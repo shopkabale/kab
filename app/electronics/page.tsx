@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
 
-// ISR: Revalidate this page every 60 seconds
 export const revalidate = 60; 
 
 export const metadata = {
@@ -36,7 +35,8 @@ export default async function ElectronicsPage() {
           {products.map((product) => (
             <Link 
               key={product.id} 
-              href={`/product/${product.publicId}`}
+              // FIX APPLIED HERE:
+              href={`/product/${product.publicId || product.id}`}
               className="group flex flex-col bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
             >
               <div className="relative aspect-square bg-slate-100 overflow-hidden">
@@ -56,7 +56,9 @@ export default async function ElectronicsPage() {
               </div>
               
               <div className="flex flex-col flex-grow p-3 sm:p-4">
-                <p className="text-[10px] sm:text-xs text-slate-500 mb-1">ID: {product.publicId}</p>
+                <p className="text-[10px] sm:text-xs text-slate-500 mb-1">
+                  ID: {product.publicId || product.id.slice(0, 8)}
+                </p>
                 <h3 className="text-xs sm:text-sm font-medium text-slate-900 line-clamp-2">
                   {product.name}
                 </h3>
@@ -65,9 +67,7 @@ export default async function ElectronicsPage() {
                     UGX {product.price.toLocaleString()}
                   </span>
                   <span className={`text-[10px] sm:text-xs font-medium px-2 py-0.5 sm:py-1 rounded-full w-fit ${
-                    product.stock > 0 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-red-100 text-red-700'
+                    product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                   }`}>
                     {product.stock > 0 ? 'In Stock' : 'Out'}
                   </span>
