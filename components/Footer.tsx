@@ -10,53 +10,60 @@ export default function Footer() {
           
           {/* Brand & Mission */}
           <div className="md:col-span-2">
-            <Link href="/" className="text-2xl font-bold text-white mb-4 inline-block">
-              Kabale <span className="text-primary">Online</span>
+            <Link href="/" className="text-2xl font-bold text-white mb-4 inline-block tracking-tight">
+              Kabale<span className="text-primary">Online</span>
             </Link>
             <p className="text-sm text-slate-400 max-w-sm leading-relaxed mb-6">
               The Better Way to Inform Your Community. We connect students at Kabale University, local farmers, and verified vendors for safe, Cash-on-Delivery commerce within Kabale town.
             </p>
           </div>
 
-          {/* Quick Links */}
+          {/* Quick Links (Updated to dynamic category routes) */}
           <div>
-            <h3 className="text-sm font-semibold text-white tracking-wider uppercase mb-4">Marketplace</h3>
+            <h3 className="text-sm font-bold text-white tracking-wider uppercase mb-4">Marketplace</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/electronics" className="text-sm hover:text-primary transition-colors">Electronics</Link>
+                <Link href="/products" className="text-sm hover:text-primary transition-colors">All Items</Link>
               </li>
               <li>
-                <Link href="/agriculture" className="text-sm hover:text-primary transition-colors">Agriculture</Link>
+                <Link href="/category/electronics" className="text-sm hover:text-primary transition-colors">Electronics</Link>
               </li>
               <li>
-                <Link href="/students" className="text-sm hover:text-primary transition-colors">Student Market</Link>
+                <Link href="/category/agriculture" className="text-sm hover:text-primary transition-colors">Agriculture</Link>
+              </li>
+              <li>
+                <Link href="/category/student_item" className="text-sm hover:text-primary transition-colors">Student Market</Link>
               </li>
             </ul>
           </div>
 
-          {/* Support & Legal */}
+          {/* Support & Account */}
           <div>
-            <h3 className="text-sm font-semibold text-white tracking-wider uppercase mb-4">Support</h3>
+            <h3 className="text-sm font-bold text-white tracking-wider uppercase mb-4">Account & Support</h3>
             <ul className="space-y-3">
               <li>
-                <Link href="/profile" className="text-sm hover:text-primary transition-colors">My Orders</Link>
+                <Link href="/profile" className="text-sm hover:text-primary transition-colors">My Profile & Orders</Link>
               </li>
-              <li className="text-sm">
+              <li>
+                <Link href="/sell" className="text-sm hover:text-primary transition-colors">Post an Ad (Sell)</Link>
+              </li>
+              <li className="text-sm text-slate-500 mt-4">
                 Strictly Cash on Delivery
               </li>
-              <li className="text-sm">
+              <li className="text-sm text-slate-500">
                 Kabale, Uganda
               </li>
             </ul>
           </div>
         </div>
         
-        <div className="border-t border-slate-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+        <div className="border-t border-slate-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-slate-500">
             &copy; {currentYear} Kabale Online. All rights reserved.
           </p>
-          <div className="mt-4 md:mt-0">
-            <p className="text-xs text-slate-600">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+            <p className="text-xs font-medium text-slate-400">
               Built for Kabale University & the local community.
             </p>
           </div>
