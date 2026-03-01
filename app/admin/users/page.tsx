@@ -108,7 +108,7 @@ export default function AdminUsersPage() {
                 </tr>
               ) : (
                 users.map((u) => {
-                  const safeName = u.displayName || u.name || "Unknown User";
+                  const safeName = u.displayName ?? "Unknown User";
                   const isSelf = user?.id === u.id;
 
                   return (
