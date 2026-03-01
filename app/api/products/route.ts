@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { Product } from "@/types";
+import { algoliaIndex } from "@/lib/algolia";
 
-// Helper to map categories to their short codes
 const getCategoryPrefix = (category: string) => {
   switch (category) {
     case "electronics": return "ELC";
@@ -23,9 +23,8 @@ export async function POST(request: Request) {
 
     const prefix = getCategoryPrefix(category);
     const counterRef = adminDb.collection("counters").doc(`product_${prefix}`);
-    const newProductRef = adminDb.collection("products").doc(); // Standard Firebase ID
+    const newProductRef = adminDb.collection("products").doc();
 
-    // We use a transaction to safely increment the counter and save the product
     const publicId = await adminDb.runTransaction(async (transaction) => {
       const counterDoc = await transaction.get(counterRef);
       
@@ -34,20 +33,17 @@ export async function POST(request: Request) {
         nextSeq = (counterDoc.data()?.seq || 0) + 1;
       }
 
-      // Format to 4 digits: ELC-0001
       const formattedId = `${prefix}-${nextSeq.toString().padStart(4, "0")}`;
 
-      // Set the new counter
       transaction.set(counterRef, { seq: nextSeq }, { merge: true });
 
-      // Create the product
       const newProduct: Product = {
         id: newProductRef.id,
         publicId: formattedId,
         name,
         slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, ""),
         category,
-        storeId: storeId || "SYSTEM", // Placeholder until we link full vendor stores
+        storeId: storeId || "SYSTEM",
         price: Number(price),
         stock: Number(stock),
         images: images || [],
@@ -57,6 +53,21 @@ export async function POST(request: Request) {
       transaction.set(newProductRef, newProduct);
       return formattedId;
     });
+
+    // === NEW: Sync to Algolia ===
+    // We only send the data necessary for search to keep Algolia costs low
+    try {
+      await algoliaIndex.saveObject({
+        objectID: publicId, // Algolia requires an objectID
+        name,
+        category,
+        price: Number(price),
+        image: images && images.length > 0 ? images[0] : "",
+      });
+    } catch (algoliaError) {
+      console.error("Failed to sync to Algolia:", algoliaError);
+      // We don't fail the whole request if Algolia fails, the product is already in the database
+    }
 
     return NextResponse.json({ success: true, publicId }, { status: 201 });
 
