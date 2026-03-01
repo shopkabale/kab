@@ -32,7 +32,6 @@ export default async function ElectronicsPage() {
           </p>
         </div>
       ) : (
-        {/* UPDATED GRID: 2 columns on mobile, 3 on tablet, 4 on desktop */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           {products.map((product) => (
             <Link 
