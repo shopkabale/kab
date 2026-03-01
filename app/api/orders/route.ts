@@ -1,77 +1,37 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
-import { Order } from "@/types";
-import { sendOrderConfirmation } from "@/lib/brevo";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, productId, price, quantity } = body;
+    const { userId, productId, sellerId, total, deliveryLocation, contactPhone, items } = body;
 
-    if (!userId || !productId || !price) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!userId || !productId) {
+      return NextResponse.json({ error: "Missing user or product ID" }, { status: 400 });
     }
 
-    // 1. Fetch user to get their email securely for Brevo
-    const userDoc = await adminDb.collection("users").doc(userId).get();
-    if (!userDoc.exists) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-    const userData = userDoc.data();
+    // Generate a beautiful Kabale Order Number
+    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // 2. Generate Order in a secure transaction
-    const counterRef = adminDb.collection("counters").doc("order_ORD");
-    const newOrderRef = adminDb.collection("orders").doc();
-    const orderTotal = Number(price) * (quantity || 1);
+    const orderData = {
+      orderNumber,
+      userId,
+      sellerId: sellerId || "SYSTEM",
+      items: items || [{ productId, quantity: 1, price: total }],
+      total: Number(total),
+      paymentMethod: "cash_on_delivery",
+      status: "pending",
+      deliveryLocation: deliveryLocation || "Kabale Town",
+      contactPhone: contactPhone || "",
+      createdAt: Date.now(),
+      updatedAt: Date.now()
+    };
 
-    const orderNumber = await adminDb.runTransaction(async (transaction) => {
-      const counterDoc = await transaction.get(counterRef);
-      
-      let nextSeq = 1;
-      if (counterDoc.exists) {
-        nextSeq = (counterDoc.data()?.seq || 0) + 1;
-      }
+    const docRef = await adminDb.collection("orders").add(orderData);
 
-      const formattedId = `ORD-${nextSeq.toString().padStart(4, "0")}`;
-
-      transaction.set(counterRef, { seq: nextSeq }, { merge: true });
-
-      const newOrder: Order = {
-        id: newOrderRef.id,
-        orderNumber: formattedId,
-        userId: userId,
-        items: [
-          {
-            productId,
-            quantity: quantity || 1,
-            price: Number(price),
-          }
-        ],
-        total: orderTotal,
-        paymentMethod: "cash_on_delivery",
-        status: "pending",
-        createdAt: Date.now(),
-      };
-
-      transaction.set(newOrderRef, newOrder);
-      return formattedId;
-    });
-
-    // 3. Fire off the Brevo Email silently in the background
-    // We don't await this blocking the response, so the user sees success instantly
-    if (userData?.email) {
-      sendOrderConfirmation(
-        userData.email,
-        userData.displayName || "Customer",
-        orderNumber,
-        orderTotal
-      ).catch(err => console.error("Background email failed:", err));
-    }
-
-    return NextResponse.json({ success: true, orderNumber }, { status: 201 });
-
+    return NextResponse.json({ success: true, orderId: docRef.id }, { status: 200 });
   } catch (error) {
-    console.error("Error creating order:", error);
-    return NextResponse.json({ error: "Failed to create order" }, { status: 500 });
+    console.error("Order creation error:", error);
+    return NextResponse.json({ error: "Failed to place order" }, { status: 500 });
   }
 }
