@@ -21,7 +21,7 @@ export default function ProfilePage() {
         const res = await fetch(`/api/orders/user?userId=${user.id}`);
         if (res.ok) {
           const data = await res.json();
-          setOrders(data.orders);
+          setOrders(data.orders || []);
         }
       } catch (error) {
         console.error(error);
@@ -34,7 +34,7 @@ export default function ProfilePage() {
         const res = await fetch(`/api/products/user?userId=${user.id}`);
         if (res.ok) {
           const data = await res.json();
-          setListings(data.products);
+          setListings(data.products || []);
         }
       } catch (error) {
         console.error(error);
@@ -48,7 +48,6 @@ export default function ProfilePage() {
     }
   }, [user, authLoading]);
 
-  // NEW: Secure Delete Handler
   const handleDeleteAd = async (productId: string) => {
     if (!user) return;
     const isConfirmed = window.confirm("Are you sure you want to delete this ad? This action cannot be undone.");
@@ -82,23 +81,34 @@ export default function ProfilePage() {
     );
   }
 
+  // SAFE FALLBACKS FOR USER DATA
+  const safeDisplayName = user.displayName || "Kabale User";
+  const safeInitial = safeDisplayName.charAt(0).toUpperCase();
+  const safeRole = user.role || "customer";
+
   return (
     <div className="py-8 max-w-4xl mx-auto px-4 sm:px-0">
+      
+      {/* Profile Header */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 mb-8 flex flex-col sm:flex-row items-center gap-6">
         {user.photoURL ? (
-          <Image src={user.photoURL} alt={user.displayName} width={96} height={96} className="rounded-full border-4 border-slate-50" />
+          <Image src={user.photoURL} alt={safeDisplayName} width={96} height={96} className="rounded-full border-4 border-slate-50 object-cover" />
         ) : (
-          <div className="w-24 h-24 bg-primary text-white rounded-full flex items-center justify-center text-3xl font-bold">{user.displayName.charAt(0)}</div>
+          <div className="w-24 h-24 bg-primary text-white rounded-full flex items-center justify-center text-3xl font-bold">{safeInitial}</div>
         )}
         <div className="text-center sm:text-left flex-grow">
-          <h1 className="text-2xl font-bold text-slate-900">{user.displayName}</h1>
-          <p className="text-slate-500 mb-2">{user.email}</p>
+          <h1 className="text-2xl font-bold text-slate-900">{safeDisplayName}</h1>
+          <p className="text-slate-500 mb-2">{user.email || "No email provided"}</p>
+          <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-800 uppercase tracking-wide">
+            {safeRole}
+          </div>
         </div>
         <Link href="/sell" className="hidden sm:flex bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors items-center gap-2 shadow-sm">
           <span>➕</span> Post New Ad
         </Link>
       </div>
 
+      {/* Tabs */}
       <div className="flex border-b border-slate-200 mb-8 overflow-x-auto scrollbar-hide">
         <button onClick={() => setActiveTab("purchases")} className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === "purchases" ? "border-primary text-primary" : "border-transparent text-slate-500"}`}>
           My Purchases ({orders.length})
@@ -109,7 +119,8 @@ export default function ProfilePage() {
       </div>
 
       <div className="min-h-[400px]">
-        {/* Purchases Tab omitted for brevity in text block, keep your existing one! */}
+        
+        {/* === PURCHASES TAB === */}
         {activeTab === "purchases" && (
            <div>
            {loadingOrders ? (
@@ -121,35 +132,41 @@ export default function ProfilePage() {
              </div>
            ) : (
              <div className="space-y-4">
-               {orders.map((order) => (
-                 <div key={order.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                   <div>
-                     <p className="font-mono text-sm font-extrabold text-primary mb-1">{order.orderNumber}</p>
-                     <p className="text-xs text-slate-500 mb-2">
-                       {new Date(order.createdAt).toLocaleDateString()}
-                     </p>
-                     <div className="text-sm text-slate-700">
-                       <span className="font-medium">Total:</span> UGX {order.total.toLocaleString()} (COD)
+               {orders.map((order) => {
+                 // SAFE FALLBACKS FOR LEGACY ORDERS
+                 const safeOrderNumber = order.orderNumber || "LEGACY-ORD";
+                 const safeTotal = Number(order.total) || 0;
+                 const safeStatus = order.status || "pending";
+                 const safeDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "Unknown Date";
+
+                 return (
+                   <div key={order.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                     <div>
+                       <p className="font-mono text-sm font-extrabold text-primary mb-1">{safeOrderNumber}</p>
+                       <p className="text-xs text-slate-500 mb-2">{safeDate}</p>
+                       <div className="text-sm text-slate-700">
+                         <span className="font-medium">Total:</span> UGX {safeTotal.toLocaleString()} (COD)
+                       </div>
+                     </div>
+                     <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center">
+                       <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                         safeStatus === 'pending' ? 'bg-amber-100 text-amber-800' :
+                         safeStatus === 'confirmed' ? 'bg-blue-100 text-blue-800' :
+                         safeStatus === 'out_for_delivery' ? 'bg-purple-100 text-purple-800' :
+                         'bg-green-100 text-green-800'
+                       }`}>
+                         {safeStatus.replace(/_/g, ' ')}
+                       </span>
                      </div>
                    </div>
-                   <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-center">
-                     <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
-                       order.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                       order.status === 'confirmed' ? 'bg-blue-100 text-blue-800' :
-                       order.status === 'out_for_delivery' ? 'bg-purple-100 text-purple-800' :
-                       'bg-green-100 text-green-800'
-                     }`}>
-                       {order.status.replace(/_/g, ' ')}
-                     </span>
-                   </div>
-                 </div>
-               ))}
+                 );
+               })}
              </div>
            )}
          </div>
         )}
 
-        {/* Listings Tab */}
+        {/* === LISTINGS TAB === */}
         {activeTab === "listings" && (
           <div>
             {loadingListings ? (
@@ -163,45 +180,53 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {listings.map((product) => (
-                  <div key={product.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col sm:flex-row gap-4">
-                    <Link href={`/item/${product.publicId || product.id}`} className="relative h-24 w-24 sm:h-20 sm:w-20 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200 group">
-                      {product.images && product.images.length > 0 ? (
-                        <Image src={product.images[0]} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform" />
-                      ) : (
-                        <span className="text-[10px] text-slate-400 absolute inset-0 flex items-center justify-center">No Img</span>
-                      )}
-                    </Link>
-                    
-                    <div className="flex-grow flex flex-col justify-between">
-                      <div>
-                        <Link href={`/item/${product.publicId || product.id}`} className="text-sm font-bold text-slate-900 hover:text-primary line-clamp-1">
-                          {product.name}
-                        </Link>
-                        <p className="text-xs text-slate-500 mt-1">ID: {product.publicId || product.id.slice(0, 8)}</p>
-                      </div>
-                      <div className="text-sm font-bold text-slate-900 mt-2 sm:mt-0">
-                        UGX {product.price.toLocaleString()}
-                      </div>
-                    </div>
+                {listings.map((product) => {
+                  // SAFE FALLBACKS FOR LEGACY PRODUCTS
+                  const safeName = product.name || "Unnamed Item";
+                  const safePrice = Number(product.price) || 0;
+                  const safeStatus = product.status || "active";
+                  const safeId = product.publicId || product.id;
+                  const hasImages = Array.isArray(product.images) && product.images.length > 0;
 
-                    {/* NEW: Edit and Delete Buttons */}
-                    <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0 gap-2 sm:gap-0">
-                      <Link 
-                        href={`/edit/${product.publicId || product.id}`}
-                        className="text-xs font-bold text-sky-600 hover:text-sky-800 bg-sky-50 px-3 py-1.5 rounded-md transition-colors"
-                      >
-                        Edit Ad
+                  return (
+                    <div key={product.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col sm:flex-row gap-4">
+                      <Link href={`/item/${safeId}`} className="relative h-24 w-24 sm:h-20 sm:w-20 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200 group">
+                        {hasImages ? (
+                          <Image src={product.images[0]} alt={safeName} fill className="object-cover group-hover:scale-105 transition-transform" />
+                        ) : (
+                          <span className="text-[10px] text-slate-400 absolute inset-0 flex items-center justify-center">No Img</span>
+                        )}
                       </Link>
-                      <button 
-                        onClick={() => handleDeleteAd(product.id)}
-                        className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-3 py-1.5 rounded-md transition-colors sm:mt-2"
-                      >
-                        Delete
-                      </button>
+                      
+                      <div className="flex-grow flex flex-col justify-between">
+                        <div>
+                          <Link href={`/item/${safeId}`} className="text-sm font-bold text-slate-900 hover:text-primary line-clamp-1">
+                            {safeName}
+                          </Link>
+                          <p className="text-xs text-slate-500 mt-1">ID: {product.publicId || product.id.slice(0, 8)}</p>
+                        </div>
+                        <div className="text-sm font-bold text-slate-900 mt-2 sm:mt-0">
+                          UGX {safePrice.toLocaleString()}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0 gap-2 sm:gap-0">
+                        <Link 
+                          href={`/edit/${safeId}`}
+                          className="text-xs font-bold text-sky-600 hover:text-sky-800 bg-sky-50 px-3 py-1.5 rounded-md transition-colors"
+                        >
+                          Edit Ad
+                        </Link>
+                        <button 
+                          onClick={() => handleDeleteAd(product.id)}
+                          className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-3 py-1.5 rounded-md transition-colors sm:mt-2"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
