@@ -1,28 +1,47 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function AdminOverview() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
-
-  // We will wire this up to a real API in Phase 2
-  const stats = {
+  const [stats, setStats] = useState({
     totalUsers: 0,
     totalProducts: 0,
     totalOrders: 0,
     totalRevenue: 0,
-  };
+  });
 
   useEffect(() => {
-    // Simulate fetching dashboard stats
-    setTimeout(() => setLoading(false), 800);
-  }, []);
+    const fetchStats = async () => {
+      if (!user || user.role !== "admin") return;
+      try {
+        const res = await fetch(`/api/admin/stats?adminId=${user.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setStats(data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch stats", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStats();
+  }, [user]);
 
   return (
     <div className="max-w-6xl mx-auto pb-20 md:pb-0">
-      <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-slate-900">Dashboard Overview</h1>
-        <p className="text-slate-600 mt-2 font-medium">System health and marketplace metrics at a glance.</p>
+      <div className="mb-8 border-b border-slate-200 pb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-slate-900">Dashboard Overview</h1>
+          <p className="text-slate-600 mt-2 font-medium">System health and marketplace metrics at a glance.</p>
+        </div>
+        <div className="bg-primary/10 text-primary px-4 py-2 rounded-lg font-bold text-sm border border-primary/20 shadow-sm">
+          Admin Mode Active
+        </div>
       </div>
 
       {loading ? (
@@ -77,13 +96,6 @@ export default function AdminOverview() {
 
         </div>
       )}
-
-      {/* Placeholder for Quick Actions */}
-      <div className="bg-slate-900 rounded-3xl p-8 text-white mt-8 shadow-xl">
-        <h2 className="text-xl font-bold mb-2">Welcome to your Command Center</h2>
-        <p className="text-slate-400 mb-6 max-w-2xl">Use the sidebar to navigate through your products, manage COD orders, and oversee your registered users and vendors.</p>
-      </div>
-
     </div>
   );
 }
