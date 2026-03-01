@@ -8,13 +8,13 @@ import { useAuth } from "@/components/AuthProvider";
 export default function SellPage() {
   const router = useRouter();
   const { user, signIn, loading: authLoading } = useAuth();
-  
+
   const [loading, setLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [formData, setFormData] = useState({
     title: "",
     category: "electronics",
@@ -41,7 +41,7 @@ export default function SellPage() {
         return;
       }
       setImageFiles(prev => [...prev, ...newFiles]);
-      
+
       const newPreviews = newFiles.map(file => URL.createObjectURL(file));
       setImagePreviews(prev => [...prev, ...newPreviews]);
     }
@@ -54,7 +54,7 @@ export default function SellPage() {
 
   const handleSubmitClick = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (imageFiles.length === 0) {
       alert("Please upload at least one image of your product.");
       return;
@@ -82,14 +82,22 @@ export default function SellPage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ folder: "kabale_online" })
         });
+        
+        if (!signRes.ok) throw new Error("Failed to get upload signature from server.");
+        
         const signData = await signRes.json();
         const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+        const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
+
+        if (!apiKey) throw new Error("Missing NEXT_PUBLIC_CLOUDINARY_API_KEY in Vercel settings.");
 
         // Upload in parallel for speed
         const uploadPromises = imageFiles.map(async (file) => {
           const formDataCloudinary = new FormData();
           formDataCloudinary.append("file", file);
-          formDataCloudinary.append("api_key", process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "");
+          
+          // ✅ FIXED: Now correctly using the API_KEY
+          formDataCloudinary.append("api_key", apiKey);
           formDataCloudinary.append("timestamp", signData.timestamp.toString());
           formDataCloudinary.append("signature", signData.signature);
           formDataCloudinary.append("folder", "kabale_online");
@@ -98,6 +106,14 @@ export default function SellPage() {
             method: "POST",
             body: formDataCloudinary,
           });
+          
+          // ✅ FIXED: Added proper error catching from Cloudinary
+          if (!res.ok) {
+            const errorData = await res.json();
+            console.error("Cloudinary rejection:", errorData);
+            throw new Error(errorData.error?.message || "Cloudinary rejected the upload.");
+          }
+          
           return res.json();
         });
 
@@ -120,16 +136,14 @@ export default function SellPage() {
       const dbData = await dbRes.json();
 
       if (dbData.success) {
-        // Your PRD redirects to /item/[publicId], so we match that route exactly
         router.push(`/item/${dbData.publicId}`);
       } else {
-        alert("Error saving product to database");
-        setLoading(false);
+        throw new Error(dbData.error || "Database rejected the product.");
       }
 
-    } catch (error) {
-      console.error(error);
-      alert("Something went wrong during upload.");
+    } catch (error: any) {
+      console.error("Upload process failed:", error);
+      alert(`Upload failed: ${error.message || "Unknown error occurred"}`);
       setLoading(false);
     }
   };
@@ -140,13 +154,13 @@ export default function SellPage() {
         <h1 className="text-3xl font-extrabold text-slate-900">Post an Item for Sale</h1>
         <p className="text-slate-600 mt-2">Reach buyers across Kabale town. No hidden fees.</p>
       </div>
-      
+
       <form onSubmit={handleSubmitClick} className="space-y-8">
-        
+
         {/* A. Basic Information Section */}
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
           <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4">Basic Details</h2>
-          
+
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Product Title *</label>
             <input required type="text" placeholder="e.g. HP EliteBook 840 G5" className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none" 
@@ -199,7 +213,7 @@ export default function SellPage() {
             <h2 className="text-xl font-bold text-slate-900">Photos</h2>
             <span className="text-sm text-slate-500">{imageFiles.length} / 5</span>
           </div>
-          
+
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {imagePreviews.map((preview, index) => (
               <div key={index} className="relative aspect-square rounded-xl border border-slate-200 overflow-hidden group">
@@ -214,7 +228,7 @@ export default function SellPage() {
                 )}
               </div>
             ))}
-            
+
             {imageFiles.length < 5 && (
               <div 
                 onClick={() => fileInputRef.current?.click()}
@@ -252,7 +266,7 @@ export default function SellPage() {
             </p>
             <div className="space-y-3">
               <button onClick={() => {
-                  setLoading(true); // Show loading state in background form
+                  setLoading(true);
                   signIn(); 
                 }} 
                 className="w-full rounded-lg bg-primary px-4 py-3 text-base font-bold text-white hover:bg-sky-500 transition-colors"
