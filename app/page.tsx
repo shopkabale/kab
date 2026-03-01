@@ -18,7 +18,7 @@ export default async function Home() {
   return (
     <div className="flex flex-col gap-y-20 pb-12">
       
-      {/* 1. Hero Section */}
+      {/* Hero Section */}
       <section className="text-center pt-12 md:pt-20 px-4">
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 mb-6 max-w-4xl mx-auto leading-tight">
           Kabale’s Online Electronics & Student Marketplace
@@ -42,7 +42,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 2. Categories Section */}
+      {/* Categories Section */}
       <section>
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold text-slate-900">Browse Categories</h2>
@@ -72,7 +72,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 3. Featured Products */}
+      {/* Featured Products */}
       {featuredProducts.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-6">
@@ -82,8 +82,8 @@ export default async function Home() {
             {featuredProducts.map((product) => (
               <Link 
                 key={product.id} 
-                // FIX: Fallback to document ID if publicId is undefined
-                href={`/product/${product.publicId || product.id}`}
+                // CRITICAL FIX: Pointing to the new /item route
+                href={`/item/${product.publicId || product.id}`}
                 className="group flex flex-col bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
               >
                 <div className="relative aspect-square bg-slate-100 overflow-hidden">
@@ -121,7 +121,7 @@ export default async function Home() {
         </section>
       )}
 
-      {/* 4 & 5. Trust & How It Works */}
+      {/* Trust & How It Works */}
       <section className="bg-slate-50 rounded-3xl p-8 md:p-12 border border-slate-200">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-slate-900 mb-4">Why Kabale Online?</h2>
@@ -169,7 +169,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 6. Seller CTA */}
+      {/* Seller CTA */}
       <section className="bg-slate-900 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
         <div className="relative z-10">
           <h2 className="text-3xl font-bold text-white mb-4">Have electronics or textbooks to sell?</h2>
@@ -177,16 +177,15 @@ export default async function Home() {
             Join the growing list of local sellers reaching Kabale University students and the wider town community.
           </p>
           <Link 
-            href="/vendor/apply" 
+            href="/sell" 
             className="inline-block rounded-lg bg-primary px-8 py-4 text-base font-bold text-white shadow-lg hover:bg-sky-400 transition-colors"
           >
-            Become a Seller
+            Post an Item
           </Link>
         </div>
         <div className="absolute top-0 left-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-2xl"></div>
         <div className="absolute bottom-0 right-0 w-64 h-64 bg-primary opacity-20 rounded-full translate-x-1/3 translate-y-1/3 blur-2xl"></div>
       </section>
-
     </div>
   );
 }
