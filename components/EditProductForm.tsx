@@ -9,16 +9,16 @@ import { Product } from "@/types";
 export default function EditProductForm({ product }: { product: Product }) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  
+
   const [loading, setLoading] = useState(false);
-  
+
   // Manage existing images from database vs newly uploaded files
   const [existingImages, setExistingImages] = useState<string[]>(product.images || []);
   const [newImageFiles, setNewImageFiles] = useState<File[]>([]);
   const [newImagePreviews, setNewImagePreviews] = useState<string[]>([]);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [formData, setFormData] = useState({
     title: product.name || "",
     category: product.category || "electronics",
@@ -66,18 +66,34 @@ export default function EditProductForm({ product }: { product: Product }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ folder: "kabale_online" })
         });
+        
+        if (!signRes.ok) throw new Error("Failed to get upload signature from server.");
+        
         const signData = await signRes.json();
         const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+        const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
+
+        if (!apiKey) throw new Error("Missing NEXT_PUBLIC_CLOUDINARY_API_KEY in Vercel settings.");
 
         const uploadPromises = newImageFiles.map(async (file) => {
           const formDataCloudinary = new FormData();
           formDataCloudinary.append("file", file);
-          formDataCloudinary.append("api_key", process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "");
+          
+          // ✅ FIXED: Pointing to API_KEY, not CLOUD_NAME
+          formDataCloudinary.append("api_key", apiKey);
           formDataCloudinary.append("timestamp", signData.timestamp.toString());
           formDataCloudinary.append("signature", signData.signature);
           formDataCloudinary.append("folder", "kabale_online");
 
           const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: formDataCloudinary });
+          
+          // ✅ FIXED: Catching exact Cloudinary rejections
+          if (!res.ok) {
+            const errorData = await res.json();
+            console.error("Cloudinary rejection:", errorData);
+            throw new Error(errorData.error?.message || "Cloudinary rejected the upload.");
+          }
+          
           return res.json();
         });
 
@@ -103,13 +119,13 @@ export default function EditProductForm({ product }: { product: Product }) {
 
       if (dbData.success) {
         alert("Ad updated successfully!");
-        router.push(`/item/${dbData.publicId}`);
+        router.push(`/item/${dbData.publicId || product.publicId || product.id}`);
       } else {
-        alert(dbData.error || "Failed to update ad.");
+        throw new Error(dbData.error || "Failed to update ad in database.");
       }
-    } catch (error) {
-      console.error(error);
-      alert("Something went wrong during update.");
+    } catch (error: any) {
+      console.error("Update process failed:", error);
+      alert(`Update failed: ${error.message || "Unknown error occurred"}`);
     } finally {
       setLoading(false);
     }
@@ -131,12 +147,12 @@ export default function EditProductForm({ product }: { product: Product }) {
         <h1 className="text-3xl font-extrabold text-slate-900">Edit Your Ad</h1>
         <p className="text-slate-600 mt-2">Update details for: {product.name}</p>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Same basic info inputs as the /sell page */}
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
           <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4">Basic Details</h2>
-          
+
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Product Title *</label>
             <input required type="text" className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-primary" 
@@ -189,7 +205,7 @@ export default function EditProductForm({ product }: { product: Product }) {
             <h2 className="text-xl font-bold text-slate-900">Photos</h2>
             <span className="text-sm text-slate-500">{existingImages.length + newImageFiles.length} / 5</span>
           </div>
-          
+
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {/* Show Existing Images */}
             {existingImages.map((img, index) => (
@@ -198,7 +214,7 @@ export default function EditProductForm({ product }: { product: Product }) {
                 <button type="button" onClick={() => removeExistingImage(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
               </div>
             ))}
-            
+
             {/* Show New Image Previews */}
             {newImagePreviews.map((preview, index) => (
               <div key={`new-${index}`} className="relative aspect-square rounded-xl border-2 border-emerald-400 overflow-hidden group">
@@ -207,7 +223,7 @@ export default function EditProductForm({ product }: { product: Product }) {
                 <div className="absolute bottom-0 w-full bg-emerald-500 text-white text-[10px] font-bold text-center">NEW</div>
               </div>
             ))}
-            
+
             {(existingImages.length + newImageFiles.length) < 5 && (
               <div onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-primary transition-colors">
                 <span className="text-2xl text-slate-400 mb-1">+</span>
@@ -219,7 +235,14 @@ export default function EditProductForm({ product }: { product: Product }) {
         </div>
 
         <button disabled={loading} type="submit" className="w-full bg-sky-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-sky-700 transition-colors disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg">
-          {loading ? "Saving Changes..." : "Update Ad"}
+          {loading ? (
+             <>
+               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+               Saving...
+             </>
+          ) : (
+            "Update Ad"
+          )}
         </button>
       </form>
     </div>
