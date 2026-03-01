@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { Order } from "@/types";
 
+// THIS FIXES THE VERCEL BUILD ERROR:
+// It forces Next.js to evaluate this API route at runtime, not build time.
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
