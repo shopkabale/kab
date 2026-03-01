@@ -35,7 +35,8 @@ export default async function AgriculturePage() {
           {products.map((product) => (
             <Link 
               key={product.id} 
-              href={`/product/${product.publicId}`}
+              // FIX APPLIED HERE:
+              href={`/product/${product.publicId || product.id}`}
               className="group flex flex-col bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
             >
               <div className="relative aspect-square bg-slate-100 overflow-hidden">
@@ -55,7 +56,9 @@ export default async function AgriculturePage() {
               </div>
               
               <div className="flex flex-col flex-grow p-3 sm:p-4">
-                <p className="text-[10px] sm:text-xs text-slate-500 mb-1">ID: {product.publicId}</p>
+                <p className="text-[10px] sm:text-xs text-slate-500 mb-1">
+                  ID: {product.publicId || product.id.slice(0, 8)}
+                </p>
                 <h3 className="text-xs sm:text-sm font-medium text-slate-900 line-clamp-2">
                   {product.name}
                 </h3>
