@@ -66,6 +66,7 @@ export default function Footer() {
           </div>
         </div>
 
+
         <div className="border-t border-slate-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-slate-500">
             &copy; {currentYear} Kabale Online. All rights reserved.
