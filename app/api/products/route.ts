@@ -3,6 +3,9 @@ import { adminDb } from "@/lib/firebase/admin";
 import { Product } from "@/types";
 import { algoliaIndex } from "@/lib/algolia";
 
+// Forces Next.js to evaluate this API route dynamically at runtime
+export const dynamic = "force-dynamic";
+
 const getCategoryPrefix = (category: string) => {
   switch (category) {
     case "electronics": return "ELC";
@@ -12,6 +15,38 @@ const getCategoryPrefix = (category: string) => {
   }
 };
 
+// =========================================================
+// GET: Fetch products for the Marketplace and Admin Dashboard
+// =========================================================
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const category = searchParams.get("category");
+    
+    let query: FirebaseFirestore.Query = adminDb.collection("products");
+    
+    if (category) {
+      query = query.where("category", "==", category);
+    }
+    
+    query = query.orderBy("createdAt", "desc").limit(50);
+    const snapshot = await query.get();
+    
+    const products = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
+
+    return NextResponse.json({ products }, { status: 200 });
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return NextResponse.json({ error: "Failed to fetch products" }, { status: 500 });
+  }
+}
+
+// =========================================================
+// POST: Create a new product (Your existing code)
+// =========================================================
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -37,7 +72,7 @@ export async function POST(request: Request) {
 
     const publicId = await adminDb.runTransaction(async (transaction) => {
       const counterDoc = await transaction.get(counterRef);
-      
+
       let nextSeq = 1;
       if (counterDoc.exists) {
         nextSeq = (counterDoc.data()?.seq || 0) + 1;
