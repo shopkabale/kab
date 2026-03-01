@@ -4,7 +4,6 @@ import { User } from "@/types";
 
 export async function POST(request: Request) {
   try {
-    // 1. Grab the secure token sent by the frontend
     const authHeader = request.headers.get("Authorization");
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return NextResponse.json({ error: "Missing or invalid token" }, { status: 401 });
@@ -12,7 +11,6 @@ export async function POST(request: Request) {
 
     const token = authHeader.split("Bearer ")[1];
     
-    // 2. Verify the token using Firebase Admin
     const decodedToken = await adminAuth.verifyIdToken(token);
     const { uid, email, name, picture } = decodedToken;
 
@@ -20,32 +18,65 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid token payload" }, { status: 401 });
     }
 
-    // 3. Check if this user already exists in your Firestore database
     const userRef = adminDb.collection("users").doc(uid);
     const userDoc = await userRef.get();
 
     let userData: User;
 
     if (!userDoc.exists) {
-      // 4. If they are brand new, create their profile!
+      // 1. BRAND NEW USER
       userData = {
         id: uid,
         email: email || "",
         displayName: name || "Kabale User",
         photoURL: picture || "",
-        role: "customer", // Everyone starts as a customer
+        role: "customer", 
         createdAt: Date.now(),
       };
       await userRef.set(userData);
     } else {
-      // 5. If they exist, just grab their existing data (like if they are an "admin" or "vendor")
+      // 2. EXISTING USER (The "Shabby Data" Adapter)
+      const data = userDoc.data() || {};
+
+      // A. Safely parse the exact Name field they have
+      const parsedName = data.displayName || data.fullName || data.name || name || "Kabale User";
+
+      // B. Safely parse the Photo
+      const parsedPhoto = data.photoURL || data.picture || picture || "";
+
+      // C. Normalize the Role (Translate old "seller" to our new "vendor" standard)
+      let parsedRole = data.role || "customer";
+      if (parsedRole === "seller") {
+        parsedRole = "vendor";
+      }
+
+      // D. Safely parse Firestore Timestamps vs JS Numbers
+      let parsedCreatedAt = Date.now();
+      if (data.createdAt) {
+        if (typeof data.createdAt === 'number') {
+          parsedCreatedAt = data.createdAt;
+        } else if (data.createdAt.toDate) {
+          parsedCreatedAt = data.createdAt.toDate().getTime();
+        } else if (data.createdAt._seconds) {
+          parsedCreatedAt = data.createdAt._seconds * 1000;
+        }
+      }
+
+      // E. Build the perfect, strict Next.js object
       userData = {
         id: userDoc.id,
-        ...userDoc.data(),
-      } as User;
+        email: data.email || email || "",
+        displayName: parsedName,
+        photoURL: parsedPhoto,
+        role: parsedRole as "customer" | "vendor" | "admin",
+        createdAt: parsedCreatedAt,
+      };
+
+      // OPTIONAL: You can silently update their messy database record to the new clean format in the background!
+      // Uncomment the line below if you want the database to slowly fix itself as people log in.
+      // await userRef.update({ displayName: parsedName, role: parsedRole });
     }
 
-    // 6. Send the verified user back to the Navbar so it can update the UI
     return NextResponse.json({ success: true, user: userData }, { status: 200 });
 
   } catch (error) {
