@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
+import SearchBar from "@/components/SearchBar";
 
 export default function Navbar() {
   const { user, loading, signIn, signOut } = useAuth();
@@ -29,45 +30,44 @@ export default function Navbar() {
 
       <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-slate-200 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-16 gap-4">
+            
             {/* Logo */}
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="text-xl font-bold text-primary">
                 Kabale Online
               </Link>
             </div>
+
+            {/* Desktop Search Bar (Centered) */}
+            <div className="hidden md:flex flex-1 max-w-md justify-center">
+              <SearchBar />
+            </div>
             
-            {/* Desktop Navigation Links */}
-            <div className="hidden md:flex space-x-8">
-              <Link href="/electronics" className="text-slate-600 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+            {/* Desktop Navigation & Auth */}
+            <div className="hidden md:flex items-center space-x-6">
+              <Link href="/electronics" className="text-slate-600 hover:text-primary text-sm font-medium transition-colors">
                 Electronics
               </Link>
-              <Link href="/agriculture" className="text-slate-600 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              <Link href="/agriculture" className="text-slate-600 hover:text-primary text-sm font-medium transition-colors">
                 Agriculture
               </Link>
-              <Link href="/students" className="text-slate-600 hover:text-primary px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              <Link href="/students" className="text-slate-600 hover:text-primary text-sm font-medium transition-colors">
                 Student Market
               </Link>
-            </div>
 
-            {/* Desktop Authentication Controls */}
-            <div className="hidden md:flex items-center">
+              <div className="h-4 w-px bg-slate-300"></div>
+
               {loading ? (
                 <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
               ) : user ? (
-                <div className="flex items-center gap-6">
-                  <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-slate-700">
-                      Hi, {user.displayName.split(' ')[0]}
-                    </span>
-                    <Link href="/profile" className="text-sm font-semibold text-primary hover:text-sky-600 transition-colors">
-                      My Profile
-                    </Link>
-                  </div>
-                  <div className="h-4 w-px bg-slate-300"></div>
+                <div className="flex items-center gap-4">
+                  <Link href="/profile" className="text-sm font-semibold text-primary hover:text-sky-600 transition-colors">
+                    My Profile
+                  </Link>
                   <button
                     onClick={signOut}
-                    className="text-sm font-semibold text-slate-600 hover:text-red-500 transition-colors"
+                    className="text-sm font-semibold text-slate-500 hover:text-red-500 transition-colors"
                   >
                     Log out
                   </button>
@@ -77,7 +77,7 @@ export default function Navbar() {
                   onClick={signIn}
                   className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 transition-colors"
                 >
-                  Log in with Google
+                  Log in
                 </button>
               )}
             </div>
@@ -106,7 +106,13 @@ export default function Navbar() {
 
         {/* Mobile Menu Dropdown */}
         <div className={`md:hidden absolute w-full bg-white border-t border-slate-200 shadow-xl transition-all duration-300 ease-in-out origin-top ${isMobileMenuOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'}`}>
-          <div className="px-4 pt-4 pb-6 space-y-2">
+          
+          {/* Mobile Search Bar */}
+          <div className="px-4 pt-4 pb-2">
+            <SearchBar />
+          </div>
+
+          <div className="px-4 py-4 space-y-2">
             <Link 
               href="/electronics" 
               onClick={() => setIsMobileMenuOpen(false)}
