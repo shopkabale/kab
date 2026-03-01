@@ -1,4 +1,3 @@
-// components/AuthProvider.tsx
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
@@ -23,10 +22,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         try {
-          // Get secure token to send to our backend
           const token = await firebaseUser.getIdToken();
           
-          // Sync with our secure API route
           const res = await fetch("/api/auth/sync", {
             method: "POST",
             headers: {
@@ -38,11 +35,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const data = await res.json();
             setUser(data.user);
           } else {
-            console.error("Failed to sync user data");
+            const errData = await res.json();
+            console.error("Backend sync failed:", errData);
+            alert(`Server Error during login: ${errData.error || 'Check Vercel logs'}`);
             setUser(null);
           }
         } catch (error) {
           console.error("Auth Error:", error);
+          alert("Network error while communicating with the server.");
           setUser(null);
         }
       } else {
