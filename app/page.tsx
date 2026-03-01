@@ -2,11 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
 
-// ISR: Revalidate the homepage every 60 seconds
 export const revalidate = 60;
 
 export default async function Home() {
-  // Fetch products to fulfill the strict 2-1-1 Featured ratio
   const electronics = await getProducts("electronics");
   const agriculture = await getProducts("agriculture");
   const students = await getProducts("student_item");
@@ -74,7 +72,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 3. Featured Products (Strictly 4 Items) */}
+      {/* 3. Featured Products */}
       {featuredProducts.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-6">
@@ -84,7 +82,8 @@ export default async function Home() {
             {featuredProducts.map((product) => (
               <Link 
                 key={product.id} 
-                href={`/product/${product.publicId}`}
+                // FIX: Fallback to document ID if publicId is undefined
+                href={`/product/${product.publicId || product.id}`}
                 className="group flex flex-col bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
               >
                 <div className="relative aspect-square bg-slate-100 overflow-hidden">
@@ -104,7 +103,9 @@ export default async function Home() {
                 </div>
                 
                 <div className="flex flex-col flex-grow p-3 sm:p-4">
-                  <p className="text-[10px] sm:text-xs text-slate-500 mb-1">ID: {product.publicId}</p>
+                  <p className="text-[10px] sm:text-xs text-slate-500 mb-1">
+                    ID: {product.publicId || product.id.slice(0, 8)}
+                  </p>
                   <h3 className="text-xs sm:text-sm font-medium text-slate-900 line-clamp-2">
                     {product.name}
                   </h3>
@@ -120,7 +121,7 @@ export default async function Home() {
         </section>
       )}
 
-      {/* 4 & 5. Trust & How It Works (Combined for flow) */}
+      {/* 4 & 5. Trust & How It Works */}
       <section className="bg-slate-50 rounded-3xl p-8 md:p-12 border border-slate-200">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-slate-900 mb-4">Why Kabale Online?</h2>
@@ -182,7 +183,6 @@ export default async function Home() {
             Become a Seller
           </Link>
         </div>
-        {/* Decorative background shapes */}
         <div className="absolute top-0 left-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-2xl"></div>
         <div className="absolute bottom-0 right-0 w-64 h-64 bg-primary opacity-20 rounded-full translate-x-1/3 translate-y-1/3 blur-2xl"></div>
       </section>
