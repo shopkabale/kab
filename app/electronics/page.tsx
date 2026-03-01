@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
 
-// ISR: Revalidate this page every 60 seconds so new products appear quickly
+// ISR: Revalidate this page every 60 seconds
 export const revalidate = 60; 
 
 export const metadata = {
@@ -11,7 +11,6 @@ export const metadata = {
 };
 
 export default async function ElectronicsPage() {
-  // Fetch products from Firestore strictly where category is "electronics"
   const products = await getProducts("electronics");
 
   return (
@@ -33,7 +32,8 @@ export default async function ElectronicsPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {/* UPDATED GRID: 2 columns on mobile, 3 on tablet, 4 on desktop */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
           {products.map((product) => (
             <Link 
               key={product.id} 
@@ -46,31 +46,31 @@ export default async function ElectronicsPage() {
                     src={product.images[0]}
                     alt={product.name}
                     fill
-                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-slate-400">
+                  <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs">
                     No Image
                   </div>
                 )}
               </div>
               
-              <div className="flex flex-col flex-grow p-4">
-                <p className="text-xs text-slate-500 mb-1">ID: {product.publicId}</p>
-                <h3 className="text-sm font-medium text-slate-900 line-clamp-2">
+              <div className="flex flex-col flex-grow p-3 sm:p-4">
+                <p className="text-[10px] sm:text-xs text-slate-500 mb-1">ID: {product.publicId}</p>
+                <h3 className="text-xs sm:text-sm font-medium text-slate-900 line-clamp-2">
                   {product.name}
                 </h3>
-                <div className="mt-auto pt-4 flex items-center justify-between">
-                  <span className="text-lg font-bold text-primary">
+                <div className="mt-auto pt-2 sm:pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
+                  <span className="text-sm sm:text-lg font-bold text-primary">
                     UGX {product.price.toLocaleString()}
                   </span>
-                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  <span className={`text-[10px] sm:text-xs font-medium px-2 py-0.5 sm:py-1 rounded-full w-fit ${
                     product.stock > 0 
                       ? 'bg-green-100 text-green-700' 
                       : 'bg-red-100 text-red-700'
                   }`}>
-                    {product.stock > 0 ? 'In Stock' : 'Out of Stock'}
+                    {product.stock > 0 ? 'In Stock' : 'Out'}
                   </span>
                 </div>
               </div>
