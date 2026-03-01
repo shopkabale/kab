@@ -2,8 +2,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProductByPublicId } from "@/lib/firebase/firestore";
+import OrderButton from "@/components/OrderButton";
 
-export const revalidate = 60; // ISR for performance
+export const revalidate = 60; 
 
 export default async function ProductDetailsPage({
   params,
@@ -13,7 +14,7 @@ export default async function ProductDetailsPage({
   const product = await getProductByPublicId(params.publicId);
 
   if (!product) {
-    notFound(); // Triggers a 404 page if the ID doesn't exist
+    notFound();
   }
 
   return (
@@ -26,7 +27,6 @@ export default async function ProductDetailsPage({
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div className="md:flex">
-          {/* Image Section */}
           <div className="md:w-1/2 relative aspect-square bg-slate-100">
             {product.images && product.images.length > 0 ? (
               <Image
@@ -44,7 +44,6 @@ export default async function ProductDetailsPage({
             )}
           </div>
 
-          {/* Details Section */}
           <div className="md:w-1/2 p-8 flex flex-col">
             <div className="uppercase tracking-wide text-sm text-primary font-semibold">
               ID: {product.publicId}
@@ -70,12 +69,9 @@ export default async function ProductDetailsPage({
               </p>
             </div>
 
-            <button 
-              disabled={product.stock <= 0}
-              className="w-full bg-slate-900 text-white py-4 px-8 rounded-lg font-bold text-lg hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Order Now (Cash on Delivery)
-            </button>
+            {/* Replaced standard HTML button with our new Interactive Component */}
+            <OrderButton product={product} />
+            
           </div>
         </div>
       </div>
