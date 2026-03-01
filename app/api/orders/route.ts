@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { Order } from "@/types";
+import { sendOrderConfirmation } from "@/lib/brevo";
 
 export async function POST(request: Request) {
   try {
@@ -11,8 +12,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
+    // 1. Fetch user to get their email securely for Brevo
+    const userDoc = await adminDb.collection("users").doc(userId).get();
+    if (!userDoc.exists) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    const userData = userDoc.data();
+
+    // 2. Generate Order in a secure transaction
     const counterRef = adminDb.collection("counters").doc("order_ORD");
     const newOrderRef = adminDb.collection("orders").doc();
+    const orderTotal = Number(price) * (quantity || 1);
 
     const orderNumber = await adminDb.runTransaction(async (transaction) => {
       const counterDoc = await transaction.get(counterRef);
@@ -37,7 +47,7 @@ export async function POST(request: Request) {
             price: Number(price),
           }
         ],
-        total: Number(price) * (quantity || 1),
+        total: orderTotal,
         paymentMethod: "cash_on_delivery",
         status: "pending",
         createdAt: Date.now(),
@@ -46,6 +56,17 @@ export async function POST(request: Request) {
       transaction.set(newOrderRef, newOrder);
       return formattedId;
     });
+
+    // 3. Fire off the Brevo Email silently in the background
+    // We don't await this blocking the response, so the user sees success instantly
+    if (userData?.email) {
+      sendOrderConfirmation(
+        userData.email,
+        userData.displayName || "Customer",
+        orderNumber,
+        orderTotal
+      ).catch(err => console.error("Background email failed:", err));
+    }
 
     return NextResponse.json({ success: true, orderNumber }, { status: 201 });
 
