@@ -16,13 +16,16 @@ export async function GET(request: Request) {
     }
 
     // Fetch orders belonging to this user, newest first
+    // ⚠️ REQUIRES FIRESTORE COMPOSITE INDEX: userId (ASC) + createdAt (DESC)
     const snapshot = await adminDb
       .collection("orders")
       .where("userId", "==", userId)
       .orderBy("createdAt", "desc")
       .get();
 
+    // ✅ FIX: Added id: doc.id so the frontend can properly render the list
     const orders = snapshot.docs.map((doc) => ({
+      id: doc.id,
       ...doc.data(),
     })) as Order[];
 
