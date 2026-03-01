@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation"; // <-- 1. Added import
 import { useAuth } from "@/components/AuthProvider";
 import SearchBar from "@/components/SearchBar";
 
 export default function Navbar() {
+  const pathname = usePathname(); // <-- 2. Call the hook
   const { user, loading, signIn, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -16,6 +18,11 @@ export default function Navbar() {
       document.body.style.overflow = 'unset';
     }
   }, [isMobileMenuOpen]);
+
+  // <-- 3. THE FIX: Hide this navbar entirely on admin pages
+  if (pathname?.startsWith("/admin")) {
+    return null; 
+  }
 
   return (
     <>
@@ -29,7 +36,7 @@ export default function Navbar() {
       <nav className="fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-slate-200 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16 gap-4 sm:gap-6">
-            
+
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="text-xl font-black text-slate-900 tracking-tight">
                 Kabale<span className="text-primary">Online</span>
@@ -39,7 +46,7 @@ export default function Navbar() {
             <div className="hidden md:flex flex-1 max-w-md justify-center">
               <SearchBar />
             </div>
-            
+
             <div className="hidden xl:flex items-center space-x-6">
               <Link href="/products" className="text-slate-600 hover:text-primary text-sm font-semibold transition-colors">
                 All Items
@@ -66,7 +73,6 @@ export default function Navbar() {
                 <div className="flex items-center gap-4 relative group ml-2">
                   <div className="flex flex-col text-right">
                     <span className="text-xs text-slate-500 font-medium">Hello,</span>
-                    {/* CRITICAL FIX: Safe fallback for displayName */}
                     <span className="text-sm font-bold text-slate-900 leading-none">
                       {(user.displayName || "User").split(' ')[0]}
                     </span>
@@ -76,7 +82,6 @@ export default function Navbar() {
                        {user.photoURL ? (
                          <img src={user.photoURL} alt="profile" className="w-full h-full object-cover" />
                        ) : (
-                         /* CRITICAL FIX: Safe fallback for charAt */
                          (user.displayName || "U").charAt(0).toUpperCase()
                        )}
                     </div>
@@ -127,7 +132,7 @@ export default function Navbar() {
         </div>
 
         <div className={`xl:hidden absolute w-full bg-white border-t border-slate-200 shadow-xl transition-all duration-300 ease-in-out origin-top ${isMobileMenuOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'}`}>
-          
+
           <div className="px-4 pt-4 pb-2 md:hidden">
             <SearchBar />
           </div>
@@ -146,7 +151,7 @@ export default function Navbar() {
               Student Market
             </Link>
           </div>
-          
+
           <div className="px-4 pt-4 pb-6 bg-slate-50">
             {loading ? (
               <div className="flex justify-center py-2">
@@ -156,12 +161,10 @@ export default function Navbar() {
               <div className="space-y-3">
                 <div className="px-3 pb-2 flex items-center gap-3">
                    <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold overflow-hidden">
-                       {/* CRITICAL FIX: Safe fallback for charAt */}
                        {user.photoURL ? <img src={user.photoURL} alt="profile" className="w-full h-full object-cover" /> : (user.displayName || "U").charAt(0).toUpperCase()}
                    </div>
                   <div>
                     <p className="text-xs text-slate-500">Logged in as</p>
-                    {/* CRITICAL FIX: Safe fallback for displayName */}
                     <p className="text-sm font-bold text-slate-900">{user.displayName || "Kabale User"}</p>
                   </div>
                 </div>
