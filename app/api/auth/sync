@@ -1,0 +1,47 @@
+// app/api/auth/sync/route.ts
+import { NextResponse } from "next/server";
+import { adminAuth, adminDb } from "@/lib/firebase/admin";
+import { User, Role } from "@/types";
+
+export async function POST(request: Request) {
+  try {
+    const authHeader = request.headers.get("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const token = authHeader.split("Bearer ")[1];
+    
+    // Verify the token securely on the server
+    const decodedToken = await adminAuth.verifyIdToken(token);
+    const { uid, email, name, picture } = decodedToken;
+
+    if (!email) {
+      return NextResponse.json({ error: "Email required" }, { status: 400 });
+    }
+
+    const userRef = adminDb.collection("users").doc(uid);
+    const userSnap = await userRef.get();
+
+    // If user doesn't exist, create them with the default "customer" role
+    if (!userSnap.exists) {
+      const newUser: User = {
+        id: uid,
+        email: email,
+        displayName: name || "New User",
+        photoURL: picture || "",
+        role: "customer" as Role, // Strict role enforcement
+        createdAt: Date.now(),
+      };
+
+      await userRef.set(newUser);
+      return NextResponse.json({ user: newUser, status: "created" }, { status: 201 });
+    }
+
+    return NextResponse.json({ user: userSnap.data(), status: "synced" }, { status: 200 });
+
+  } catch (error) {
+    console.error("Auth Sync Error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
