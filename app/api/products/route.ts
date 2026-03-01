@@ -15,9 +15,19 @@ const getCategoryPrefix = (category: string) => {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, category, price, stock, images, storeId } = body;
+    const { 
+      title, // Using title to match your new spec
+      category, 
+      price, 
+      condition,
+      description,
+      images, 
+      sellerId,
+      sellerName,
+      sellerPhone 
+    } = body;
 
-    if (!name || !category || !price) {
+    if (!title || !category || !price) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -37,16 +47,24 @@ export async function POST(request: Request) {
 
       transaction.set(counterRef, { seq: nextSeq }, { merge: true });
 
-      const newProduct: Product = {
+      // Build the product using your exact new MVP schema
+      const newProduct = {
         id: newProductRef.id,
         publicId: formattedId,
-        name,
-        slug: name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, ""),
+        name: title, // Keeping 'name' for backwards compatibility, but mapped from 'title'
+        title: title,
+        slug: title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, ""),
         category,
-        storeId: storeId || "SYSTEM",
         price: Number(price),
-        stock: Number(stock),
+        condition: condition || "used",
+        description: description || "",
         images: images || [],
+        sellerId: sellerId || "SYSTEM",
+        sellerName: sellerName || "Anonymous",
+        sellerPhone: sellerPhone || "",
+        status: "active", // AUTO-PUBLISH: Skips admin verification
+        views: 0,
+        stock: 1, // Defaulting to 1 for individual items
         createdAt: Date.now(),
       };
 
@@ -54,19 +72,17 @@ export async function POST(request: Request) {
       return formattedId;
     });
 
-    // === NEW: Sync to Algolia ===
-    // We only send the data necessary for search to keep Algolia costs low
+    // Sync to Algolia for instant search
     try {
       await algoliaIndex.saveObject({
-        objectID: publicId, // Algolia requires an objectID
-        name,
+        objectID: publicId,
+        name: title,
         category,
         price: Number(price),
         image: images && images.length > 0 ? images[0] : "",
       });
     } catch (algoliaError) {
       console.error("Failed to sync to Algolia:", algoliaError);
-      // We don't fail the whole request if Algolia fails, the product is already in the database
     }
 
     return NextResponse.json({ success: true, publicId }, { status: 201 });
