@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@brevo/inbound": "^2.0.0",
+    "@getbrevo/brevo": "^4.0.0",
     "algoliasearch": "^4.22.0",
     "cloudinary": "^2.0.0",
     "firebase": "^10.8.0",
