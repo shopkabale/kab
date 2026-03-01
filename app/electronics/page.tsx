@@ -35,7 +35,6 @@ export default async function ElectronicsPage() {
           {products.map((product) => (
             <Link 
               key={product.id} 
-              // FIX APPLIED HERE:
               href={`/product/${product.publicId || product.id}`}
               className="group flex flex-col bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
             >
@@ -43,7 +42,7 @@ export default async function ElectronicsPage() {
                 {product.images && product.images.length > 0 ? (
                   <Image
                     src={product.images[0]}
-                    alt={product.name}
+                    alt={product.name || "Product Image"}
                     fill
                     sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
@@ -60,16 +59,19 @@ export default async function ElectronicsPage() {
                   ID: {product.publicId || product.id.slice(0, 8)}
                 </p>
                 <h3 className="text-xs sm:text-sm font-medium text-slate-900 line-clamp-2">
-                  {product.name}
+                  {product.name || "Unnamed Item"}
                 </h3>
                 <div className="mt-auto pt-2 sm:pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
                   <span className="text-sm sm:text-lg font-bold text-primary">
-                    UGX {product.price.toLocaleString()}
+                    {/* CRITICAL FIX: Safe mathematical casting prevents crash */}
+                    UGX {(Number(product.price) || 0).toLocaleString()}
                   </span>
                   <span className={`text-[10px] sm:text-xs font-medium px-2 py-0.5 sm:py-1 rounded-full w-fit ${
-                    product.stock > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    (Number(product.stock) || 0) > 0 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-red-100 text-red-700'
                   }`}>
-                    {product.stock > 0 ? 'In Stock' : 'Out'}
+                    {(Number(product.stock) || 0) > 0 ? 'In Stock' : 'Out'}
                   </span>
                 </div>
               </div>
