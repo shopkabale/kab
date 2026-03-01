@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { AuthProvider } from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,12 +16,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
+      <body className="flex flex-col min-h-screen bg-background text-slate-900">
         <AuthProvider>
           <Navbar />
-          <main className="min-h-screen max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24">
+          {/* pt-24 pushes content down so it's not hidden behind the fixed Navbar */}
+          <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-12 w-full">
             {children}
           </main>
+          <Footer />
         </AuthProvider>
       </body>
     </html>
