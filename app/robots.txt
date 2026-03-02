@@ -1,0 +1,17 @@
+import { MetadataRoute } from 'next';
+
+export default function robots(): MetadataRoute.Robots {
+  return {
+    rules: {
+      userAgent: '*',
+      allow: '/',
+      disallow: [
+        '/admin/',    // Keeps your blog editor private
+        '/checkout/', // Keeps buyer info out of search
+        '/api/',      // Keeps your backend routes hidden
+        '/edit/',     // Keeps product editing pages private
+      ],
+    },
+    sitemap: 'https://www.kabaleonline.com/sitemap.xml',
+  };
+}
