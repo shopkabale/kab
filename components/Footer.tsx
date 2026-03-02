@@ -2,85 +2,131 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { FaWhatsapp, FaFacebookF, FaInstagram, FaXTwitter } from "react-icons/fa6";
 
 export default function Footer() {
   const pathname = usePathname();
   const currentYear = new Date().getFullYear();
 
-  // THE FIX: Hide this entire footer on admin pages!
-  if (pathname?.startsWith("/admin")) {
-    return null; 
-  }
+  // Hide footer on admin pages
+  if (pathname?.startsWith("/admin")) return null;
 
   return (
-    <footer className="bg-slate-900 text-slate-300 border-t border-slate-800 mt-auto">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="bg-black text-neutral-400 border-t border-neutral-800 mt-auto text-xs md:text-sm">
+      <div className="max-w-7xl mx-auto px-6 py-10 md:py-14">
 
-          {/* Brand & Mission */}
-          <div className="md:col-span-2">
-            <Link href="/" className="text-2xl font-bold text-white mb-4 inline-block tracking-tight">
+        {/* Main Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
+
+          {/* Brand */}
+          <div className="col-span-2 md:col-span-1">
+            <Link
+              href="/"
+              className="text-xl md:text-2xl font-semibold text-white tracking-tight"
+            >
               Kabale<span className="text-primary">Online</span>
             </Link>
-            <p className="text-sm text-slate-400 max-w-sm leading-relaxed mb-6">
-              The Better Way to Inform Your Community. We connect students at Kabale University, local farmers, and verified vendors for safe, Cash-on-Delivery commerce within Kabale town.
+            <p className="mt-4 text-neutral-500 leading-relaxed max-w-xs">
+              The modern marketplace connecting Kabale University students,
+              farmers, and trusted local vendors.
             </p>
           </div>
 
-          {/* Quick Links (Updated to dynamic category routes) */}
+          {/* Marketplace */}
           <div>
-            <h3 className="text-sm font-bold text-white tracking-wider uppercase mb-4">Marketplace</h3>
+            <h3 className="text-white text-[11px] uppercase tracking-widest mb-4">
+              Marketplace
+            </h3>
             <ul className="space-y-3">
-<li>
-      <Link href="/blog" className="text-sm text-primary hover:text-white transition-colors font-bold">Campus Journal</Link>
-    </li>
-              <li>
-                <Link href="/products" className="text-sm hover:text-primary transition-colors">All Items</Link>
-              </li>
-              <li>
-                <Link href="/category/electronics" className="text-sm hover:text-primary transition-colors">Electronics</Link>
-              </li>
-              <li>
-                <Link href="/category/agriculture" className="text-sm hover:text-primary transition-colors">Agriculture</Link>
-              </li>
-              <li>
-                <Link href="/category/student_item" className="text-sm hover:text-primary transition-colors">Student Market</Link>
-              </li>
+              <li><Link href="/products" className="hover:text-white transition">All Items</Link></li>
+              <li><Link href="/category/electronics" className="hover:text-white transition">Electronics</Link></li>
+              <li><Link href="/category/agriculture" className="hover:text-white transition">Agriculture</Link></li>
+              <li><Link href="/category/student_item" className="hover:text-white transition">Student Market</Link></li>
             </ul>
           </div>
 
-          {/* Support & Account */}
+          {/* Company */}
           <div>
-            <h3 className="text-sm font-bold text-white tracking-wider uppercase mb-4">Account & Support</h3>
+            <h3 className="text-white text-[11px] uppercase tracking-widest mb-4">
+              Company
+            </h3>
             <ul className="space-y-3">
-              <li>
-                <Link href="/profile" className="text-sm hover:text-primary transition-colors">My Profile & Orders</Link>
-              </li>
-              <li>
-                <Link href="/sell" className="text-sm hover:text-primary transition-colors">Post an Ad (Sell)</Link>
-              </li>
-              <li className="text-sm text-slate-500 mt-4">
-                Strictly Cash on Delivery
-              </li>
-              <li className="text-sm text-slate-500">
-                Kabale, Uganda
-              </li>
+              <li><Link href="/about" className="hover:text-white transition">About</Link></li>
+              <li><Link href="/contact" className="hover:text-white transition">Contact</Link></li>
+              <li><Link href="/faq" className="hover:text-white transition">FAQ</Link></li>
+              <li><Link href="/terms" className="hover:text-white transition">Terms</Link></li>
             </ul>
           </div>
+
+          {/* Account */}
+          <div>
+            <h3 className="text-white text-[11px] uppercase tracking-widest mb-4">
+              Account
+            </h3>
+            <ul className="space-y-3">
+              <li><Link href="/profile" className="hover:text-white transition">My Profile</Link></li>
+              <li><Link href="/sell" className="hover:text-white transition">Post an Ad</Link></li>
+              <li className="text-neutral-600 pt-2">Cash on Delivery Only</li>
+              <li className="text-neutral-600">Kabale, Uganda</li>
+            </ul>
+          </div>
+
         </div>
 
+        {/* Bottom Section */}
+        <div className="border-t border-neutral-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
 
-        <div className="border-t border-slate-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-          <p className="text-sm text-slate-500">
-            &copy; {currentYear} Kabale Online. All rights reserved.
+          {/* Copyright */}
+          <p className="text-neutral-600 text-[11px] md:text-xs">
+            © {currentYear} Kabale Online. All rights reserved.
           </p>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-green-500"></span>
-            <p className="text-xs font-medium text-slate-400">
-              Built for Kabale University & the local community.
-            </p>
+
+          {/* Social Icons */}
+          <div className="flex items-center gap-6 text-neutral-500 text-lg">
+
+            <a
+              href="https://wa.me/256759997376"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition duration-200"
+              aria-label="WhatsApp"
+            >
+              <FaWhatsapp />
+            </a>
+
+            <a
+              href="https://www.fb.com/l/6lp1kJRRR"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition duration-200"
+              aria-label="Facebook"
+            >
+              <FaFacebookF />
+            </a>
+
+            <a
+              href="https://instagram.com/okaynotice"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition duration-200"
+              aria-label="Instagram"
+            >
+              <FaInstagram />
+            </a>
+
+            <a
+              href="https://x.com/Kabale_Online"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition duration-200"
+              aria-label="X"
+            >
+              <FaXTwitter />
+            </a>
+
           </div>
         </div>
+
       </div>
     </footer>
   );
