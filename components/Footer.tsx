@@ -31,6 +31,9 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-bold text-white tracking-wider uppercase mb-4">Marketplace</h3>
             <ul className="space-y-3">
+<li>
+      <Link href="/blog" className="text-sm text-primary hover:text-white transition-colors font-bold">Campus Journal</Link>
+    </li>
               <li>
                 <Link href="/products" className="text-sm hover:text-primary transition-colors">All Items</Link>
               </li>
