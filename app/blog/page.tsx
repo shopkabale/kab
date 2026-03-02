@@ -67,15 +67,23 @@ export default async function BlogHomePage({
             </Link>
 
             <div className="kb-sub-col">
-              {topRecentPosts.map(post => (
-                <Link key={post.id} href={`/blog/${post.id}`} className="kb-sub-card">
-                  <img src={post.featuredImage || post.image || "/og-image.jpg"} alt={post.title} className="kb-sub-img" />
-                  <div className="kb-sub-info">
-                    <span className="kb-sub-cat">{post.category}</span>
-                    <h4>{post.title}</h4>
-                  </div>
-                </Link>
-              ))}
+              {topRecentPosts.map(post => {
+                 // --- CRASH FIX: Safe date handling ---
+                 const dateStr = post.publishedAt && typeof post.publishedAt.toDate === 'function' 
+                    ? post.publishedAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
+                    : "Recently";
+
+                 return (
+                  <Link key={post.id} href={`/blog/${post.id}`} className="kb-sub-card">
+                    <img src={post.featuredImage || post.image || "/og-image.jpg"} alt={post.title} className="kb-sub-img" />
+                    <div className="kb-sub-info">
+                      <span className="kb-sub-cat">{post.category}</span>
+                      <h4>{post.title}</h4>
+                      <span style={{ fontSize: "0.75rem", color: "#666" }}>{dateStr}</span>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}
@@ -91,13 +99,17 @@ export default async function BlogHomePage({
             <div className="kb-feed">
               {feedPosts.length > 0 ? (
                 feedPosts.map(post => {
-                  const date = post.publishedAt ? new Date(post.publishedAt._seconds * 1000).toLocaleDateString() : "Recently";
+                  // --- CRASH FIX FOR FEED: Bulletproof Date Parsing ---
+                  const dateStr = post.publishedAt && typeof post.publishedAt.toDate === 'function' 
+                    ? post.publishedAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
+                    : "Recently";
+
                   return (
                     <Link key={post.id} href={`/blog/${post.id}`} className="kb-article-card">
                       <img src={post.featuredImage || post.image || "/og-image.jpg"} alt={post.title} className="kb-article-img" />
                       <div>
                         <div className="kb-article-meta">
-                          <span style={{ color: "#D97706" }}>{post.category}</span> • {date}
+                          <span style={{ color: "#D97706" }}>{post.category}</span> • {dateStr}
                         </div>
                         <h3 className="kb-article-title">{post.title}</h3>
                         <p className="kb-article-excerpt">{post.excerpt}</p>
@@ -117,7 +129,7 @@ export default async function BlogHomePage({
           <aside className="kb-sidebar">
             {/* Newsletter */}
             <div className="kb-widget kb-newsletter-box">
-              <span style={{ fontSize: "2.5rem", display: "block", marginBottom: "10px", color: "#D97706" }}>💌</span>
+              <span style={{ fontSize: "2.5rem", display: "block", margin: "0 auto 10px", color: "#D97706" }}>💌</span>
               <h3 style={{ fontSize: "1.4rem" }}>The Weekly Drop</h3>
               <p>Join students getting thrift alerts & campus updates.</p>
               <form action="#" method="POST">
@@ -133,15 +145,18 @@ export default async function BlogHomePage({
             <div className="kb-widget">
               <div className="kb-widget-title">Trending Now</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "15px" }}>
-                {allPosts.slice(0, 4).map((post, idx) => (
+                {allPosts.slice(0, 4).map((post) => {
+                   const readTimeStr = typeof post.readTime === 'number' ? `${post.readTime} min read` : (post.readTime || '3 min read');
+                   return (
                    <Link key={post.id} href={`/blog/${post.id}`} style={{ display: "flex", gap: "15px", alignItems: "center", textDecoration: "none", color: "inherit", borderBottom: "1px solid #eee", paddingBottom: "10px" }}>
                      <img src={post.featuredImage || post.image || "/og-image.jpg"} style={{ width: "60px", height: "60px", borderRadius: "50%", objectFit: "cover" }} alt={post.title} />
                      <div>
-                       <h4 style={{ fontSize: "0.95rem", fontWeight: 700, margin: "0 0 4px" }}>{post.title}</h4>
-                       <span style={{ fontSize: "0.75rem", color: "#888" }}>{post.readTime || '3 min read'}</span>
+                       <h4 style={{ fontSize: "0.95rem", fontWeight: 700, margin: "0 0 4px", color: '#111' }}>{post.title}</h4>
+                       <span style={{ fontSize: "0.75rem", color: "#888" }}>{readTimeStr}</span>
                      </div>
                    </Link>
-                ))}
+                   );
+                })}
               </div>
             </div>
           </aside>
