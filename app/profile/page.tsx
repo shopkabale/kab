@@ -5,10 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { Order, Product } from "@/types";
+import SellerDashboard from "@/components/SellerDashboard"; // <-- 1. IMPORT ADDED HERE
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState<"purchases" | "listings">("purchases");
+  // 2. STATE UPDATED TO INCLUDE "seller" TAB
+  const [activeTab, setActiveTab] = useState<"purchases" | "listings" | "seller">("purchases");
+  
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [listings, setListings] = useState<Product[]>([]);
@@ -88,7 +91,7 @@ export default function ProfilePage() {
 
   return (
     <div className="py-8 max-w-4xl mx-auto px-4 sm:px-0">
-      
+
       {/* Profile Header */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 mb-8 flex flex-col sm:flex-row items-center gap-6">
         {user.photoURL ? (
@@ -110,16 +113,20 @@ export default function ProfilePage() {
 
       {/* Tabs */}
       <div className="flex border-b border-slate-200 mb-8 overflow-x-auto scrollbar-hide">
-        <button onClick={() => setActiveTab("purchases")} className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === "purchases" ? "border-primary text-primary" : "border-transparent text-slate-500"}`}>
+        <button onClick={() => setActiveTab("purchases")} className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === "purchases" ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
           My Purchases ({orders.length})
         </button>
-        <button onClick={() => setActiveTab("listings")} className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === "listings" ? "border-primary text-primary" : "border-transparent text-slate-500"}`}>
+        <button onClick={() => setActiveTab("listings")} className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === "listings" ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
           My Ads & Listings ({listings.length})
+        </button>
+        {/* 3. NEW SELLER DASHBOARD TAB */}
+        <button onClick={() => setActiveTab("seller")} className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === "seller" ? "border-amber-500 text-amber-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+          Sales Dashboard 📈
         </button>
       </div>
 
       <div className="min-h-[400px]">
-        
+
         {/* === PURCHASES TAB === */}
         {activeTab === "purchases" && (
            <div>
@@ -133,7 +140,6 @@ export default function ProfilePage() {
            ) : (
              <div className="space-y-4">
                {orders.map((order) => {
-                 // SAFE FALLBACKS FOR LEGACY ORDERS
                  const safeOrderNumber = order.orderNumber || "LEGACY-ORD";
                  const safeTotal = Number(order.total) || 0;
                  const safeStatus = order.status || "pending";
@@ -181,7 +187,6 @@ export default function ProfilePage() {
             ) : (
               <div className="space-y-4">
                 {listings.map((product) => {
-                  // SAFE FALLBACKS FOR LEGACY PRODUCTS
                   const safeName = product.name || "Unnamed Item";
                   const safePrice = Number(product.price) || 0;
                   const safeStatus = product.status || "active";
@@ -197,7 +202,7 @@ export default function ProfilePage() {
                           <span className="text-[10px] text-slate-400 absolute inset-0 flex items-center justify-center">No Img</span>
                         )}
                       </Link>
-                      
+
                       <div className="flex-grow flex flex-col justify-between">
                         <div>
                           <Link href={`/item/${safeId}`} className="text-sm font-bold text-slate-900 hover:text-primary line-clamp-1">
@@ -231,6 +236,12 @@ export default function ProfilePage() {
             )}
           </div>
         )}
+
+        {/* === 4. SELLER DASHBOARD TAB === */}
+        {activeTab === "seller" && (
+          <SellerDashboard userId={user.id} />
+        )}
+
       </div>
     </div>
   );
