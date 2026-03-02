@@ -48,7 +48,21 @@ export default async function BlogPostPage({ params }: Props) {
     .filter(p => p.id !== post.id)
     .slice(0, 3);
 
-  const dateStr = post.publishedAt ? new Date(post.publishedAt._seconds * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "Recently";
+  // --- THE CRASH FIX: Bulletproof Date Parsing ---
+  let dateStr = "Recently";
+  if (post.publishedAt) {
+    if (typeof post.publishedAt.toDate === 'function') {
+      dateStr = post.publishedAt.toDate().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    } else if (post.publishedAt._seconds) {
+      dateStr = new Date(post.publishedAt._seconds * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    }
+  }
+
+  // Handle readTime whether it's stored as a number (3) or string ("3 mins")
+  const formattedReadTime = typeof post.readTime === 'number' 
+    ? `${post.readTime} min read` 
+    : (post.readTime || '3 min read');
+
   const htmlContent = await marked.parse(post.content || "No content available.");
   const displayImage = post.featuredImage || post.image;
 
@@ -56,7 +70,7 @@ export default async function BlogPostPage({ params }: Props) {
     <>
       <BlogControls postId={post.id} title={post.title} />
 
-      <main className="pb-20">
+      <main className="pb-20 pt-8">
         <article className="kb-article-wrapper">
           <header className="kb-post-header">
             <span className="kb-cat-badge">{post.category || 'Journal'}</span>
@@ -65,7 +79,7 @@ export default async function BlogPostPage({ params }: Props) {
               <img src="/icon-192x192.png" style={{ width: '40px', height: '40px', borderRadius: '50%', border: '1px solid #eee' }} alt="Author" />
               <div>
                 <span style={{ fontWeight: 700, color: '#111' }}>{post.author || "Kabale Online"}</span><br />
-                <span style={{ color: '#666', fontSize: '0.85rem' }}>{dateStr}</span> • <span style={{ color: '#666', fontSize: '0.85rem' }}>{post.readTime || '3 min read'}</span>
+                <span style={{ color: '#666', fontSize: '0.85rem' }}>{dateStr}</span> • <span style={{ color: '#666', fontSize: '0.85rem' }}>{formattedReadTime}</span>
               </div>
             </div>
           </header>
@@ -94,7 +108,7 @@ export default async function BlogPostPage({ params }: Props) {
                     <img src={related.featuredImage || related.image || "/og-image.jpg"} className="kb-next-img" alt={related.title} />
                     <div className="kb-next-body">
                       <div style={{ fontSize: '0.75rem', color: '#D97706', fontWeight: 700, textTransform: 'uppercase', marginBottom: '5px' }}>{related.category}</div>
-                      <h4 style={{ fontWeight: 800, fontSize: '1.1rem', margin: '0', lineHeight: 1.4, fontFamily: "'Inter', sans-serif" }}>{related.title}</h4>
+                      <h4 style={{ fontWeight: 800, fontSize: '1.1rem', margin: '0', lineHeight: 1.4, fontFamily: "'Inter', sans-serif", color: '#111' }}>{related.title}</h4>
                     </div>
                   </Link>
                 ))}
