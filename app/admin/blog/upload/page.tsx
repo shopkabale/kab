@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { doc, getDoc, addDoc, updateDoc, collection, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/client"; // Ensure this is your client DB
+import { db } from "@/lib/firebase/config"; // Ensure this is your client DB
 
 // 1. DYNAMICALLY IMPORT THE EDITOR (Crucial for Next.js)
 // This prevents SSR crashes because the editor needs the 'window' object
