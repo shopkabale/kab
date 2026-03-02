@@ -67,7 +67,7 @@ export default function Navbar() {
               <div className="h-5 w-px bg-slate-200 mx-2"></div>
 
               <Link href="/sell" className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-slate-800 transition-colors shadow-sm">
-                <span>➕</span> Post Ad
+                <span>➕</span> Post Your Item
               </Link>
 
               {loading ? (
@@ -114,7 +114,7 @@ export default function Navbar() {
 
             <div className="flex items-center xl:hidden gap-3">
                <Link href="/sell" className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm">
-                Post Ad
+                Post Your Item
               </Link>
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
