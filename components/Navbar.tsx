@@ -60,6 +60,9 @@ export default function Navbar() {
               <Link href="/category/student_item" className="text-slate-600 hover:text-primary text-sm font-semibold transition-colors">
                 Student Market
               </Link>
+<Link href="/blog" className="text-slate-600 hover:text-primary text-sm font-semibold transition-colors">
+  Journal
+</Link>
 
               <div className="h-5 w-px bg-slate-200 mx-2"></div>
 
@@ -150,6 +153,9 @@ export default function Navbar() {
             <Link href="/category/student_item" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-3 rounded-lg text-base font-semibold text-slate-700 hover:text-primary hover:bg-slate-50">
               Student Market
             </Link>
+<Link href="/blog" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-3 rounded-lg text-base font-semibold text-slate-700 hover:text-primary hover:bg-slate-50">
+  Journal
+</Link>
           </div>
 
           <div className="px-4 pt-4 pb-6 bg-slate-50">
