@@ -49,7 +49,7 @@ export default async function BlogPostPage({ params }: Props) {
     .slice(0, 3);
 
   const dateStr = post.publishedAt ? new Date(post.publishedAt._seconds * 1000).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "Recently";
-  const htmlContent = marked.parse(post.content || "No content available.");
+  const htmlContent = await marked.parse(post.content || "No content available.");
   const displayImage = post.featuredImage || post.image;
 
   return (
