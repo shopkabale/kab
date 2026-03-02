@@ -11,22 +11,26 @@ type Props = { params: { id: string } };
 
 // --- DYNAMIC SEO FOR WHATSAPP/TWITTER ---
 export async function generateMetadata({ params }: Props, parent: ResolvingMetadata): Promise<Metadata> {
-  const snap = await adminDb.collection("blog_posts").doc(params.id).get();
-  if (!snap.exists) return { title: "Article Not Found | Kabale Online" };
-  
-  const post = snap.data();
-  const displayImage = post?.featuredImage || post?.image || "/og-image.jpg";
+  try {
+    const snap = await adminDb.collection("blog_posts").doc(params.id).get();
+    if (!snap.exists) return { title: "Article Not Found | Kabale Online" };
+    
+    const post = snap.data();
+    const displayImage = post?.featuredImage || post?.image || "/og-image.jpg";
 
-  return {
-    title: `${post?.title} | Kabale Online Journal`,
-    description: post?.excerpt || "Read the latest updates on Kabale Online.",
-    openGraph: {
-      title: post?.title,
-      description: post?.excerpt,
-      images: [{ url: displayImage, width: 1200, height: 630 }],
-      type: "article",
-    }
-  };
+    return {
+      title: `${post?.title} | Kabale Online Journal`,
+      description: post?.excerpt || "Read the latest updates on Kabale Online.",
+      openGraph: {
+        title: post?.title,
+        description: post?.excerpt,
+        images: [{ url: displayImage, width: 1200, height: 630 }],
+        type: "article",
+      }
+    };
+  } catch (error) {
+    return { title: "Journal | Kabale Online" };
+  }
 }
 
 // --- MAIN SERVER COMPONENT ---
@@ -36,19 +40,23 @@ export default async function BlogPostPage({ params }: Props) {
 
   const post = { id: snap.id, ...snap.data() } as any;
 
-  // Fetch Related Posts
-  const relatedQuery = await adminDb.collection("blog_posts")
-    .where("category", "==", post.category || "General")
-    .orderBy("publishedAt", "desc")
-    .limit(4)
-    .get();
+  // --- THE CRASH FIX: Removed 'orderBy' to prevent Firebase Index errors & added Try/Catch ---
+  let relatedPosts: any[] = [];
+  try {
+    const relatedQuery = await adminDb.collection("blog_posts")
+      .where("category", "==", post.category || "General")
+      .limit(4)
+      .get();
 
-  const relatedPosts = relatedQuery.docs
-    .map(d => ({ id: d.id, ...d.data() } as any))
-    .filter(p => p.id !== post.id)
-    .slice(0, 3);
+    relatedPosts = relatedQuery.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(p => p.id !== post.id)
+      .slice(0, 3);
+  } catch (error) {
+    console.error("Failed to load related posts:", error);
+  }
 
-  // --- THE CRASH FIX: Bulletproof Date Parsing ---
+  // Safe Date Parsing
   let dateStr = "Recently";
   if (post.publishedAt) {
     if (typeof post.publishedAt.toDate === 'function') {
@@ -58,12 +66,13 @@ export default async function BlogPostPage({ params }: Props) {
     }
   }
 
-  // Handle readTime whether it's stored as a number (3) or string ("3 mins")
+  // Safe Read Time
   const formattedReadTime = typeof post.readTime === 'number' 
     ? `${post.readTime} min read` 
     : (post.readTime || '3 min read');
 
-  const htmlContent = await marked.parse(post.content || "No content available.");
+  // Ensure content is strictly a string before parsing
+  const htmlContent = await marked.parse(String(post.content || "No content available."));
   const displayImage = post.featuredImage || post.image;
 
   return (
