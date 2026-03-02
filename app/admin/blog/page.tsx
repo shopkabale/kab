@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { collection, getDocs, orderBy, query, deleteDoc, doc } from "firebase/firestore";
-import { db } from "@/lib/firebase/firestore.ts"; // Make sure this points to your client config!
+import { db } from "@/lib/firebase/config"; // Make sure this points to your client config!
 
 export default function AdminBlogDashboard() {
   const [posts, setPosts] = useState<any[]>([]);
