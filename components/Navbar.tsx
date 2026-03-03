@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation"; // <-- 1. Added import
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import SearchBar from "@/components/SearchBar";
 
 export default function Navbar() {
-  const pathname = usePathname(); // <-- 2. Call the hook
+  const pathname = usePathname();
   const { user, loading, signIn, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -19,7 +19,7 @@ export default function Navbar() {
     }
   }, [isMobileMenuOpen]);
 
-  // <-- 3. THE FIX: Hide this navbar entirely on admin pages
+  // Hide this navbar entirely on admin pages
   if (pathname?.startsWith("/admin")) {
     return null; 
   }
@@ -39,7 +39,7 @@ export default function Navbar() {
 
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="text-xl font-black text-slate-900 tracking-tight">
-                Kabale<span className="text-primary">Online</span>
+                Okay<span className="text-[#D97706]">Notice</span>
               </Link>
             </div>
 
@@ -47,22 +47,26 @@ export default function Navbar() {
               <SearchBar />
             </div>
 
+            {/* DESKTOP MENU */}
             <div className="hidden xl:flex items-center space-x-6">
-              <Link href="/products" className="text-slate-600 hover:text-primary text-sm font-semibold transition-colors">
+              <Link href="/products" className="text-slate-600 hover:text-[#D97706] text-sm font-semibold transition-colors">
                 All Items
               </Link>
-              <Link href="/category/electronics" className="text-slate-600 hover:text-primary text-sm font-semibold transition-colors">
+              <Link href="/category/electronics" className="text-slate-600 hover:text-[#D97706] text-sm font-semibold transition-colors">
                 Electronics
               </Link>
-              <Link href="/category/agriculture" className="text-slate-600 hover:text-primary text-sm font-semibold transition-colors">
+              <Link href="/category/agriculture" className="text-slate-600 hover:text-[#D97706] text-sm font-semibold transition-colors">
                 Agriculture
               </Link>
-              <Link href="/category/student_item" className="text-slate-600 hover:text-primary text-sm font-semibold transition-colors">
+              <Link href="/category/student_item" className="text-slate-600 hover:text-[#D97706] text-sm font-semibold transition-colors">
                 Student Market
               </Link>
-<Link href="/blog" className="text-slate-600 hover:text-primary text-sm font-semibold transition-colors">
-  Journal
-</Link>
+              <Link href="/requests" className="text-slate-600 hover:text-[#D97706] text-sm font-semibold transition-colors">
+                Requests
+              </Link>
+              <Link href="/blog" className="text-slate-600 hover:text-[#D97706] text-sm font-semibold transition-colors">
+                Journal
+              </Link>
 
               <div className="h-5 w-px bg-slate-200 mx-2"></div>
 
@@ -71,7 +75,7 @@ export default function Navbar() {
               </Link>
 
               {loading ? (
-                <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin ml-4"></div>
+                <div className="h-6 w-6 rounded-full border-2 border-[#D97706] border-t-transparent animate-spin ml-4"></div>
               ) : user ? (
                 <div className="flex items-center gap-4 relative group ml-2">
                   <div className="flex flex-col text-right">
@@ -81,7 +85,7 @@ export default function Navbar() {
                     </span>
                   </div>
                   <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold border-2 border-white shadow-sm cursor-pointer overflow-hidden">
+                    <div className="w-10 h-10 rounded-full bg-[#D97706] text-white flex items-center justify-center font-bold border-2 border-white shadow-sm cursor-pointer overflow-hidden">
                        {user.photoURL ? (
                          <img src={user.photoURL} alt="profile" className="w-full h-full object-cover" />
                        ) : (
@@ -89,10 +93,10 @@ export default function Navbar() {
                        )}
                     </div>
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                      <Link href="/profile" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary">
+                      <Link href="/profile" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-[#D97706]">
                         My Profile & Orders
                       </Link>
-                      <Link href="/sell" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-primary">
+                      <Link href="/sell" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-[#D97706]">
                         My Listings
                       </Link>
                       <hr className="my-2 border-slate-100" />
@@ -105,16 +109,17 @@ export default function Navbar() {
               ) : (
                 <button
                   onClick={signIn}
-                  className="rounded-lg bg-white border-2 border-slate-200 px-5 py-2 text-sm font-bold text-slate-700 hover:border-primary hover:text-primary transition-colors ml-2"
+                  className="rounded-lg bg-white border-2 border-slate-200 px-5 py-2 text-sm font-bold text-slate-700 hover:border-[#D97706] hover:text-[#D97706] transition-colors ml-2"
                 >
                   Log In
                 </button>
               )}
             </div>
 
+            {/* MOBILE TOGGLE BUTTONS */}
             <div className="flex items-center xl:hidden gap-3">
                <Link href="/sell" className="bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm">
-                Post Your Item
+                Post Item
               </Link>
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -134,39 +139,57 @@ export default function Navbar() {
           </div>
         </div>
 
-        <div className={`xl:hidden absolute w-full bg-white border-t border-slate-200 shadow-xl transition-all duration-300 ease-in-out origin-top ${isMobileMenuOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'}`}>
+        {/* MOBILE DROPDOWN MENU */}
+        <div className={`xl:hidden absolute w-full bg-white border-t border-slate-200 shadow-xl transition-all duration-300 ease-in-out origin-top ${isMobileMenuOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'} max-h-[85vh] overflow-y-auto`}>
 
           <div className="px-4 pt-4 pb-2 md:hidden">
             <SearchBar />
           </div>
 
-          <div className="px-4 py-4 space-y-2 border-b border-slate-100">
-            <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-3 rounded-lg text-base font-semibold text-slate-700 hover:text-primary hover:bg-slate-50">
+          {/* GROUP 1: Shop By Category */}
+          <div className="px-2 py-3">
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-4 mb-2">Shop by Category</h3>
+            <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2.5 rounded-lg text-base font-semibold text-slate-700 hover:text-[#D97706] hover:bg-amber-50">
               Browse All Items
             </Link>
-            <Link href="/category/electronics" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-3 rounded-lg text-base font-semibold text-slate-700 hover:text-primary hover:bg-slate-50">
+            <Link href="/category/electronics" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2.5 rounded-lg text-base font-semibold text-slate-700 hover:text-[#D97706] hover:bg-amber-50">
               Electronics
             </Link>
-            <Link href="/category/agriculture" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-3 rounded-lg text-base font-semibold text-slate-700 hover:text-primary hover:bg-slate-50">
+            <Link href="/category/agriculture" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2.5 rounded-lg text-base font-semibold text-slate-700 hover:text-[#D97706] hover:bg-amber-50">
               Agriculture
             </Link>
-            <Link href="/category/student_item" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-3 rounded-lg text-base font-semibold text-slate-700 hover:text-primary hover:bg-slate-50">
+            <Link href="/category/student_item" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2.5 rounded-lg text-base font-semibold text-slate-700 hover:text-[#D97706] hover:bg-amber-50">
               Student Market
             </Link>
-<Link href="/blog" onClick={() => setIsMobileMenuOpen(false)} className="block px-3 py-3 rounded-lg text-base font-semibold text-slate-700 hover:text-primary hover:bg-slate-50">
-  Journal
-</Link>
           </div>
 
-          <div className="px-4 pt-4 pb-6 bg-slate-50">
+          <hr className="border-slate-100 mx-4" />
+
+          {/* GROUP 2: Community & News */}
+          <div className="px-2 py-3">
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-4 mb-2">Community & News</h3>
+            <Link href="/requests" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-semibold text-slate-700 hover:text-[#D97706] hover:bg-amber-50">
+              <span>📢</span> Buyer Requests
+            </Link>
+            <Link href="/blog" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-semibold text-slate-700 hover:text-[#D97706] hover:bg-amber-50">
+              <span>📰</span> Journal & News
+            </Link>
+          </div>
+
+          <hr className="border-slate-100 mx-4" />
+
+          {/* GROUP 3: Authentication & Profile */}
+          <div className="px-4 pt-4 pb-6 bg-slate-50 mt-2">
+            <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Your Account</h3>
+            
             {loading ? (
               <div className="flex justify-center py-2">
-                <div className="h-6 w-6 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+                <div className="h-6 w-6 rounded-full border-2 border-[#D97706] border-t-transparent animate-spin"></div>
               </div>
             ) : user ? (
               <div className="space-y-3">
                 <div className="px-3 pb-2 flex items-center gap-3">
-                   <div className="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold overflow-hidden">
+                   <div className="w-10 h-10 rounded-full bg-[#D97706] text-white flex items-center justify-center font-bold overflow-hidden">
                        {user.photoURL ? <img src={user.photoURL} alt="profile" className="w-full h-full object-cover" /> : (user.displayName || "U").charAt(0).toUpperCase()}
                    </div>
                   <div>
@@ -182,7 +205,7 @@ export default function Navbar() {
                 </button>
               </div>
             ) : (
-              <button onClick={() => { signIn(); setIsMobileMenuOpen(false); }} className="w-full flex justify-center rounded-lg bg-primary px-4 py-3 text-base font-semibold text-white shadow-sm hover:bg-sky-500">
+              <button onClick={() => { signIn(); setIsMobileMenuOpen(false); }} className="w-full flex justify-center rounded-lg bg-[#D97706] px-4 py-3 text-base font-semibold text-white shadow-sm hover:bg-amber-600">
                 Log In / Register
               </button>
             )}
