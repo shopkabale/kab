@@ -89,7 +89,7 @@ export async function sendSellerNotification(
   if (!brevoApiKey || !sellerEmail) return false;
 
   const emailData = {
-    sender: { name: "Okay Notice Alerts", email: senderEmail },
+    sender: { name: "Kabale Online Alerts", email: senderEmail },
     to: [{ email: sellerEmail, name: sellerName || "Seller" }],
     subject: `💰 New Order for ${itemName}!`,
     htmlContent: `
@@ -105,7 +105,7 @@ export async function sendSellerNotification(
         </div>
         
         <p style="margin-top: 20px; text-align: center;">
-          <a href="https://wa.me/${buyerPhone.replace(/[^0-9]/g, '')}?text=Hi%20${buyerName},%20I%20am%20contacting%20you%20about%20your%20order%20for%20${itemName}%20on%20Okay%20Notice." 
+          <a href="https://wa.me/${buyerPhone.replace(/[^0-9]/g, '')}?text=Hi%20${buyerName},%20I%20am%20contacting%20you%20about%20your%20order%20for%20${itemName}%20on%20Kabale%20Online." 
              style="background-color: #25D366; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
             Click here to WhatsApp the Buyer
           </a>
@@ -135,7 +135,7 @@ export async function sendAdminAlert(
   buyerPhone: string
 ) {
   const brevoApiKey = process.env.BREVO_API_KEY;
-  const senderEmail = process.env.SENDER_EMAIL || "noreply@okaynotice.com";
+  const senderEmail = process.env.SENDER_EMAIL || "support@kabaleonline.com";
   const adminEmail = "shopkabale@gmail.com"; // Your actual admin receiving email
 
   if (!brevoApiKey) return false;
