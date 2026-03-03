@@ -1,13 +1,13 @@
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Buyer Request Board | Okay Notice Kabale",
+  title: "Buyer Request Board | Kabale Online",
   description: "See what students and locals in Kabale are looking to buy right now. Have an item? Browse the requests and make a quick, easy sale today.",
   openGraph: {
-    title: "Buyer Request Board | Okay Notice Kabale",
+    title: "Buyer Request Board | Kabale Online",
     description: "See what students and locals in Kabale are looking to buy right now. Have an item? Browse the requests and make a quick, easy sale today.",
-    url: "https://www.okaynotice.com/requests",
-    siteName: "Okay Notice",
+    url: "https://www.kabaleonline.com/requests",
+    siteName: "Kabale Online",
     images: [
       {
         url: "/og-image.jpg", // Make sure you have an og-image.jpg in your public folder!
