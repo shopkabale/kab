@@ -1,25 +1,38 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
+import { adminDb } from "@/lib/firebase/admin";
+import HotInKabale from "@/components/HotInKabale";
 
 // ISR: Revalidate the homepage every 60 seconds
 export const revalidate = 60;
 
 export default async function Home() {
-  // Fetch products to fulfill the strict 2-1-1 Featured ratio
+  // 1. Fetch products for the lottery
   const electronics = await getProducts("electronics");
   const agriculture = await getProducts("agriculture");
   const students = await getProducts("student_item");
 
-  const featuredProducts = [
-    ...electronics.slice(0, 2),
-    ...agriculture.slice(0, 1),
-    ...students.slice(0, 1),
-  ];
+  // Combine all active products and shuffle them for the "Free Featured Slot"
+  const allProducts = [...electronics, ...agriculture, ...students];
+  const shuffled = allProducts.sort(() => 0.5 - Math.random());
+  const featuredProducts = shuffled.slice(0, 4);
+
+  // 2. Fetch the latest 3 blog posts
+  let latestBlogs: any[] = [];
+  try {
+    const blogSnap = await adminDb.collection("blog_posts")
+      .orderBy("publishedAt", "desc")
+      .limit(3)
+      .get();
+    latestBlogs = blogSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  } catch (error) {
+    console.error("Failed to load blogs on homepage", error);
+  }
 
   return (
     <div className="flex flex-col gap-y-20 pb-12">
-      
+
       {/* 1. Hero Section */}
       <section className="text-center pt-12 md:pt-20 px-4">
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 mb-6 max-w-4xl mx-auto leading-tight">
@@ -74,11 +87,19 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 3. Featured Products */}
+      {/* NEW: HOT IN KABALE SECTION */}
+      <HotInKabale />
+
+      {/* 3. Random Featured Products (The Lottery) */}
       {featuredProducts.length > 0 && (
         <section>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-slate-900">Featured in Kabale</h2>
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                Today's Community Picks 🎁
+              </h2>
+              <p className="text-sm text-slate-500 mt-1">Randomly selected local sellers. Check back often!</p>
+            </div>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
             {featuredProducts.map((product) => (
@@ -102,7 +123,7 @@ export default async function Home() {
                     </div>
                   )}
                 </div>
-                
+
                 <div className="flex flex-col flex-grow p-3 sm:p-4">
                   <p className="text-[10px] sm:text-xs text-slate-500 mb-1">
                     ID: {product.publicId || product.id.slice(0, 8)}
@@ -169,6 +190,51 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* NEW: LATEST FROM THE BLOG SECTION */}
+      {latestBlogs.length > 0 && (
+        <section className="pt-8">
+          <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-4">
+            <h2 className="text-2xl font-bold text-slate-900">Kabale Campus Journal</h2>
+            <Link href="/blog" className="text-sm font-bold text-primary hover:underline">
+              Read all articles &rarr;
+            </Link>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {latestBlogs.map((blog) => {
+              // Safe Date Parsing
+              const dateStr = blog.publishedAt && typeof blog.publishedAt.toDate === 'function' 
+                ? blog.publishedAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
+                : "Recently";
+
+              return (
+                <Link key={blog.id} href={`/blog/${blog.id}`} className="group flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
+                    <img 
+                      src={blog.featuredImage || blog.image || "/og-image.jpg"} 
+                      alt={blog.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="p-6 flex flex-col flex-grow">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#D97706] mb-2">
+                      {blog.category || "General"}
+                    </span>
+                    <h3 className="text-lg font-bold text-slate-900 mb-2 leading-snug group-hover:text-primary transition-colors">
+                      {blog.title}
+                    </h3>
+                    <div className="mt-auto pt-4 flex items-center justify-between text-xs text-slate-500 font-medium border-t border-slate-100">
+                      <span>{dateStr}</span>
+                      <span>{typeof blog.readTime === 'number' ? `${blog.readTime} min read` : (blog.readTime || '3 min read')}</span>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* 5. Seller CTA */}
       <section className="bg-slate-900 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
