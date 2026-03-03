@@ -9,9 +9,11 @@ export default function ProductActions({ product }: { product: Product }) {
   const { user, signIn } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false); // NEW: Controls the Fast-Checkout Modal
 
   // Format Ugandan phone numbers for the WhatsApp API (07... to 2567...)
   const formatWhatsAppNumber = (phone: string) => {
+    if (!phone) return "";
     const cleanPhone = phone.replace(/\D/g, "");
     if (cleanPhone.startsWith("0")) {
       return `256${cleanPhone.slice(1)}`;
@@ -26,24 +28,23 @@ export default function ProductActions({ product }: { product: Product }) {
     }
     const phone = formatWhatsAppNumber(product.sellerPhone);
     const message = encodeURIComponent(
-      `Hello ${product.sellerName}, I am interested in buying your item on Kabale Online:\n\n*${product.name}*\nPrice: UGX ${product.price.toLocaleString()}\nID: ${product.publicId}\n\nIs it still available?`
+      `Hello ${product.sellerName || "there"}, I am interested in buying your item on Okay Notice:\n\n*${product.name}*\nPrice: UGX ${Number(product.price).toLocaleString()}\nID: ${product.publicId || product.id}\n\nIs it still available?`
     );
     window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
   };
 
-  const handleBuyNow = async () => {
+  // 1. First step: Check login and open the modal
+  const handleBuyNowClick = () => {
     if (!user) {
-      alert("Please sign in to place an official order.");
+      alert("Please log in to place an official order.");
       signIn();
       return;
     }
+    setShowModal(true);
+  };
 
-    const confirmOrder = window.confirm(
-      `Place an official Cash on Delivery order for ${product.name}?`
-    );
-    
-    if (!confirmOrder) return;
-
+  // 2. Second step: Execute the order when they click Proceed
+  const executeFastCheckout = async () => {
     setLoading(true);
 
     try {
@@ -51,56 +52,103 @@ export default function ProductActions({ product }: { product: Product }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.id,
+          userId: user.uid, // FIXED: user.uid is correct for Firebase
           productId: product.id,
-          price: product.price,
-          quantity: 1,
+          sellerId: product.sellerId || "SYSTEM",
+          total: product.price,
+          // Sending default fast-checkout values since we skipped the long form
+          deliveryLocation: "Kabale Town (Fast Checkout)",
+          contactPhone: "Provided via account", 
         }),
       });
 
       const data = await res.json();
 
       if (data.success) {
-        alert(`Order ${data.orderNumber} placed! The seller will be notified.`);
-        router.push("/profile"); // Redirect to their orders page
+        // Close modal and redirect straight to the success page!
+        setShowModal(false);
+        router.push(`/success/${data.orderId}`);
       } else {
-        alert("Failed to place order.");
+        alert("Failed to place order: " + (data.error || "Unknown error"));
+        setLoading(false);
       }
     } catch (error) {
       console.error(error);
-      alert("Something went wrong.");
-    } finally {
+      alert("Something went wrong with the connection.");
       setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-3 mt-8">
-      <button 
-        onClick={handleBuyNow}
-        disabled={product.stock <= 0 || loading}
-        className="w-full bg-slate-900 text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
-      >
-        {loading ? "Processing..." : "Buy Now (Cash on Delivery)"}
-      </button>
-
-      <button 
-        onClick={handleWhatsApp}
-        disabled={product.stock <= 0 || !product.sellerPhone}
-        className="w-full bg-[#25D366] text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-[#1ebe5d] transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
-      >
-        Buy via WhatsApp
-      </button>
-
-      {/* Admin God Mode Delete Button (Only visible if you are logged in as admin) */}
-      {user?.role === "admin" && (
+    <>
+      <div className="space-y-3 mt-8">
         <button 
-          onClick={() => alert("Admin Delete API not connected yet, but you are recognized as an Admin!")}
-          className="w-full mt-4 bg-red-100 text-red-600 py-3 rounded-lg font-bold text-sm hover:bg-red-200 transition-colors"
+          onClick={handleBuyNowClick}
+          disabled={product.stock <= 0 || loading}
+          className="w-full bg-slate-900 text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-slate-800 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
         >
-          [Admin Action] Delete Spam Product
+          {loading ? "Processing..." : "Buy Now (Fast Checkout)"}
         </button>
+
+        <button 
+          onClick={handleWhatsApp}
+          disabled={product.stock <= 0 || !product.sellerPhone}
+          className="w-full bg-[#25D366] text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
+        >
+          💬 Buy via WhatsApp
+        </button>
+
+        {/* Admin God Mode Delete Button */}
+        {user?.role === "admin" && (
+          <button 
+            onClick={() => alert("Admin Delete API not connected yet, but you are recognized as an Admin!")}
+            className="w-full mt-4 bg-red-50 border border-red-200 text-red-600 py-3 rounded-xl font-bold text-sm hover:bg-red-100 transition-colors"
+          >
+            🗑️ [Admin Action] Delete Product
+          </button>
+        )}
+      </div>
+
+      {/* FAST CHECKOUT MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-2 bg-[#D97706]"></div>
+            
+            <h2 className="text-2xl font-black text-slate-900 mb-2">Confirm Fast Checkout</h2>
+            
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 mt-4">
+              <p className="text-sm text-slate-600 mb-2">You are about to place an official order for:</p>
+              <p className="font-bold text-lg text-slate-900 leading-tight">{product.name}</p>
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">
+                <span className="text-sm font-medium text-slate-500">Total to pay on delivery:</span>
+                <span className="font-black text-[#D97706] text-lg">UGX {Number(product.price).toLocaleString()}</span>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-600 mb-8 font-medium">
+              By proceeding, the seller will be immediately notified via email and SMS to reserve this item for you. You only pay when the item is in your hands in Kabale.
+            </p>
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setShowModal(false)}
+                disabled={loading}
+                className="flex-1 bg-white border-2 border-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={executeFastCheckout}
+                disabled={loading}
+                className="flex-1 bg-[#D97706] text-white py-3 rounded-xl font-bold hover:bg-amber-600 transition-colors shadow-md disabled:opacity-50"
+              >
+                {loading ? "Sending..." : "Proceed & Order"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
-    </div>
+    </>
   );
 }
