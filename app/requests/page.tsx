@@ -83,15 +83,15 @@ export default function RequestsPage() {
   };
 
   const copyToClipboard = (id: string) => {
-    const url = `https://www.okaynotice.com/requests/${id}`;
+    const url = `https://www.kabaleonline.com/requests/${id}`;
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 3000);
   };
 
   const shareToWhatsApp = (req: ItemRequest) => {
-    const url = `https://www.okaynotice.com/requests/${req.id}`;
-    const text = `I am looking for a ${req.itemNeeded} on Okay Notice! Budget: UGX ${Number(req.budget).toLocaleString()}. Know anyone selling? Check it out here: ${url}`;
+    const url = `https://www.kabaleonline.com/requests/${req.id}`;
+    const text = `I am looking for a ${req.itemNeeded} on Kabale Online! Budget: UGX ${Number(req.budget).toLocaleString()}. Know anyone selling? Check it out here: ${url}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
