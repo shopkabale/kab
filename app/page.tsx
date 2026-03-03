@@ -115,7 +115,7 @@ export default async function Home() {
             {featuredProducts.map((product) => (
               <Link 
                 key={product.id} 
-                href={`/item/${product.publicId || product.id}`}
+                href={`/product/${product.publicId || product.id}`}
                 className="group flex flex-col bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
               >
                 <div className="relative aspect-square bg-slate-100 overflow-hidden">
