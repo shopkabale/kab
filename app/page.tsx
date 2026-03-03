@@ -41,7 +41,9 @@ export default async function Home() {
         <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto font-medium">
           Order today. Pay on delivery strictly within Kabale town.
         </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        
+        {/* Updated Button Row */}
+        <div className="flex flex-wrap items-center justify-center gap-4">
           <Link 
             href="/category/electronics" 
             className="w-full sm:w-auto rounded-lg bg-primary px-8 py-4 text-base font-bold text-white shadow-md hover:bg-sky-500 transition-all hover:-translate-y-1"
@@ -52,8 +54,22 @@ export default async function Home() {
             href="/category/student_item" 
             className="w-full sm:w-auto rounded-lg bg-white border-2 border-slate-200 px-8 py-4 text-base font-bold text-slate-700 hover:border-primary hover:text-primary transition-all hover:-translate-y-1"
           >
-            Explore Student Market
+            Student Market
           </Link>
+          {/* NEW: Request an Item Button */}
+          <Link 
+            href="/requests" 
+            className="w-full sm:w-auto rounded-lg bg-[#D97706] px-8 py-4 text-base font-bold text-white shadow-md hover:bg-amber-600 transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
+          >
+            📢 Request an Item
+          </Link>
+        </div>
+
+        {/* NEW: Quick Link to Hot in Kabale */}
+        <div className="mt-8">
+          <a href="#trending" className="inline-flex items-center justify-center gap-2 text-sm font-bold text-slate-500 hover:text-red-500 transition-colors bg-slate-100 hover:bg-red-50 px-4 py-2 rounded-full">
+            <span className="animate-pulse">🔥</span> See what's trending in Kabale right now &darr;
+          </a>
         </div>
       </section>
 
@@ -87,8 +103,10 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* NEW: HOT IN KABALE SECTION */}
-      <HotInKabale />
+      {/* NEW: HOT IN KABALE SECTION (With ID for anchor scroll) */}
+      <div id="trending">
+        <HotInKabale />
+      </div>
 
       {/* 3. Random Featured Products (The Lottery) */}
       {featuredProducts.length > 0 && (
