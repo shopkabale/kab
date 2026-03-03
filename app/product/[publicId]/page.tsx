@@ -19,6 +19,7 @@ export default async function ProductDetailsPage({
 
   return (
     <div className="py-8 max-w-5xl mx-auto">
+<ProductTracker productId={product.id} />
       <div className="mb-4">
         <Link href={`/${product.category === "student_item" ? "students" : product.category}`} className="text-sm text-primary hover:underline">
           &larr; Back to {product.category}
