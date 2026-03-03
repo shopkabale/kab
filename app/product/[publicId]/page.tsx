@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProductByPublicId } from "@/lib/firebase/firestore";
 import OrderButton from "@/components/OrderButton";
+import ProductTracker from "@/components/ProductTracker";
 
 export const revalidate = 60; 
 
