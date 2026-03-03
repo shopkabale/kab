@@ -59,7 +59,7 @@ export default function CheckoutForm({ product }: { product: Product }) {
       <div className="py-20 text-center px-4 max-w-md mx-auto">
         <h2 className="text-2xl font-bold text-slate-900 mb-4">Log in to Order</h2>
         <p className="text-slate-600 mb-8">You must be logged in to securely place a Cash on Delivery order.</p>
-        <Link href={`/item/${product.publicId || product.id}`} className="text-primary font-bold hover:underline">
+        <Link href={`/product/${product.publicId || product.id}`} className="text-primary font-bold hover:underline">
           Go back to product
         </Link>
       </div>
