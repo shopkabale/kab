@@ -9,7 +9,7 @@ export default function ProductActions({ product }: { product: Product }) {
   const { user, signIn } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false); // NEW: Controls the Fast-Checkout Modal
+  const [showModal, setShowModal] = useState(false);
 
   // Format Ugandan phone numbers for the WhatsApp API (07... to 2567...)
   const formatWhatsAppNumber = (phone: string) => {
@@ -33,7 +33,6 @@ export default function ProductActions({ product }: { product: Product }) {
     window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
   };
 
-  // 1. First step: Check login and open the modal
   const handleBuyNowClick = () => {
     if (!user) {
       alert("Please log in to place an official order.");
@@ -43,8 +42,10 @@ export default function ProductActions({ product }: { product: Product }) {
     setShowModal(true);
   };
 
-  // 2. Second step: Execute the order when they click Proceed
   const executeFastCheckout = async () => {
+    // THE FIX: This single line guarantees to TypeScript that 'user' is not null
+    if (!user) return; 
+
     setLoading(true);
 
     try {
@@ -52,11 +53,10 @@ export default function ProductActions({ product }: { product: Product }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.uid, // FIXED: user.uid is correct for Firebase
+          userId: user.uid, 
           productId: product.id,
           sellerId: product.sellerId || "SYSTEM",
           total: product.price,
-          // Sending default fast-checkout values since we skipped the long form
           deliveryLocation: "Kabale Town (Fast Checkout)",
           contactPhone: "Provided via account", 
         }),
@@ -65,7 +65,6 @@ export default function ProductActions({ product }: { product: Product }) {
       const data = await res.json();
 
       if (data.success) {
-        // Close modal and redirect straight to the success page!
         setShowModal(false);
         router.push(`/success/${data.orderId}`);
       } else {
@@ -98,10 +97,9 @@ export default function ProductActions({ product }: { product: Product }) {
           💬 Buy via WhatsApp
         </button>
 
-        {/* Admin God Mode Delete Button */}
         {user?.role === "admin" && (
           <button 
-            onClick={() => alert("Admin Delete API not connected yet, but you are recognized as an Admin!")}
+            onClick={() => alert("Admin Delete API not connected yet!")}
             className="w-full mt-4 bg-red-50 border border-red-200 text-red-600 py-3 rounded-xl font-bold text-sm hover:bg-red-100 transition-colors"
           >
             🗑️ [Admin Action] Delete Product
@@ -109,7 +107,6 @@ export default function ProductActions({ product }: { product: Product }) {
         )}
       </div>
 
-      {/* FAST CHECKOUT MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl relative overflow-hidden">
