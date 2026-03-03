@@ -72,3 +72,98 @@ export async function sendOrderConfirmation(
     return false;
   }
 }
+
+
+
+export async function sendSellerNotification(
+  sellerEmail: string,
+  sellerName: string,
+  itemName: string,
+  buyerName: string,
+  buyerPhone: string,
+  buyerLocation: string
+) {
+  const brevoApiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.SENDER_EMAIL || "noreply@okaynotice.com";
+
+  if (!brevoApiKey || !sellerEmail) return false;
+
+  const emailData = {
+    sender: { name: "Okay Notice Alerts", email: senderEmail },
+    to: [{ email: sellerEmail, name: sellerName || "Seller" }],
+    subject: `💰 New Order for ${itemName}!`,
+    htmlContent: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
+        <h2 style="color: #D97706; margin-top: 0;">You have a new customer!</h2>
+        <p>Someone wants to buy your <strong>${itemName}</strong>.</p>
+        
+        <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 20px 0;">
+          <h3 style="margin-top: 0; color: #333;">Delivery Details</h3>
+          <p><strong>Buyer Name:</strong> ${buyerName}</p>
+          <p><strong>Location:</strong> ${buyerLocation}</p>
+          <p><strong>Phone:</strong> ${buyerPhone}</p>
+        </div>
+        
+        <p style="margin-top: 20px; text-align: center;">
+          <a href="https://wa.me/${buyerPhone.replace(/[^0-9]/g, '')}?text=Hi%20${buyerName},%20I%20am%20contacting%20you%20about%20your%20order%20for%20${itemName}%20on%20Okay%20Notice." 
+             style="background-color: #25D366; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+            Click here to WhatsApp the Buyer
+          </a>
+        </p>
+      </div>
+    `,
+  };
+
+  try {
+    await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "api-key": brevoApiKey, "accept": "application/json" },
+      body: JSON.stringify(emailData),
+    });
+    return true;
+  } catch (error) {
+    console.error("Seller email failed:", error);
+    return false;
+  }
+}
+
+export async function sendAdminAlert(
+  orderNumber: string,
+  itemName: string,
+  totalAmount: number,
+  buyerName: string,
+  buyerPhone: string
+) {
+  const brevoApiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.SENDER_EMAIL || "noreply@okaynotice.com";
+  const adminEmail = "shopkabale@gmail.com"; // Your actual admin receiving email
+
+  if (!brevoApiKey) return false;
+
+  const emailData = {
+    sender: { name: "System Alert", email: senderEmail },
+    to: [{ email: adminEmail, name: "Admin" }],
+    subject: `🔔 New Sale Alert: ${itemName} (${orderNumber})`,
+    htmlContent: `
+      <div style="font-family: Arial, sans-serif; padding: 20px;">
+        <h3 style="color: #333;">New Order Placed on Okay Notice</h3>
+        <p><strong>Order ID:</strong> ${orderNumber}</p>
+        <p><strong>Item:</strong> ${itemName}</p>
+        <p><strong>Amount:</strong> UGX ${totalAmount.toLocaleString()}</p>
+        <p><strong>Buyer:</strong> ${buyerName} (${buyerPhone})</p>
+      </div>
+    `,
+  };
+
+  try {
+    await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "api-key": brevoApiKey, "accept": "application/json" },
+      body: JSON.stringify(emailData),
+    });
+    return true;
+  } catch (error) {
+    console.error("Admin alert failed:", error);
+    return false;
+  }
+}
