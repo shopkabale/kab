@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const data = docSnap.data();
     const formattedBudget = Number(data?.budget).toLocaleString();
     const title = `${data?.buyerName} is looking for: ${data?.itemNeeded}`;
-    const description = `Budget: UGX ${formattedBudget}. Do you have this item in Kabale? Tap to message ${data?.buyerName} directly on Okay Notice!`;
+    const description = `Budget: UGX ${formattedBudget}. Do you have this item in Kabale? Tap to message ${data?.buyerName} directly on Kabale Online!`;
 
     return {
       title,
@@ -27,8 +27,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       openGraph: {
         title,
         description,
-        url: `https://www.okaynotice.com/requests/${params.requestId}`,
-        siteName: "Okay Notice",
+        url: `https://www.kabaleonline.com/requests/${params.requestId}`,
+        siteName: "Kabale Online",
         images: [{ url: "/og-image.jpg", width: 1200, height: 630 }], // Uses your default OG image
         type: "website",
       },
@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       },
     };
   } catch (error) {
-    return { title: "Buyer Request | Okay Notice" };
+    return { title: "Buyer Request | Kabale Online" };
   }
 }
 
