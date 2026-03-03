@@ -58,9 +58,10 @@ export default async function Home() {
           {/* NEW: Request an Item Button */}
           <Link 
             href="/requests" 
-            className="w-full sm:w-auto rounded-lg bg-[#D97706] px-8 py-4 text-base font-bold text-white shadow-md hover:bg-amber-600 transition-all hover:-translate-y-1 flex items-center justify-center gap-2"
+            className="w-full sm:w-auto rounded-lg bg-[#D97706] px-8 py-4 text-base font-bold text-white shadow-md hover:bg-amber-600 transition-all hover:-translate-y-1 flex flex-col items-center justify-center gap-1"
           >
-            📢 Request an Item
+            <span className="flex items-center gap-2">📢 Buyer Request Board</span>
+            <span className="text-[10px] font-medium opacity-80 uppercase tracking-wider">Post Needs &bull; Find Buyers</span>
           </Link>
         </div>
 
