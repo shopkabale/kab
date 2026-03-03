@@ -43,7 +43,7 @@ export default function ProductActions({ product }: { product: Product }) {
   };
 
   const executeFastCheckout = async () => {
-    // THE FIX: This single line guarantees to TypeScript that 'user' is not null
+    // This tells TypeScript that we are 100% sure 'user' exists before continuing
     if (!user) return; 
 
     setLoading(true);
@@ -53,7 +53,7 @@ export default function ProductActions({ product }: { product: Product }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.uid, 
+          userId: user.id, // Fixed: Using user.id to perfectly match your types
           productId: product.id,
           sellerId: product.sellerId || "SYSTEM",
           total: product.price,
