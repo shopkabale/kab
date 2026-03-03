@@ -39,7 +39,7 @@ export default function Navbar() {
 
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="text-xl font-black text-slate-900 tracking-tight">
-                Okay<span className="text-[#D97706]">Notice</span>
+                Kabale<span className="text-[#D97706]">Online</span>
               </Link>
             </div>
 
