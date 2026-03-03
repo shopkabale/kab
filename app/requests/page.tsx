@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { collection, query, orderBy, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, orderBy, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config"; // Your client Firebase config
 
 interface ItemRequest {
@@ -29,11 +29,21 @@ export default function RequestsPage() {
     buyerPhone: "",
   });
 
-  // Fetch Requests
+  // Fetch Requests (Filtered by last 7 days!)
   useEffect(() => {
     const fetchRequests = async () => {
       try {
-        const q = query(collection(db, "item_requests"), orderBy("createdAt", "desc"));
+        // 1. Calculate the date 7 days ago
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        // 2. Only fetch requests created AFTER 7 days ago
+        const q = query(
+          collection(db, "item_requests"), 
+          where("createdAt", ">=", sevenDaysAgo),
+          orderBy("createdAt", "desc")
+        );
+        
         const snap = await getDocs(q);
         const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as ItemRequest));
         setRequests(data);
@@ -52,6 +62,7 @@ export default function RequestsPage() {
     setSubmitting(true);
 
     try {
+      // Save to Firebase
       const docRef = await addDoc(collection(db, "item_requests"), {
         ...formData,
         createdAt: serverTimestamp(),
@@ -61,14 +72,14 @@ export default function RequestsPage() {
       setRequests([{ 
         id: docRef.id, 
         ...formData, 
-        createdAt: new Date() 
-      } as ItemRequest, ...requests]);
+        createdAt: { toDate: () => new Date() } // Mock timestamp for immediate UI update
+      } as unknown as ItemRequest, ...requests]);
 
       setIsModalOpen(false);
       setFormData({ itemNeeded: "", budget: "", category: "Electronics", buyerName: "", buyerPhone: "" });
-      alert("Request posted successfully! Sellers will contact you soon.");
+      alert("Request posted successfully! It will stay live on the board for 7 days.");
     } catch (error) {
-      alert("Failed to post request. Try again.");
+      alert("Failed to post request. Please ensure your Firebase Rules allow creates.");
       console.error(error);
     } finally {
       setSubmitting(false);
@@ -108,13 +119,13 @@ export default function RequestsPage() {
       ) : requests.length === 0 ? (
         <div className="text-center py-20 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
           <span className="text-4xl block mb-3">👀</span>
-          <p className="text-slate-600 font-medium">No requests yet. Be the first to ask for an item!</p>
+          <p className="text-slate-600 font-medium">No active requests right now. Be the first to ask for an item!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {requests.map((req) => {
             const dateStr = req.createdAt?.toDate ? req.createdAt.toDate().toLocaleDateString() : "Just now";
-            const whatsappLink = `https://wa.me/${req.buyerPhone.replace(/[^0-9]/g, '')}?text=Hi%20${req.buyerName},%20I%20saw%20your%20request%20for%20"${req.itemNeeded}"%20on%20Kabale%20Online.%20I%20have%20it!`;
+            const whatsappLink = `https://wa.me/${req.buyerPhone.replace(/[^0-9]/g, '')}?text=Hi%20${req.buyerName},%20I%20saw%20your%20request%20for%20"${req.itemNeeded}"%20on%20Okay%20Notice.%20I%20have%20it!`;
 
             return (
               <div key={req.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative">
