@@ -10,8 +10,10 @@ export default function ProductActions({ product }: { product: Product }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  
+  // NEW: State to capture the buyer's phone number in the fast modal
+  const [contactPhone, setContactPhone] = useState("");
 
-  // Format Ugandan phone numbers for the WhatsApp API (07... to 2567...)
   const formatWhatsAppNumber = (phone: string) => {
     if (!phone) return "";
     const cleanPhone = phone.replace(/\D/g, "");
@@ -43,8 +45,13 @@ export default function ProductActions({ product }: { product: Product }) {
   };
 
   const executeFastCheckout = async () => {
-    // This tells TypeScript that we are 100% sure 'user' exists before continuing
     if (!user) return; 
+
+    // NEW: Validation to ensure they typed a phone number before proceeding
+    if (!contactPhone.trim()) {
+      alert("Please provide your phone number so the seller can call you for delivery.");
+      return;
+    }
 
     setLoading(true);
 
@@ -53,12 +60,12 @@ export default function ProductActions({ product }: { product: Product }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.id, // Fixed: Using user.id to perfectly match your types
+          userId: user.id,
           productId: product.id,
           sellerId: product.sellerId || "SYSTEM",
           total: product.price,
           deliveryLocation: "Kabale Town (Fast Checkout)",
-          contactPhone: "Provided via account", 
+          contactPhone: contactPhone, // NEW: Sending the captured phone number!
         }),
       });
 
@@ -114,22 +121,33 @@ export default function ProductActions({ product }: { product: Product }) {
             
             <h2 className="text-2xl font-black text-slate-900 mb-2">Confirm Fast Checkout</h2>
             
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6 mt-4">
-              <p className="text-sm text-slate-600 mb-2">You are about to place an official order for:</p>
-              <p className="font-bold text-lg text-slate-900 leading-tight">{product.name}</p>
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4 mt-4">
+              <p className="font-bold text-lg text-slate-900 leading-tight line-clamp-2">{product.name}</p>
               <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">
-                <span className="text-sm font-medium text-slate-500">Total to pay on delivery:</span>
+                <span className="text-sm font-medium text-slate-500">Pay on delivery:</span>
                 <span className="font-black text-[#D97706] text-lg">UGX {Number(product.price).toLocaleString()}</span>
               </div>
             </div>
 
-            <p className="text-sm text-slate-600 mb-8 font-medium">
-              By proceeding, the seller will be immediately notified via email and SMS to reserve this item for you. You only pay when the item is in your hands in Kabale.
-            </p>
+            {/* NEW: Phone Number Input Field */}
+            <div className="mb-6">
+              <label className="block text-sm font-semibold text-slate-900 mb-2">Your Phone / WhatsApp Number *</label>
+              <input 
+                required 
+                type="tel" 
+                placeholder="e.g. 077... or 075..."
+                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-[#D97706] transition-shadow"
+                value={contactPhone} 
+                onChange={e => setContactPhone(e.target.value)} 
+              />
+              <p className="text-xs text-slate-500 mt-2 font-medium leading-relaxed">
+                The seller will be immediately notified to reserve this item and will call this number to arrange delivery in Kabale.
+              </p>
+            </div>
 
             <div className="flex gap-3">
               <button 
-                onClick={() => setShowModal(false)}
+                onClick={() => { setShowModal(false); setContactPhone(""); }}
                 disabled={loading}
                 className="flex-1 bg-white border-2 border-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-50 transition-colors"
               >
@@ -137,7 +155,7 @@ export default function ProductActions({ product }: { product: Product }) {
               </button>
               <button 
                 onClick={executeFastCheckout}
-                disabled={loading}
+                disabled={loading || !contactPhone.trim()}
                 className="flex-1 bg-[#D97706] text-white py-3 rounded-xl font-bold hover:bg-amber-600 transition-colors shadow-md disabled:opacity-50"
               >
                 {loading ? "Sending..." : "Proceed & Order"}
