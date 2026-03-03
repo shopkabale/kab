@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
 import { adminDb } from "@/lib/firebase/admin";
-import HotInKabale from "@/components/HotInKabale";
 
 // ISR: Revalidate the homepage every 60 seconds
 export const revalidate = 60;
@@ -65,12 +64,7 @@ export default async function Home() {
           </Link>
         </div>
 
-        {/* NEW: Quick Link to Hot in Kabale */}
-        <div className="mt-8">
-          <a href="#trending" className="inline-flex items-center justify-center gap-2 text-sm font-bold text-slate-500 hover:text-red-500 transition-colors bg-slate-100 hover:bg-red-50 px-4 py-2 rounded-full">
-            <span className="animate-pulse">🔥</span> See what's trending in Kabale right now &darr;
-          </a>
-        </div>
+        
       </section>
 
       {/* 2. Categories Section */}
@@ -103,10 +97,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* NEW: HOT IN KABALE SECTION (With ID for anchor scroll) */}
-      <div id="trending">
-        <HotInKabale />
-      </div>
+      
 
       {/* 3. Random Featured Products (The Lottery) */}
       {featuredProducts.length > 0 && (
