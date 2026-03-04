@@ -146,7 +146,7 @@ export async function sendAdminAlert(
     subject: `🔔 New Sale Alert: ${itemName} (${orderNumber})`,
     htmlContent: `
       <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h3 style="color: #333;">New Order Placed on Okay Notice</h3>
+        <h3 style="color: #333;">New Order Placed on Kabale Online</h3>
         <p><strong>Order ID:</strong> ${orderNumber}</p>
         <p><strong>Item:</strong> ${itemName}</p>
         <p><strong>Amount:</strong> UGX ${totalAmount.toLocaleString()}</p>
