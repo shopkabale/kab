@@ -30,7 +30,7 @@ export default function ProductActions({ product }: { product: Product }) {
     }
     const phone = formatWhatsAppNumber(product.sellerPhone);
     const message = encodeURIComponent(
-      `Hello ${product.sellerName || "there"}, I am interested in buying your item on Okay Notice:\n\n*${product.name}*\nPrice: UGX ${Number(product.price).toLocaleString()}\nID: ${product.publicId || product.id}\n\nIs it still available?`
+      `Hello ${product.sellerName || "there"}, I am interested in buying your item on Kabale Online:\n\n*${product.name}*\nPrice: UGX ${Number(product.price).toLocaleString()}\nID: ${product.publicId || product.id}\n\nIs it still available?`
     );
     window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
   };
