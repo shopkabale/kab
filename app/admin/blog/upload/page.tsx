@@ -89,25 +89,38 @@ export default function BlogUploadPage() {
   // ================= IMAGE UPLOAD =================
 
   const uploadToCloudinary = async (file: File) => {
-    const sigRes = await fetch("/api/cloudinary/sign", { method: "POST" });
-    const sigData = await sigRes.json();
+    try {
+      const sigRes = await fetch("/api/cloudinary/blog-sign", { method: "POST" });
+      
+      if (!sigRes.ok) {
+        throw new Error(`Signature API failed with status: ${sigRes.status}`);
+      }
+      
+      const sigData = await sigRes.json();
+      if (!sigData.cloudName || !sigData.signature) {
+        throw new Error("Signature API is missing cloudName or signature");
+      }
 
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("api_key", sigData.apiKey);
-    fd.append("timestamp", sigData.timestamp);
-    fd.append("signature", sigData.signature);
-    fd.append("folder", "kabale_blog");
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("api_key", sigData.apiKey);
+      fd.append("timestamp", sigData.timestamp);
+      fd.append("signature", sigData.signature);
+      fd.append("folder", "kabale_blog"); 
 
-    const uploadRes = await fetch(
-      `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`,
-      { method: "POST", body: fd }
-    );
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`,
+        { method: "POST", body: fd }
+      );
 
-    const uploadData = await uploadRes.json();
-    if (uploadData.error) throw new Error(uploadData.error.message);
+      const uploadData = await uploadRes.json();
+      if (uploadData.error) throw new Error(uploadData.error.message);
 
-    return uploadData.secure_url;
+      return uploadData.secure_url;
+    } catch (error) {
+      console.error("Cloudinary upload failed:", error);
+      throw error; 
+    }
   };
 
   // ================= EDITOR IMAGE PASTE =================
@@ -121,8 +134,13 @@ export default function BlogUploadPage() {
         const file = item.getAsFile();
         if (!file) continue;
 
-        const url = await uploadToCloudinary(file);
-        setContent((prev) => prev + `\n\n![image](${url})\n\n`);
+        try {
+          // You can add a temporary loading placeholder to the editor here if desired
+          const url = await uploadToCloudinary(file);
+          setContent((prev) => prev + `\n\n![image](${url})\n\n`);
+        } catch (err) {
+          alert("Failed to upload pasted image.");
+        }
       }
     }
   };
@@ -168,7 +186,8 @@ export default function BlogUploadPage() {
       };
 
       if (editId) {
-        await updateDoc(doc(db, "blog_posts", slug), postData);
+        // FIXED: Update using editId, not the potentially modified slug
+        await updateDoc(doc(db, "blog_posts", editId), postData);
         alert("Article Updated ✅");
       } else {
         await setDoc(doc(db, "blog_posts", slug), {
@@ -295,6 +314,7 @@ export default function BlogUploadPage() {
                 {previewUrl ? (
                   <img
                     src={previewUrl}
+                    alt="Cover preview"
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -305,16 +325,24 @@ export default function BlogUploadPage() {
                 type="file"
                 accept="image/*"
                 hidden
-                onChange={(e) =>
-                  setImageFile(e.target.files?.[0] || null)
-                }
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setImageFile(file);
+                    // Generates the immediate local preview
+                    setPreviewUrl(URL.createObjectURL(file)); 
+                  } else {
+                    setImageFile(null);
+                    setPreviewUrl("");
+                  }
+                }}
               />
             </label>
           </div>
 
           <button
             disabled={loading}
-            className="w-full p-4 bg-slate-900 text-white rounded-xl font-bold"
+            className="w-full p-4 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors disabled:opacity-50"
           >
             {loading ? "Publishing..." : "Save Article"}
           </button>
