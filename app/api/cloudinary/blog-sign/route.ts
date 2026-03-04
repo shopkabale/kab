@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 
-export async function POST() {
+// Forces Vercel to run this dynamically on every request so signatures don't expire
+export const dynamic = "force-dynamic";
+
+export async function POST(request: Request) {
   try {
     const timestamp = Math.round(new Date().getTime() / 1000);
     
-    // Using your EXACT SAME environment variables from the e-commerce setup
+    // Pulling exact variable names matching your Vercel dashboard
     const apiSecret = process.env.CLOUDINARY_API_SECRET;
-    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY || process.env.CLOUDINARY_API_KEY; 
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME;
 
     if (!apiSecret || !apiKey || !cloudName) {
@@ -15,9 +18,10 @@ export async function POST() {
       return NextResponse.json({ error: "Server configuration error" }, { status: 500 });
     }
 
-    // Hardcoded folder exclusively for the blog
+    // Hardcoded folder exclusively for the Kabale Online blog
     const folder = "kabale_blog";
     
+    // Cloudinary requires parameters to be sorted alphabetically before hashing
     const signatureString = `folder=${folder}&timestamp=${timestamp}${apiSecret}`;
 
     const signature = crypto
