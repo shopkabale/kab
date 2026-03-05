@@ -1,3 +1,4 @@
+import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProductByPublicId } from "@/lib/firebase/firestore";
@@ -7,6 +8,55 @@ import ProductTracker from "@/components/ProductTracker"; // The invisible view 
 
 export const revalidate = 60; 
 
+// ============================================================================
+// 1. DYNAMIC METADATA: This is the magic that WhatsApp/Facebook reads!
+// ============================================================================
+export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
+  const product = await getProductByPublicId(params.publicId);
+
+  if (!product) {
+    return {
+      title: "Item Not Found | Kabale Online",
+    };
+  }
+
+  const safeName = product.name || "Unnamed Item";
+  const formattedPrice = `UGX ${(Number(product.price) || 0).toLocaleString()}`;
+  
+  const title = `${safeName} - ${formattedPrice} | Kabale Online`;
+  const description = product.description?.slice(0, 150) || `Buy this ${safeName} for ${formattedPrice}. Pay strictly Cash on Delivery in Kabale town.`;
+  const imageUrl = product.images?.[0] || "https://www.kabaleonline.com/og-image.jpg";
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `https://www.kabaleonline.com/product/${params.publicId}`,
+      siteName: "Kabale Online",
+      images: [
+        {
+          url: imageUrl,
+          width: 1200,
+          height: 630,
+          alt: safeName,
+        },
+      ],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: [imageUrl],
+    },
+  };
+}
+
+// ============================================================================
+// 2. THE MAIN PAGE UI
+// ============================================================================
 export default async function ProductDetailsPage({ params }: { params: { publicId: string } }) {
   const product = await getProductByPublicId(params.publicId);
 
@@ -22,7 +72,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
   return (
     <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6">
-      
+
       {/* 1. SILENT VIEW TRACKER */}
       <ProductTracker productId={product.id} />
 
