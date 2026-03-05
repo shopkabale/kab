@@ -30,7 +30,7 @@ export default function ProductActions({ product }: { product: Product }) {
     }
     const phone = formatWhatsAppNumber(product.sellerPhone);
     const message = encodeURIComponent(
-      `Hello ${product.sellerName || "there"}, I am interested in buying your item on Okay Notice:\n\n*${product.name}*\nPrice: UGX ${Number(product.price).toLocaleString()}\nID: ${product.publicId || product.id}\n\nIs it still available?`
+      `Hello ${product.sellerName || "there"}, I am interested in buying your item on Kabale Online:\n\n*${product.name}*\nPrice: UGX ${Number(product.price).toLocaleString()}\nID: ${product.publicId || product.id}\n\nIs it still available?`
     );
     window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
   };
@@ -40,7 +40,7 @@ export default function ProductActions({ product }: { product: Product }) {
     // Dynamically grab the website URL and attach the product ID
     const url = `${window.location.origin}/product/${product.publicId || product.id}`;
     const message = encodeURIComponent(
-      `Check out this ${product.name} for UGX ${Number(product.price).toLocaleString()} on Okay Notice! \n\nSee it here: ${url}`
+      `Check out this ${product.name} for UGX ${Number(product.price).toLocaleString()} on Kabale Online! \n\nSee it here: ${url}`
     );
     // Leaving out the phone number opens the "Select Contact" screen in WhatsApp
     window.open(`https://wa.me/?text=${message}`, "_blank");
