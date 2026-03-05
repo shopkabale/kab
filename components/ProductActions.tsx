@@ -11,7 +11,6 @@ export default function ProductActions({ product }: { product: Product }) {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   
-  // NEW: State to capture the buyer's phone number in the fast modal
   const [contactPhone, setContactPhone] = useState("");
 
   const formatWhatsAppNumber = (phone: string) => {
@@ -23,16 +22,28 @@ export default function ProductActions({ product }: { product: Product }) {
     return cleanPhone;
   };
 
-  const handleWhatsApp = () => {
+  // 1. WhatsApp the SELLER (To Buy)
+  const handleBuyViaWhatsApp = () => {
     if (!product.sellerPhone) {
       alert("This seller did not provide a WhatsApp number.");
       return;
     }
     const phone = formatWhatsAppNumber(product.sellerPhone);
     const message = encodeURIComponent(
-      `Hello ${product.sellerName || "there"}, I am interested in buying your item on Kabale Online:\n\n*${product.name}*\nPrice: UGX ${Number(product.price).toLocaleString()}\nID: ${product.publicId || product.id}\n\nIs it still available?`
+      `Hello ${product.sellerName || "there"}, I am interested in buying your item on Okay Notice:\n\n*${product.name}*\nPrice: UGX ${Number(product.price).toLocaleString()}\nID: ${product.publicId || product.id}\n\nIs it still available?`
     );
     window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
+  };
+
+  // 2. WhatsApp a FRIEND (To Share)
+  const handleShareToWhatsApp = () => {
+    // Dynamically grab the website URL and attach the product ID
+    const url = `${window.location.origin}/product/${product.publicId || product.id}`;
+    const message = encodeURIComponent(
+      `Check out this ${product.name} for UGX ${Number(product.price).toLocaleString()} on Okay Notice! \n\nSee it here: ${url}`
+    );
+    // Leaving out the phone number opens the "Select Contact" screen in WhatsApp
+    window.open(`https://wa.me/?text=${message}`, "_blank");
   };
 
   const handleBuyNowClick = () => {
@@ -47,7 +58,6 @@ export default function ProductActions({ product }: { product: Product }) {
   const executeFastCheckout = async () => {
     if (!user) return; 
 
-    // NEW: Validation to ensure they typed a phone number before proceeding
     if (!contactPhone.trim()) {
       alert("Please provide your phone number so the seller can call you for delivery.");
       return;
@@ -65,7 +75,7 @@ export default function ProductActions({ product }: { product: Product }) {
           sellerId: product.sellerId || "SYSTEM",
           total: product.price,
           deliveryLocation: "Kabale Town (Fast Checkout)",
-          contactPhone: contactPhone, // NEW: Sending the captured phone number!
+          contactPhone: contactPhone,
         }),
       });
 
@@ -88,6 +98,8 @@ export default function ProductActions({ product }: { product: Product }) {
   return (
     <>
       <div className="space-y-3 mt-8">
+        
+        {/* BUY NOW (FAST CHECKOUT) */}
         <button 
           onClick={handleBuyNowClick}
           disabled={product.stock <= 0 || loading}
@@ -96,14 +108,24 @@ export default function ProductActions({ product }: { product: Product }) {
           {loading ? "Processing..." : "Buy Now (Fast Checkout)"}
         </button>
 
+        {/* BUY VIA WHATSAPP (Contact Seller) */}
         <button 
-          onClick={handleWhatsApp}
+          onClick={handleBuyViaWhatsApp}
           disabled={product.stock <= 0 || !product.sellerPhone}
           className="w-full bg-[#25D366] text-white py-4 px-8 rounded-xl font-bold text-lg hover:bg-green-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-md"
         >
           💬 Buy via WhatsApp
         </button>
 
+        {/* SHARE TO WHATSAPP (Contact Friends) */}
+        <button 
+          onClick={handleShareToWhatsApp}
+          className="w-full bg-slate-100 text-slate-700 py-4 px-8 rounded-xl font-bold text-lg hover:bg-slate-200 transition-colors flex items-center justify-center gap-2 shadow-sm border border-slate-200"
+        >
+          📤 Share to WhatsApp
+        </button>
+
+        {/* ADMIN DELETE */}
         {user?.role === "admin" && (
           <button 
             onClick={() => alert("Admin Delete API not connected yet!")}
@@ -114,6 +136,7 @@ export default function ProductActions({ product }: { product: Product }) {
         )}
       </div>
 
+      {/* FAST CHECKOUT MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl relative overflow-hidden">
@@ -129,7 +152,6 @@ export default function ProductActions({ product }: { product: Product }) {
               </div>
             </div>
 
-            {/* NEW: Phone Number Input Field */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-slate-900 mb-2">Your Phone / WhatsApp Number *</label>
               <input 
