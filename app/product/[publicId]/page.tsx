@@ -16,7 +16,6 @@ export async function generateMetadata({ params }: { params: { publicId: string 
   const safeName = product.name || "Unnamed Item";
   const formattedPrice = `UGX ${(Number(product.price) || 0).toLocaleString()}`;
   
-  // SEO Title with "Available in Kabale" injected automatically
   const title = `${safeName} - Available in Kabale | ${formattedPrice}`;
   const description = product.description?.slice(0, 150) || `Buy this ${safeName} for ${formattedPrice}. Pay strictly Cash on Delivery in Kabale town.`;
   const imageUrl = product.images?.[0] || "https://www.kabaleonline.com/og-image.jpg";
@@ -46,11 +45,16 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const safeCondition = product.condition || "used";
   const safeCategory = product.category || "general";
   
-  // Fake FOMO Math (Generates consistent fake numbers based on the product name length so they don't jump around)
+  // FIXED: Strictly checked for null/undefined to satisfy TypeScript
+  const safeStock = (product.stock !== undefined && product.stock !== null) 
+    ? Number(product.stock) 
+    : 1;
+  
+  // Fake FOMO Math
   const fakeViews = (safeName.length * 3) + 12;
   const fakeBought = (safeName.length % 4) + 2;
 
-  // Admin check (Adjust these strings to match your actual admin display name)
+  // Admin check for Official Store
   const isAdmin = product.sellerName?.toLowerCase().includes('admin') || product.sellerName?.toLowerCase().includes('kabale online');
 
   return (
@@ -98,21 +102,34 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               {safeName} <span className="text-lg font-medium text-slate-500 block sm:inline mt-1 sm:mt-0">(Available in Kabale)</span>
             </h1>
 
-            {/* Pricing */}
+            {/* Pricing & Stock Badge */}
             <div className="flex items-end gap-4 mt-4 mb-2">
               <span className="text-4xl font-black text-[#D97706]">
                 UGX {safePrice.toLocaleString()}
               </span>
+              <span className={`text-xs font-bold px-3 py-1 rounded-full mb-1 ${
+                safeStock > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+              }`}>
+                {safeStock > 0 ? 'In Stock' : 'Out of Stock'}
+              </span>
             </div>
 
-            {/* FOMO Section */}
-            <div className="flex items-center gap-3 text-xs font-bold text-red-600 bg-red-50 py-2 px-3 rounded-lg w-fit mb-6 border border-red-100">
+            {/* FOMO Section (Dynamic based on Admin & Stock) */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-bold text-red-600 bg-red-50 py-2 px-3 rounded-lg w-fit mb-6 border border-red-100">
               <span className="animate-pulse">🔥</span>
               <span>{fakeViews} viewing today</span>
-              <span className="text-red-300">•</span>
-              <span>{fakeBought} bought this week</span>
-              <span className="text-red-300">•</span>
-              <span>Few remaining!</span>
+              
+              {/* Only show "bought this week" if it's the Official Store */}
+              {isAdmin && (
+                <>
+                  <span className="text-red-300 hidden sm:inline">•</span>
+                  <span>{fakeBought} bought this week</span>
+                </>
+              )}
+              
+              <span className="text-red-300 hidden sm:inline">•</span>
+              {/* Show "Very few left" if stock is 1 or undefined, otherwise "Few remaining!" */}
+              <span>{safeStock <= 1 ? "Very few left" : "Few remaining!"}</span>
             </div>
 
             {/* Same Day Delivery Banner */}
@@ -159,6 +176,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               >
                 🛒 Proceed to Checkout
               </Link>
+              {/* Product Actions Component handles the Buy Now modal and WhatsApp sharing */}
               <ProductActions product={product} />
             </div>
 
