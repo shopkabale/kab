@@ -39,8 +39,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navItems = [
     { name: "Dashboard", href: "/admin", icon: "📊" },
-    { name: "Upload Official Item", href: "/admin/upload", icon: "✨" }, // NEW PAGE ADDED
-    { name: "Manage Products", href: "/admin/products", icon: "📦" },
+    { name: "Official Store", href: "/admin/official", icon: "🏪" }, // NEW: Manager Page
+    { name: "Upload Official Item", href: "/admin/upload", icon: "✨" }, 
+    { name: "All Products", href: "/admin/products", icon: "📦" },
     { name: "Orders", href: "/admin/orders", icon: "🛒" },
     { name: "Users", href: "/admin/users", icon: "👥" },
   ];
