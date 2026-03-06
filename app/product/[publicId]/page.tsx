@@ -45,17 +45,29 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const safeCondition = product.condition || "used";
   const safeCategory = product.category || "general";
   
-  // FIXED: Strictly checked for null/undefined to satisfy TypeScript
-  const safeStock = (product.stock !== undefined && product.stock !== null) 
-    ? Number(product.stock) 
-    : 1;
-  
+  // ==========================================
+  // 1. BULLETPROOF STOCK PARSING
+  // ==========================================
+  let safeStock = 1; // Default to 1 so old items can still be bought
+  if (product.stock !== undefined && product.stock !== null && product.stock !== "") {
+    const parsed = Number(product.stock);
+    if (!isNaN(parsed)) {
+      safeStock = parsed; 
+    }
+  }
+
+  // Determine FOMO text strictly based on our clean safeStock number
+  const fomoStockText = safeStock <= 1 ? "Very few left" : "Few remaining!";
+
+  // ==========================================
+  // 2. BULLETPROOF ADMIN CHECK
+  // ==========================================
+  const sellerNameStr = String(product.sellerName || "").toLowerCase();
+  const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online');
+
   // Fake FOMO Math
   const fakeViews = (safeName.length * 3) + 12;
   const fakeBought = (safeName.length % 4) + 2;
-
-  // Admin check for Official Store
-  const isAdmin = product.sellerName?.toLowerCase().includes('admin') || product.sellerName?.toLowerCase().includes('kabale online');
 
   return (
     <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6">
@@ -98,69 +110,79 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </div>
 
             {/* Title with injected location */}
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight mb-2">
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight mb-4">
               {safeName} <span className="text-lg font-medium text-slate-500 block sm:inline mt-1 sm:mt-0">(Available in Kabale)</span>
             </h1>
 
-            {/* Pricing & Stock Badge */}
-            <div className="flex items-end gap-4 mt-4 mb-2">
+            {/* 1. PRICE (Alone on one line) */}
+            <div className="mb-3">
               <span className="text-4xl font-black text-[#D97706]">
                 UGX {safePrice.toLocaleString()}
               </span>
-              <span className={`text-xs font-bold px-3 py-1 rounded-full mb-1 ${
-                safeStock > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+            </div>
+
+            {/* 2. STOCK STATUS (Alone on one line, respecting actual quantity) */}
+            <div className="mb-6">
+              <span className={`text-sm font-bold px-4 py-1.5 rounded-md ${
+                safeStock > 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
               }`}>
                 {safeStock > 0 ? 'In Stock' : 'Out of Stock'}
               </span>
             </div>
 
-            {/* FOMO Section (Dynamic based on Admin & Stock) */}
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-bold text-red-600 bg-red-50 py-2 px-3 rounded-lg w-fit mb-6 border border-red-100">
-              <span className="animate-pulse">🔥</span>
-              <span>{fakeViews} viewing today</span>
+            {/* 3. FOMO SECTION (Each item on its own line) */}
+            <div className="flex flex-col gap-3 mb-6 bg-slate-50 border border-slate-100 p-4 rounded-xl">
               
-              {/* Only show "bought this week" if it's the Official Store */}
+              {/* Line 1: Views */}
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                <span className="animate-pulse text-lg">🔥</span>
+                <span>{fakeViews} viewing today</span>
+              </div>
+              
+              {/* Line 2: Bought (Admin Only) */}
               {isAdmin && (
-                <>
-                  <span className="text-red-300 hidden sm:inline">•</span>
+                <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
+                  <span className="text-lg">🛒</span>
                   <span>{fakeBought} bought this week</span>
-                </>
+                </div>
               )}
               
-              <span className="text-red-300 hidden sm:inline">•</span>
-              {/* Show "Very few left" if stock is 1 or undefined, otherwise "Few remaining!" */}
-              <span>{safeStock <= 1 ? "Very few left" : "Few remaining!"}</span>
-            </div>
-
-            {/* Same Day Delivery Banner */}
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-6 flex items-start gap-3">
-              <span className="text-xl">🚚</span>
-              <div>
-                <p className="text-sm font-bold text-emerald-900">Available in Kabale</p>
-                <p className="text-xs text-emerald-700 font-medium">Same day delivery if ordered between 7 AM and 3 PM.</p>
+              {/* Line 3: Urgency */}
+              <div className="flex items-center gap-2 text-sm font-bold text-red-600">
+                <span className="text-lg">⏳</span>
+                <span>{fomoStockText}</span>
               </div>
             </div>
 
-            {/* Seller Info Box with Official Store Check */}
-            <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6 flex items-center gap-4">
+            {/* 4. DELIVERY BANNER (Alone on one line) */}
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+              <span className="text-xl">🚚</span>
+              <div>
+                <p className="text-sm font-bold text-emerald-900">Available in Kabale</p>
+                <p className="text-xs text-emerald-700 font-medium mt-1">Same day delivery if ordered between 7 AM and 3 PM.</p>
+              </div>
+            </div>
+
+            {/* 5. SELLER INFO (Alone on one line block) */}
+            <div className="bg-white border border-slate-200 rounded-xl p-4 mb-8 flex items-center gap-4 shadow-sm">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl flex-shrink-0 ${isAdmin ? 'bg-[#D97706] text-white' : 'bg-slate-200 text-slate-700'}`}>
                 {isAdmin ? "K" : (product.sellerName ? product.sellerName.charAt(0).toUpperCase() : "S")}
               </div>
               <div className="overflow-hidden flex-grow">
                 <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Sold By</p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-0.5">
                   <p className="text-base font-bold text-slate-900 truncate">{product.sellerName || "Verified Seller"}</p>
                   {isAdmin && (
-                    <span className="bg-[#D97706] text-white text-[9px] uppercase font-black px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
+                    <span className="bg-[#D97706] text-white text-[10px] uppercase font-black px-2 py-0.5 rounded w-fit flex items-center gap-1 shadow-sm">
                       <span>✓</span> Official Store
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-600 font-medium">📍 Kabale Town</p>
+                <p className="text-xs text-slate-600 font-medium mt-1">📍 Kabale Town</p>
               </div>
             </div>
 
-            {/* Description */}
+            {/* DESCRIPTION */}
             <div className="mb-8 flex-grow">
               <h3 className="text-sm font-bold text-slate-900 mb-3 border-b border-slate-100 pb-2 uppercase tracking-wider">Description</h3>
               <div className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
@@ -168,7 +190,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </div>
             </div>
 
-            {/* Actions: Checkout & Extras */}
+            {/* ACTIONS: Checkout & Extras */}
             <div className="mt-auto border-t border-slate-100 pt-6 space-y-4">
               <Link 
                 href={`/checkout/${product.publicId || product.id}`}
