@@ -46,10 +46,10 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const safeCategory = product.category || "general";
   
   // ==========================================
-  // 1. BULLETPROOF STOCK PARSING
+  // 1. BULLETPROOF STOCK PARSING (No String Checks!)
   // ==========================================
   let safeStock = 1; // Default to 1 so old items can still be bought
-  if (product.stock !== undefined && product.stock !== null && product.stock !== "") {
+  if (product.stock !== undefined && product.stock !== null) {
     const parsed = Number(product.stock);
     if (!isNaN(parsed)) {
       safeStock = parsed; 
@@ -57,13 +57,13 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   }
 
   // Determine FOMO text strictly based on our clean safeStock number
-  const fomoStockText = safeStock <= 1 ? "Very few left" : "Few remaining!";
+  const fomoStockText = safeStock <= 1 ? "Very few left!" : "Few remaining!";
 
   // ==========================================
   // 2. BULLETPROOF ADMIN CHECK
   // ==========================================
   const sellerNameStr = String(product.sellerName || "").toLowerCase();
-  const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online');
+  const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
 
   // Fake FOMO Math
   const fakeViews = (safeName.length * 3) + 12;
@@ -130,7 +130,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </span>
             </div>
 
-            {/* 3. FOMO SECTION (Each item on its own line) */}
+            {/* 3. FOMO SECTION (Each item strictly on its own line) */}
             <div className="flex flex-col gap-3 mb-6 bg-slate-50 border border-slate-100 p-4 rounded-xl">
               
               {/* Line 1: Views */}
@@ -163,22 +163,22 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </div>
             </div>
 
-            {/* 5. SELLER INFO (Alone on one line block) */}
+            {/* 5. SELLER INFO (Clean stacked block) */}
             <div className="bg-white border border-slate-200 rounded-xl p-4 mb-8 flex items-center gap-4 shadow-sm">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl flex-shrink-0 ${isAdmin ? 'bg-[#D97706] text-white' : 'bg-slate-200 text-slate-700'}`}>
                 {isAdmin ? "K" : (product.sellerName ? product.sellerName.charAt(0).toUpperCase() : "S")}
               </div>
-              <div className="overflow-hidden flex-grow">
-                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Sold By</p>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 mt-0.5">
-                  <p className="text-base font-bold text-slate-900 truncate">{product.sellerName || "Verified Seller"}</p>
+              <div className="overflow-hidden flex-grow flex flex-col gap-1">
+                <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Sold By</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-base font-bold text-slate-900 truncate">{product.sellerName || "Verified Seller"}</span>
                   {isAdmin && (
-                    <span className="bg-[#D97706] text-white text-[10px] uppercase font-black px-2 py-0.5 rounded w-fit flex items-center gap-1 shadow-sm">
+                    <span className="bg-[#D97706] text-white text-[10px] uppercase font-black px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
                       <span>✓</span> Official Store
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-slate-600 font-medium mt-1">📍 Kabale Town</p>
+                <span className="text-xs text-slate-600 font-medium">📍 Kabale Town</span>
               </div>
             </div>
 
