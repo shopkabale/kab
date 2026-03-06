@@ -1,72 +1,108 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 
 export default function AdminUploadPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const editPublicId = searchParams.get("edit"); // Checks if we are editing!
   
-  // Get the current user and their role
   const { user, loading: authLoading } = useAuth();
 
   const [loading, setLoading] = useState(false);
+  const [initialFetchLoading, setInitialFetchLoading] = useState(!!editPublicId);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
+  
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [productIdToUpdate, setProductIdToUpdate] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
     category: "electronics",
     price: "",
     quantity: "1",
-    condition: "new", // Defaulting admin to 'new'
+    condition: "new",
     description: "",
-    sellerPhone: "", // Enter the official business WhatsApp number here
+    sellerPhone: "", 
   });
 
   // ============================================================================
-  // STRICT SECURITY CHECK
+  // PRE-FILL DATA IF EDITING
   // ============================================================================
-  if (authLoading) {
-    return <div className="py-20 text-center font-bold text-slate-500 animate-pulse">Verifying Admin Access...</div>;
+  useEffect(() => {
+    if (editPublicId && user?.role === "admin") {
+      const fetchProduct = async () => {
+        try {
+          // We will need a GET /api/products/[id] route to make this work perfectly
+          const res = await fetch(`/api/products/${editPublicId}`);
+          if (res.ok) {
+            const data = await res.json();
+            setProductIdToUpdate(data.id); // Save document ID for PUT request
+            setExistingImages(data.images || []);
+            setFormData({
+              title: data.name || data.title || "",
+              category: data.category || "electronics",
+              price: data.price ? data.price.toString() : "",
+              quantity: data.stock !== undefined ? data.stock.toString() : "1",
+              condition: data.condition || "new",
+              description: data.description || "",
+              sellerPhone: data.sellerPhone || "",
+            });
+          }
+        } catch (error) {
+          console.error("Failed to fetch product for editing:", error);
+        } finally {
+          setInitialFetchLoading(false);
+        }
+      };
+      fetchProduct();
+    }
+  }, [editPublicId, user]);
+
+  // ============================================================================
+  // SECURITY CHECK
+  // ============================================================================
+  if (authLoading || initialFetchLoading) {
+    return <div className="py-20 text-center font-bold text-slate-500 animate-pulse">Loading Admin Portal...</div>;
   }
 
-  // Block anyone who isn't logged in, OR anyone whose role isn't 'admin'
   if (!user || user.role !== "admin") {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4">
-        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-4xl mb-6">
-          ⛔
-        </div>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center">
+        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-4xl mb-6">⛔</div>
         <h1 className="text-3xl font-black text-slate-900 mb-2">Access Denied</h1>
-        <p className="text-slate-600 mb-8 font-medium">You must be an authorized Administrator to view this page.</p>
-        <Link href="/" className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-md">
-          Return to Homepage
-        </Link>
+        <Link href="/" className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors mt-4">Return to Homepage</Link>
       </div>
     );
   }
 
   // ============================================================================
-  // UPLOAD LOGIC
+  // UPLOAD / UPDATE LOGIC
   // ============================================================================
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      if (imageFiles.length + newFiles.length > 5) {
-        alert("Maximum 5 images allowed.");
+      if (existingImages.length + imageFiles.length + newFiles.length > 5) {
+        alert("Maximum 5 images allowed total.");
         return;
       }
       setImageFiles(prev => [...prev, ...newFiles]);
-      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-      setImagePreviews(prev => [...prev, ...newPreviews]);
+      setImagePreviews(prev => [...prev, ...newFiles.map(file => URL.createObjectURL(file))]);
     }
   };
 
-  const removeImage = (index: number) => {
+  const removeExistingImage = (index: number) => {
+    setExistingImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeNewImage = (index: number) => {
     setImageFiles(prev => prev.filter((_, i) => i !== index));
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
@@ -74,54 +110,55 @@ export default function AdminUploadPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (imageFiles.length === 0) {
-      alert("Please upload at least one image.");
+    if (existingImages.length === 0 && imageFiles.length === 0) {
+      alert("Please have at least one image.");
       return;
     }
 
     setLoading(true);
 
     try {
-      let imageUrls: string[] = [];
+      let newlyUploadedUrls: string[] = [];
 
-      // 1. Upload Images to Cloudinary
-      const signRes = await fetch("/api/cloudinary/sign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ folder: "kabale_online" })
-      });
-
-      if (!signRes.ok) throw new Error("Failed to get upload signature.");
-
-      const signData = await signRes.json();
-      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-      const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
-
-      if (!apiKey) throw new Error("Missing Cloudinary API Key.");
-
-      const uploadPromises = imageFiles.map(async (file) => {
-        const formDataCloudinary = new FormData();
-        formDataCloudinary.append("file", file);
-        formDataCloudinary.append("api_key", apiKey);
-        formDataCloudinary.append("timestamp", signData.timestamp.toString());
-        formDataCloudinary.append("signature", signData.signature);
-        formDataCloudinary.append("folder", "kabale_online");
-
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+      // 1. Upload NEW Images to Cloudinary
+      if (imageFiles.length > 0) {
+        const signRes = await fetch("/api/cloudinary/sign", {
           method: "POST",
-          body: formDataCloudinary,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ folder: "kabale_online" })
         });
 
-        if (!res.ok) throw new Error("Cloudinary rejected the upload.");
-        return res.json();
-      });
+        const signData = await signRes.json();
+        const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
 
-      const uploadResults = await Promise.all(uploadPromises);
-      imageUrls = uploadResults.map(data => data.secure_url).filter(url => url);
+        const uploadPromises = imageFiles.map(async (file) => {
+          const formDataCloudinary = new FormData();
+          formDataCloudinary.append("file", file);
+          formDataCloudinary.append("api_key", apiKey!);
+          formDataCloudinary.append("timestamp", signData.timestamp.toString());
+          formDataCloudinary.append("signature", signData.signature);
+          formDataCloudinary.append("folder", "kabale_online");
 
-      // 2. Save Product to Firestore (WITH ADMIN OVERRIDES)
-      const dbRes = await fetch("/api/products", {
-        method: "POST",
+          const res = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, {
+            method: "POST",
+            body: formDataCloudinary,
+          });
+          return res.json();
+        });
+
+        const uploadResults = await Promise.all(uploadPromises);
+        newlyUploadedUrls = uploadResults.map(data => data.secure_url).filter(url => url);
+      }
+
+      // Combine remaining old images with new ones
+      const finalImagesList = [...existingImages, ...newlyUploadedUrls];
+
+      // 2. Decide if we are doing a POST (Create) or PUT (Update)
+      const method = editPublicId ? "PUT" : "POST";
+      const apiUrl = editPublicId ? `/api/products/${productIdToUpdate}` : "/api/products";
+
+      const dbRes = await fetch(apiUrl, {
+        method: method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: formData.title,
@@ -131,45 +168,41 @@ export default function AdminUploadPage() {
           condition: formData.condition,
           description: formData.description,
           sellerPhone: formData.sellerPhone,
-          images: imageUrls,
-          
-          // FORCING OFFICIAL ADMIN DATA
+          images: finalImagesList,
           sellerId: user.id, 
-          sellerName: "Kabale Online Official", // Automatically triggers the badge
-          isAdminUpload: true, // Useful for future database filtering
+          sellerName: "Kabale Online Official", 
+          isAdminUpload: true, 
         }),
       });
 
       const dbData = await dbRes.json();
 
-      if (dbData.success) {
-        // Redirect the admin directly to the live product page to view it
-        router.push(`/product/${dbData.publicId}`);
+      if (dbRes.ok) {
+        router.push(`/product/${editPublicId ? editPublicId : dbData.publicId}`);
       } else {
         throw new Error(dbData.error || "Database rejected the product.");
       }
 
     } catch (error: any) {
-      console.error("Upload failed:", error);
-      alert(`Upload failed: ${error.message}`);
+      console.error("Action failed:", error);
+      alert(`Action failed: ${error.message}`);
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6">
+    <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6">
       
-      {/* Admin Header Section */}
+      {/* Dynamic Admin Header */}
       <div className="bg-slate-900 rounded-3xl p-8 mb-8 text-white flex items-center justify-between shadow-lg">
         <div>
           <span className="bg-[#D97706] text-white text-[10px] uppercase font-black px-3 py-1 rounded-full tracking-widest mb-3 inline-block">
-            Secure Admin Portal
+            {editPublicId ? "Update Mode" : "Secure Admin Portal"}
           </span>
-          <h1 className="text-3xl font-extrabold mb-1">Upload Official Inventory</h1>
-          <p className="text-slate-400">Items posted here automatically receive the "Official Store" badge.</p>
-        </div>
-        <div className="hidden md:flex w-16 h-16 bg-white/10 rounded-full items-center justify-center text-3xl">
-          👑
+          <h1 className="text-3xl font-extrabold mb-1">
+            {editPublicId ? "Edit Official Item" : "Upload Official Inventory"}
+          </h1>
+          {editPublicId && <p className="text-slate-400">Editing Product ID: {editPublicId}</p>}
         </div>
       </div>
 
@@ -181,7 +214,7 @@ export default function AdminUploadPage() {
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Product Title *</label>
-            <input required type="text" placeholder="e.g. iPhone 13 Pro Max (256GB)" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow" 
+            <input required type="text" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow" 
               value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
           </div>
 
@@ -197,12 +230,12 @@ export default function AdminUploadPage() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-900 mb-2">Price (UGX) *</label>
-              <input required type="number" placeholder="e.g. 1500000" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
+              <input required type="number" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
                 value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-900 mb-2">Quantity in Stock *</label>
-              <input required type="number" min="1" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
+              <input required type="number" min="0" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
                 value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
             </div>
           </div>
@@ -218,48 +251,48 @@ export default function AdminUploadPage() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-900 mb-2">Official WhatsApp Number *</label>
-              <input required type="tel" placeholder="e.g. 077..." className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
+              <input required type="tel" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
                 value={formData.sellerPhone} onChange={e => setFormData({...formData, sellerPhone: e.target.value})} />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Description *</label>
-            <textarea required rows={5} placeholder="Full product specifications and details..." className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none resize-none transition-shadow"
+            <textarea required rows={5} className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none resize-none transition-shadow"
               value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
           </div>
         </div>
 
-        {/* IMAGE UPLOAD SECTION */}
+        {/* DYNAMIC IMAGE UPLOAD SECTION */}
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-            <h2 className="text-xl font-bold text-slate-900">High Quality Images</h2>
-            <span className="text-sm font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">{imageFiles.length} / 5</span>
+            <h2 className="text-xl font-bold text-slate-900">Manage Images</h2>
+            <span className="text-sm font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">{existingImages.length + imageFiles.length} / 5</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {imagePreviews.map((preview, index) => (
-              <div key={index} className="relative aspect-square rounded-xl border border-slate-200 overflow-hidden group shadow-sm">
-                <Image src={preview} alt="preview" fill className="object-cover" />
-                <button type="button" onClick={() => removeImage(index)} className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center text-sm opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-red-600">
-                  ✕
-                </button>
-                {index === 0 && (
-                  <div className="absolute bottom-0 left-0 w-full bg-[#D97706] text-white text-[10px] text-center py-1.5 font-black tracking-widest uppercase">
-                    Main Photo
-                  </div>
-                )}
+            
+            {/* Show Existing Images (Only if editing) */}
+            {existingImages.map((url, index) => (
+              <div key={`old-${index}`} className="relative aspect-square rounded-xl border border-slate-200 overflow-hidden group shadow-sm">
+                <Image src={url} alt="existing" fill className="object-cover" />
+                <button type="button" onClick={() => removeExistingImage(index)} className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
               </div>
             ))}
 
-            {imageFiles.length < 5 && (
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-amber-50 hover:border-[#D97706] transition-colors"
-              >
-                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mb-2">
-                  <span className="text-xl text-slate-500">+</span>
-                </div>
+            {/* Show New Previews */}
+            {imagePreviews.map((preview, index) => (
+              <div key={`new-${index}`} className="relative aspect-square rounded-xl border-4 border-[#D97706] overflow-hidden group shadow-sm">
+                <Image src={preview} alt="new preview" fill className="object-cover" />
+                <div className="absolute bottom-0 left-0 w-full bg-[#D97706] text-white text-[10px] text-center py-1 font-bold">NEW</div>
+                <button type="button" onClick={() => removeNewImage(index)} className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
+              </div>
+            ))}
+
+            {/* Add Image Button */}
+            {(existingImages.length + imageFiles.length) < 5 && (
+              <div onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-amber-50 hover:border-[#D97706] transition-colors">
+                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mb-2"><span className="text-xl text-slate-500">+</span></div>
                 <span className="text-xs text-slate-600 font-bold">Add Photo</span>
               </div>
             )}
@@ -267,15 +300,15 @@ export default function AdminUploadPage() {
           <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleImageSelect} />
         </div>
 
-        {/* SUBMIT BUTTON */}
+        {/* DYNAMIC SUBMIT BUTTON */}
         <button disabled={loading} type="submit" className="w-full bg-[#D97706] text-white py-5 rounded-xl font-black text-xl hover:bg-amber-600 transition-all hover:-translate-y-1 hover:shadow-xl disabled:opacity-70 disabled:hover:translate-y-0 flex justify-center items-center gap-3">
           {loading ? (
              <>
                <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-               Uploading Official Product...
+               {editPublicId ? "Saving Updates..." : "Uploading Official Product..."}
              </>
           ) : (
-            "Publish to Official Store"
+            editPublicId ? "Save Product Changes" : "Publish to Official Store"
           )}
         </button>
       </form>
