@@ -45,8 +45,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const safeCondition = product.condition || "used";
   const safeCategory = product.category || "general";
   
-  // LEGACY FIX: If an older product has no stock defined, default it to 1 so it can still be bought!
-  const safeStock = product.stock !== undefined && product.stock !== null && product.stock !== "" 
+  // FIXED: Strictly checked for null/undefined to satisfy TypeScript
+  const safeStock = (product.stock !== undefined && product.stock !== null) 
     ? Number(product.stock) 
     : 1;
   
@@ -129,7 +129,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               
               <span className="text-red-300 hidden sm:inline">•</span>
               {/* Show "Very few left" if stock is 1 or undefined, otherwise "Few remaining!" */}
-              <span>{(!product.stock || Number(product.stock) <= 1) ? "Very few left" : "Few remaining!"}</span>
+              <span>{safeStock <= 1 ? "Very few left" : "Few remaining!"}</span>
             </div>
 
             {/* Same Day Delivery Banner */}
