@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
-import { Product } from "@/types";
 import { algoliaIndex } from "@/lib/algolia";
 
 // Forces Next.js to evaluate this API route dynamically at runtime
@@ -22,16 +21,16 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
-    
+
     let query: FirebaseFirestore.Query = adminDb.collection("products");
-    
+
     if (category) {
       query = query.where("category", "==", category);
     }
-    
+
     query = query.orderBy("createdAt", "desc").limit(50);
     const snapshot = await query.get();
-    
+
     const products = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -45,13 +44,13 @@ export async function GET(request: Request) {
 }
 
 // =========================================================
-// POST: Create a new product (Your existing code)
+// POST: Create a new product
 // =========================================================
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { 
-      title, // Using title to match your new spec
+      title, 
       category, 
       price, 
       condition,
@@ -59,7 +58,9 @@ export async function POST(request: Request) {
       images, 
       sellerId,
       sellerName,
-      sellerPhone 
+      sellerPhone,
+      stock,          // NEW: Catching the stock/quantity from the frontend
+      isAdminUpload   // NEW: Catching the admin flag from the admin upload page
     } = body;
 
     if (!title || !category || !price) {
@@ -82,11 +83,11 @@ export async function POST(request: Request) {
 
       transaction.set(counterRef, { seq: nextSeq }, { merge: true });
 
-      // Build the product using your exact new MVP schema
+      // Build the product using your exact schema, now with stock and admin data
       const newProduct = {
         id: newProductRef.id,
         publicId: formattedId,
-        name: title, // Keeping 'name' for backwards compatibility, but mapped from 'title'
+        name: title, 
         title: title,
         slug: title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, ""),
         category,
@@ -97,9 +98,10 @@ export async function POST(request: Request) {
         sellerId: sellerId || "SYSTEM",
         sellerName: sellerName || "Anonymous",
         sellerPhone: sellerPhone || "",
-        status: "active", // AUTO-PUBLISH: Skips admin verification
+        status: "active", 
         views: 0,
-        stock: 1, // Defaulting to 1 for individual items
+        stock: stock !== undefined ? Number(stock) : 1, // NEW: Uses the passed stock, or defaults to 1
+        isAdminUpload: isAdminUpload || false,          // NEW: Flags official store items
         createdAt: Date.now(),
       };
 
