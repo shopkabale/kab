@@ -19,16 +19,15 @@ export default function SellPage() {
     title: "",
     category: "electronics",
     price: "",
+    quantity: "1", // NEW: Default to 1 item
     condition: "used",
     description: "",
     sellerPhone: "",
   });
 
-  // Watch for user login if they were interrupted
   useEffect(() => {
     if (user && showLoginModal) {
       setShowLoginModal(false);
-      // Auto-submit now that they are logged in!
       submitProductData(user); 
     }
   }, [user, showLoginModal]);
@@ -60,7 +59,6 @@ export default function SellPage() {
       return;
     }
 
-    // LOGIN INTERRUPTION FLOW
     if (!user) {
       setShowLoginModal(true);
       return;
@@ -75,28 +73,24 @@ export default function SellPage() {
     try {
       let imageUrls: string[] = [];
 
-      // 1. Upload Images to Cloudinary
       if (imageFiles.length > 0) {
         const signRes = await fetch("/api/cloudinary/sign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ folder: "kabale_online" })
         });
-        
+
         if (!signRes.ok) throw new Error("Failed to get upload signature from server.");
-        
+
         const signData = await signRes.json();
         const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
         const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
 
         if (!apiKey) throw new Error("Missing NEXT_PUBLIC_CLOUDINARY_API_KEY in Vercel settings.");
 
-        // Upload in parallel for speed
         const uploadPromises = imageFiles.map(async (file) => {
           const formDataCloudinary = new FormData();
           formDataCloudinary.append("file", file);
-          
-          // ✅ FIXED: Now correctly using the API_KEY
           formDataCloudinary.append("api_key", apiKey);
           formDataCloudinary.append("timestamp", signData.timestamp.toString());
           formDataCloudinary.append("signature", signData.signature);
@@ -106,14 +100,12 @@ export default function SellPage() {
             method: "POST",
             body: formDataCloudinary,
           });
-          
-          // ✅ FIXED: Added proper error catching from Cloudinary
+
           if (!res.ok) {
             const errorData = await res.json();
-            console.error("Cloudinary rejection:", errorData);
             throw new Error(errorData.error?.message || "Cloudinary rejected the upload.");
           }
-          
+
           return res.json();
         });
 
@@ -121,12 +113,17 @@ export default function SellPage() {
         imageUrls = uploadResults.map(data => data.secure_url).filter(url => url);
       }
 
-      // 2. Save Product to Firestore
       const dbRes = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          ...formData,
+          title: formData.title,
+          category: formData.category,
+          price: formData.price,
+          stock: Number(formData.quantity), // NEW: Passing quantity as stock
+          condition: formData.condition,
+          description: formData.description,
+          sellerPhone: formData.sellerPhone,
           images: imageUrls,
           sellerId: currentUser.id,
           sellerName: currentUser.displayName,
@@ -136,7 +133,7 @@ export default function SellPage() {
       const dbData = await dbRes.json();
 
       if (dbData.success) {
-        router.push(`/item/${dbData.publicId}`);
+        router.push(`/product/${dbData.publicId}`);
       } else {
         throw new Error(dbData.error || "Database rejected the product.");
       }
@@ -157,20 +154,19 @@ export default function SellPage() {
 
       <form onSubmit={handleSubmitClick} className="space-y-8">
 
-        {/* A. Basic Information Section */}
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
           <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4">Basic Details</h2>
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Product Title *</label>
-            <input required type="text" placeholder="e.g. HP EliteBook 840 G5" className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none" 
+            <input required type="text" placeholder="e.g. HP EliteBook 840 G5" className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] focus:border-transparent outline-none" 
               value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-semibold text-slate-900 mb-2">Category *</label>
-              <select className="w-full rounded-lg border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-primary outline-none"
+              <select className="w-full rounded-lg border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#D97706] outline-none"
                 value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
                 <option value="electronics">Electronics</option>
                 <option value="agriculture">Agriculture</option>
@@ -179,15 +175,21 @@ export default function SellPage() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-900 mb-2">Price (UGX) *</label>
-              <input required type="number" placeholder="e.g. 850000" className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-primary outline-none"
+              <input required type="number" placeholder="850000" className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none"
                 value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
+            </div>
+            {/* NEW QUANTITY FIELD */}
+            <div>
+              <label className="block text-sm font-semibold text-slate-900 mb-2">Quantity *</label>
+              <input required type="number" min="1" placeholder="1" className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none"
+                value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-semibold text-slate-900 mb-2">Condition *</label>
-              <select className="w-full rounded-lg border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-primary outline-none"
+              <select className="w-full rounded-lg border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#D97706] outline-none"
                 value={formData.condition} onChange={e => setFormData({...formData, condition: e.target.value})}>
                 <option value="used">Used / Second Hand</option>
                 <option value="new">Brand New</option>
@@ -195,19 +197,18 @@ export default function SellPage() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-slate-900 mb-2">Your WhatsApp Number *</label>
-              <input required type="tel" placeholder="e.g. 0745184660" className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-primary outline-none"
+              <input required type="tel" placeholder="e.g. 0745184660" className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none"
                 value={formData.sellerPhone} onChange={e => setFormData({...formData, sellerPhone: e.target.value})} />
             </div>
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Description *</label>
-            <textarea required rows={4} placeholder="Describe the item, features, and any flaws..." className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-primary outline-none resize-none"
+            <textarea required rows={4} placeholder="Describe the item, features, and any flaws..." className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none resize-none"
               value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
           </div>
         </div>
 
-        {/* B. Image Upload Section */}
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex justify-between items-center border-b border-slate-100 pb-4">
             <h2 className="text-xl font-bold text-slate-900">Photos</h2>
@@ -232,7 +233,7 @@ export default function SellPage() {
             {imageFiles.length < 5 && (
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-primary transition-colors"
+                className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-[#D97706] transition-colors"
               >
                 <span className="text-2xl text-slate-400 mb-1">+</span>
                 <span className="text-xs text-slate-500 font-medium">Add Photo</span>
@@ -242,8 +243,7 @@ export default function SellPage() {
           <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleImageSelect} />
         </div>
 
-        {/* C. Submit Button */}
-        <button disabled={loading} type="submit" className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-slate-800 transition-colors disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg">
+        <button disabled={loading} type="submit" className="w-full bg-[#D97706] text-white py-4 rounded-xl font-bold text-lg hover:bg-amber-600 transition-colors disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg">
           {loading ? (
              <>
                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -255,21 +255,17 @@ export default function SellPage() {
         </button>
       </form>
 
-      {/* D. Login Interruption Modal */}
       {showLoginModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 text-center animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-sky-100 text-sky-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">🔐</div>
+            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">🔐</div>
             <h2 className="text-2xl font-bold text-slate-900 mb-2">Almost there!</h2>
             <p className="text-slate-600 mb-8">
               Sign in with Google to publish your product to the marketplace. Your form data is saved.
             </p>
             <div className="space-y-3">
-              <button onClick={() => {
-                  setLoading(true);
-                  signIn(); 
-                }} 
-                className="w-full rounded-lg bg-primary px-4 py-3 text-base font-bold text-white hover:bg-sky-500 transition-colors"
+              <button onClick={() => { setLoading(true); signIn(); }} 
+                className="w-full rounded-lg bg-[#D97706] px-4 py-3 text-base font-bold text-white hover:bg-amber-600 transition-colors"
               >
                 Sign in with Google
               </button>
