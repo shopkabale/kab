@@ -1,281 +1,188 @@
-"use client";
+import { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getProductByPublicId } from "@/lib/firebase/firestore";
+import ImageGallery from "@/components/ImageGallery";
+import ProductActions from "@/components/ProductActions";
+import ProductTracker from "@/components/ProductTracker";
 
-import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { useAuth } from "@/components/AuthProvider";
+export const revalidate = 60; 
 
-export default function SellPage() {
-  const router = useRouter();
-  const { user, signIn, loading: authLoading } = useAuth();
+export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
+  const product = await getProductByPublicId(params.publicId);
 
-  const [loading, setLoading] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  if (!product) return { title: "Item Not Found | Kabale Online" };
 
-  const [formData, setFormData] = useState({
-    title: "",
-    category: "electronics",
-    price: "",
-    quantity: "1", // NEW: Default to 1 item
-    condition: "used",
-    description: "",
-    sellerPhone: "",
-  });
+  const safeName = product.name || "Unnamed Item";
+  const formattedPrice = `UGX ${(Number(product.price) || 0).toLocaleString()}`;
+  
+  const title = `${safeName} - Available in Kabale | ${formattedPrice}`;
+  const description = product.description?.slice(0, 150) || `Buy this ${safeName} for ${formattedPrice}. Pay strictly Cash on Delivery in Kabale town.`;
+  const imageUrl = product.images?.[0] || "https://www.kabaleonline.com/og-image.jpg";
 
-  useEffect(() => {
-    if (user && showLoginModal) {
-      setShowLoginModal(false);
-      submitProductData(user); 
-    }
-  }, [user, showLoginModal]);
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      if (imageFiles.length + newFiles.length > 5) {
-        alert("You can only upload a maximum of 5 images.");
-        return;
-      }
-      setImageFiles(prev => [...prev, ...newFiles]);
-
-      const newPreviews = newFiles.map(file => URL.createObjectURL(file));
-      setImagePreviews(prev => [...prev, ...newPreviews]);
-    }
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url: `https://www.kabaleonline.com/product/${params.publicId}`,
+      siteName: "Kabale Online",
+      images: [{ url: imageUrl, width: 1200, height: 630, alt: safeName }],
+      type: "website",
+    },
+    twitter: { card: "summary_large_image", title, description, images: [imageUrl] },
   };
+}
 
-  const removeImage = (index: number) => {
-    setImageFiles(prev => prev.filter((_, i) => i !== index));
-    setImagePreviews(prev => prev.filter((_, i) => i !== index));
-  };
+export default async function ProductDetailsPage({ params }: { params: { publicId: string } }) {
+  const product = await getProductByPublicId(params.publicId);
 
-  const handleSubmitClick = (e: React.FormEvent) => {
-    e.preventDefault();
+  if (!product) notFound();
 
-    if (imageFiles.length === 0) {
-      alert("Please upload at least one image of your product.");
-      return;
-    }
+  const safeName = product.name || "Unnamed Item";
+  const safePrice = Number(product.price) || 0;
+  const safeCondition = product.condition || "used";
+  const safeCategory = product.category || "general";
+  
+  // LEGACY FIX: If an older product has no stock defined, default it to 1 so it can still be bought!
+  const safeStock = product.stock !== undefined && product.stock !== null && product.stock !== "" 
+    ? Number(product.stock) 
+    : 1;
+  
+  // Fake FOMO Math
+  const fakeViews = (safeName.length * 3) + 12;
+  const fakeBought = (safeName.length % 4) + 2;
 
-    if (!user) {
-      setShowLoginModal(true);
-      return;
-    }
-
-    submitProductData(user);
-  };
-
-  const submitProductData = async (currentUser: any) => {
-    setLoading(true);
-
-    try {
-      let imageUrls: string[] = [];
-
-      if (imageFiles.length > 0) {
-        const signRes = await fetch("/api/cloudinary/sign", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ folder: "kabale_online" })
-        });
-
-        if (!signRes.ok) throw new Error("Failed to get upload signature from server.");
-
-        const signData = await signRes.json();
-        const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-        const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
-
-        if (!apiKey) throw new Error("Missing NEXT_PUBLIC_CLOUDINARY_API_KEY in Vercel settings.");
-
-        const uploadPromises = imageFiles.map(async (file) => {
-          const formDataCloudinary = new FormData();
-          formDataCloudinary.append("file", file);
-          formDataCloudinary.append("api_key", apiKey);
-          formDataCloudinary.append("timestamp", signData.timestamp.toString());
-          formDataCloudinary.append("signature", signData.signature);
-          formDataCloudinary.append("folder", "kabale_online");
-
-          const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-            method: "POST",
-            body: formDataCloudinary,
-          });
-
-          if (!res.ok) {
-            const errorData = await res.json();
-            throw new Error(errorData.error?.message || "Cloudinary rejected the upload.");
-          }
-
-          return res.json();
-        });
-
-        const uploadResults = await Promise.all(uploadPromises);
-        imageUrls = uploadResults.map(data => data.secure_url).filter(url => url);
-      }
-
-      const dbRes = await fetch("/api/products", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: formData.title,
-          category: formData.category,
-          price: formData.price,
-          stock: Number(formData.quantity), // NEW: Passing quantity as stock
-          condition: formData.condition,
-          description: formData.description,
-          sellerPhone: formData.sellerPhone,
-          images: imageUrls,
-          sellerId: currentUser.id,
-          sellerName: currentUser.displayName,
-        }),
-      });
-
-      const dbData = await dbRes.json();
-
-      if (dbData.success) {
-        router.push(`/product/${dbData.publicId}`);
-      } else {
-        throw new Error(dbData.error || "Database rejected the product.");
-      }
-
-    } catch (error: any) {
-      console.error("Upload process failed:", error);
-      alert(`Upload failed: ${error.message || "Unknown error occurred"}`);
-      setLoading(false);
-    }
-  };
+  // Admin check for Official Store
+  const isAdmin = product.sellerName?.toLowerCase().includes('admin') || product.sellerName?.toLowerCase().includes('kabale online');
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
-      <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-slate-900">Post an Item for Sale</h1>
-        <p className="text-slate-600 mt-2">Reach buyers across Kabale town. No hidden fees.</p>
+    <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6">
+      <ProductTracker productId={product.id} />
+
+      {/* BREADCRUMBS */}
+      <div className="mb-6 flex items-center text-sm text-slate-500 font-medium overflow-x-auto whitespace-nowrap scrollbar-hide">
+        <Link href="/" className="hover:text-[#D97706] transition-colors">Home</Link>
+        <span className="mx-2">/</span>
+        <Link href={`/category/${safeCategory}`} className="hover:text-[#D97706] transition-colors capitalize">
+          {safeCategory.replace(/_/g, ' ')}
+        </Link>
+        <span className="mx-2">/</span>
+        <span className="text-slate-900 truncate max-w-[200px]">{safeName}</span>
       </div>
 
-      <form onSubmit={handleSubmitClick} className="space-y-8">
+      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-8 p-6 lg:p-8">
 
-        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-          <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4">Basic Details</h2>
-
-          <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Product Title *</label>
-            <input required type="text" placeholder="e.g. HP EliteBook 840 G5" className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] focus:border-transparent outline-none" 
-              value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Category *</label>
-              <select className="w-full rounded-lg border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#D97706] outline-none"
-                value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                <option value="electronics">Electronics</option>
-                <option value="agriculture">Agriculture</option>
-                <option value="student_item">Student Market</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Price (UGX) *</label>
-              <input required type="number" placeholder="850000" className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none"
-                value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
-            </div>
-            {/* NEW QUANTITY FIELD */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Quantity *</label>
-              <input required type="number" min="1" placeholder="1" className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none"
-                value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Condition *</label>
-              <select className="w-full rounded-lg border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#D97706] outline-none"
-                value={formData.condition} onChange={e => setFormData({...formData, condition: e.target.value})}>
-                <option value="used">Used / Second Hand</option>
-                <option value="new">Brand New</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Your WhatsApp Number *</label>
-              <input required type="tel" placeholder="e.g. 0745184660" className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none"
-                value={formData.sellerPhone} onChange={e => setFormData({...formData, sellerPhone: e.target.value})} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Description *</label>
-            <textarea required rows={4} placeholder="Describe the item, features, and any flaws..." className="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none resize-none"
-              value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-          <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-            <h2 className="text-xl font-bold text-slate-900">Photos</h2>
-            <span className="text-sm text-slate-500">{imageFiles.length} / 5</span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            {imagePreviews.map((preview, index) => (
-              <div key={index} className="relative aspect-square rounded-xl border border-slate-200 overflow-hidden group">
-                <Image src={preview} alt="preview" fill className="object-cover" />
-                <button type="button" onClick={() => removeImage(index)} className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">
-                  ✕
-                </button>
-                {index === 0 && (
-                  <div className="absolute bottom-0 left-0 w-full bg-slate-900/70 text-white text-[10px] text-center py-1 font-bold">
-                    COVER
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {imageFiles.length < 5 && (
-              <div 
-                onClick={() => fileInputRef.current?.click()}
-                className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 hover:border-[#D97706] transition-colors"
-              >
-                <span className="text-2xl text-slate-400 mb-1">+</span>
-                <span className="text-xs text-slate-500 font-medium">Add Photo</span>
-              </div>
-            )}
-          </div>
-          <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleImageSelect} />
-        </div>
-
-        <button disabled={loading} type="submit" className="w-full bg-[#D97706] text-white py-4 rounded-xl font-bold text-lg hover:bg-amber-600 transition-colors disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg">
-          {loading ? (
-             <>
-               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-               Publishing...
-             </>
-          ) : (
-            "Post Item Now"
-          )}
-        </button>
-      </form>
-
-      {showLoginModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 text-center animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">🔐</div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Almost there!</h2>
-            <p className="text-slate-600 mb-8">
-              Sign in with Google to publish your product to the marketplace. Your form data is saved.
+          {/* LEFT COLUMN: Image Gallery & Color Notice */}
+          <div className="w-full mb-8 lg:mb-0 flex flex-col">
+            <ImageGallery images={product.images || []} title={safeName} />
+            <p className="text-[11px] text-slate-400 mt-4 text-center italic">
+              * Note: Actual color variations may occur due to lighting or screen settings.
             </p>
-            <div className="space-y-3">
-              <button onClick={() => { setLoading(true); signIn(); }} 
-                className="w-full rounded-lg bg-[#D97706] px-4 py-3 text-base font-bold text-white hover:bg-amber-600 transition-colors"
-              >
-                Sign in with Google
-              </button>
-              <button onClick={() => setShowLoginModal(false)} className="w-full rounded-lg bg-white border border-slate-200 px-4 py-3 text-base font-bold text-slate-700 hover:bg-slate-50 transition-colors">
-                Cancel
-              </button>
+          </div>
+
+          {/* RIGHT COLUMN: Product Details */}
+          <div className="flex flex-col h-full">
+
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="bg-slate-100 text-slate-700 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-widest">
+                ID: {product.publicId || product.id.slice(0, 8)}
+              </span>
+              <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
+                safeCondition === 'new' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+              }`}>
+                {safeCondition === 'new' ? 'Brand New' : 'Used'}
+              </span>
             </div>
+
+            {/* Title with injected location */}
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight mb-2">
+              {safeName} <span className="text-lg font-medium text-slate-500 block sm:inline mt-1 sm:mt-0">(Available in Kabale)</span>
+            </h1>
+
+            {/* Pricing & Stock Badge */}
+            <div className="flex items-end gap-4 mt-4 mb-2">
+              <span className="text-4xl font-black text-[#D97706]">
+                UGX {safePrice.toLocaleString()}
+              </span>
+              <span className={`text-xs font-bold px-3 py-1 rounded-full mb-1 ${
+                safeStock > 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+              }`}>
+                {safeStock > 0 ? 'In Stock' : 'Out of Stock'}
+              </span>
+            </div>
+
+            {/* FOMO Section (Dynamic based on Admin & Stock) */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-bold text-red-600 bg-red-50 py-2 px-3 rounded-lg w-fit mb-6 border border-red-100">
+              <span className="animate-pulse">🔥</span>
+              <span>{fakeViews} viewing today</span>
+              
+              {/* Only show "bought this week" if it's the Official Store */}
+              {isAdmin && (
+                <>
+                  <span className="text-red-300 hidden sm:inline">•</span>
+                  <span>{fakeBought} bought this week</span>
+                </>
+              )}
+              
+              <span className="text-red-300 hidden sm:inline">•</span>
+              {/* Show "Very few left" if stock is 1 or undefined, otherwise "Few remaining!" */}
+              <span>{(!product.stock || Number(product.stock) <= 1) ? "Very few left" : "Few remaining!"}</span>
+            </div>
+
+            {/* Same Day Delivery Banner */}
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-6 flex items-start gap-3">
+              <span className="text-xl">🚚</span>
+              <div>
+                <p className="text-sm font-bold text-emerald-900">Available in Kabale</p>
+                <p className="text-xs text-emerald-700 font-medium">Same day delivery if ordered between 7 AM and 3 PM.</p>
+              </div>
+            </div>
+
+            {/* Seller Info Box with Official Store Check */}
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 mb-6 flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl flex-shrink-0 ${isAdmin ? 'bg-[#D97706] text-white' : 'bg-slate-200 text-slate-700'}`}>
+                {isAdmin ? "K" : (product.sellerName ? product.sellerName.charAt(0).toUpperCase() : "S")}
+              </div>
+              <div className="overflow-hidden flex-grow">
+                <p className="text-[10px] text-slate-500 uppercase tracking-wider font-bold">Sold By</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-base font-bold text-slate-900 truncate">{product.sellerName || "Verified Seller"}</p>
+                  {isAdmin && (
+                    <span className="bg-[#D97706] text-white text-[9px] uppercase font-black px-2 py-0.5 rounded flex items-center gap-1 shadow-sm">
+                      <span>✓</span> Official Store
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-600 font-medium">📍 Kabale Town</p>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="mb-8 flex-grow">
+              <h3 className="text-sm font-bold text-slate-900 mb-3 border-b border-slate-100 pb-2 uppercase tracking-wider">Description</h3>
+              <div className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                {product.description || "No description provided by the seller."}
+              </div>
+            </div>
+
+            {/* Actions: Checkout & Extras */}
+            <div className="mt-auto border-t border-slate-100 pt-6 space-y-4">
+              <Link 
+                href={`/checkout/${product.publicId || product.id}`}
+                className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-slate-800 transition-all hover:shadow-lg hover:-translate-y-1 flex items-center justify-center gap-2"
+              >
+                🛒 Proceed to Checkout
+              </Link>
+              {/* Product Actions Component handles the Buy Now modal and WhatsApp sharing */}
+              <ProductActions product={product} />
+            </div>
+
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
