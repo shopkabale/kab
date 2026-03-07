@@ -35,7 +35,7 @@ function parseProduct(doc: FirebaseFirestore.DocumentSnapshot): Product {
     stock: Number(data.stock) || Number(data.quantity) || 1,
     images: parsedImages,
     createdAt: parsedCreatedAt,
-    
+
     // --- NEW MAPPED FIELDS ---
     condition: data.condition || "used",
     description: data.description || "",
@@ -50,18 +50,24 @@ function parseProduct(doc: FirebaseFirestore.DocumentSnapshot): Product {
 
 // --- FETCH FUNCTIONS ---
 
-export async function getProducts(category?: string): Promise<Product[]> {
+// FIXED: Added limitCount so we aren't hardcoded to 20 anymore!
+export async function getProducts(category?: string, limitCount?: number): Promise<Product[]> {
   try {
     let query: FirebaseFirestore.Query = adminDb.collection("products");
-    
+
     if (category) {
       query = query.where("category", "==", category);
     }
-    
-    query = query.orderBy("createdAt", "desc").limit(20);
+
+    query = query.orderBy("createdAt", "desc");
+
+    // Only apply a limit if the frontend specifically asks for one
+    if (limitCount) {
+      query = query.limit(limitCount);
+    }
 
     const snapshot = await query.get();
-    
+
     if (snapshot.empty) {
       return [];
     }
@@ -86,7 +92,7 @@ export async function getProductByPublicId(publicIdOrId: string): Promise<Produc
     }
 
     const docRef = await adminDb.collection("products").doc(publicIdOrId).get();
-    
+
     if (docRef.exists) {
       return parseProduct(docRef);
     }
