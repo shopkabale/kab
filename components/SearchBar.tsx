@@ -130,7 +130,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
             className="bg-slate-50 p-2 text-center border-t border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors"
             onClick={handleFullSearchSubmit}
           >
-            <span className="text-xs font-bold text-[#D97706]">Press Enter to see all results ➔</span>
+            <span className="text-xs font-bold text-[#D97706]">Tap to see all results ➔</span>
           </div>
         </div>
       )}
