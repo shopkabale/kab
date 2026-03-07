@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import FloatingHelpButton from "@/components/FloatingHelpButton"; // 1. Imported the new button
 import "./globals.css";
 
 // 1. VIEWPORT CONFIG (Required for PWA mobile rendering)
@@ -62,6 +63,10 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          
+          {/* 2. Injected the floating button globally */}
+          <FloatingHelpButton />
+          
         </AuthProvider>
       </body>
     </html>
