@@ -11,7 +11,8 @@ const searchClient = algoliasearch(
   process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "",
   process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY || ""
 );
-const index = searchClient.initIndex(process.env.ALGOLIA_INDEX_NAME || "kabale_products");
+// Make sure this matches your exact index name!
+const index = searchClient.initIndex(process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "kabale_products");
 
 interface SearchResult {
   objectID: string;
@@ -21,7 +22,11 @@ interface SearchResult {
   image: string;
 }
 
-export default function SearchBar() {
+interface SearchBarProps {
+  onSearch?: () => void; // This allows the Navbar to pass a "close menu" function
+}
+
+export default function SearchBar({ onSearch }: SearchBarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -37,7 +42,7 @@ export default function SearchBar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Handle the Live Dropdown Search
+  // Handle the Live Dropdown Search via Algolia
   const handleLiveSearch = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
@@ -59,19 +64,16 @@ export default function SearchBar() {
 
   // Handle the "Enter" Key press OR the Search Button click
   const handleFullSearchSubmit = (e: React.FormEvent) => {
-    e.preventDefault(); // Prevents page reload
+    e.preventDefault();
     if (query.trim() !== "") {
       setIsOpen(false);
+      if (onSearch) onSearch(); // CLOSES THE MOBILE MENU!
       router.push(`/search?q=${encodeURIComponent(query.trim())}`);
     }
   };
 
   return (
     <div className="relative w-full max-w-md mx-auto" ref={searchRef}>
-      {/* The <form> tag is the magic here. 
-        It naturally captures the "Enter" key on Desktop 
-        AND the "Go/Search" button on mobile keyboards! 
-      */}
       <form onSubmit={handleFullSearchSubmit} className="relative flex items-center">
         <input
           type="text"
@@ -82,7 +84,6 @@ export default function SearchBar() {
           className="w-full pl-5 pr-14 py-2.5 border border-slate-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#D97706] focus:border-transparent transition-all shadow-sm"
         />
         
-        {/* The Clickable Search Button for Mobile & Desktop */}
         <button 
           type="submit"
           aria-label="Submit Search"
@@ -96,12 +97,16 @@ export default function SearchBar() {
 
       {/* The Algolia Live Dropdown */}
       {isOpen && results.length > 0 && (
-        <div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-[100]">
           {results.map((hit) => (
             <Link
               key={hit.objectID}
               href={`/product/${hit.objectID}`} 
-              onClick={() => { setIsOpen(false); setQuery(""); }}
+              onClick={() => { 
+                setIsOpen(false); 
+                setQuery(""); 
+                if (onSearch) onSearch(); // Close mobile menu when an item is clicked
+              }}
               className="flex items-center p-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
             >
               {hit.image ? (
@@ -121,7 +126,6 @@ export default function SearchBar() {
             </Link>
           ))}
           
-          {/* A prompt at the bottom of the dropdown to view all results */}
           <div 
             className="bg-slate-50 p-2 text-center border-t border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors"
             onClick={handleFullSearchSubmit}
