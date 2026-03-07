@@ -143,7 +143,8 @@ export default function Navbar() {
         <div className={`xl:hidden absolute w-full bg-white border-t border-slate-200 shadow-xl transition-all duration-300 ease-in-out origin-top ${isMobileMenuOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'} max-h-[85vh] overflow-y-auto`}>
 
           <div className="px-4 pt-4 pb-2 md:hidden">
-            <SearchBar />
+            {/* FIXED: Passed the onSearch prop to close the menu */}
+            <SearchBar onSearch={() => setIsMobileMenuOpen(false)} />
           </div>
 
           {/* GROUP 1: Shop By Category */}
@@ -181,7 +182,7 @@ export default function Navbar() {
           {/* GROUP 3: Authentication & Profile */}
           <div className="px-4 pt-4 pb-6 bg-slate-50 mt-2">
             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Your Account</h3>
-            
+
             {loading ? (
               <div className="flex justify-center py-2">
                 <div className="h-6 w-6 rounded-full border-2 border-[#D97706] border-t-transparent animate-spin"></div>
