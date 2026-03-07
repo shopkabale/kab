@@ -2,7 +2,8 @@ import algoliasearch from "algoliasearch";
 
 const appId = process.env.NEXT_PUBLIC_ALGOLIA_APP_ID;
 const adminKey = process.env.ALGOLIA_ADMIN_KEY;
-const indexName = process.env.ALGOLIA_INDEX_NAME;
+// FIXED: Now looking for the correct PUBLIC variable
+const indexName = process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME; 
 
 if (!appId || !adminKey || !indexName) {
   console.warn("Algolia environment variables are missing.");
@@ -10,4 +11,4 @@ if (!appId || !adminKey || !indexName) {
 
 // We use the Admin Key here because this is strictly for server-side indexing
 export const algoliaAdminClient = algoliasearch(appId || "", adminKey || "");
-export const algoliaIndex = algoliaAdminClient.initIndex(indexName || "kabale_products");
+export const algoliaIndex = algoliaAdminClient.initIndex(indexName || "products");
