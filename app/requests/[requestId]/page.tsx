@@ -7,13 +7,23 @@ interface PageProps {
   params: { requestId: string };
 }
 
+// FORMATTING HELPER: Automatically adds the Ugandan 256 code if missing
+const formatWhatsAppNumber = (phone: string) => {
+  if (!phone) return "";
+  let cleaned = phone.replace(/[^0-9]/g, ''); // Remove spaces, dashes, or + signs
+  if (cleaned.startsWith('0')) {
+    return '256' + cleaned.substring(1); // Change 07... to 2567...
+  }
+  return cleaned; // If they already typed 256, just return it
+};
+
 // 1. GENERATE DYNAMIC META TAGS FOR SOCIAL SHARING
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   try {
     const docSnap = await adminDb.collection("item_requests").doc(params.requestId).get();
-    
+
     if (!docSnap.exists) {
-      return { title: "Request Not Found | Okay Notice" };
+      return { title: "Request Not Found | Kabale Online" }; // FIXED: Old brand name removed
     }
 
     const data = docSnap.data();
@@ -53,7 +63,10 @@ export default async function SingleRequestPage({ params }: PageProps) {
 
   const req = docSnap.data();
   const dateStr = req?.createdAt?.toDate ? req.createdAt.toDate().toLocaleDateString() : "Recently";
-  const whatsappLink = `https://wa.me/${req?.buyerPhone?.replace(/[^0-9]/g, '')}?text=Hi%20${req?.buyerName},%20I%20saw%20your%20request%20for%20"${req?.itemNeeded}"%20on%20Okay%20Notice.%20I%20have%20this%20item!`;
+  
+  // FIXED: Formatted the phone number and updated the WhatsApp message text
+  const formattedPhone = formatWhatsAppNumber(req?.buyerPhone);
+  const whatsappLink = `https://wa.me/${formattedPhone}?text=Hi%20${req?.buyerName},%20I%20saw%20your%20request%20for%20"${req?.itemNeeded}"%20on%20Kabale%20Online.%20I%20have%20this%20item!`;
 
   return (
     <div className="max-w-3xl mx-auto py-16 px-4 min-h-screen">
@@ -63,7 +76,7 @@ export default async function SingleRequestPage({ params }: PageProps) {
 
       <div className="bg-white border border-slate-200 rounded-3xl p-8 md:p-12 shadow-lg relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-[#D97706]"></div>
-        
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <span className="text-xs font-black text-[#D97706] bg-amber-50 px-4 py-1.5 rounded-full uppercase tracking-widest mb-4 inline-block">
