@@ -5,6 +5,22 @@ import { getProducts } from "@/lib/firebase/firestore";
 // Force dynamic so Next.js can read the ?page=2 URL parameter perfectly
 export const dynamic = "force-dynamic";
 
+// ==========================================
+// THE DAILY SHUFFLE ALGORITHM
+// ==========================================
+function getDailyRandomScore(id: string) {
+  // Get today's date as a string (e.g., "2026-03-08")
+  const today = new Date().toISOString().split('T')[0];
+  const seedString = id + today; 
+  
+  let hash = 0;
+  for (let i = 0; i < seedString.length; i++) {
+    hash = (hash << 5) - hash + seedString.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+}
+
 // Helper to map URL slugs to beautiful page titles and descriptions
 const categoryDetails: Record<string, { title: string; description: string }> = {
   "electronics": {
@@ -43,17 +59,20 @@ export default async function CategoryPage({
   // 1. Fetch products strictly for the category in the URL
   const allCategoryProducts = await getProducts(params.categorySlug);
 
-  // 2. Pagination Setup
+  // 2. SHUFFLE THEM (Stable Daily Randomization)
+  allCategoryProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
+
+  // 3. Pagination Setup
   const currentPage = Number(searchParams.page) || 1;
   const itemsPerPage = 12; // Adjust if you want 16 or 20 per page
   const totalItems = allCategoryProducts.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  
-  // 3. Slice the array to get only the items for the current page
+
+  // 4. Slice the array to get only the items for the current page
   const paginatedProducts = allCategoryProducts.slice(startIndex, startIndex + itemsPerPage);
 
-  // 4. Get the matching text for the header
+  // 5. Get the matching text for the header
   const info = categoryDetails[params.categorySlug] || {
     title: params.categorySlug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
     description: `Browse all items in ${params.categorySlug.replace(/_/g, ' ')}.`
@@ -61,7 +80,7 @@ export default async function CategoryPage({
 
   return (
     <div className="py-8 max-w-7xl mx-auto px-4 sm:px-6">
-      
+
       {/* HEADER */}
       <div className="mb-8 border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
         <div>
