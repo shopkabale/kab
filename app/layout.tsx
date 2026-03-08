@@ -16,7 +16,7 @@ export const viewport: Viewport = {
 
 // 2. SEO & PWA METADATA
 export const metadata: Metadata = {
-  title: "Kabale Online | The Better Way to Inform Your Community",
+  title: "Kabale Online | The Better Way To Buy and Sell in Kabale and the Greater Kigezi  Region ",
   description: "Connect with students at Kabale University, local farmers, and verified vendors for safe, Cash-on-Delivery commerce.",
   keywords: ["Kabale", "Kabale University", "buy and sell", "Uganda", "marketplace", "student market", "agriculture"],
   manifest: "/manifest.json", // Triggers the "Add to Home Screen" install prompt
