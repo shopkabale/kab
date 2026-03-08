@@ -15,7 +15,9 @@ export default async function Home() {
   // Combine all active products and shuffle them for the "Free Featured Slot"
   const allProducts = [...electronics, ...agriculture, ...students];
   const shuffled = allProducts.sort(() => 0.5 - Math.random());
-  const featuredProducts = shuffled.slice(0, 4);
+  
+  // 🔥 UPGRADE 1: Increased from 4 to 12 so the homepage looks massive and active
+  const featuredProducts = shuffled.slice(0, 12);
 
   // 2. Fetch the latest 3 blog posts
   let latestBlogs: any[] = [];
@@ -34,13 +36,19 @@ export default async function Home() {
 
       {/* 1. Hero Section */}
       <section className="text-center pt-12 md:pt-20 px-4">
+        
+        {/* 🔥 UPGRADE 2: The "Growing Fast" Disclaimer */}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs font-bold mb-6 animate-pulse">
+          🚀 Adding new Kabale vendors every day
+        </div>
+
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 mb-6 max-w-4xl mx-auto leading-tight">
           Kabale’s Online Electronics & Student Marketplace
         </h1>
         <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto font-medium">
           Order today. Pay on delivery strictly within Kabale town.
         </p>
-        
+
         {/* Updated Button Row */}
         <div className="flex flex-wrap items-center justify-center gap-4">
           <Link 
@@ -55,7 +63,6 @@ export default async function Home() {
           >
             Student Market
           </Link>
-          {/* NEW: Request an Item Button */}
           <Link 
             href="/requests" 
             className="w-full sm:w-auto rounded-lg bg-[#D97706] px-8 py-4 text-base font-bold text-white shadow-md hover:bg-amber-600 transition-all hover:-translate-y-1 flex flex-col items-center justify-center gap-1"
@@ -64,8 +71,6 @@ export default async function Home() {
             <span className="text-[10px] font-medium opacity-80 uppercase tracking-wider">Post Needs &bull; Find Buyers</span>
           </Link>
         </div>
-
-        
       </section>
 
       {/* 2. Categories Section */}
@@ -98,8 +103,6 @@ export default async function Home() {
         </div>
       </section>
 
-      
-
       {/* 3. Random Featured Products (The Lottery) */}
       {featuredProducts.length > 0 && (
         <section>
@@ -111,50 +114,71 @@ export default async function Home() {
               <p className="text-sm text-slate-500 mt-1">Randomly selected local sellers. Check back often!</p>
             </div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {featuredProducts.map((product) => (
               <Link 
                 key={product.id} 
                 href={`/product/${product.publicId || product.id}`}
-                className="group flex flex-col bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow"
+                className="group flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1"
               >
                 <div className="relative aspect-square bg-slate-100 overflow-hidden">
                   {product.images && product.images.length > 0 ? (
                     <Image
                       src={product.images[0]}
-                      alt={product.name || "Product Image"}
+                      alt={product.name || "Product"}
                       fill
-                      sizes="(max-width: 768px) 50vw, 25vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
+                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs">
+                    <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs font-bold">
                       No Image
                     </div>
                   )}
+                  {/* Category Badge */}
+                  <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-md text-[9px] font-black text-slate-700 uppercase tracking-widest shadow-sm">
+                    {product.category ? product.category.replace('_', ' ') : "General"}
+                  </div>
                 </div>
 
-                <div className="flex flex-col flex-grow p-3 sm:p-4">
-                  <p className="text-[10px] sm:text-xs text-slate-500 mb-1">
+                <div className="flex flex-col flex-grow p-4">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">
                     ID: {product.publicId || product.id.slice(0, 8)}
                   </p>
-                  <h3 className="text-xs sm:text-sm font-medium text-slate-900 line-clamp-2">
-                    {product.name || "Unnamed Item"}
+                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 group-hover:text-[#D97706] transition-colors mb-2">
+                    {product.name}
                   </h3>
-                  <div className="mt-auto pt-2 sm:pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-0">
-                    <span className="text-sm sm:text-lg font-bold text-primary">
-                      UGX {(Number(product.price) || 0).toLocaleString()}
+                  <div className="mt-auto pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <span className="text-lg font-black text-[#D97706]">
+                      UGX {Number(product.price).toLocaleString()}
+                    </span>
+                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md w-fit ${
+                      Number(product.stock) > 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+                    }`}>
+                      {Number(product.stock) > 0 ? 'In Stock' : 'Out of Stock'}
                     </span>
                   </div>
                 </div>
               </Link>
             ))}
           </div>
+
+          {/* 🔥 UPGRADE 3: The Giant "Explore All" Button */}
+          <div className="mt-10 flex justify-center">
+            <Link 
+              href="/products"
+              className="w-full sm:w-auto px-12 py-5 bg-slate-900 text-white font-extrabold text-lg rounded-2xl hover:bg-slate-800 transition-colors shadow-xl flex items-center justify-center gap-3 group"
+            >
+              Explore All Marketplace Items 
+              <span className="group-hover:translate-x-2 transition-transform">➔</span>
+            </Link>
+          </div>
         </section>
       )}
 
       {/* 4. Trust & How It Works */}
-      <section className="bg-slate-50 rounded-3xl p-8 md:p-12 border border-slate-200">
+      <section className="bg-slate-50 rounded-3xl p-8 md:p-12 border border-slate-200 mt-12">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-slate-900 mb-4">Why Kabale Online?</h2>
           <p className="text-slate-600 max-w-2xl mx-auto">
@@ -210,7 +234,7 @@ export default async function Home() {
               Read all articles &rarr;
             </Link>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {latestBlogs.map((blog) => {
               // Safe Date Parsing
