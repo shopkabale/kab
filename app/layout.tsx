@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     title: "Kabale Online",
   },
   openGraph: {
-    title: "Kabale Online | The Better Way to Inform Your Community",
+    title: "Kabale Online | The Better Way To Buy and Sell in Kabale and the Greater Kigezi  Region ",
     description: "Buy and sell locally in Kabale with strictly Cash on Delivery.",
     url: "https://www.okaynotice.com",
     siteName: "Kabale Online",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Kabale Online Marketplace",
-    description: "The Better Way to Inform Your Community in Kabale.",
+    description: "The Better Way To Buy and Sell in Kabale and the Greater Kigezi  Region ",
     images: ["/og-image.jpg"],
   },
 };
