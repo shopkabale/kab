@@ -10,6 +10,7 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    unoptimized: true, // THE CHEAT CODE: Saves your Vercel limits!
     remotePatterns: [
       {
         protocol: 'https',
