@@ -3,7 +3,7 @@ import { AuthProvider } from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FloatingHelpButton from "@/components/FloatingHelpButton";
-import { Analytics } from "@vercel/analytics/react"; // 1. Imported Vercel Analytics
+import { Analytics } from "@vercel/analytics/react";
 import "./globals.css";
 
 // 1. VIEWPORT CONFIG (Required for PWA mobile rendering)
@@ -16,7 +16,7 @@ export const viewport: Viewport = {
 
 // 2. SEO & PWA METADATA
 export const metadata: Metadata = {
-  title: "Kabale Online | The Better Way To Buy and Sell in Kabale and the Greater Kigezi  Region ",
+  title: "Kabale Online | The Better Way To Buy and Sell in Kabale and the Greater Kigezi Region",
   description: "Connect with students at Kabale University, local farmers, and verified vendors for safe, Cash-on-Delivery commerce.",
   keywords: ["Kabale", "Kabale University", "buy and sell", "Uganda", "marketplace", "student market", "agriculture"],
   manifest: "/manifest.json", // Triggers the "Add to Home Screen" install prompt
@@ -26,9 +26,9 @@ export const metadata: Metadata = {
     title: "Kabale Online",
   },
   openGraph: {
-    title: "Kabale Online | The Better Way To Buy and Sell in Kabale and the Greater Kigezi  Region ",
+    title: "Kabale Online | The Better Way To Buy and Sell in Kabale and the Greater Kigezi Region",
     description: "Buy and sell locally in Kabale with strictly Cash on Delivery.",
-    url: "https://www.okaynotice.com",
+    url: "https://www.kabaleonline.com",
     siteName: "Kabale Online",
     images: [
       {
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Kabale Online Marketplace",
-    description: "The Better Way To Buy and Sell in Kabale and the Greater Kigezi  Region ",
+    description: "The Better Way To Buy and Sell in Kabale and the Greater Kigezi Region",
     images: ["/og-image.jpg"],
   },
 };
@@ -69,7 +69,7 @@ export default function RootLayout({
           <FloatingHelpButton />
         </AuthProvider>
 
-        {/* 2. Dropped the Analytics component at the end of the body */}
+        {/* Dropped the Analytics component at the end of the body */}
         <Analytics />
       </body>
     </html>
