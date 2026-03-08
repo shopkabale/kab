@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from "next";
 import { AuthProvider } from "@/components/AuthProvider";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import FloatingHelpButton from "@/components/FloatingHelpButton"; // 1. Imported the new button
+import FloatingHelpButton from "@/components/FloatingHelpButton";
+import { Analytics } from "@vercel/analytics/react"; // 1. Imported Vercel Analytics
 import "./globals.css";
 
 // 1. VIEWPORT CONFIG (Required for PWA mobile rendering)
@@ -15,7 +16,7 @@ export const viewport: Viewport = {
 
 // 2. SEO & PWA METADATA
 export const metadata: Metadata = {
-  title: "Kabale Online | The Better Way to Buy and Sell in the Kabale and Kigezi  Community",
+  title: "Kabale Online | The Better Way to Inform Your Community",
   description: "Connect with students at Kabale University, local farmers, and verified vendors for safe, Cash-on-Delivery commerce.",
   keywords: ["Kabale", "Kabale University", "buy and sell", "Uganda", "marketplace", "student market", "agriculture"],
   manifest: "/manifest.json", // Triggers the "Add to Home Screen" install prompt
@@ -63,11 +64,13 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
-          
-          {/* 2. Injected the floating button globally */}
+
+          {/* Injected the floating button globally */}
           <FloatingHelpButton />
-          
         </AuthProvider>
+
+        {/* 2. Dropped the Analytics component at the end of the body */}
+        <Analytics />
       </body>
     </html>
   );
