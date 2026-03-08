@@ -105,7 +105,7 @@ export default function Footer() {
             </a>
 
             <a
-              href="https://instagram.com/okaynotice"
+              href="https://instagram.com/kabale.online"
               target="_blank"
               rel="noopener noreferrer"
               className="hover:text-white transition duration-200"
