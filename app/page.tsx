@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
 import { adminDb } from "@/lib/firebase/admin";
+import AnnouncementBanner from "@/components/AnnouncementBanner"; // 1. IMPORT IT HERE
 
 // ISR: Revalidate the homepage every 60 seconds
 export const revalidate = 60;
@@ -37,10 +38,10 @@ export default async function Home() {
       {/* 1. Hero Section */}
       <section className="text-center pt-12 md:pt-20 px-4">
         
-        {/* 🔥 UPGRADE 2: The "Growing Fast" Disclaimer */}
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 border border-green-200 text-green-700 text-xs font-bold mb-6 animate-pulse">
-          🚀 Adding new Kabale vendors every day
-        </div>
+        
+        {/* 2. DROP THE NEW BANNER HERE */}
+        <AnnouncementBanner />
+
 
         <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 mb-6 max-w-4xl mx-auto leading-tight">
           Kabale’s Online Electronics & Student Marketplace
