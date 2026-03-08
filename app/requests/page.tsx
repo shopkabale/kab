@@ -15,13 +15,21 @@ interface ItemRequest {
   createdAt: any;
 }
 
+// FORMATTING HELPER: Automatically adds the Ugandan 256 code if missing
+const formatWhatsAppNumber = (phone: string) => {
+  let cleaned = phone.replace(/[^0-9]/g, ''); // Remove spaces, dashes, or + signs
+  if (cleaned.startsWith('0')) {
+    return '256' + cleaned.substring(1); // Change 07... to 2567...
+  }
+  return cleaned; // If they already typed 256, just return it
+};
+
 export default function RequestsPage() {
   const [requests, setRequests] = useState<ItemRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  
-  // NEW: Track the success state and the ID of the new request
+
   const [successData, setSuccessData] = useState<{ id: string, item: string } | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -71,7 +79,6 @@ export default function RequestsPage() {
         createdAt: { toDate: () => new Date() } 
       } as unknown as ItemRequest, ...requests]);
 
-      // Instead of closing the modal, trigger the Success Screen!
       setSuccessData({ id: docRef.id, item: formData.itemNeeded });
       setFormData({ itemNeeded: "", budget: "", category: "Electronics", buyerName: "", buyerPhone: "" });
     } catch (error) {
@@ -97,7 +104,7 @@ export default function RequestsPage() {
 
   return (
     <div className="max-w-5xl mx-auto py-12 px-4 min-h-screen">
-      
+
       {/* Header Section */}
       <div className="bg-slate-900 text-white rounded-3xl p-8 sm:p-12 mb-10 text-center relative overflow-hidden shadow-lg">
         <div className="relative z-10">
@@ -134,7 +141,10 @@ export default function RequestsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {requests.map((req) => {
             const dateStr = req.createdAt?.toDate ? req.createdAt.toDate().toLocaleDateString() : "Just now";
-            const whatsappLink = `https://wa.me/${req.buyerPhone.replace(/[^0-9]/g, '')}?text=Hi%20${req.buyerName},%20I%20saw%20your%20request%20for%20"${req.itemNeeded}"%20on%20Okay%20Notice.%20I%20have%20this%20item!`;
+            
+            // USE THE FORMATTER HERE!
+            const formattedPhone = formatWhatsAppNumber(req.buyerPhone);
+            const whatsappLink = `https://wa.me/${formattedPhone}?text=Hi%20${req.buyerName},%20I%20saw%20your%20request%20for%20"${req.itemNeeded}"%20on%20Kabale%20Online.%20I%20have%20this%20item!`;
 
             return (
               <div key={req.id} className="flex flex-col bg-white border border-slate-200 rounded-2xl p-6 shadow-sm hover:shadow-md transition-shadow relative">
@@ -142,7 +152,7 @@ export default function RequestsPage() {
                   {req.category}
                 </span>
                 <h3 className="font-bold text-xl text-slate-900 mb-2 leading-tight">{req.itemNeeded}</h3>
-                
+
                 <div className="bg-slate-50 p-3 rounded-lg border border-slate-100 mb-4">
                   <p className="text-xs text-slate-500 font-bold uppercase mb-1">Max Budget</p>
                   <p className="font-black text-emerald-600 text-lg">UGX {Number(req.budget).toLocaleString()}</p>
@@ -177,27 +187,27 @@ export default function RequestsPage() {
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl relative overflow-hidden">
             <button onClick={() => setIsModalOpen(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-900 text-3xl font-bold z-10">&times;</button>
-            
+
             {successData ? (
               // VIRAL SUCCESS SCREEN
               <div className="p-8 text-center">
                 <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-6">✅</div>
                 <h2 className="text-2xl font-black text-slate-900 mb-2">Request Posted!</h2>
                 <p className="text-slate-600 mb-8">Your request is now live on the board.</p>
-                
+
                 <div className="bg-slate-50 border border-slate-200 rounded-2xl p-6 mb-6">
                   <h3 className="font-bold text-slate-900 mb-2 text-lg">What's Next?</h3>
                   <p className="text-sm text-slate-500 mb-4">Share this directly to your WhatsApp Status or friends to find sellers 10x faster!</p>
-                  
+
                   <button 
                     onClick={() => copyToClipboard(successData.id)}
                     className="w-full bg-white border-2 border-slate-200 text-slate-700 py-3 rounded-xl font-bold mb-3 hover:border-[#D97706] hover:text-[#D97706] transition-colors flex items-center justify-center gap-2"
                   >
                     {copied ? "✅ Link Copied!" : "📋 Tap to Copy Link"}
                   </button>
-                  
+
                   <a 
-                    href={`https://wa.me/?text=${encodeURIComponent(`I am looking for a ${successData.item} on Okay Notice! Know anyone selling? Check it out here: https://www.okaynotice.com/requests/${successData.id}`)}`}
+                    href={`https://wa.me/?text=${encodeURIComponent(`I am looking for a ${successData.item} on Kabale Online! Know anyone selling? Check it out here: https://www.kabaleonline.com/requests/${successData.id}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full block bg-[#25D366] text-white py-3 rounded-xl font-bold hover:bg-green-600 transition-colors shadow-md"
@@ -205,7 +215,7 @@ export default function RequestsPage() {
                     📱 Share to WhatsApp
                   </a>
                 </div>
-                
+
                 <button onClick={() => setIsModalOpen(false)} className="text-slate-400 font-bold hover:text-slate-600 text-sm">
                   Close and return to board
                 </button>
