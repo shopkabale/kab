@@ -2,13 +2,29 @@ import Image from "next/image";
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
 
-// Force dynamic so Next.js can read the ?page=2 URL parameter
+// Force dynamic so Next.js can read the ?page=2 URL parameter perfectly
 export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "All Products | Kabale Online",
   description: "Browse all items available for sale in Kabale town.",
 };
+
+// ==========================================
+// THE DAILY SHUFFLE ALGORITHM
+// ==========================================
+function getDailyRandomScore(id: string) {
+  // Get today's date as a string (e.g., "2026-03-08")
+  const today = new Date().toISOString().split('T')[0];
+  const seedString = id + today; // Mix the product ID with today's date
+  
+  let hash = 0;
+  for (let i = 0; i < seedString.length; i++) {
+    hash = (hash << 5) - hash + seedString.charCodeAt(i);
+    hash |= 0; // Convert to 32bit integer
+  }
+  return hash;
+}
 
 export default async function AllProductsPage({
   searchParams,
@@ -17,17 +33,20 @@ export default async function AllProductsPage({
 }) {
   // Pagination Setup
   const currentPage = Number(searchParams.page) || 1;
-  const itemsPerPage = 12; // Change this to 16 or 20 if you prefer!
+  const itemsPerPage = 12;
 
-  // Fetch ALL products perfectly formatted via your own adapter
+  // 1. Fetch ALL products 
   const allProducts = await getProducts();
 
-  // The Pagination Math
+  // 2. SHUFFLE THEM (Stable Daily Randomization)
+  allProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
+
+  // 3. The Pagination Math
   const totalItems = allProducts.length;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   
-  // Slice to get only the items for the current page
+  // 4. Slice the array to get only the items for the current page
   const paginatedProducts = allProducts.slice(startIndex, startIndex + itemsPerPage);
 
   return (
@@ -107,9 +126,7 @@ export default async function AllProductsPage({
             ))}
           </div>
 
-          {/* ========================================== */}
           {/* PAGINATION CONTROLS */}
-          {/* ========================================== */}
           {totalPages > 1 && (
             <div className="mt-12 flex items-center justify-center gap-4">
               {currentPage > 1 ? (
