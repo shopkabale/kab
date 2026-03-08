@@ -42,6 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Official Store", href: "/admin/official", icon: "🏪" }, // NEW: Manager Page
     { name: "Upload Official Item", href: "/admin/upload", icon: "✨" }, 
     { name: "All Products", href: "/admin/products", icon: "📦" },
+{ name: "Blogs Center", href: "/admin/blog", icon: "💬" },
     { name: "Orders", href: "/admin/orders", icon: "🛒" },
     { name: "Users", href: "/admin/users", icon: "👥" },
   ];
