@@ -2,25 +2,30 @@ import Image from "next/image";
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
 import { adminDb } from "@/lib/firebase/admin";
-import AnnouncementBanner from "@/components/AnnouncementBanner"; // 1. IMPORT IT HERE
+import AnnouncementBanner from "@/components/AnnouncementBanner";
+import HeroCarousel from "@/components/HeroCarousel";
+import QuickCartButton from "@/components/QuickCartButton"; 
 
-// ISR: Revalidate the homepage every 60 seconds
-export const revalidate = 60;
+// 🔥 24-HOUR RANDOMIZER (86400 seconds = 24 hours)
+export const revalidate = 86400;
 
 export default async function Home() {
-  // 1. Fetch products for the lottery
+  // Fetch specific categories
   const electronics = await getProducts("electronics");
   const agriculture = await getProducts("agriculture");
   const students = await getProducts("student_item");
 
-  // Combine all active products and shuffle them for the "Free Featured Slot"
   const allProducts = [...electronics, ...agriculture, ...students];
-  const shuffled = allProducts.sort(() => 0.5 - Math.random());
-  
-  // 🔥 UPGRADE 1: Increased from 4 to 12 so the homepage looks massive and active
-  const featuredProducts = shuffled.slice(0, 12);
 
-  // 2. Fetch the latest 3 blog posts
+  // Helper function to shuffle and pick 12
+  const getRandom12 = (arr: any[]) => [...arr].sort(() => 0.5 - Math.random()).slice(0, 12);
+
+  // Layout Step 4, 6, 8 Arrays
+  const mixedFeatured = getRandom12(allProducts);
+  const electronicsFeatured = getRandom12(electronics);
+  const studentsFeatured = getRandom12(students);
+
+  // Layout Step 10: Fetch latest 3 blogs
   let latestBlogs: any[] = [];
   try {
     const blogSnap = await adminDb.collection("blog_posts")
@@ -33,263 +38,159 @@ export default async function Home() {
   }
 
   return (
-    <div className="flex flex-col gap-y-20 pb-12">
-
-      {/* 1. Hero Section */}
-      <section className="text-center pt-12 md:pt-20 px-4">
-        
-        
-        {/* 2. DROP THE NEW BANNER HERE */}
+    <div className="flex flex-col gap-y-10 pb-12 bg-white dark:bg-[#0a0a0a]">
+      
+      {/* STEP 1: Main hero slider & Announcement */}
+      <section className="px-2 pt-4">
         <AnnouncementBanner />
+        <HeroCarousel />
 
+        {/* STEP 2: Horizontal 3 Category List */}
+        <div className="flex overflow-x-auto gap-4 py-4 no-scrollbar items-center justify-start md:justify-center px-2">
+          {[
+            { name: "Electronics", icon: "💻", href: "/category/electronics", bg: "bg-blue-50 dark:bg-blue-900/20" },
+            { name: "Agriculture", icon: "🌾", href: "/category/agriculture", bg: "bg-green-50 dark:bg-green-900/20" },
+            { name: "Student Market", icon: "📚", href: "/category/student_item", bg: "bg-amber-50 dark:bg-amber-900/20" },
+          ].map((cat) => (
+            <Link key={cat.name} href={cat.href} className="flex flex-col items-center min-w-[90px] gap-2 group">
+              <div className={`w-16 h-16 rounded-full flex items-center justify-center text-3xl shadow-sm border border-slate-200 dark:border-slate-800 group-hover:scale-110 transition-transform ${cat.bg}`}>
+                {cat.icon}
+              </div>
+              <span className="text-[10px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tighter text-center group-hover:text-[#D97706]">
+                {cat.name}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
 
-        <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight text-slate-900 mb-6 max-w-4xl mx-auto leading-tight">
-          Kabale’s Online Electronics & Student Marketplace
-        </h1>
-        <p className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto font-medium">
-          Order today. Pay on delivery strictly within Kabale town.
-        </p>
+      {/* STEP 3 & 4: Available Items (Mixed 12) */}
+      <ProductSection title="Available Items" products={mixedFeatured} linkHref="/products" />
 
-        {/* Updated Button Row */}
-        <div className="flex flex-wrap items-center justify-center gap-4">
-          <Link 
-            href="/category/electronics" 
-            className="w-full sm:w-auto rounded-lg bg-primary px-8 py-4 text-base font-bold text-white shadow-md hover:bg-sky-500 transition-all hover:-translate-y-1"
-          >
+      {/* STEP 5 & 6: Fixed Electronics Hero + 12 Random Electronics */}
+      <section>
+        {/* Step 5: Electronics Hero Banner */}
+        <div className="mx-4 mb-4 rounded-2xl bg-slate-900 p-8 text-white relative overflow-hidden h-[180px] flex flex-col justify-center shadow-lg">
+          <h2 className="text-2xl font-black mb-2 z-10 relative leading-tight">Quality Gadgets <br/>& Electronics</h2>
+          <Link href="/category/electronics" className="bg-[#D97706] text-white px-6 py-2.5 rounded-full font-bold text-xs w-fit uppercase z-10 shadow-md hover:bg-amber-600 transition-colors mt-2">
             Shop Electronics
           </Link>
-          <Link 
-            href="/category/student_item" 
-            className="w-full sm:w-auto rounded-lg bg-white border-2 border-slate-200 px-8 py-4 text-base font-bold text-slate-700 hover:border-primary hover:text-primary transition-all hover:-translate-y-1"
-          >
+          {/* Add a real image here later if you want, using an absolute positioned Image tag */}
+          <span className="absolute right-[-10px] bottom-[-20px] text-8xl opacity-10">💻</span>
+        </div>
+        
+        {/* Step 6: 12 Random Electronics */}
+        <ProductSection products={electronicsFeatured} />
+      </section>
+
+      {/* STEP 7 & 8: Student Market Hero + 12 Random Student Items */}
+      <section>
+        {/* Step 7: Student Market Hero Banner */}
+        <div className="mx-4 mb-4 rounded-2xl bg-[#D97706] p-8 text-white relative overflow-hidden h-[180px] flex flex-col justify-center shadow-lg">
+          <h2 className="text-2xl font-black mb-2 z-10 relative leading-tight">Campus Essentials <br/>& Gear</h2>
+          <Link href="/category/student_item" className="bg-white text-slate-900 px-6 py-2.5 rounded-full font-bold text-xs w-fit uppercase z-10 shadow-md hover:bg-slate-100 transition-colors mt-2">
             Student Market
           </Link>
-          <Link 
-            href="/requests" 
-            className="w-full sm:w-auto rounded-lg bg-[#D97706] px-8 py-4 text-base font-bold text-white shadow-md hover:bg-amber-600 transition-all hover:-translate-y-1 flex flex-col items-center justify-center gap-1"
-          >
-            <span className="flex items-center gap-2">📢 Buyer Request Board</span>
-            <span className="text-[10px] font-medium opacity-80 uppercase tracking-wider">Post Needs &bull; Find Buyers</span>
-          </Link>
+          <span className="absolute right-[-10px] bottom-[-10px] text-8xl opacity-20">🎒</span>
         </div>
+
+        {/* Step 8: 12 Random Student Items */}
+        <ProductSection products={studentsFeatured} />
       </section>
 
-      {/* 2. Categories Section */}
-      <section>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-slate-900">Browse Categories</h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Link href="/category/electronics" className="group block p-8 bg-gradient-to-br from-slate-50 to-slate-100 rounded-2xl border border-slate-200 hover:border-primary transition-colors text-center shadow-sm hover:shadow-md">
-            <div className="w-16 h-16 mx-auto mb-4 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-              <span className="text-2xl">💻</span>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Electronics</h3>
-            <p className="text-sm text-slate-500">Laptops, phones & accessories</p>
-          </Link>
-          <Link href="/category/agriculture" className="group block p-8 bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl border border-green-100 hover:border-green-500 transition-colors text-center shadow-sm hover:shadow-md">
-            <div className="w-16 h-16 mx-auto mb-4 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-              <span className="text-2xl">🌾</span>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Agriculture</h3>
-            <p className="text-sm text-slate-500">Local produce & tools</p>
-          </Link>
-          <Link href="/category/student_item" className="group block p-8 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-100 hover:border-amber-500 transition-colors text-center shadow-sm hover:shadow-md">
-            <div className="w-16 h-16 mx-auto mb-4 bg-white rounded-full flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
-              <span className="text-2xl">📚</span>
-            </div>
-            <h3 className="text-xl font-bold text-slate-900 mb-2">Student Market</h3>
-            <p className="text-sm text-slate-500">Textbooks & campus essentials</p>
-          </Link>
-        </div>
-      </section>
-
-      {/* 3. Random Featured Products (The Lottery) */}
-      {featuredProducts.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-                Today's Community Picks 🎁
-              </h2>
-              <p className="text-sm text-slate-500 mt-1">Randomly selected local sellers. Check back often!</p>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {featuredProducts.map((product) => (
-              <Link 
-                key={product.id} 
-                href={`/product/${product.publicId || product.id}`}
-                className="group flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1"
-              >
-                <div className="relative aspect-square bg-slate-100 overflow-hidden">
-                  {product.images && product.images.length > 0 ? (
-                    <Image
-                      src={product.images[0]}
-                      alt={product.name || "Product"}
-                      fill
-                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs font-bold">
-                      No Image
-                    </div>
-                  )}
-                  {/* Category Badge */}
-                  <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-md text-[9px] font-black text-slate-700 uppercase tracking-widest shadow-sm">
-                    {product.category ? product.category.replace('_', ' ') : "General"}
-                  </div>
-                </div>
-
-                <div className="flex flex-col flex-grow p-4">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">
-                    ID: {product.publicId || product.id.slice(0, 8)}
-                  </p>
-                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 group-hover:text-[#D97706] transition-colors mb-2">
-                    {product.name}
-                  </h3>
-                  <div className="mt-auto pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <span className="text-lg font-black text-[#D97706]">
-                      UGX {Number(product.price).toLocaleString()}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md w-fit ${
-                      Number(product.stock) > 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                    }`}>
-                      {Number(product.stock) > 0 ? 'In Stock' : 'Out of Stock'}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {/* 🔥 UPGRADE 3: The Giant "Explore All" Button */}
-          <div className="mt-10 flex justify-center">
-            <Link 
-              href="/products"
-              className="w-full sm:w-auto px-12 py-5 bg-slate-900 text-white font-extrabold text-lg rounded-2xl hover:bg-slate-800 transition-colors shadow-xl flex items-center justify-center gap-3 group"
-            >
-              Explore All Marketplace Items 
-              <span className="group-hover:translate-x-2 transition-transform">➔</span>
-            </Link>
-          </div>
-        </section>
-      )}
-
-      {/* 4. Trust & How It Works */}
-      <section className="bg-slate-50 rounded-3xl p-8 md:p-12 border border-slate-200 mt-12">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-slate-900 mb-4">Why Kabale Online?</h2>
-          <p className="text-slate-600 max-w-2xl mx-auto">
-            We built this platform specifically for the Kabale community to make local buying and selling safe and easy.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-          <div className="text-center">
-            <div className="w-12 h-12 mx-auto bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-4 text-xl shadow-sm">🤝</div>
-            <h3 className="font-bold text-slate-900 mb-2">100% Cash on Delivery</h3>
-            <p className="text-sm text-slate-600">Inspect your item first. Pay only when it is in your hands.</p>
-          </div>
-          <div className="text-center">
-            <div className="w-12 h-12 mx-auto bg-sky-100 text-sky-600 rounded-full flex items-center justify-center mb-4 text-xl shadow-sm">📍</div>
-            <h3 className="font-bold text-slate-900 mb-2">Local Kabale Sellers</h3>
-            <p className="text-sm text-slate-600">Every vendor is based right here in Kabale town.</p>
-          </div>
-          <div className="text-center">
-            <div className="w-12 h-12 mx-auto bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4 text-xl shadow-sm">🛡️</div>
-            <h3 className="font-bold text-slate-900 mb-2">Verified Listings</h3>
-            <p className="text-sm text-slate-600">We monitor our platform to keep spam and scams out.</p>
-          </div>
-        </div>
-
-        <div className="border-t border-slate-200 pt-12">
-          <h3 className="text-2xl font-bold text-slate-900 text-center mb-8">How it works</h3>
-          <div className="flex flex-col md:flex-row items-center justify-center gap-4 md:gap-12">
-            <div className="flex items-center gap-4">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-sm shadow-sm">1</span>
-              <span className="font-medium text-slate-700">Browse Items</span>
-            </div>
-            <div className="hidden md:block w-12 h-px bg-slate-300"></div>
-            <div className="flex items-center gap-4">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-900 text-white font-bold text-sm shadow-sm">2</span>
-              <span className="font-medium text-slate-700">Place Order</span>
-            </div>
-            <div className="hidden md:block w-12 h-px bg-slate-300"></div>
-            <div className="flex items-center gap-4">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-white font-bold text-sm shadow-sm">3</span>
-              <span className="font-bold text-primary">Pay on Delivery</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* NEW: LATEST FROM THE BLOG SECTION */}
+      {/* STEP 9 & 10: "Fresh from the journal" + List Layout Blogs */}
       {latestBlogs.length > 0 && (
-        <section className="pt-8">
-          <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-4">
-            <h2 className="text-2xl font-bold text-slate-900">Kabale Campus Journal</h2>
-            <Link href="/blog" className="text-sm font-bold text-primary hover:underline">
-              Read all articles &rarr;
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <section className="px-4 border-t border-slate-200 dark:border-slate-800 pt-10 pb-6">
+          {/* Step 9 */}
+          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight mb-6">
+            Fresh from the Journal
+          </h2>
+          
+          {/* Step 10: List of 3 blogs */}
+          <div className="flex flex-col gap-4">
             {latestBlogs.map((blog) => {
-              // Safe Date Parsing
               const dateStr = blog.publishedAt && typeof blog.publishedAt.toDate === 'function' 
-                ? blog.publishedAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) 
-                : "Recently";
+                ? blog.publishedAt.toDate().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) 
+                : "";
 
               return (
-                <Link key={blog.id} href={`/blog/${blog.id}`} className="group flex flex-col bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
+                <Link key={blog.id} href={`/blog/${blog.id}`} className="flex items-center gap-4 group bg-slate-50 dark:bg-[#151515] p-3 rounded-2xl border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all">
+                  <div className="relative w-24 h-24 rounded-xl overflow-hidden shrink-0 bg-slate-200">
                     <img 
                       src={blog.featuredImage || blog.image || "/og-image.jpg"} 
                       alt={blog.title} 
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   </div>
-                  <div className="p-6 flex flex-col flex-grow">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#D97706] mb-2">
-                      {blog.category || "General"}
+                  <div className="flex flex-col flex-1 py-1">
+                    <span className="text-[10px] font-black text-[#D97706] uppercase tracking-wider mb-1">
+                      {blog.category || "News"}
                     </span>
-                    <h3 className="text-lg font-bold text-slate-900 mb-2 leading-snug group-hover:text-primary transition-colors">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-snug group-hover:text-[#D97706] transition-colors">
                       {blog.title}
                     </h3>
-                    <div className="mt-auto pt-4 flex items-center justify-between text-xs text-slate-500 font-medium border-t border-slate-100">
+                    <div className="mt-auto pt-2 flex items-center justify-between text-[11px] text-slate-500 font-medium">
                       <span>{dateStr}</span>
-                      <span>{typeof blog.readTime === 'number' ? `${blog.readTime} min read` : (blog.readTime || '3 min read')}</span>
+                      <span>{typeof blog.readTime === 'number' ? `${blog.readTime} min` : (blog.readTime || '3 min')} read</span>
                     </div>
                   </div>
                 </Link>
               );
             })}
           </div>
+          <div className="mt-6 text-center">
+             <Link href="/blog" className="text-xs font-bold text-[#D97706] uppercase tracking-wider border-b-2 border-[#D97706] pb-1">View All Articles</Link>
+          </div>
         </section>
       )}
-
-      {/* 5. Seller CTA */}
-      <section className="bg-slate-900 rounded-3xl p-8 md:p-12 text-center relative overflow-hidden">
-        <div className="relative z-10">
-          <h2 className="text-3xl font-bold text-white mb-4">Have electronics or textbooks to sell?</h2>
-          <p className="text-slate-300 mb-8 max-w-xl mx-auto">
-            Join the growing list of local sellers reaching Kabale University students and the wider town community.
-          </p>
-          <Link 
-            href="/sell" 
-            className="inline-block rounded-lg bg-primary px-8 py-4 text-base font-bold text-white shadow-lg hover:bg-sky-400 transition-colors"
-          >
-            Post an Item
-          </Link>
-        </div>
-        {/* Background Accents */}
-        <div className="absolute top-0 left-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-2xl"></div>
-        <div className="absolute bottom-0 right-0 w-64 h-64 bg-primary opacity-20 rounded-full translate-x-1/3 translate-y-1/3 blur-2xl"></div>
-      </section>
-
     </div>
   );
+}
+
+// ==========================================
+// REUSABLE PRODUCT GRID COMPONENT
+// ==========================================
+function ProductSection({ title, products, linkHref }: { title?: string, products: any[], linkHref?: string }) {
+  if (!products || products.length === 0) return null;
+  
+  return (
+    <div className="px-2 md:px-4">
+      {title && (
+        <div className="flex items-center justify-between mb-4 px-2">
+          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{title}</h2>
+          {linkHref && <Link href={linkHref} className="text-[11px] font-bold text-[#D97706] uppercase">See All</Link>}
+        </div>
+      )}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 md:gap-5">
+        {products.map((p) => (
+          <div key={p.id} className="relative group flex flex-col bg-white dark:bg-[#151515] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-lg transition-all">
+            
+            {/* The Link wraps everything EXCEPT the Cart Button */}
+            <Link href={`/product/${p.publicId || p.id}`} className="flex flex-col flex-grow">
+              <div className="relative aspect-square overflow-hidden bg-slate-50 dark:bg-slate-900">
+                 {p.images?.[0] ? (
+                   <Image src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                 ) : (
+                   <div className="m-auto flex items-center justify-center h-full text-[10px] font-bold text-slate-400 uppercase">No Image</div>
+                 )}
+              </div>
+              <div className="p-3 flex flex-col flex-grow">
+                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider truncate mb-1">{p.category?.replace('_', ' ')}</p>
+                <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 line-clamp-2 mb-3">{p.name}</h3>
+                <div className="mt-auto">
+                  <span className="text-[13px] font-black text-slate-900 dark:text-white">UGX {Number(p.price).toLocaleString()}</span>
+                </div>
+              </div>
+            </Link>
+
+            {/* QUICK CART BUTTON - Placed absolutely so it doesn't trigger the Link */}
+            <div className="absolute bottom-3 right-3 z-20">
+              <QuickCartButton product={p} />
+            </div>
+
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
