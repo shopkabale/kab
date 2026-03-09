@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Product } from "@/types";
@@ -11,6 +12,12 @@ export default function QuickCartButton({ product }: { product: Product }) {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [contactPhone, setContactPhone] = useState("");
+  
+  // 1. Setup mounted state for the Portal (Prevents Next.js hydration errors)
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleCartClick = (e: React.MouseEvent) => {
     e.preventDefault(); 
@@ -63,6 +70,56 @@ export default function QuickCartButton({ product }: { product: Product }) {
     }
   };
 
+  // 2. We extract the modal HTML into a variable
+  const modalContent = (
+    <div 
+      onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} 
+      className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 cursor-default"
+    >
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-[#D97706]"></div>
+        
+        <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">Confirm Fast Checkout</h2>
+        
+        <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 mb-4 mt-4">
+          <p className="font-bold text-lg text-slate-900 dark:text-white leading-tight line-clamp-2">{product.name}</p>
+          <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Pay on delivery:</span>
+            <span className="font-black text-[#D97706] text-lg">UGX {Number(product.price).toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">WhatsApp / Phone Number</label>
+          <input 
+            required 
+            type="tel" 
+            placeholder="e.g. 077... or 075..."
+            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white px-4 py-3 outline-none focus:ring-2 focus:ring-[#D97706]"
+            value={contactPhone} 
+            onChange={e => setContactPhone(e.target.value)} 
+          />
+        </div>
+
+        <div className="flex gap-3">
+          <button 
+            onClick={(e) => { e.preventDefault(); setShowModal(false); }}
+            className="flex-1 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 py-3 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={executeFastCheckout}
+            disabled={loading || !contactPhone.trim()}
+            className="flex-1 bg-[#D97706] text-white py-3 rounded-xl font-bold hover:bg-amber-600 disabled:opacity-50 transition-colors shadow-md"
+          >
+            {loading ? "Sending..." : "Order Now"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <>
       {/* 🛒 RED CART BUTTON */}
@@ -76,55 +133,8 @@ export default function QuickCartButton({ product }: { product: Product }) {
         </svg>
       </button>
 
-      {/* FAST CHECKOUT MODAL */}
-      {showModal && (
-        <div 
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4 cursor-default"
-        >
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-2 bg-[#D97706]"></div>
-            
-            <h2 className="text-xl font-black text-slate-900 dark:text-white mb-2">Confirm Fast Checkout</h2>
-            
-            <div className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 mb-4 mt-4">
-              <p className="font-bold text-lg text-slate-900 dark:text-white leading-tight line-clamp-2">{product.name}</p>
-              <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
-                <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Pay on delivery:</span>
-                <span className="font-black text-[#D97706] text-lg">UGX {Number(product.price).toLocaleString()}</span>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-slate-900 dark:text-white mb-2">WhatsApp / Phone Number</label>
-              <input 
-                required 
-                type="tel" 
-                placeholder="e.g. 077... or 075..."
-                className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 dark:text-white px-4 py-3 outline-none focus:ring-2 focus:ring-[#D97706]"
-                value={contactPhone} 
-                onChange={e => setContactPhone(e.target.value)} 
-              />
-            </div>
-
-            <div className="flex gap-3">
-              <button 
-                onClick={(e) => { e.preventDefault(); setShowModal(false); }}
-                className="flex-1 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 py-3 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={executeFastCheckout}
-                disabled={loading || !contactPhone.trim()}
-                className="flex-1 bg-[#D97706] text-white py-3 rounded-xl font-bold hover:bg-amber-600 disabled:opacity-50 transition-colors shadow-md"
-              >
-                {loading ? "Sending..." : "Order Now"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 3. If modal is open AND component is mounted, teleport it to the document body! */}
+      {showModal && mounted && createPortal(modalContent, document.body)}
     </>
   );
 }
