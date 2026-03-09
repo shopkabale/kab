@@ -46,42 +46,48 @@ export default function HeroCarousel() {
         modules={[Autoplay, Pagination]}
         autoplay={{ delay: 5000, disableOnInteraction: false }}
         pagination={{ clickable: true }}
-        className="h-[200px] md:h-[350px] w-full bg-[#fbbf24]" // Base Yellow Color
+        // Slightly taller to accommodate the zoomed-in images perfectly
+        className="h-[220px] md:h-[400px] w-full bg-[#fbbf24]" 
       >
         {slides.map((slide, i) => (
-          <SwiperSlide key={i} className="flex relative items-center justify-between p-6 md:p-12 overflow-hidden">
-            
-            {/* Text Content (Left side) */}
-            <div className="relative z-10 max-w-[60%] md:max-w-md text-slate-900">
-              <h2 className="text-xl md:text-5xl font-black mb-1 md:mb-3 leading-tight tracking-tight">
+          // UPGRADED: Increased horizontal padding (px-8 md:px-16) to push text inward
+          <SwiperSlide key={i} className="flex relative items-center justify-between px-8 md:px-16 py-6 md:py-12 overflow-hidden">
+
+            {/* TEXT CONTENT (Left side) */}
+            <div className="relative z-20 max-w-[55%] md:max-w-lg text-slate-900">
+              <h2 className="text-2xl md:text-5xl lg:text-6xl font-black mb-2 md:mb-4 leading-[1.1] tracking-tight drop-shadow-sm">
                 {slide.title}
               </h2>
-              <p className="text-[10px] md:text-lg mb-4 font-medium opacity-90 hidden sm:block">
+              <p className="text-[11px] md:text-lg mb-5 font-medium opacity-90 hidden sm:block max-w-sm">
                 {slide.subtitle}
               </p>
-              <Link href={slide.href} className="inline-block bg-slate-900 text-white px-5 py-2 md:px-8 md:py-3 rounded-full font-bold text-[10px] md:text-sm uppercase shadow-md hover:bg-slate-800 transition-colors mt-2">
+              {/* UPGRADED: Thicker button with a hover scale effect for a premium feel */}
+              <Link href={slide.href} className="inline-block bg-slate-900 text-white px-6 py-2.5 md:px-10 md:py-4 rounded-full font-bold text-[10px] md:text-sm uppercase shadow-xl hover:bg-slate-800 hover:scale-105 transition-all duration-300">
                 {slide.btnText}
               </Link>
             </div>
 
-            {/* Image (Right side) */}
-            <div className="absolute right-[-10%] md:right-10 bottom-0 h-[90%] w-[55%] md:w-[40%] flex items-end justify-center">
-               <div className="w-full h-full relative">
+            {/* IMAGE CONTENT (Right side) */}
+            {/* UPGRADED: Brought inward (right-0 md:right-8) and made taller to pop out of the bottom */}
+            <div className="absolute right-0 md:right-8 bottom-[-5%] md:bottom-[-10%] h-[105%] md:h-[120%] w-[60%] md:w-[50%] flex items-end justify-center z-10 pointer-events-none">
+               {/* UPGRADED: Added scale-110/125 to zoom the image, and drop-shadow-2xl to make it float */}
+               <div className="w-full h-full relative transform scale-110 md:scale-125 origin-bottom-right">
                   <Image 
                     src={slide.image} 
                     alt={slide.title} 
                     fill 
-                    className="object-contain object-bottom"
+                    className="object-contain object-bottom drop-shadow-2xl"
                     onError={(e) => {
-                      // Fallback: hides the broken image icon until you add the actual files
                       (e.target as HTMLElement).style.display = 'none';
                     }}
                   />
                </div>
             </div>
+
+            {/* GRADIENT OVERLAY */}
+            {/* UPGRADED: Constrained width to 75% so it protects the text but leaves the right-side image vibrant */}
+            <div className="absolute top-0 left-0 bottom-0 w-[75%] bg-gradient-to-r from-[#fbbf24] via-[#fbbf24]/90 to-transparent z-0 pointer-events-none"></div>
             
-            {/* Subtle Gradient Overlay so text is always readable over the yellow */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#fbbf24] via-[#fbbf24]/90 to-transparent z-0"></div>
           </SwiperSlide>
         ))}
       </Swiper>
