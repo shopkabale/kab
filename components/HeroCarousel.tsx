@@ -10,7 +10,7 @@ import Image from "next/image";
 export default function HeroCarousel() {
   const slides = [
     {
-      title: "The better way to buy and sell in kabale",
+      title: "The better way to buy and sell in Kabale",
       subtitle: "Join the fastest growing marketplace.",
       btnText: "EXPLORE",
       href: "/products",
@@ -40,7 +40,8 @@ export default function HeroCarousel() {
   ];
 
   return (
-    <div className="w-full rounded-2xl overflow-hidden shadow-sm mb-6">
+    // FULL WIDTH ON MOBILE: -mx-4 pulls it to the edges of the screen
+    <div className="-mx-4 sm:-mx-6 lg:-mx-8 sm:rounded-2xl overflow-hidden shadow-sm mb-6">
       <Swiper
         modules={[Autoplay, Pagination]}
         autoplay={{ delay: 5000, disableOnInteraction: false }}
@@ -65,7 +66,6 @@ export default function HeroCarousel() {
 
             {/* Image (Right side) */}
             <div className="absolute right-[-10%] md:right-10 bottom-0 h-[90%] w-[55%] md:w-[40%] flex items-end justify-center">
-               {/* Replace this div with an actual image once you have them in the public folder */}
                <div className="w-full h-full relative">
                   <Image 
                     src={slide.image} 
@@ -73,14 +73,14 @@ export default function HeroCarousel() {
                     fill 
                     className="object-contain object-bottom"
                     onError={(e) => {
-                      // Fallback if image doesn't exist yet
+                      // Fallback: hides the broken image icon until you add the actual files
                       (e.target as HTMLElement).style.display = 'none';
                     }}
                   />
                </div>
             </div>
             
-            {/* Subtle Gradient Overlay for text readability */}
+            {/* Subtle Gradient Overlay so text is always readable over the yellow */}
             <div className="absolute inset-0 bg-gradient-to-r from-[#fbbf24] via-[#fbbf24]/90 to-transparent z-0"></div>
           </SwiperSlide>
         ))}
