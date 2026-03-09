@@ -13,7 +13,7 @@ export default function QuickCartButton({ product }: { product: Product }) {
   const [contactPhone, setContactPhone] = useState("");
 
   const handleCartClick = (e: React.MouseEvent) => {
-    e.preventDefault(); // Stops the Link from navigating to the product page
+    e.preventDefault(); 
     e.stopPropagation(); 
     
     if (!user) {
@@ -65,18 +65,18 @@ export default function QuickCartButton({ product }: { product: Product }) {
 
   return (
     <>
-      {/* The 🛒 Button for the Grid */}
+      {/* 🛒 RED CART BUTTON */}
       <button 
         onClick={handleCartClick}
         disabled={product.stock <= 0}
-        className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-[#D97706] hover:text-white transition-colors flex items-center justify-center shadow-sm disabled:opacity-50"
+        className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-red-600 hover:text-white transition-colors flex items-center justify-center shadow-sm disabled:opacity-50 group relative z-10"
       >
-        <svg className="w-4 h-4 text-slate-700 dark:text-slate-300 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-red-600 group-hover:text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
         </svg>
       </button>
 
-      {/* The Fast Checkout Modal */}
+      {/* FAST CHECKOUT MODAL */}
       {showModal && (
         <div 
           onClick={(e) => { e.preventDefault(); e.stopPropagation(); }} 
@@ -110,14 +110,14 @@ export default function QuickCartButton({ product }: { product: Product }) {
             <div className="flex gap-3">
               <button 
                 onClick={(e) => { e.preventDefault(); setShowModal(false); }}
-                className="flex-1 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 py-3 rounded-xl font-bold"
+                className="flex-1 bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 py-3 rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={executeFastCheckout}
                 disabled={loading || !contactPhone.trim()}
-                className="flex-1 bg-[#D97706] text-white py-3 rounded-xl font-bold hover:bg-amber-600 disabled:opacity-50"
+                className="flex-1 bg-[#D97706] text-white py-3 rounded-xl font-bold hover:bg-amber-600 disabled:opacity-50 transition-colors shadow-md"
               >
                 {loading ? "Sending..." : "Order Now"}
               </button>
