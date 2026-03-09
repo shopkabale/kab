@@ -1,8 +1,7 @@
-import Image from "next/image";
-import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
+import ClientProductGrid from "@/components/ClientProductGrid"; // Import the new grid
 
-// Force dynamic so Next.js can read the ?page=2 URL parameter perfectly
+// Force dynamic ensures we fetch fresh data
 export const dynamic = "force-dynamic";
 
 export const metadata = {
@@ -14,156 +13,58 @@ export const metadata = {
 // THE DAILY SHUFFLE ALGORITHM
 // ==========================================
 function getDailyRandomScore(id: string) {
-  // Get today's date as a string (e.g., "2026-03-08")
   const today = new Date().toISOString().split('T')[0];
-  const seedString = id + today; // Mix the product ID with today's date
-  
+  const seedString = id + today; 
+
   let hash = 0;
   for (let i = 0; i < seedString.length; i++) {
     hash = (hash << 5) - hash + seedString.charCodeAt(i);
-    hash |= 0; // Convert to 32bit integer
+    hash |= 0; 
   }
   return hash;
 }
 
-export default async function AllProductsPage({
-  searchParams,
-}: {
-  searchParams: { page?: string };
-}) {
-  // Pagination Setup
-  const currentPage = Number(searchParams.page) || 1;
-  const itemsPerPage = 12;
-
+export default async function AllProductsPage() {
   // 1. Fetch ALL products 
   const allProducts = await getProducts();
 
   // 2. SHUFFLE THEM (Stable Daily Randomization)
   allProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
 
-  // 3. The Pagination Math
-  const totalItems = allProducts.length;
-  const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  
-  // 4. Slice the array to get only the items for the current page
-  const paginatedProducts = allProducts.slice(startIndex, startIndex + itemsPerPage);
-
   return (
-    <div className="py-8 max-w-7xl mx-auto px-4 sm:px-6">
-      <div className="mb-8 border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-            All Products
+    <div className="flex flex-col bg-white dark:bg-[#0a0a0a] min-h-screen">
+      
+      {/* PROFESSIONAL HERO SECTION */}
+      <section className="px-4 py-6">
+        <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-6 sm:px-12 sm:rounded-2xl bg-slate-900 py-16 text-white relative overflow-hidden flex flex-col justify-center shadow-lg text-center">
+          <h1 className="text-3xl md:text-5xl font-black mb-4 z-10 relative leading-tight tracking-tight">
+            All Marketplace Items
           </h1>
-          <p className="mt-2 text-lg text-slate-600 font-medium">
-            Discover everything our local Kabale vendors have to offer.
+          <p className="text-slate-300 text-sm md:text-lg max-w-2xl mx-auto z-10 relative font-medium">
+            Discover everything our local Kabale vendors have to offer. Fast delivery, pay on arrival.
           </p>
+          
+          {/* Background Decor */}
+          <span className="absolute left-[-5%] top-[-20%] text-9xl opacity-5">🛍️</span>
+          <span className="absolute right-[-2%] bottom-[-10%] text-9xl opacity-5">📦</span>
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent z-0"></div>
         </div>
-        {totalItems > 0 && (
-          <div className="bg-slate-100 text-slate-600 px-4 py-2 rounded-lg text-sm font-bold shadow-sm w-fit">
-            Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, totalItems)} of {totalItems} items
-          </div>
-        )}
+      </section>
+
+      {/* STATS HEADER */}
+      <div className="px-4 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+            Explore {allProducts.length}+ Items
+          </h2>
+        </div>
       </div>
 
-      {totalItems === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border border-dashed border-slate-300 shadow-sm">
-          <span className="text-5xl block mb-4">🛒</span>
-          <h3 className="text-xl font-bold text-slate-900">No products found</h3>
-          <p className="mt-2 text-slate-500">
-            Check back soon! We are adding new items every day.
-          </p>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-            {paginatedProducts.map((product) => (
-              <Link 
-                key={product.id} 
-                href={`/product/${product.publicId || product.id}`}
-                className="group flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1"
-              >
-                <div className="relative aspect-square bg-slate-100 overflow-hidden">
-                  {product.images && product.images.length > 0 ? (
-                    <Image
-                      src={product.images[0]}
-                      alt={product.name || "Product"}
-                      fill
-                      sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs font-bold">
-                      No Image
-                    </div>
-                  )}
-                  {/* Category Badge */}
-                  <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-md text-[9px] font-black text-slate-700 uppercase tracking-widest shadow-sm">
-                    {product.category ? product.category.replace('_', ' ') : "General"}
-                  </div>
-                </div>
+      {/* THE CLIENT GRID (Handles the animated Load More) */}
+      <div className="px-4 pb-16">
+        <ClientProductGrid products={allProducts} />
+      </div>
 
-                <div className="flex flex-col flex-grow p-4">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">
-                    ID: {product.publicId || product.id.slice(0, 8)}
-                  </p>
-                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 group-hover:text-[#D97706] transition-colors mb-2">
-                    {product.name}
-                  </h3>
-                  <div className="mt-auto pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <span className="text-lg font-black text-[#D97706]">
-                      UGX {Number(product.price).toLocaleString()}
-                    </span>
-                    <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md w-fit ${
-                      Number(product.stock) > 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
-                    }`}>
-                      {Number(product.stock) > 0 ? 'In Stock' : 'Out of Stock'}
-                    </span>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          {/* PAGINATION CONTROLS */}
-          {totalPages > 1 && (
-            <div className="mt-12 flex items-center justify-center gap-4">
-              {currentPage > 1 ? (
-                <Link 
-                  href={`/products?page=${currentPage - 1}`}
-                  className="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:text-[#D97706] transition-colors shadow-sm"
-                >
-                  ← Previous
-                </Link>
-              ) : (
-                <div className="px-6 py-3 bg-slate-50 border border-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed">
-                  ← Previous
-                </div>
-              )}
-
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-slate-500">
-                  Page <span className="text-slate-900">{currentPage}</span> of {totalPages}
-                </span>
-              </div>
-
-              {currentPage < totalPages ? (
-                <Link 
-                  href={`/products?page=${currentPage + 1}`}
-                  className="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:text-[#D97706] transition-colors shadow-sm"
-                >
-                  Next →
-                </Link>
-              ) : (
-                <div className="px-6 py-3 bg-slate-50 border border-slate-100 text-slate-400 font-bold rounded-xl cursor-not-allowed">
-                  Next →
-                </div>
-              )}
-            </div>
-          )}
-        </>
-      )}
     </div>
   );
 }
