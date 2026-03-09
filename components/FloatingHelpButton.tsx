@@ -39,7 +39,8 @@ export default function FloatingHelpButton() {
 
   return (
     <div 
-      className={`fixed bottom-6 right-6 z-50 flex flex-col items-end transition-all duration-500 ease-in-out ${
+      // 🔥 UPGRADED: Changed bottom-6 to bottom-24 for mobile, xl:bottom-6 for desktop
+      className={`fixed bottom-24 xl:bottom-6 right-4 md:right-6 z-50 flex flex-col items-end transition-all duration-500 ease-in-out ${
         isVisible ? "translate-y-0 opacity-100" : "translate-y-24 opacity-0 pointer-events-none"
       }`}
     >
