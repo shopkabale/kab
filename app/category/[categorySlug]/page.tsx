@@ -1,5 +1,6 @@
 import { getProducts } from "@/lib/firebase/firestore";
 import ClientProductGrid from "@/components/ClientProductGrid";
+import SearchBar from "@/components/SearchBar"; // 👈 1. Imported the SearchBar
 
 // Force dynamic ensures we fetch fresh data
 export const dynamic = "force-dynamic";
@@ -78,7 +79,7 @@ export default async function CategoryPage({
 
   return (
     <div className="flex flex-col bg-white dark:bg-[#0a0a0a] min-h-screen">
-      
+
       {/* PROFESSIONAL DYNAMIC HERO SECTION */}
       <section className="px-4 py-6">
         <div className={`-mx-4 sm:-mx-6 lg:-mx-8 px-6 sm:px-12 sm:rounded-2xl ${info.bg} py-16 text-white relative overflow-hidden flex flex-col justify-center shadow-lg text-center transition-colors duration-500`}>
@@ -88,13 +89,18 @@ export default async function CategoryPage({
           <p className="text-white/90 text-sm md:text-lg max-w-2xl mx-auto z-10 relative font-medium">
             {info.description}
           </p>
-          
+
           {/* Background Decor */}
           <span className="absolute left-[-5%] top-[-20%] text-9xl opacity-10">{info.icon}</span>
           <span className="absolute right-[-5%] bottom-[-10%] text-9xl md:text-[150px] opacity-10">{info.icon}</span>
           <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-0"></div>
         </div>
       </section>
+
+      {/* 👈 2. ADDED SEARCH BAR HERE */}
+      <div className="w-full max-w-2xl mx-auto px-4 pb-6 md:pb-8">
+        <SearchBar />
+      </div>
 
       {/* STATS HEADER */}
       <div className="px-4 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
