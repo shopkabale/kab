@@ -4,7 +4,8 @@ import { getProducts } from "@/lib/firebase/firestore";
 import { adminDb } from "@/lib/firebase/admin";
 import HeroCarousel from "@/components/HeroCarousel";
 import QuickCartButton from "@/components/QuickCartButton"; 
-import ScrollReveal from "@/components/ScrollReveal"; // Added the animation wrapper
+import ScrollReveal from "@/components/ScrollReveal";
+import SearchBar from "@/components/SearchBar"; // 👈 1. Imported the SearchBar
 
 // 🔥 24-HOUR RANDOMIZER (86400 seconds = 24 hours)
 export const revalidate = 86400;
@@ -35,13 +36,18 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col pb-16 md:pb-24 bg-white dark:bg-[#0a0a0a] overflow-hidden">
-      
+
       {/* ============================== */}
       {/* 1. HERO & CATEGORIES           */}
       {/* ============================== */}
       <section className="pt-6">
-        
+
         <HeroCarousel />
+
+        {/* 👈 2. ADDED SEARCH BAR HERE WITH SPACING */}
+        <div className="w-full max-w-2xl mx-auto px-4 pt-8 pb-2 md:pt-10 md:pb-4">
+          <SearchBar />
+        </div>
 
         <div className="flex overflow-x-auto gap-6 py-6 no-scrollbar items-center justify-start md:justify-center px-4">
           {[
@@ -90,7 +96,7 @@ export default async function Home() {
           </Link>
           <span className="absolute right-[-10px] bottom-[-20px] text-8xl md:text-[150px] opacity-10">💻</span>
         </div>
-        
+
         <ProductSection 
           products={electronicsFeatured} 
           linkHref="/category/electronics" 
@@ -169,7 +175,7 @@ export default async function Home() {
 // ==========================================
 function ProductSection({ title, products, linkHref, linkText }: { title?: string, products: any[], linkHref?: string, linkText?: string }) {
   if (!products || products.length === 0) return null;
-  
+
   return (
     <div className="px-4">
       {title && (
@@ -178,11 +184,10 @@ function ProductSection({ title, products, linkHref, linkText }: { title?: strin
         </div>
       )}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-        {/* ADDED SCROLL REVEAL ANIMATION HERE */}
         {products.map((p, i) => (
           <ScrollReveal key={p.id} index={i}>
             <div className="relative group flex flex-col bg-white dark:bg-[#151515] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-lg transition-all h-full">
-              
+
               <Link href={`/product/${p.publicId || p.id}`} className="flex flex-col flex-grow">
                 <div className="relative aspect-square overflow-hidden bg-slate-50 dark:bg-slate-900">
                    {p.images?.[0] ? (
@@ -195,13 +200,11 @@ function ProductSection({ title, products, linkHref, linkText }: { title?: strin
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate mb-1">{p.category?.replace('_', ' ')}</p>
                   <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-2 mb-4">{p.name}</h3>
                   <div className="mt-auto">
-                    {/* YELLOW PRICE TEXT */}
                     <span className="text-sm font-black text-yellow-500">UGX {Number(p.price).toLocaleString()}</span>
                   </div>
                 </div>
               </Link>
 
-              {/* QUICK CART BUTTON */}
               <div className="absolute bottom-4 right-4 z-20">
                 <QuickCartButton product={p} />
               </div>
@@ -211,7 +214,6 @@ function ProductSection({ title, products, linkHref, linkText }: { title?: strin
         ))}
       </div>
 
-      {/* VIEW ALL BUTTON */}
       {linkHref && linkText && (
         <div className="mt-8 flex justify-center">
           <Link href={linkHref} className="w-full sm:w-auto px-10 py-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest text-center hover:border-[#D97706] hover:text-[#D97706] transition-colors">
