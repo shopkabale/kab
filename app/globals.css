@@ -143,17 +143,18 @@ body {
     .kb-next-grid { grid-template-columns: 1fr; }
 }
 
-@keyframes slideDown {
-  from {
-    transform: translateY(-20px);
+@keyframes dropIn {
+  0% {
+    transform: translateY(-6px);
     opacity: 0;
   }
-  to {
+
+  100% {
     transform: translateY(0);
     opacity: 1;
   }
 }
 
-.animate-slideDown {
-  animation: slideDown 0.4s ease-out;
+.animate-dropIn {
+  animation: dropIn 0.25s ease;
 }
