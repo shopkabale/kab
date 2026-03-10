@@ -1,43 +1,43 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
-export default function WebsiteBanner() {
-  const [visible, setVisible] = useState(false);
+const messages = [
+  "Need a website for your business?",
+  "We build affordable websites.",
+];
+
+export default function WebsiteBanner({ onClose }: { onClose: () => void }) {
+  const [index, setIndex] = useState(0);
 
   useEffect(() => {
-    const hidden = localStorage.getItem("hideWebsiteBanner");
-    if (!hidden) setVisible(true);
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % messages.length);
+    }, 2000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const closeBanner = () => {
-    localStorage.setItem("hideWebsiteBanner", "true");
-    setVisible(false);
-  };
-
-  if (!visible) return null;
-
   return (
-    <div className="w-full bg-black text-white flex items-center justify-between px-3 py-2 animate-slideDown">
-      
-      <div className="text-xs leading-tight">
-        <p>Need a website for your business?</p>
-        <p>We build affordable websites.</p>
-      </div>
+    <div className="fixed top-0 left-0 w-full bg-black text-white z-[60] flex items-center justify-between px-4 h-8 text-xs">
 
-      <div className="flex items-center gap-2">
+      {/* ROTATING TEXT */}
+      <span key={index} className="animate-dropIn">
+        {messages[index]}
+      </span>
+
+      {/* RIGHT SIDE */}
+      <div className="flex items-center gap-3">
         <a
-          href="/contact"
-          className="bg-white text-black px-3 py-1 rounded text-xs font-medium"
+          href="https://wa.me/256759997376"
+          target="_blank"
+          className="bg-white text-black px-3 py-[2px] rounded text-xs"
         >
-          Contact us
+          Contact
         </a>
 
-        <button onClick={closeBanner} className="text-white text-sm">
-          ✕
-        </button>
+        <button onClick={onClose}>✕</button>
       </div>
-
     </div>
   );
 }
