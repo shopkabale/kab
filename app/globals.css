@@ -156,5 +156,5 @@ body {
 }
 
 .animate-dropIn {
-  animation: dropIn 0.35s ease;
+  animation: dropIn 0.5s ease;
 }
