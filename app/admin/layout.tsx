@@ -39,12 +39,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navItems = [
     { name: "Dashboard", href: "/admin", icon: "📊" },
-    { name: "Official Store", href: "/admin/official", icon: "🏪" }, // NEW: Manager Page
+    { name: "Official Store", href: "/admin/official", icon: "🏪" },
     { name: "Upload Official Item", href: "/admin/upload", icon: "✨" }, 
     { name: "All Products", href: "/admin/products", icon: "📦" },
-{ name: "Blogs Center", href: "/admin/blog", icon: "💬" },
+    { name: "Blogs Center", href: "/admin/blog", icon: "💬" },
     { name: "Orders", href: "/admin/orders", icon: "🛒" },
     { name: "Users", href: "/admin/users", icon: "👥" },
+    { name: "Search Logs", href: "/admin/searches", icon: "🔍" }, // 👈 ADDED HERE
   ];
 
   return (
@@ -55,7 +56,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* ========================================== */}
       <aside className="hidden md:flex w-72 bg-slate-950 text-white flex-col flex-shrink-0 shadow-2xl z-20 relative">
         <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-950 opacity-50 pointer-events-none"></div>
-        
+
         <div className="h-20 flex items-center px-8 border-b border-slate-800 relative z-10">
           <Link href="/" className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
             <span className="text-3xl">🛡️</span>
@@ -143,7 +144,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* MAIN CONTENT AREA */}
       {/* ========================================== */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative z-10 bg-slate-50/50">
-        
+
         {/* Premium Mobile Header with Hamburger */}
         <header className="md:hidden h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-4 shadow-sm sticky top-0 z-30">
           <button 
@@ -152,7 +153,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           >
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
-          
+
           <Link href="/admin" className="text-lg font-black tracking-tight text-slate-900 absolute left-1/2 -translate-x-1/2">
             Kabale<span className="text-[#D97706]">Admin</span>
           </Link>
