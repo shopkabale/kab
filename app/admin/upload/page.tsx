@@ -9,14 +9,14 @@ import { useAuth } from "@/components/AuthProvider";
 export default function AdminUploadPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const editPublicId = searchParams.get("edit"); // Checks if we are editing!
-  
+  const editPublicId = searchParams.get("edit");
+
   const { user, loading: authLoading } = useAuth();
 
   const [loading, setLoading] = useState(false);
   const [initialFetchLoading, setInitialFetchLoading] = useState(!!editPublicId);
   const [existingImages, setExistingImages] = useState<string[]>([]);
-  
+
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,11 +40,10 @@ export default function AdminUploadPage() {
     if (editPublicId && user?.role === "admin") {
       const fetchProduct = async () => {
         try {
-          // We will need a GET /api/products/[id] route to make this work perfectly
           const res = await fetch(`/api/products/${editPublicId}`);
           if (res.ok) {
             const data = await res.json();
-            setProductIdToUpdate(data.id); // Save document ID for PUT request
+            setProductIdToUpdate(data.id);
             setExistingImages(data.images || []);
             setFormData({
               title: data.name || data.title || "",
@@ -175,24 +174,42 @@ export default function AdminUploadPage() {
         }),
       });
 
-      const dbData = await dbRes.json();
+      // 3. ROBUST PARSING: Read text first to prevent JSON crash on 504/HTML errors
+      const rawText = await dbRes.text();
+      let dbData;
+      
+      try {
+        dbData = rawText ? JSON.parse(rawText) : {};
+      } catch (parseError) {
+        console.error("Failed to parse server response. Raw text:", rawText);
+        throw new Error(`Server returned an unexpected format (Status ${dbRes.status}). Check server logs or network tab.`);
+      }
 
+      // 4. Handle Success vs Error
       if (dbRes.ok) {
-        router.push(`/product/${editPublicId ? editPublicId : dbData.publicId}`);
+        const targetId = editPublicId || dbData.publicId || dbData.id;
+        if (!targetId) {
+          console.warn("Product saved, but no ID was returned to route to.");
+          router.push('/admin'); // Safe fallback if no ID exists
+        } else {
+          router.push(`/product/${targetId}`);
+        }
       } else {
-        throw new Error(dbData.error || "Database rejected the product.");
+        throw new Error(dbData.error || dbData.message || "Database rejected the product.");
       }
 
     } catch (error: any) {
       console.error("Action failed:", error);
       alert(`Action failed: ${error.message}`);
+    } finally {
+      // 5. Always stop the loading spinner, pass or fail
       setLoading(false);
     }
   };
 
   return (
     <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6">
-      
+
       {/* Dynamic Admin Header */}
       <div className="bg-slate-900 rounded-3xl p-8 mb-8 text-white flex items-center justify-between shadow-lg">
         <div>
@@ -271,7 +288,7 @@ export default function AdminUploadPage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-            
+
             {/* Show Existing Images (Only if editing) */}
             {existingImages.map((url, index) => (
               <div key={`old-${index}`} className="relative aspect-square rounded-xl border border-slate-200 overflow-hidden group shadow-sm">
