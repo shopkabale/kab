@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import SearchBar from "@/components/SearchBar";
 
-export default function Navbar() {
+export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const pathname = usePathname();
   const { user, loading, signIn, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
