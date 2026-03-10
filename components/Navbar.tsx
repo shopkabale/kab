@@ -35,7 +35,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
 
       <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white/95 backdrop-blur-md border-b border-slate-200 z-50`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16 gap-4 sm:gap-6">
+          <div className="flex justify-between items-center h-12 gap-4 sm:gap-6">
 
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="text-xl font-black text-slate-900 tracking-tight">
