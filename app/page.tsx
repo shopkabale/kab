@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
 import { adminDb } from "@/lib/firebase/admin";
-import AnnouncementBanner from "@/components/AnnouncementBanner";
 import HeroCarousel from "@/components/HeroCarousel";
 import QuickCartButton from "@/components/QuickCartButton"; 
 import ScrollReveal from "@/components/ScrollReveal"; // Added the animation wrapper
@@ -41,7 +40,7 @@ export default async function Home() {
       {/* 1. HERO & CATEGORIES           */}
       {/* ============================== */}
       <section className="pt-6">
-        <AnnouncementBanner />
+        
         <HeroCarousel />
 
         <div className="flex overflow-x-auto gap-6 py-6 no-scrollbar items-center justify-start md:justify-center px-4">
