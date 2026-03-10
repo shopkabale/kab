@@ -142,3 +142,18 @@ body {
     .kb-share-bar { position: static; transform: none; flex-direction: row; justify-content: center; margin: 30px 0; width: 100%; border: none; }
     .kb-next-grid { grid-template-columns: 1fr; }
 }
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.4s ease-out;
+}
