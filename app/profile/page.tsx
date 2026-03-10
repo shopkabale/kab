@@ -195,7 +195,7 @@ export default function ProfilePage() {
 
                   return (
                     <div key={product.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col sm:flex-row gap-4">
-                      <Link href={`/item/${safeId}`} className="relative h-24 w-24 sm:h-20 sm:w-20 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200 group">
+                      <Link href={`/product/${safeId}`} className="relative h-24 w-24 sm:h-20 sm:w-20 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200 group">
                         {hasImages ? (
                           <Image src={product.images[0]} alt={safeName} fill className="object-cover group-hover:scale-105 transition-transform" />
                         ) : (
@@ -205,7 +205,7 @@ export default function ProfilePage() {
 
                       <div className="flex-grow flex flex-col justify-between">
                         <div>
-                          <Link href={`/item/${safeId}`} className="text-sm font-bold text-slate-900 hover:text-primary line-clamp-1">
+                          <Link href={`/product/${safeId}`} className="text-sm font-bold text-slate-900 hover:text-primary line-clamp-1">
                             {safeName}
                           </Link>
                           <p className="text-xs text-slate-500 mt-1">ID: {product.publicId || product.id.slice(0, 8)}</p>
