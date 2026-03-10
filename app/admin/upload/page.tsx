@@ -6,7 +6,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 
-// 1. Rename your main logic to a "Content" component
 function AdminUploadContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -16,8 +15,9 @@ function AdminUploadContent() {
 
   const [loading, setLoading] = useState(false);
   const [initialFetchLoading, setInitialFetchLoading] = useState(!!editPublicId);
-  const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [successMessage, setSuccessMessage] = useState(""); // NEW: Success state
 
+  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -116,6 +116,7 @@ function AdminUploadContent() {
     }
 
     setLoading(true);
+    setSuccessMessage(""); // Clear old messages
 
     try {
       let newlyUploadedUrls: string[] = [];
@@ -178,17 +179,33 @@ function AdminUploadContent() {
         dbData = rawText ? JSON.parse(rawText) : {};
       } catch (parseError) {
         console.error("Failed to parse server response. Raw text:", rawText);
-        throw new Error(`Server returned an unexpected format (Status ${dbRes.status}). Check server logs or network tab.`);
+        throw new Error(`Server returned an unexpected format (Status ${dbRes.status}).`);
       }
 
       if (dbRes.ok) {
-        const targetId = editPublicId || dbData.publicId || dbData.id;
-        if (!targetId) {
-          console.warn("Product saved, but no ID was returned to route to.");
-          router.push('/admin'); 
-        } else {
-          router.push(`/product/${targetId}`);
+        // 1. Show Success Message & Scroll to top
+        setSuccessMessage(editPublicId ? "Official item updated successfully!" : "New official product published!");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+
+        // 2. Clear form (but KEEP the phone number) if it's a new upload
+        if (!editPublicId) {
+          setFormData(prev => ({
+            title: "",
+            category: "electronics",
+            price: "",
+            quantity: "1",
+            condition: "new",
+            description: "",
+            sellerPhone: prev.sellerPhone, // <-- Magic happens here! Keeps the existing number.
+          }));
+          setImageFiles([]);
+          setImagePreviews([]);
+          if (fileInputRef.current) fileInputRef.current.value = "";
         }
+
+        // 3. Auto-hide notification after 5 seconds
+        setTimeout(() => setSuccessMessage(""), 5000);
+
       } else {
         throw new Error(dbData.error || dbData.message || "Database rejected the product.");
       }
@@ -204,7 +221,7 @@ function AdminUploadContent() {
   return (
     <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6">
 
-      <div className="bg-slate-900 rounded-3xl p-8 mb-8 text-white flex items-center justify-between shadow-lg">
+      <div className="bg-slate-900 rounded-3xl p-8 mb-6 text-white flex items-center justify-between shadow-lg">
         <div>
           <span className="bg-[#D97706] text-white text-[10px] uppercase font-black px-3 py-1 rounded-full tracking-widest mb-3 inline-block">
             {editPublicId ? "Update Mode" : "Secure Admin Portal"}
@@ -215,6 +232,19 @@ function AdminUploadContent() {
           {editPublicId && <p className="text-slate-400">Editing Product ID: {editPublicId}</p>}
         </div>
       </div>
+
+      {/* NEW: SUCCESS NOTIFICATION BANNER */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-xl mb-8 flex justify-between items-center shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">✅</span>
+            <span className="font-bold text-lg">{successMessage}</span>
+          </div>
+          <button type="button" onClick={() => setSuccessMessage("")} className="text-green-600 hover:text-green-900 font-black text-xl px-2 transition-colors">
+            ✕
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* DETAILS SECTION */}
@@ -321,7 +351,7 @@ function AdminUploadContent() {
   );
 }
 
-// 2. Wrap the Content in a Suspense boundary for the default export!
+// Wrap the Content in a Suspense boundary to prevent Next.js client-side exceptions
 export default function AdminUploadPage() {
   return (
     <Suspense fallback={
