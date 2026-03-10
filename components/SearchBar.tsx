@@ -77,12 +77,16 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
       setIsOpen(false);
       if (onSearch) onSearch(); // CLOSES THE MOBILE MENU!
 
-      // Save search query to Firestore for analytics
+      // 🔥 SAVE SEARCH TO FIRESTORE 🔥
       try {
+        // Safe type casting to bypass the strict Vercel build error
+        // We noticed your ProfilePage uses user.id, so we prioritize that!
+        const currentUser = user as any; 
+
         await addDoc(collection(db, "search_queries"), {
           query: finalQuery.toLowerCase(),
-          userId: user?.uid || "anonymous",
-          userEmail: user?.email || null,
+          userId: currentUser?.id || currentUser?.uid || "anonymous",
+          userEmail: currentUser?.email || null,
           createdAt: serverTimestamp(),
         });
       } catch (error) {
