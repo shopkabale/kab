@@ -36,7 +36,7 @@ return (
       target="_blank"
       className="bg-white text-black px-3 py-[2px] rounded text-xs font-semibold"
     >
-      Contact
+      Contact Us
     </a>
 
     <button
