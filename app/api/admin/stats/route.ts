@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     const adminId = searchParams.get("adminId");
 
     if (!adminId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    
+
     const adminDoc = await adminDb.collection("users").doc(adminId).get();
     if (adminDoc.data()?.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -17,6 +17,9 @@ export async function GET(request: Request) {
     const usersCount = await adminDb.collection("users").count().get();
     const productsCount = await adminDb.collection("products").count().get();
     const ordersCount = await adminDb.collection("orders").count().get();
+    
+    // 👈 ADDED: Count total search queries
+    const searchesCount = await adminDb.collection("search_queries").count().get();
 
     // Calculate total revenue from all orders
     const ordersSnapshot = await adminDb.collection("orders").get();
@@ -30,6 +33,7 @@ export async function GET(request: Request) {
       totalProducts: productsCount.data().count,
       totalOrders: ordersCount.data().count,
       totalRevenue,
+      totalSearches: searchesCount.data().count, // 👈 ADDED: Return it to the frontend
     }, { status: 200 });
 
   } catch (error) {
