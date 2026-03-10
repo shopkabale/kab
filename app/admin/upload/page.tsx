@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 
-export default function AdminUploadPage() {
+// 1. Rename your main logic to a "Content" component
+function AdminUploadContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editPublicId = searchParams.get("edit");
@@ -119,7 +120,6 @@ export default function AdminUploadPage() {
     try {
       let newlyUploadedUrls: string[] = [];
 
-      // 1. Upload NEW Images to Cloudinary
       if (imageFiles.length > 0) {
         const signRes = await fetch("/api/cloudinary/sign", {
           method: "POST",
@@ -149,10 +149,7 @@ export default function AdminUploadPage() {
         newlyUploadedUrls = uploadResults.map(data => data.secure_url).filter(url => url);
       }
 
-      // Combine remaining old images with new ones
       const finalImagesList = [...existingImages, ...newlyUploadedUrls];
-
-      // 2. Decide if we are doing a POST (Create) or PUT (Update)
       const method = editPublicId ? "PUT" : "POST";
       const apiUrl = editPublicId ? `/api/products/${productIdToUpdate}` : "/api/products";
 
@@ -174,7 +171,6 @@ export default function AdminUploadPage() {
         }),
       });
 
-      // 3. ROBUST PARSING: Read text first to prevent JSON crash on 504/HTML errors
       const rawText = await dbRes.text();
       let dbData;
       
@@ -185,12 +181,11 @@ export default function AdminUploadPage() {
         throw new Error(`Server returned an unexpected format (Status ${dbRes.status}). Check server logs or network tab.`);
       }
 
-      // 4. Handle Success vs Error
       if (dbRes.ok) {
         const targetId = editPublicId || dbData.publicId || dbData.id;
         if (!targetId) {
           console.warn("Product saved, but no ID was returned to route to.");
-          router.push('/admin'); // Safe fallback if no ID exists
+          router.push('/admin'); 
         } else {
           router.push(`/product/${targetId}`);
         }
@@ -202,7 +197,6 @@ export default function AdminUploadPage() {
       console.error("Action failed:", error);
       alert(`Action failed: ${error.message}`);
     } finally {
-      // 5. Always stop the loading spinner, pass or fail
       setLoading(false);
     }
   };
@@ -210,7 +204,6 @@ export default function AdminUploadPage() {
   return (
     <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6">
 
-      {/* Dynamic Admin Header */}
       <div className="bg-slate-900 rounded-3xl p-8 mb-8 text-white flex items-center justify-between shadow-lg">
         <div>
           <span className="bg-[#D97706] text-white text-[10px] uppercase font-black px-3 py-1 rounded-full tracking-widest mb-3 inline-block">
@@ -224,7 +217,6 @@ export default function AdminUploadPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
-
         {/* DETAILS SECTION */}
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
           <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4">Product Details</h2>
@@ -288,8 +280,6 @@ export default function AdminUploadPage() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-
-            {/* Show Existing Images (Only if editing) */}
             {existingImages.map((url, index) => (
               <div key={`old-${index}`} className="relative aspect-square rounded-xl border border-slate-200 overflow-hidden group shadow-sm">
                 <Image src={url} alt="existing" fill className="object-cover" />
@@ -297,7 +287,6 @@ export default function AdminUploadPage() {
               </div>
             ))}
 
-            {/* Show New Previews */}
             {imagePreviews.map((preview, index) => (
               <div key={`new-${index}`} className="relative aspect-square rounded-xl border-4 border-[#D97706] overflow-hidden group shadow-sm">
                 <Image src={preview} alt="new preview" fill className="object-cover" />
@@ -306,7 +295,6 @@ export default function AdminUploadPage() {
               </div>
             ))}
 
-            {/* Add Image Button */}
             {(existingImages.length + imageFiles.length) < 5 && (
               <div onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-amber-50 hover:border-[#D97706] transition-colors">
                 <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mb-2"><span className="text-xl text-slate-500">+</span></div>
@@ -330,5 +318,19 @@ export default function AdminUploadPage() {
         </button>
       </form>
     </div>
+  );
+}
+
+// 2. Wrap the Content in a Suspense boundary for the default export!
+export default function AdminUploadPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-[60vh] flex flex-col items-center justify-center">
+        <div className="w-10 h-10 border-4 border-[#D97706] border-t-transparent rounded-full animate-spin"></div>
+        <p className="mt-4 text-slate-500 font-bold animate-pulse">Loading secure portal...</p>
+      </div>
+    }>
+      <AdminUploadContent />
+    </Suspense>
   );
 }
