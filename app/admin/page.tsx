@@ -11,6 +11,7 @@ export default function AdminOverview() {
     totalProducts: 0,
     totalOrders: 0,
     totalRevenue: 0,
+    totalSearches: 0, // 👈 Added searches to state
   });
 
   useEffect(() => {
@@ -45,21 +46,23 @@ export default function AdminOverview() {
       </div>
 
       {loading ? (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {[...Array(4)].map((_, i) => (
+        // 👈 Updated grid sizing for 5 cards
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
+          {[...Array(5)].map((_, i) => (
             <div key={i} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm animate-pulse h-32"></div>
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
-          
+        // 👈 Updated grid sizing for 5 cards
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 mb-8">
+
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
             <div className="flex justify-between items-start mb-4">
               <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center text-xl">👥</div>
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Total Users</p>
-              <h3 className="text-3xl font-black text-slate-900">{stats.totalUsers}</h3>
+              <p className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Users</p>
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-900">{stats.totalUsers}</h3>
             </div>
           </div>
 
@@ -68,8 +71,8 @@ export default function AdminOverview() {
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl">📦</div>
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Active Products</p>
-              <h3 className="text-3xl font-black text-slate-900">{stats.totalProducts}</h3>
+              <p className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Active Products</p>
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-900">{stats.totalProducts}</h3>
             </div>
           </div>
 
@@ -78,8 +81,19 @@ export default function AdminOverview() {
               <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl">🛒</div>
             </div>
             <div>
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Total Orders</p>
-              <h3 className="text-3xl font-black text-slate-900">{stats.totalOrders}</h3>
+              <p className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Total Orders</p>
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-900">{stats.totalOrders}</h3>
+            </div>
+          </div>
+
+          {/* 👈 NEW CARD: Search Queries */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl">🔍</div>
+            </div>
+            <div>
+              <p className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Search Queries</p>
+              <h3 className="text-2xl sm:text-3xl font-black text-slate-900">{stats.totalSearches || 0}</h3>
             </div>
           </div>
 
@@ -88,8 +102,8 @@ export default function AdminOverview() {
               <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center text-xl">💰</div>
             </div>
             <div className="relative z-10">
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-1">Platform Volume</p>
-              <h3 className="text-2xl font-black text-slate-900">UGX {stats.totalRevenue.toLocaleString()}</h3>
+              <p className="text-[11px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Platform Volume</p>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900">UGX {stats.totalRevenue.toLocaleString()}</h3>
             </div>
             <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-primary/5 rounded-full blur-xl"></div>
           </div>
