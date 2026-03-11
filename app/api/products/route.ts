@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { algoliaIndex } from "@/lib/algolia";
 
-// Forces Next.js to evaluate this API route dynamically at runtime
 export const dynamic = "force-dynamic";
 
 const getCategoryPrefix = (category: string) => {
@@ -15,12 +14,17 @@ const getCategoryPrefix = (category: string) => {
 };
 
 // =========================================================
-// GET: Fetch products for the Marketplace and Admin Dashboard
+// GET: Fetch products with Pagination Support
 // =========================================================
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category");
+    const cursor = searchParams.get("cursor"); // NEW: Catch the pagination cursor
+    const limitParam = searchParams.get("limit");
+    
+    // Default to 50 if no limit is provided, otherwise use the requested limit
+    const limitVal = limitParam ? parseInt(limitParam, 10) : 50;
 
     let query: FirebaseFirestore.Query = adminDb.collection("products");
 
@@ -28,7 +32,18 @@ export async function GET(request: Request) {
       query = query.where("category", "==", category);
     }
 
-    query = query.orderBy("createdAt", "desc").limit(50);
+    // Must order by createdAt to paginate properly
+    query = query.orderBy("createdAt", "desc");
+
+    // NEW: If a cursor is provided, start the query AFTER that specific document
+    if (cursor) {
+      const cursorDoc = await adminDb.collection("products").doc(cursor).get();
+      if (cursorDoc.exists) {
+        query = query.startAfter(cursorDoc);
+      }
+    }
+
+    query = query.limit(limitVal);
     const snapshot = await query.get();
 
     const products = snapshot.docs.map(doc => ({
@@ -55,12 +70,13 @@ export async function POST(request: Request) {
       price, 
       condition,
       description,
+      metaDescription, // NEW: Catching the AI-generated SEO description
       images, 
       sellerId,
       sellerName,
       sellerPhone,
-      stock,          // NEW: Catching the stock/quantity from the frontend
-      isAdminUpload   // NEW: Catching the admin flag from the admin upload page
+      stock,          
+      isAdminUpload   
     } = body;
 
     if (!title || !category || !price) {
@@ -83,7 +99,6 @@ export async function POST(request: Request) {
 
       transaction.set(counterRef, { seq: nextSeq }, { merge: true });
 
-      // Build the product using your exact schema, now with stock and admin data
       const newProduct = {
         id: newProductRef.id,
         publicId: formattedId,
@@ -94,14 +109,15 @@ export async function POST(request: Request) {
         price: Number(price),
         condition: condition || "used",
         description: description || "",
+        metaDescription: metaDescription || "", // NEW: Save to Firestore
         images: images || [],
         sellerId: sellerId || "SYSTEM",
         sellerName: sellerName || "Anonymous",
         sellerPhone: sellerPhone || "",
         status: "active", 
         views: 0,
-        stock: stock !== undefined ? Number(stock) : 1, // NEW: Uses the passed stock, or defaults to 1
-        isAdminUpload: isAdminUpload || false,          // NEW: Flags official store items
+        stock: stock !== undefined ? Number(stock) : 1, 
+        isAdminUpload: isAdminUpload || false,          
         createdAt: Date.now(),
       };
 
@@ -109,7 +125,6 @@ export async function POST(request: Request) {
       return formattedId;
     });
 
-    // Sync to Algolia for instant search
     try {
       await algoliaIndex.saveObject({
         objectID: publicId,
