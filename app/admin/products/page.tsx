@@ -10,25 +10,83 @@ export default function AdminProductsPage() {
   const { user } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  
+  // Pagination states
+  const [lastDocId, setLastDocId] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(true);
+
+  const fetchProducts = async (isLoadMore = false) => {
+    try {
+      if (isLoadMore) setLoadingMore(true);
+      else setLoading(true);
+
+      // Append the last document ID to the URL if we are loading more
+      const url = new URL("/api/products", window.location.origin);
+      if (isLoadMore && lastDocId) {
+        url.searchParams.append("cursor", lastDocId);
+      }
+      url.searchParams.append("limit", "25"); // Ask for 25 at a time
+
+      const res = await fetch(url.toString());
+      if (res.ok) {
+        const data = await res.json();
+        const fetchedProducts = data.products || [];
+
+        if (fetchedProducts.length < 25) {
+          setHasMore(false); // No more products left in database
+        }
+
+        if (isLoadMore) {
+          setProducts(prev => [...prev, ...fetchedProducts]);
+        } else {
+          setProducts(fetchedProducts);
+        }
+
+        if (fetchedProducts.length > 0) {
+          setLastDocId(fetchedProducts[fetchedProducts.length - 1].id);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch products", error);
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
-    // We can reuse our public GET route to fetch all products
-    const fetchProducts = async () => {
-      try {
-        const res = await fetch("/api/products");
-        if (res.ok) {
-          const data = await res.json();
-          setProducts(data.products || []);
-        }
-      } catch (error) {
-        console.error("Failed to fetch products", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchProducts();
   }, []);
+
+  // ============================================================================
+  // INLINE CATEGORY QUICK-EDIT
+  // ============================================================================
+  const handleCategoryChange = async (productId: string, newCategory: string) => {
+    if (!user || user.role !== "admin") return;
+    setUpdatingId(productId);
+
+    try {
+      const res = await fetch(`/api/admin/products/${productId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category: newCategory, adminId: user.id }),
+      });
+
+      if (res.ok) {
+        // Update the UI instantly without reloading
+        setProducts(prev => prev.map(p => p.id === productId ? { ...p, category: newCategory } : p));
+      } else {
+        alert("Failed to update category.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error updating category.");
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   const handleForceDelete = async (productId: string) => {
     if (!user || user.role !== "admin") return;
@@ -56,18 +114,18 @@ export default function AdminProductsPage() {
     <div className="max-w-6xl mx-auto pb-20 md:pb-0">
       <div className="mb-8 border-b border-slate-200 pb-6">
         <h1 className="text-3xl font-extrabold text-slate-900">Product Management</h1>
-        <p className="text-slate-600 mt-2 font-medium">Review auto-published items and remove spam.</p>
+        <p className="text-slate-600 mt-2 font-medium">Review user uploads, fix categories, and remove spam.</p>
       </div>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
                 <th className="px-6 py-4">Item</th>
                 <th className="px-6 py-4">Price</th>
+                <th className="px-6 py-4">Quick Category Fix</th>
                 <th className="px-6 py-4">Seller</th>
-                <th className="px-6 py-4">Status</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -93,7 +151,7 @@ export default function AdminProductsPage() {
                           )}
                         </div>
                         <div>
-                          <Link href={`/item/${product.publicId || product.id}`} target="_blank" className="font-bold text-slate-900 hover:text-primary line-clamp-1">
+                          <Link href={`/item/${product.publicId || product.id}`} target="_blank" className="font-bold text-slate-900 hover:text-[#D97706] line-clamp-1">
                             {product.name}
                           </Link>
                           <p className="text-xs text-slate-500 font-mono mt-0.5">{product.publicId || product.id.slice(0, 8)}</p>
@@ -103,21 +161,38 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-4 font-bold text-slate-900 whitespace-nowrap">
                       UGX {Number(product.price).toLocaleString()}
                     </td>
+                    
+                    {/* Inline Category Dropdown */}
                     <td className="px-6 py-4">
-                      <p className="text-sm font-semibold text-slate-700">{product.sellerName || "Unknown"}</p>
-                      <p className="text-xs text-slate-500">{product.sellerPhone || "No Phone"}</p>
+                      <select 
+                        disabled={updatingId === product.id}
+                        value={product.category || "uncategorized"}
+                        onChange={(e) => handleCategoryChange(product.id, e.target.value)}
+                        className={`text-xs font-bold rounded-lg border px-2 py-1.5 outline-none transition-colors ${updatingId === product.id ? 'opacity-50' : 'border-slate-300 bg-white hover:border-[#D97706]'}`}
+                      >
+                        <option value="uncategorized" disabled>Select...</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="agriculture">Agriculture</option>
+                        <option value="student_item">Student Market</option>
+                      </select>
                     </td>
+
                     <td className="px-6 py-4">
-                      <span className="bg-green-100 text-green-800 text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                        Active
-                      </span>
+                      <p className="text-sm font-semibold text-slate-700 truncate max-w-[120px]">{product.sellerName || "Unknown"}</p>
                     </td>
-                    <td className="px-6 py-4 text-right whitespace-nowrap">
+                    <td className="px-6 py-4 text-right whitespace-nowrap space-x-2">
+                      {/* Full Edit Link */}
+                      <Link
+                        href={`/admin/upload?edit=${product.publicId || product.id}`}
+                        className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg transition-colors inline-block"
+                      >
+                        Edit Full
+                      </Link>
                       <button
                         onClick={() => handleForceDelete(product.id)}
                         className="text-xs font-bold text-red-600 bg-red-50 hover:bg-red-100 px-3 py-2 rounded-lg transition-colors"
                       >
-                        Force Delete
+                        Delete
                       </button>
                     </td>
                   </tr>
@@ -127,6 +202,21 @@ export default function AdminProductsPage() {
           </table>
         </div>
       </div>
+
+      {/* Pagination Load More Button */}
+      {!loading && hasMore && (
+        <div className="flex justify-center mb-8">
+          <button 
+            onClick={() => fetchProducts(true)}
+            disabled={loadingMore}
+            className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-all disabled:opacity-70 flex items-center gap-2 shadow-sm"
+          >
+            {loadingMore ? (
+              <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Loading...</>
+            ) : "Load Next 25 Products"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
