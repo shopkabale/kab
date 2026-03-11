@@ -15,7 +15,8 @@ function AdminUploadContent() {
 
   const [loading, setLoading] = useState(false);
   const [initialFetchLoading, setInitialFetchLoading] = useState(!!editPublicId);
-  const [successMessage, setSuccessMessage] = useState(""); // NEW: Success state
+  const [successMessage, setSuccessMessage] = useState(""); 
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false); // NEW: AI Loading state
 
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -31,6 +32,7 @@ function AdminUploadContent() {
     quantity: "1",
     condition: "new",
     description: "",
+    metaDescription: "", // NEW: Added SEO field
     sellerPhone: "", 
   });
 
@@ -53,6 +55,7 @@ function AdminUploadContent() {
               quantity: data.stock !== undefined ? data.stock.toString() : "1",
               condition: data.condition || "new",
               description: data.description || "",
+              metaDescription: data.metaDescription || "", // NEW: Pre-fill SEO field
               sellerPhone: data.sellerPhone || "",
             });
           }
@@ -65,6 +68,46 @@ function AdminUploadContent() {
       fetchProduct();
     }
   }, [editPublicId, user]);
+
+  // ============================================================================
+  // AI GENERATION LOGIC (NEW)
+  // ============================================================================
+  const handleGenerateAI = async () => {
+    if (!formData.title) {
+      alert("Please enter a Product Title first so the AI knows what to write about!");
+      return;
+    }
+
+    setIsGeneratingAi(true);
+    try {
+      // Pass the title and category to give the AI context
+      const response = await fetch("https://bio-generator.ali3nplumb3r.workers.dev/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productName: formData.title,
+          features: `Category: ${formData.category}, Condition: ${formData.condition}`
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setFormData(prev => ({
+          ...prev,
+          description: data.description || prev.description,
+          metaDescription: data.metaDescription || prev.metaDescription
+        }));
+      } else {
+        alert(`AI Generation Failed: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("AI Error:", error);
+      alert("Failed to connect to the AI Generator.");
+    } finally {
+      setIsGeneratingAi(false);
+    }
+  };
 
   // ============================================================================
   // SECURITY CHECK
@@ -116,7 +159,7 @@ function AdminUploadContent() {
     }
 
     setLoading(true);
-    setSuccessMessage(""); // Clear old messages
+    setSuccessMessage("");
 
     try {
       let newlyUploadedUrls: string[] = [];
@@ -164,6 +207,7 @@ function AdminUploadContent() {
           stock: Number(formData.quantity),
           condition: formData.condition,
           description: formData.description,
+          metaDescription: formData.metaDescription, // NEW: Include SEO field in DB save
           sellerPhone: formData.sellerPhone,
           images: finalImagesList,
           sellerId: user.id, 
@@ -174,7 +218,7 @@ function AdminUploadContent() {
 
       const rawText = await dbRes.text();
       let dbData;
-      
+
       try {
         dbData = rawText ? JSON.parse(rawText) : {};
       } catch (parseError) {
@@ -183,11 +227,9 @@ function AdminUploadContent() {
       }
 
       if (dbRes.ok) {
-        // 1. Show Success Message & Scroll to top
         setSuccessMessage(editPublicId ? "Official item updated successfully!" : "New official product published!");
         window.scrollTo({ top: 0, behavior: "smooth" });
 
-        // 2. Clear form (but KEEP the phone number) if it's a new upload
         if (!editPublicId) {
           setFormData(prev => ({
             title: "",
@@ -196,14 +238,14 @@ function AdminUploadContent() {
             quantity: "1",
             condition: "new",
             description: "",
-            sellerPhone: prev.sellerPhone, // <-- Magic happens here! Keeps the existing number.
+            metaDescription: "", // NEW: Clear SEO field
+            sellerPhone: prev.sellerPhone, 
           }));
           setImageFiles([]);
           setImagePreviews([]);
           if (fileInputRef.current) fileInputRef.current.value = "";
         }
 
-        // 3. Auto-hide notification after 5 seconds
         setTimeout(() => setSuccessMessage(""), 5000);
 
       } else {
@@ -233,7 +275,6 @@ function AdminUploadContent() {
         </div>
       </div>
 
-      {/* NEW: SUCCESS NOTIFICATION BANNER */}
       {successMessage && (
         <div className="bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-xl mb-8 flex justify-between items-center shadow-sm">
           <div className="flex items-center gap-3">
@@ -295,10 +336,29 @@ function AdminUploadContent() {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Description *</label>
+          {/* NEW: AI GENERATION UI */}
+          <div className="pt-4 border-t border-slate-100">
+            <div className="flex justify-between items-end mb-2">
+              <label className="block text-sm font-semibold text-slate-900">Description *</label>
+              <button 
+                type="button" 
+                onClick={handleGenerateAI}
+                disabled={isGeneratingAi}
+                className="text-xs bg-indigo-100 text-indigo-700 font-bold px-3 py-1.5 rounded-lg hover:bg-indigo-200 transition-colors disabled:opacity-50 flex items-center gap-1"
+              >
+                {isGeneratingAi ? "Generating..." : "✨ Auto-Write with AI"}
+              </button>
+            </div>
             <textarea required rows={5} className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none resize-none transition-shadow"
-              value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
+              value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Full product description..." />
+          </div>
+
+          {/* NEW: SEO META DESCRIPTION FIELD */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">SEO Meta Description (for Google Search)</label>
+            <textarea rows={2} maxLength={160} className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition-shadow text-sm"
+              value={formData.metaDescription} onChange={e => setFormData({...formData, metaDescription: e.target.value})} placeholder="Short snippet for Google (under 160 characters)..." />
+            <p className="text-right text-xs text-slate-500 mt-1">{formData.metaDescription.length} / 160</p>
           </div>
         </div>
 
