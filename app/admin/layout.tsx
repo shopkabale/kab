@@ -45,11 +45,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Blogs Center", href: "/admin/blog", icon: "💬" },
     { name: "Orders", href: "/admin/orders", icon: "🛒" },
     { name: "Users", href: "/admin/users", icon: "👥" },
-    { name: "Search Logs", href: "/admin/searches", icon: "🔍" }, // 👈 ADDED HERE
+    { name: "Search Logs", href: "/admin/searches", icon: "🔍" },
   ];
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden font-sans">
+    // ✨ FIXED: Changed from 'h-screen' to 'fixed inset-0 z-50' to snap to edges and hide the top gap
+    <div className="fixed inset-0 z-50 flex bg-slate-50 overflow-hidden font-sans">
 
       {/* ========================================== */}
       {/* DESKTOP SIDEBAR */}
