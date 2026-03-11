@@ -5,7 +5,7 @@ import { adminDb } from "@/lib/firebase/admin";
 import HeroCarousel from "@/components/HeroCarousel";
 import QuickCartButton from "@/components/QuickCartButton"; 
 import ScrollReveal from "@/components/ScrollReveal";
-import SearchBar from "@/components/SearchBar"; // 👈 1. Imported the SearchBar
+import SearchBar from "@/components/SearchBar"; 
 
 // 🔥 24-HOUR RANDOMIZER (86400 seconds = 24 hours)
 export const revalidate = 86400;
@@ -24,6 +24,7 @@ export default async function Home() {
   const mixedFeatured = getRandom12(allProducts);
   const electronicsFeatured = getRandom12(electronics);
   const studentsFeatured = getRandom12(students);
+  const agricultureFeatured = getRandom12(agriculture); // NEW: Get random agriculture items
 
   // 3. Fetch latest blogs
   let latestBlogs: any[] = [];
@@ -44,7 +45,7 @@ export default async function Home() {
 
         <HeroCarousel />
 
-        {/* 👈 2. ADDED SEARCH BAR HERE WITH SPACING */}
+        {/* SEARCH BAR */}
         <div className="w-full max-w-2xl mx-auto px-4 pt-8 pb-2 md:pt-10 md:pb-4">
           <SearchBar />
         </div>
@@ -71,22 +72,7 @@ export default async function Home() {
       <div className="h-2 w-full bg-slate-50 dark:bg-[#111] my-8 md:my-12 border-y border-slate-100 dark:border-slate-800/50"></div>
 
       {/* ============================== */}
-      {/* 2. AVAILABLE ITEMS (MIXED)     */}
-      {/* ============================== */}
-      <section>
-        <ProductSection 
-          title="Available Items" 
-          products={mixedFeatured} 
-          linkHref="/products" 
-          linkText="View All Items" 
-        />
-      </section>
-
-      {/* DIVIDER */}
-      <div className="h-2 w-full bg-slate-50 dark:bg-[#111] my-8 md:my-12 border-y border-slate-100 dark:border-slate-800/50"></div>
-
-      {/* ============================== */}
-      {/* 3. ELECTRONICS SECTION         */}
+      {/* 2. ELECTRONICS SECTION         */}
       {/* ============================== */}
       <section>
         <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-6 sm:px-12 mb-8 sm:rounded-2xl bg-slate-900 py-12 md:py-16 text-white relative overflow-hidden flex flex-col justify-center shadow-lg">
@@ -108,7 +94,7 @@ export default async function Home() {
       <div className="h-2 w-full bg-slate-50 dark:bg-[#111] my-8 md:my-12 border-y border-slate-100 dark:border-slate-800/50"></div>
 
       {/* ============================== */}
-      {/* 4. STUDENT MARKET SECTION      */}
+      {/* 3. STUDENT MARKET SECTION      */}
       {/* ============================== */}
       <section>
         <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-6 sm:px-12 mb-8 sm:rounded-2xl bg-[#D97706] py-12 md:py-16 text-white relative overflow-hidden flex flex-col justify-center shadow-lg">
@@ -130,7 +116,44 @@ export default async function Home() {
       <div className="h-2 w-full bg-slate-50 dark:bg-[#111] my-8 md:my-12 border-y border-slate-100 dark:border-slate-800/50"></div>
 
       {/* ============================== */}
-      {/* 5. FRESH FROM THE JOURNAL      */}
+      {/* 4. AVAILABLE ITEMS (MIXED)     */}
+      {/* ============================== */}
+      <section>
+        <ProductSection 
+          title="Random Local Discoveries" 
+          products={mixedFeatured} 
+          linkHref="/products" 
+          linkText="View All Items" 
+        />
+      </section>
+
+      {/* DIVIDER */}
+      <div className="h-2 w-full bg-slate-50 dark:bg-[#111] my-8 md:my-12 border-y border-slate-100 dark:border-slate-800/50"></div>
+
+      {/* ============================== */}
+      {/* 5. AGRICULTURE SECTION         */}
+      {/* ============================== */}
+      <section>
+        <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-6 sm:px-12 mb-8 sm:rounded-2xl bg-green-700 py-12 md:py-16 text-white relative overflow-hidden flex flex-col justify-center shadow-lg">
+          <h2 className="text-2xl md:text-4xl font-black mb-3 z-10 relative leading-tight">Local Agriculture <br/>& Produce</h2>
+          <Link href="/category/agriculture" className="bg-white text-green-900 px-8 py-3 rounded-full font-bold text-xs md:text-sm w-fit uppercase z-10 shadow-md hover:bg-green-50 transition-colors mt-2">
+            Shop Agriculture
+          </Link>
+          <span className="absolute right-[-10px] bottom-[-10px] text-8xl md:text-[150px] opacity-20">🌾</span>
+        </div>
+
+        <ProductSection 
+          products={agricultureFeatured} 
+          linkHref="/category/agriculture" 
+          linkText="View All Agriculture" 
+        />
+      </section>
+
+      {/* DIVIDER */}
+      <div className="h-2 w-full bg-slate-50 dark:bg-[#111] my-8 md:my-12 border-y border-slate-100 dark:border-slate-800/50"></div>
+
+      {/* ============================== */}
+      {/* 6. FRESH FROM THE JOURNAL      */}
       {/* ============================== */}
       {latestBlogs.length > 0 && (
         <section className="px-4 py-6 md:py-8">
