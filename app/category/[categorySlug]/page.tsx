@@ -41,7 +41,8 @@ export async function generateMetadata({ params }: { params: { categorySlug: str
   };
 
   // Replace this with your actual production domain once you link it (e.g., https://kabaleonline.com)
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://kab-eight.vercel.app";
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.kabaleonline.com";
+
   const currentUrl = `${baseUrl}/category/${slug}`;
   
   // The new dynamic image URL powered by Vercel OG
