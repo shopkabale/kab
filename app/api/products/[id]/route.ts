@@ -10,7 +10,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
     // Check if the ID passed is a publicId (e.g., ELC-0001)
     let docRef;
     const querySnapshot = await adminDb.collection("products").where("publicId", "==", params.id).limit(1).get();
-    
+
     if (!querySnapshot.empty) {
       docRef = querySnapshot.docs[0];
     } else {
@@ -29,7 +29,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
 }
 
 // =========================================================
-// PUT: Update an existing product
+// PUT: Update an existing product (Full Edit Form)
 // =========================================================
 export async function PUT(request: Request, { params }: { params: { id: string } }) {
   try {
@@ -39,19 +39,19 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       title, 
       category, 
       price, 
-      stock, // NEW: Now we correctly catch the stock updates!
+      stock, 
       condition, 
       description, 
       images, 
       sellerPhone,
-      isAdminUpload // Used to bypass strict ownership rules for the Admin
+      isAdminUpload 
     } = body;
 
     const docRef = adminDb.collection("products").doc(params.id);
     const doc = await docRef.get();
 
     if (!doc.exists) return NextResponse.json({ error: "Product not found" }, { status: 404 });
-    
+
     // Security check: Only the original seller OR an Admin can edit
     if (!isAdminUpload && doc.data()?.sellerId !== userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -63,7 +63,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
       name: title, // Backwards compatibility
       category,
       price: Number(price),
-      stock: Number(stock), // NEW: Save the updated stock back to the database
+      stock: Number(stock), 
       condition,
       description,
       images,
@@ -93,21 +93,64 @@ export async function PUT(request: Request, { params }: { params: { id: string }
 }
 
 // =========================================================
+// PATCH: Quick Update (Inline Category Editing from Admin Table)
+// =========================================================
+export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const { id } = params;
+    const body = await request.json();
+    const { category, adminId } = body;
+
+    if (!adminId) {
+      return NextResponse.json({ error: "Unauthorized admin action" }, { status: 401 });
+    }
+    if (!category) {
+      return NextResponse.json({ error: "Category is required" }, { status: 400 });
+    }
+
+    const docRef = adminDb.collection("products").doc(id);
+    const docSnap = await docRef.get();
+    
+    if (!docSnap.exists) return NextResponse.json({ error: "Product not found" }, { status: 404 });
+
+    // Update Firestore
+    await docRef.update({ category });
+
+    // Update Algolia Search so the category change reflects in the search bar immediately
+    const publicId = docSnap.data()?.publicId || id;
+    try {
+      await algoliaIndex.partialUpdateObject({
+        objectID: publicId,
+        category: category
+      });
+    } catch (algoliaError) {
+      console.error("Algolia sync failed during category update:", algoliaError);
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error updating product category:", error);
+    return NextResponse.json({ error: "Failed to update category" }, { status: 500 });
+  }
+}
+
+// =========================================================
 // DELETE: Remove a product
 // =========================================================
 export async function DELETE(request: Request, { params }: { params: { id: string } }) {
   try {
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
-    const isAdmin = searchParams.get("isAdmin") === "true"; // Checking if request comes from admin panel
+    const isAdmin = searchParams.get("isAdmin") === "true"; 
+    const adminId = searchParams.get("adminId"); // NEW: Catching the adminId from the quick-delete table
 
     const docRef = adminDb.collection("products").doc(params.id);
     const doc = await docRef.get();
 
     if (!doc.exists) return NextResponse.json({ error: "Product not found" }, { status: 404 });
-    
+
     // Security check: Only the original seller OR an Admin can delete
-    if (!isAdmin && doc.data()?.sellerId !== userId) {
+    if (!isAdmin && !adminId && doc.data()?.sellerId !== userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
