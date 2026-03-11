@@ -1,6 +1,7 @@
+import { Metadata } from "next";
 import { getProducts } from "@/lib/firebase/firestore";
 import ClientProductGrid from "@/components/ClientProductGrid";
-import SearchBar from "@/components/SearchBar"; // 👈 1. Imported the SearchBar
+import SearchBar from "@/components/SearchBar";
 
 // Force dynamic ensures we fetch fresh data
 export const dynamic = "force-dynamic";
@@ -18,28 +19,70 @@ const categoryDetails: Record<string, { title: string; description: string; bg: 
   "agriculture": {
     title: "Agriculture Market",
     description: "Support local farmers. Buy fresh produce, tools, and supplies.",
-    bg: "bg-green-700", // A rich green for agriculture
+    bg: "bg-green-700", 
     icon: "🌾",
   },
   "student_item": {
     title: "Campus Essentials & Gear",
     description: "Textbooks, furniture, and campus essentials for Kabale University.",
-    bg: "bg-[#D97706]", // The signature amber/yellow
+    bg: "bg-[#D97706]", 
     icon: "🎒",
   }
 };
 
 // ==========================================
-// DYNAMIC SEO METADATA
+// DYNAMIC SEO & OPEN GRAPH METADATA
 // ==========================================
-export async function generateMetadata({ params }: { params: { categorySlug: string } }) {
-  const info = categoryDetails[params.categorySlug] || { 
-    title: `${params.categorySlug.replace(/_/g, ' ')}`, 
-    description: "Browse products on Kabale Online." 
+export async function generateMetadata({ params }: { params: { categorySlug: string } }): Promise<Metadata> {
+  const slug = params.categorySlug;
+  const info = categoryDetails[slug] || { 
+    title: `${slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`, 
+    description: `Shop the best local deals for ${slug.replace(/_/g, ' ')} delivered fast to your hostel.` 
   };
+
+  // Replace this with your actual production domain once you link it (e.g., https://kabaleonline.com)
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://kab-eight.vercel.app";
+  const currentUrl = `${baseUrl}/category/${slug}`;
+  
+  // The new dynamic image URL powered by Vercel OG
+  const ogImageUrl = `${baseUrl}/api/og?title=${encodeURIComponent(info.title)}&desc=${encodeURIComponent("Fast Local Delivery in Kabale")}`;
+
   return {
     title: `${info.title} | Kabale Online`,
     description: info.description,
+    keywords: [
+      info.title, 
+      "Kabale Online", 
+      "Kabale University", 
+      "student market", 
+      slug.replace(/_/g, ' '), 
+      "buy online Kabale"
+    ],
+    openGraph: {
+      title: `${info.title} | Kabale Online`,
+      description: info.description,
+      url: currentUrl,
+      siteName: "Kabale Online",
+      images: [
+        {
+          url: ogImageUrl, 
+          width: 1200,
+          height: 630,
+          alt: `${info.title} on Kabale Online`,
+        },
+      ],
+      locale: "en_UG",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${info.title} | Kabale Online`,
+      description: info.description,
+      images: [ogImageUrl],
+    },
+    alternates: {
+      canonical: currentUrl,
+    },
   };
 }
 
@@ -58,6 +101,9 @@ function getDailyRandomScore(id: string) {
   return hash;
 }
 
+// ==========================================
+// MAIN PAGE COMPONENT
+// ==========================================
 export default async function CategoryPage({ 
   params,
 }: { 
@@ -97,7 +143,7 @@ export default async function CategoryPage({
         </div>
       </section>
 
-      {/* 👈 2. ADDED SEARCH BAR HERE */}
+      {/* SEARCH BAR */}
       <div className="w-full max-w-2xl mx-auto px-4 pb-6 md:pb-8">
         <SearchBar />
       </div>
@@ -111,7 +157,7 @@ export default async function CategoryPage({
         </div>
       </div>
 
-      {/* THE CLIENT GRID (Handles the animated Load More & dark mode cards) */}
+      {/* THE CLIENT GRID */}
       <div className="px-4 pb-16">
         <ClientProductGrid products={allCategoryProducts} />
       </div>
