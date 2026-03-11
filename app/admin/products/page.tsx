@@ -12,7 +12,7 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  
+
   // Pagination states
   const [lastDocId, setLastDocId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
@@ -68,7 +68,8 @@ export default function AdminProductsPage() {
     setUpdatingId(productId);
 
     try {
-      const res = await fetch(`/api/admin/products/${productId}`, {
+      // FIXED: Pointing exactly to /api/products/
+      const res = await fetch(`/api/products/${productId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ category: newCategory, adminId: user.id }),
@@ -88,13 +89,17 @@ export default function AdminProductsPage() {
     }
   };
 
+  // ============================================================================
+  // FORCE DELETE
+  // ============================================================================
   const handleForceDelete = async (productId: string) => {
     if (!user || user.role !== "admin") return;
     const confirm = window.confirm("ADMIN ACTION: Are you sure you want to permanently delete this product from the marketplace?");
     if (!confirm) return;
 
     try {
-      const res = await fetch(`/api/admin/products/${productId}?adminId=${user.id}`, {
+      // FIXED: Pointing to /api/products/ and appending the proper isAdmin query params
+      const res = await fetch(`/api/products/${productId}?isAdmin=true&adminId=${user.id}`, {
         method: "DELETE",
       });
 
@@ -161,7 +166,7 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-4 font-bold text-slate-900 whitespace-nowrap">
                       UGX {Number(product.price).toLocaleString()}
                     </td>
-                    
+
                     {/* Inline Category Dropdown */}
                     <td className="px-6 py-4">
                       <select 
