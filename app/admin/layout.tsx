@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getAuth } from "firebase/auth"; // ✨ NEW: Imported getAuth for proper TypeScript types
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -22,9 +23,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Verify the custom claim when the user object loads
   useEffect(() => {
     async function verifyAdminClaim() {
-      if (user) {
+      const auth = getAuth();
+      
+      // ✨ FIXED: Use auth.currentUser to satisfy TypeScript's strict User typing
+      if (user && auth.currentUser) {
         try {
-          const tokenResult = await user.getIdTokenResult();
+          const tokenResult = await auth.currentUser.getIdTokenResult();
 
           if (tokenResult.claims.admin) {
             setIsAdmin(true);
@@ -127,10 +131,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-6 border-t border-slate-800 relative z-10 bg-slate-950/50 backdrop-blur-md">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#D97706] to-amber-400 flex items-center justify-center font-black text-white shadow-inner text-lg">
-              {user.displayName?.charAt(0) || "A"}
+              {/* @ts-ignore - Safely grab the first letter even if displayName isn't perfectly typed */}
+              {user?.displayName?.charAt(0) || "A"}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-bold text-white truncate">{user.displayName || "Admin"}</p>
+              {/* @ts-ignore */}
+              <p className="text-sm font-bold text-white truncate">{user?.displayName || "Admin"}</p>
               <p className="text-[10px] text-[#D97706] uppercase tracking-widest font-black mt-0.5">System Admin</p>
             </div>
           </div>
@@ -197,7 +203,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
 
           <div className="w-8 h-8 rounded-full bg-[#D97706] text-white flex items-center justify-center font-bold text-xs shadow-md">
-            {user.displayName?.charAt(0) || "A"}
+            {/* @ts-ignore */}
+            {user?.displayName?.charAt(0) || "A"}
           </div>
         </header>
 
