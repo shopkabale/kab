@@ -14,33 +14,38 @@ export default function BottomNav() {
   // Hide entirely on admin routes
   if (pathname?.startsWith("/admin")) return null;
 
-  // 1. Check for the Admin Custom Claim and Set Cookie
+  // 1. Check for the Admin Custom Claim and Set Cookie (Crash-Proof)
   useEffect(() => {
-    const auth = getAuth();
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        try {
-          const idTokenResult = await user.getIdTokenResult();
+    let unsubscribeAuth = () => {};
 
-          if (idTokenResult.claims.admin) {
-            setIsAdmin(true);
-            // Plant the VIP cookie (expires in 1 day)
-            document.cookie = "kabale_admin_session=true; path=/; max-age=86400; secure; samesite=strict";
-          } else {
+    try {
+      const auth = getAuth();
+      unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          try {
+            // Read the token (no need to force refresh here, we just want the cached claim)
+            const idTokenResult = await user.getIdTokenResult();
+
+            if (idTokenResult.claims.admin) {
+              setIsAdmin(true);
+              // Plant the VIP cookie (expires in 1 day)
+              document.cookie = "kabale_admin_session=true; path=/; max-age=86400; secure; samesite=strict";
+            } else {
+              setIsAdmin(false);
+              document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            }
+          } catch (error) {
+            console.error("Error fetching custom claims:", error);
             setIsAdmin(false);
-            // Destroy the cookie if they are a regular user
-            document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           }
-        } catch (error) {
-          console.error("Error fetching custom claims:", error);
+        } else {
           setIsAdmin(false);
+          document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         }
-      } else {
-        setIsAdmin(false);
-        // Destroy the cookie if they log out
-        document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      }
-    });
+      });
+    } catch (error) {
+      console.error("Firebase not initialized yet in BottomNav:", error);
+    }
 
     return () => unsubscribeAuth();
   }, []);
