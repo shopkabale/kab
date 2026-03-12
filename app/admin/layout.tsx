@@ -9,8 +9,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, loading } = useAuth();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  // New states for custom claim verification
+
+  // States for custom claim verification
   const [isAdmin, setIsAdmin] = useState(false);
   const [isVerifying, setIsVerifying] = useState(true);
 
@@ -24,13 +24,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     async function verifyAdminClaim() {
       if (user) {
         try {
-          // Read the secure token directly from the user object
           const tokenResult = await user.getIdTokenResult();
-          
+
           if (tokenResult.claims.admin) {
             setIsAdmin(true);
+            // Keep the VIP cookie fresh while working in the dashboard
+            document.cookie = "kabale_admin_session=true; path=/; max-age=86400; secure; samesite=strict";
           } else {
             setIsAdmin(false);
+            // Clear cookie if admin status is revoked
+            document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           }
         } catch (error) {
           console.error("Error verifying admin token:", error);
@@ -38,11 +41,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         }
       } else {
         setIsAdmin(false);
+        document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       }
-      setIsVerifying(false); // Done checking
+      setIsVerifying(false); 
     }
 
-    // Only run the token check after the initial auth loading is done
     if (!loading) {
       verifyAdminClaim();
     }
@@ -64,7 +67,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="h-screen flex flex-col items-center justify-center bg-slate-50 px-4 text-center">
         <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6 text-4xl shadow-sm">⛔</div>
         <h1 className="text-3xl font-extrabold text-slate-900 mb-4">Classified Area</h1>
-        <p className="text-slate-600 mb-8 max-w-md">You need Administrator privileges to access the Kabale Online Command Center.</p>
+        <p className="text-slate-600 mb-8 max-w-md">You need Administrator privileges to access the Command Center.</p>
         <Link href="/" className="bg-[#D97706] text-white px-8 py-4 rounded-xl font-bold hover:bg-amber-600 transition-colors shadow-md">
           Return to Marketplace
         </Link>
@@ -124,7 +127,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-6 border-t border-slate-800 relative z-10 bg-slate-950/50 backdrop-blur-md">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#D97706] to-amber-400 flex items-center justify-center font-black text-white shadow-inner text-lg">
-              {/* Fallbacks added here just in case displayName is ever missing */}
               {user.displayName?.charAt(0) || "A"}
             </div>
             <div className="overflow-hidden">
