@@ -10,9 +10,10 @@ export async function POST(request: Request) {
     }
 
     const token = authHeader.split("Bearer ")[1];
-    
+
+    // ✨ NEW: The verifyIdToken method actually extracts your custom claims!
     const decodedToken = await adminAuth.verifyIdToken(token);
-    const { uid, email, name, picture } = decodedToken;
+    const { uid, email, name, picture, admin } = decodedToken; // Extracted 'admin' claim
 
     if (!uid) {
       return NextResponse.json({ error: "Invalid token payload" }, { status: 401 });
@@ -30,7 +31,8 @@ export async function POST(request: Request) {
         email: email || "",
         displayName: name || "Kabale User",
         photoURL: picture || "",
-        role: "customer", 
+        // If they somehow have the claim (unlikely for a new user, but safe), make them admin
+        role: admin === true ? "admin" : "customer", 
         createdAt: Date.now(),
       };
       await userRef.set(userData);
@@ -38,31 +40,30 @@ export async function POST(request: Request) {
       // 2. EXISTING USER (The "Shabby Data" Adapter)
       const data = userDoc.data() || {};
 
-      // A. Safely parse the exact Name field they have
       const parsedName = data.displayName || data.fullName || data.name || name || "Kabale User";
-
-      // B. Safely parse the Photo
       const parsedPhoto = data.photoURL || data.picture || picture || "";
 
-      // C. Normalize the Role (Translate old "seller" to our new "vendor" standard)
+      // Normalize the Role (Translate old "seller" to our new "vendor" standard)
       let parsedRole = data.role || "customer";
       if (parsedRole === "seller") {
         parsedRole = "vendor";
       }
 
-      // D. Safely parse Firestore Timestamps vs JS Numbers
-      let parsedCreatedAt = Date.now();
-      if (data.createdAt) {
-        if (typeof data.createdAt === 'number') {
-          parsedCreatedAt = data.createdAt;
-        } else if (data.createdAt.toDate) {
-          parsedCreatedAt = data.createdAt.toDate().getTime();
-        } else if (data.createdAt._seconds) {
-          parsedCreatedAt = data.createdAt._seconds * 1000;
-        }
+      // ✨ NEW: The Ultimate Truth Check.
+      // If the secure token says they are an admin, override the database!
+      if (admin === true) {
+        parsedRole = "admin";
       }
 
-      // E. Build the perfect, strict Next.js object
+      const parsedCreatedAt = (() => {
+        if (!data.createdAt) return Date.now();
+        if (typeof data.createdAt === 'number') return data.createdAt;
+        if (data.createdAt.toDate) return data.createdAt.toDate().getTime();
+        if (data.createdAt._seconds) return data.createdAt._seconds * 1000;
+        return Date.now();
+      })();
+
+      // Build the perfect, strict Next.js object
       userData = {
         id: userDoc.id,
         email: data.email || email || "",
@@ -72,8 +73,7 @@ export async function POST(request: Request) {
         createdAt: parsedCreatedAt,
       };
 
-      // OPTIONAL: You can silently update their messy database record to the new clean format in the background!
-      // Uncomment the line below if you want the database to slowly fix itself as people log in.
+      // Optional: Since you have custom claims now, you don't strictly *need* // to sync the role back to the database, but it keeps things tidy!
       // await userRef.update({ displayName: parsedName, role: parsedRole });
     }
 
