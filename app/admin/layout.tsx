@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { getAuth } from "firebase/auth"; // ✨ NEW: Imported getAuth for proper TypeScript types
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -23,21 +22,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   // Verify the custom claim when the user object loads
   useEffect(() => {
     async function verifyAdminClaim() {
-      const auth = getAuth();
-      
-      // ✨ FIXED: Use auth.currentUser to satisfy TypeScript's strict User typing
-      if (user && auth.currentUser) {
+      if (user) {
         try {
-          const tokenResult = await auth.currentUser.getIdTokenResult();
+          // 1. Safely cast to any to bypass TypeScript without breaking React
+          const firebaseUser = user as any;
+          
+          // 2. Double-check the function exists to prevent "not a function" crashes
+          if (typeof firebaseUser.getIdTokenResult === "function") {
+            const tokenResult = await firebaseUser.getIdTokenResult();
 
-          if (tokenResult.claims.admin) {
-            setIsAdmin(true);
-            // Keep the VIP cookie fresh while working in the dashboard
-            document.cookie = "kabale_admin_session=true; path=/; max-age=86400; secure; samesite=strict";
+            if (tokenResult.claims.admin) {
+              setIsAdmin(true);
+              document.cookie = "kabale_admin_session=true; path=/; max-age=86400; secure; samesite=strict";
+            } else {
+              setIsAdmin(false);
+              document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
+            }
           } else {
             setIsAdmin(false);
-            // Clear cookie if admin status is revoked
-            document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           }
         } catch (error) {
           console.error("Error verifying admin token:", error);
@@ -90,6 +92,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Search Logs", href: "/admin/searches", icon: "🔍" },
   ];
 
+  // 3. Super-safe variables to prevent UI rendering crashes
+  const safeDisplayName = (user as any)?.displayName || "Admin";
+  const safeFirstLetter = typeof safeDisplayName === "string" && safeDisplayName.length > 0 
+    ? safeDisplayName.charAt(0) 
+    : "A";
+
   return (
     <div className="fixed inset-0 z-50 flex bg-slate-50 overflow-hidden font-sans">
 
@@ -131,12 +139,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-6 border-t border-slate-800 relative z-10 bg-slate-950/50 backdrop-blur-md">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#D97706] to-amber-400 flex items-center justify-center font-black text-white shadow-inner text-lg">
-              {/* @ts-ignore - Safely grab the first letter even if displayName isn't perfectly typed */}
-              {user?.displayName?.charAt(0) || "A"}
+              {safeFirstLetter}
             </div>
             <div className="overflow-hidden">
-              {/* @ts-ignore */}
-              <p className="text-sm font-bold text-white truncate">{user?.displayName || "Admin"}</p>
+              <p className="text-sm font-bold text-white truncate">{safeDisplayName}</p>
               <p className="text-[10px] text-[#D97706] uppercase tracking-widest font-black mt-0.5">System Admin</p>
             </div>
           </div>
@@ -203,8 +209,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
 
           <div className="w-8 h-8 rounded-full bg-[#D97706] text-white flex items-center justify-center font-bold text-xs shadow-md">
-            {/* @ts-ignore */}
-            {user?.displayName?.charAt(0) || "A"}
+            {safeFirstLetter}
           </div>
         </header>
 
