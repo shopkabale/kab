@@ -9,13 +9,47 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, loading } = useAuth();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // New states for custom claim verification
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
 
   // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  if (loading) {
+  // Verify the custom claim when the user object loads
+  useEffect(() => {
+    async function verifyAdminClaim() {
+      if (user) {
+        try {
+          // Read the secure token directly from the user object
+          const tokenResult = await user.getIdTokenResult();
+          
+          if (tokenResult.claims.admin) {
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+          }
+        } catch (error) {
+          console.error("Error verifying admin token:", error);
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+      setIsVerifying(false); // Done checking
+    }
+
+    // Only run the token check after the initial auth loading is done
+    if (!loading) {
+      verifyAdminClaim();
+    }
+  }, [user, loading]);
+
+  // Show loader while initial auth is loading OR while checking the token
+  if (loading || isVerifying) {
     return (
       <div className="h-screen flex flex-col items-center justify-center text-slate-500 bg-slate-50">
         <div className="w-8 h-8 border-4 border-[#D97706] border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -24,7 +58,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  if (!user || user.role !== "admin") {
+  // Reject if there is no user, OR if the user does NOT have the admin custom claim
+  if (!user || !isAdmin) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-slate-50 px-4 text-center">
         <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6 text-4xl shadow-sm">⛔</div>
@@ -49,7 +84,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   ];
 
   return (
-    // ✨ FIXED: Changed from 'h-screen' to 'fixed inset-0 z-50' to snap to edges and hide the top gap
     <div className="fixed inset-0 z-50 flex bg-slate-50 overflow-hidden font-sans">
 
       {/* ========================================== */}
@@ -90,10 +124,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-6 border-t border-slate-800 relative z-10 bg-slate-950/50 backdrop-blur-md">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-[#D97706] to-amber-400 flex items-center justify-center font-black text-white shadow-inner text-lg">
-              {user.displayName.charAt(0)}
+              {/* Fallbacks added here just in case displayName is ever missing */}
+              {user.displayName?.charAt(0) || "A"}
             </div>
             <div className="overflow-hidden">
-              <p className="text-sm font-bold text-white truncate">{user.displayName}</p>
+              <p className="text-sm font-bold text-white truncate">{user.displayName || "Admin"}</p>
               <p className="text-[10px] text-[#D97706] uppercase tracking-widest font-black mt-0.5">System Admin</p>
             </div>
           </div>
@@ -160,7 +195,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </Link>
 
           <div className="w-8 h-8 rounded-full bg-[#D97706] text-white flex items-center justify-center font-bold text-xs shadow-md">
-            {user.displayName.charAt(0)}
+            {user.displayName?.charAt(0) || "A"}
           </div>
         </header>
 
