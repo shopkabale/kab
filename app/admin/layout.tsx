@@ -4,9 +4,10 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getAuth, onAuthStateChanged } from "firebase/auth"; // ✨ NEW: We import the raw auth checker
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user } = useAuth(); // We just use this for your display name now
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -19,17 +20,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  // Verify the custom claim when the user object loads
+  // Verify the custom claim independently from your custom useAuth hook
   useEffect(() => {
-    async function verifyAdminClaim() {
-      if (user) {
-        try {
-          // 1. Safely cast to any to bypass TypeScript without breaking React
-          const firebaseUser = user as any;
-          
-          // 2. Double-check the function exists to prevent "not a function" crashes
-          if (typeof firebaseUser.getIdTokenResult === "function") {
-            const tokenResult = await firebaseUser.getIdTokenResult();
+    let unsubscribe = () => {};
+    
+    try {
+      const auth = getAuth();
+      unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        if (firebaseUser) {
+          try {
+            // ✨ FIXED: Added 'true' to force a fresh token pull from the server
+            const tokenResult = await firebaseUser.getIdTokenResult(true);
 
             if (tokenResult.claims.admin) {
               setIsAdmin(true);
@@ -38,27 +39,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               setIsAdmin(false);
               document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
             }
-          } else {
+          } catch (error) {
+            console.error("Error verifying admin token:", error);
             setIsAdmin(false);
           }
-        } catch (error) {
-          console.error("Error verifying admin token:", error);
+        } else {
           setIsAdmin(false);
+          document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
         }
-      } else {
-        setIsAdmin(false);
-        document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
-      }
-      setIsVerifying(false); 
+        setIsVerifying(false); 
+      });
+    } catch (error) {
+      console.error("Firebase not initialized yet:", error);
+      setIsVerifying(false);
     }
 
-    if (!loading) {
-      verifyAdminClaim();
-    }
-  }, [user, loading]);
+    return () => unsubscribe();
+  }, []);
 
-  // Show loader while initial auth is loading OR while checking the token
-  if (loading || isVerifying) {
+  // Show loader while checking the secure token
+  if (isVerifying) {
     return (
       <div className="h-screen flex flex-col items-center justify-center text-slate-500 bg-slate-50">
         <div className="w-8 h-8 border-4 border-[#D97706] border-t-transparent rounded-full animate-spin mb-4"></div>
@@ -68,7 +68,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   // Reject if there is no user, OR if the user does NOT have the admin custom claim
-  if (!user || !isAdmin) {
+  if (!isAdmin) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-slate-50 px-4 text-center">
         <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6 text-4xl shadow-sm">⛔</div>
@@ -92,7 +92,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Search Logs", href: "/admin/searches", icon: "🔍" },
   ];
 
-  // 3. Super-safe variables to prevent UI rendering crashes
+  // Super-safe variables to prevent UI rendering crashes
   const safeDisplayName = (user as any)?.displayName || "Admin";
   const safeFirstLetter = typeof safeDisplayName === "string" && safeDisplayName.length > 0 
     ? safeDisplayName.charAt(0) 
