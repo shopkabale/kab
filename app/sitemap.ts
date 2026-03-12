@@ -5,10 +5,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://www.kabaleonline.com";
 
   // 1. Fetch Dynamic Products
+  // Removed .limit(50) to fetch all products. 
+  // Added a generous limit of 10,000 as a best practice safety net.
   const productsSnap = await adminDb
     .collection("products")
     .orderBy("createdAt", "desc")
-    .limit(50)
+    .limit(10000) 
     .get();
 
   const productEntries = productsSnap.docs.map((doc) => ({
@@ -19,10 +21,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   // 2. Fetch Dynamic Blog Posts
+  // Removed .limit(30) to fetch all blog posts.
   const blogSnap = await adminDb
     .collection("blog_posts")
     .orderBy("publishedAt", "desc")
-    .limit(30)
+    .limit(10000) 
     .get();
 
   const blogEntries = blogSnap.docs.map((doc) => ({
