@@ -3,19 +3,49 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [isAdmin, setIsAdmin] = useState(false); // New state for admin check
 
   // Hide entirely on admin routes
   if (pathname?.startsWith("/admin")) return null;
 
+  // 1. Check for the Admin Custom Claim
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        try {
+          // Get the token result which contains our custom claims
+          const idTokenResult = await user.getIdTokenResult();
+          
+          // Check if the 'admin' claim exists and is true
+          if (idTokenResult.claims.admin) {
+            setIsAdmin(true);
+          } else {
+            setIsAdmin(false);
+          }
+        } catch (error) {
+          console.error("Error fetching custom claims:", error);
+          setIsAdmin(false);
+        }
+      } else {
+        setIsAdmin(false);
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, []);
+
+  // 2. Handle Scroll behavior
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       // If scrolling down and past 50px, hide. If scrolling up, show.
       if (currentScrollY > lastScrollY && currentScrollY > 50) {
         setIsVisible(false);
@@ -29,12 +59,18 @@ export default function BottomNav() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  const navItems = [
+  // 3. Base navigation items
+  const baseNavItems = [
     { label: "Home", href: "/", icon: "🏠" },
     { label: "Shop", href: "/products", icon: "🛍️" },
     { label: "Sell", href: "/sell", icon: "➕" },
     { label: "Profile", href: "/profile", icon: "👤" },
   ];
+
+  // 4. Dynamically add the Admin item if the user has the custom claim
+  const navItems = isAdmin
+    ? [...baseNavItems, { label: "Admin", href: "/admin", icon: "🛡️" }]
+    : baseNavItems;
 
   return (
     <div 
@@ -46,7 +82,7 @@ export default function BottomNav() {
         {navItems.map((item) => {
           // Check if the current route matches the tab
           const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
-          
+
           return (
             <Link 
               key={item.label} 
