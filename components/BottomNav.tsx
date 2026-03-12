@@ -9,25 +9,27 @@ export default function BottomNav() {
   const pathname = usePathname();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
-  const [isAdmin, setIsAdmin] = useState(false); // New state for admin check
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Hide entirely on admin routes
   if (pathname?.startsWith("/admin")) return null;
 
-  // 1. Check for the Admin Custom Claim
+  // 1. Check for the Admin Custom Claim and Set Cookie
   useEffect(() => {
     const auth = getAuth();
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
-          // Get the token result which contains our custom claims
           const idTokenResult = await user.getIdTokenResult();
-          
-          // Check if the 'admin' claim exists and is true
+
           if (idTokenResult.claims.admin) {
             setIsAdmin(true);
+            // Plant the VIP cookie (expires in 1 day)
+            document.cookie = "kabale_admin_session=true; path=/; max-age=86400; secure; samesite=strict";
           } else {
             setIsAdmin(false);
+            // Destroy the cookie if they are a regular user
+            document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
           }
         } catch (error) {
           console.error("Error fetching custom claims:", error);
@@ -35,6 +37,8 @@ export default function BottomNav() {
         }
       } else {
         setIsAdmin(false);
+        // Destroy the cookie if they log out
+        document.cookie = "kabale_admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT";
       }
     });
 
