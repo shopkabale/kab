@@ -38,7 +38,7 @@ export default function ProductActions({ product }: { product: Product }) {
   // 2. WhatsApp a FRIEND (To Share)
   const handleShareToWhatsApp = () => {
     // Dynamically grab the website URL and attach the product ID
-    const url = `${window.location.origin}/item/${product.publicId || product.id}`;
+    const url = `${window.location.origin}/product/${product.publicId || product.id}`;
     const message = encodeURIComponent(
       `Check out this ${product.name} for UGX ${Number(product.price).toLocaleString()} on Kabale Online! \n\nSee it here: ${url}`
     );
