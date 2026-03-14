@@ -1,7 +1,9 @@
 export type Role = "customer" | "vendor" | "admin";
-// Added "general" and string to safely handle your older database items
 export type ProductCategory = "electronics" | "agriculture" | "student_item" | "general" | string;
 export type OrderStatus = "pending" | "confirmed" | "out_for_delivery" | "delivered";
+
+// --- NEW PAYMENT TYPE ---
+export type PaymentType = "store_subscription" | "featured_listing" | "urgent_listing" | "homepage_ad";
 
 export interface User {
   id: string; // Matches Firebase Auth UID
@@ -13,18 +15,16 @@ export interface User {
 }
 
 export interface Product {
-  id: string; // Firestore auto-generated ID
-  publicId: string; // e.g., ELC-0001
+  id: string;
+  publicId: string;
   name: string;
   slug: string;
   category: ProductCategory;
-  storeId?: string; // Made optional since we are transitioning to sellerId
+  storeId?: string;
   price: number;
-  stock: number;
-  images: string[]; // Cloudinary URLs
+  stock: number; // You use stock instead of quantity, which is perfect
+  images: string[];
   createdAt: number;
-  
-  // --- NEW FIELDS FOR MVP ---
   condition?: string;
   description?: string;
   sellerId?: string;
@@ -32,6 +32,12 @@ export interface Product {
   sellerPhone?: string;
   status?: string;
   views?: number;
+
+  // --- NEW MONETIZATION FIELDS ---
+  featured?: boolean;
+  featuredUntil?: number;
+  urgent?: boolean;
+  urgentUntil?: number;
 }
 
 export interface Order {
@@ -55,7 +61,28 @@ export interface Store {
   name: string;
   slug: string;
   description: string;
-  phone?: string; // Added to match the Vendor Application form
+  phone?: string;
   isApproved: boolean;
+  createdAt: number;
+
+  // --- NEW SUBSCRIPTION FIELDS ---
+  logo?: string;
+  banner?: string;
+  expiresAt?: number;
+  rating?: number;
+  ratingCount?: number;
+}
+
+// --- NEW PAYMENT INTERFACE ---
+export interface Payment {
+  id: string;
+  transactionId?: string; // Added after successful Flutterwave verification
+  userId: string;
+  paymentType: PaymentType;
+  referenceId: string; // The storeId or productId being upgraded
+  amount: number;
+  currency: "UGX";
+  status: "pending" | "successful" | "failed";
+  tx_ref: string;
   createdAt: number;
 }
