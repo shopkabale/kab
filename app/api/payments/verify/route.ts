@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const flwResponse = await fetch(`https://api.flutterwave.com/v3/transactions/${transaction_id}/verify`, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`, // Pulled from your Vercel env
+        Authorization: `Bearer ${process.env.FLW_SECRET_KEY}`, 
         "Content-Type": "application/json",
       },
     });
@@ -59,33 +59,65 @@ export async function POST(request: Request) {
 
     const now = Date.now();
 
-    // 5. Handle the Store Subscription logic
+    // ---------------------------------------------------------
+    // 5. Handle the Different Payment Logic Paths
+    // ---------------------------------------------------------
+
+    // A. STORE SUBSCRIPTION
     if (paymentData?.paymentType === "store_subscription") {
       const storeId = paymentData.referenceId;
       const storeRef = adminDb.collection("stores").doc(storeId);
       
-      // Calculate 30 days in milliseconds (30 * 24 * 60 * 60 * 1000)
-      const thirtyDaysInMillis = 2592000000; 
+      const thirtyDaysInMillis = 30 * 24 * 60 * 60 * 1000; 
       
-      // Update the store's expiration date and approval status
       batch.update(storeRef, {
         isApproved: true,
         expiresAt: now + thirtyDaysInMillis,
       });
 
-      // Upgrade the user's role to "vendor"
       const userRef = adminDb.collection("users").doc(paymentData.userId);
       batch.update(userRef, {
         role: "vendor",
       });
     }
     
-    // (You can easily add else-if blocks here later for "featured_listing" and "urgent_listing")
+    // B. FEATURED LISTING
+    else if (paymentData?.paymentType === "featured_listing") {
+      const productId = paymentData.referenceId;
+      const productRef = adminDb.collection("products").doc(productId);
+      
+      const sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
 
+      batch.update(productRef, {
+        featured: true,
+        featuredUntil: now + sevenDaysInMillis,
+      });
+    }
+
+    // C. URGENT LISTING
+    else if (paymentData?.paymentType === "urgent_listing") {
+      const productId = paymentData.referenceId;
+      const productRef = adminDb.collection("products").doc(productId);
+      
+      const threeDaysInMillis = 3 * 24 * 60 * 60 * 1000;
+
+      batch.update(productRef, {
+        urgent: true,
+        urgentUntil: now + threeDaysInMillis,
+      });
+    }
+
+    // ---------------------------------------------------------
     // 6. Commit all changes to Firestore at once
+    // ---------------------------------------------------------
     await batch.commit();
 
-    return NextResponse.json({ success: true, message: "Payment verified and store activated." });
+    let successMessage = "Payment verified successfully.";
+    if (paymentData?.paymentType === "store_subscription") successMessage = "Store activated successfully!";
+    if (paymentData?.paymentType === "featured_listing") successMessage = "Your item is now Featured!";
+    if (paymentData?.paymentType === "urgent_listing") successMessage = "Your item is now marked Urgent!";
+
+    return NextResponse.json({ success: true, message: successMessage });
 
   } catch (error) {
     console.error("Payment Verification Error:", error);
