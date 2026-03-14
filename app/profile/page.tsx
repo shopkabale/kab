@@ -1,21 +1,30 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { Order, Product } from "@/types";
-import SellerDashboard from "@/components/SellerDashboard"; // <-- 1. IMPORT ADDED HERE
+import SellerDashboard from "@/components/SellerDashboard";
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
-  // 2. STATE UPDATED TO INCLUDE "seller" TAB
+  const router = useRouter();
+
   const [activeTab, setActiveTab] = useState<"purchases" | "listings" | "seller">("purchases");
-  
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [listings, setListings] = useState<Product[]>([]);
   const [loadingListings, setLoadingListings] = useState(true);
+
+  // --- NEW REDIRECT LOGIC ---
+  useEffect(() => {
+    // If the user is logged in AND they are a store vendor, redirect them instantly
+    if (user && user.role === "vendor") {
+      router.push("/vendor/dashboard");
+    }
+  }, [user, router]);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -44,10 +53,13 @@ export default function ProfilePage() {
       } finally { setLoadingListings(false); }
     };
 
-    if (user) {
-      fetchOrders(); fetchListings();
+    // Only fetch data if the user is NOT being redirected
+    if (user && user.role !== "vendor") {
+      fetchOrders(); 
+      fetchListings();
     } else if (!authLoading) {
-      setLoadingOrders(false); setLoadingListings(false);
+      setLoadingOrders(false); 
+      setLoadingListings(false);
     }
   }, [user, authLoading]);
 
@@ -72,7 +84,10 @@ export default function ProfilePage() {
     }
   };
 
-  if (authLoading) return <div className="py-20 text-center text-slate-500">Loading profile...</div>;
+  // If we are redirecting the user or auth is loading, show a clean loading state
+  if (authLoading || (user && user.role === "vendor")) {
+    return <div className="py-20 text-center text-slate-500">Loading dashboard...</div>;
+  }
 
   if (!user) {
     return (
@@ -91,7 +106,6 @@ export default function ProfilePage() {
 
   return (
     <div className="py-8 max-w-4xl mx-auto px-4 sm:px-0">
-
       {/* Profile Header */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 mb-8 flex flex-col sm:flex-row items-center gap-6">
         {user.photoURL ? (
@@ -119,14 +133,13 @@ export default function ProfilePage() {
         <button onClick={() => setActiveTab("listings")} className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === "listings" ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
           My Ads & Listings ({listings.length})
         </button>
-        {/* 3. NEW SELLER DASHBOARD TAB */}
-        <button onClick={() => setActiveTab("seller")} className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === "seller" ? "border-amber-500 text-amber-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-          Sales Dashboard 📈
-        </button>
+        {/* Upgrade Banner for Free Sellers */}
+        <Link href="/store/upgrade" className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 border-transparent text-amber-600 hover:text-amber-700 transition-colors ml-auto`}>
+          ✨ Upgrade to Store
+        </Link>
       </div>
 
       <div className="min-h-[400px]">
-
         {/* === PURCHASES TAB === */}
         {activeTab === "purchases" && (
            <div>
@@ -236,12 +249,6 @@ export default function ProfilePage() {
             )}
           </div>
         )}
-
-        {/* === 4. SELLER DASHBOARD TAB === */}
-        {activeTab === "seller" && (
-          <SellerDashboard userId={user.id} />
-        )}
-
       </div>
     </div>
   );
