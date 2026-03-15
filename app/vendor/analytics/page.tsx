@@ -69,7 +69,7 @@ export default function VendorAnalyticsPage() {
 
   // 2. Pending Revenue (Orders not yet delivered)
   const pendingRevenue = orders
-    .filter(order => order.status !== "delivered" && order.status !== "cancelled")
+    .filter(order => order.status !== "delivered")
     .reduce((sum, order) => sum + (Number(order.total) || 0), 0);
 
   // 3. Total Product Views
@@ -79,7 +79,6 @@ export default function VendorAnalyticsPage() {
   const conversionRate = totalViews > 0 ? ((orders.length / totalViews) * 100).toFixed(1) : "0.0";
 
   // 5. Top Performing Products (Sorted by lowest stock / assumed most sales)
-  // If you track "sold" count in your schema, replace `a.stock - b.stock` with `b.sold - a.sold`
   const topProducts = [...products]
     .sort((a, b) => (b.views || 0) - (a.views || 0))
     .slice(0, 5);
