@@ -1,7 +1,7 @@
 export type Role = "customer" | "vendor" | "admin";
+// Added "general" and string to safely handle your older database items
 export type ProductCategory = "electronics" | "agriculture" | "student_item" | "general" | string;
 export type OrderStatus = "pending" | "confirmed" | "out_for_delivery" | "delivered";
-export type PaymentType = "store_subscription" | "featured_listing" | "urgent_listing" | "homepage_ad";
 
 export interface User {
   id: string; // Matches Firebase Auth UID
@@ -13,18 +13,18 @@ export interface User {
 }
 
 export interface Product {
-  id: string;
-  publicId: string;
+  id: string; // Firestore auto-generated ID
+  publicId: string; // e.g., ELC-0001
   name: string;
   slug: string;
   category: ProductCategory;
-  storeId?: string;
+  storeId?: string; // Made optional since we are transitioning to sellerId
   price: number;
-  stock: number; 
-  images: string[];
+  stock: number;
+  images: string[]; // Cloudinary URLs
   createdAt: number;
   
-  // Optional detailed fields for quick-listing compatibility
+  // --- NEW FIELDS FOR MVP ---
   condition?: string;
   description?: string;
   sellerId?: string;
@@ -32,19 +32,12 @@ export interface Product {
   sellerPhone?: string;
   status?: string;
   views?: number;
-
-  // --- MONETIZATION FIELDS ---
-  featured?: boolean;
-  featuredUntil?: number;
-  urgent?: boolean;
-  urgentUntil?: number;
 }
 
 export interface Order {
   id: string;
   orderNumber: string;
   userId: string;
-  sellerId?: string; // Important for vendor dashboard routing
   items: Array<{
     productId: string;
     quantity: number;
@@ -62,64 +55,7 @@ export interface Store {
   name: string;
   slug: string;
   description: string;
+  phone?: string; // Added to match the Vendor Application form
   isApproved: boolean;
-  createdAt: number;
-  expiresAt?: number;
-  
-  // --- BRANDING ---
-  logo?: string;
-  banner?: string;
-
-  // --- NEW: PHYSICAL BUSINESS INFO ---
-  location?: {
-    district: string; 
-    town: string;     
-    street: string;   
-    landmark?: string; 
-    lat?: number;
-    lng?: number;
-  };
-
-  // --- NEW: CONTACT INFO ---
-  phone?: string;
-  whatsapp?: string; 
-  email?: string;
-
-  // --- NEW: DELIVERY OPTIONS ---
-  deliveryOptions?: {
-    pickupAvailable: boolean;
-    deliveryAvailable: boolean;
-  };
-
-  // --- NEW: OPERATING HOURS ---
-  operatingHours?: {
-    monday: { open: string, close: string, isClosed: boolean };
-    tuesday: { open: string, close: string, isClosed: boolean };
-    wednesday: { open: string, close: string, isClosed: boolean };
-    thursday: { open: string, close: string, isClosed: boolean };
-    friday: { open: string, close: string, isClosed: boolean };
-    saturday: { open: string, close: string, isClosed: boolean };
-    sunday: { open: string, close: string, isClosed: boolean };
-  };
-
-  // --- NEW: TRUST & ACTIVITY METRICS ---
-  rating?: number;
-  ratingCount?: number;
-  followersCount?: number;
-  totalSales?: number;       
-  averageResponseTimeMin?: number; 
-  lastActiveAt?: number;     
-}
-
-export interface Payment {
-  id: string;
-  transactionId?: string; // Added after successful Flutterwave verification
-  userId: string;
-  paymentType: PaymentType;
-  referenceId: string; // The storeId or productId being upgraded
-  amount: number;
-  currency: "UGX";
-  status: "pending" | "successful" | "failed";
-  tx_ref: string;
   createdAt: number;
 }
