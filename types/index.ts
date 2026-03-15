@@ -1,8 +1,6 @@
 export type Role = "customer" | "vendor" | "admin";
 export type ProductCategory = "electronics" | "agriculture" | "student_item" | "general" | string;
 export type OrderStatus = "pending" | "confirmed" | "out_for_delivery" | "delivered";
-
-// --- NEW PAYMENT TYPE ---
 export type PaymentType = "store_subscription" | "featured_listing" | "urgent_listing" | "homepage_ad";
 
 export interface User {
@@ -22,9 +20,11 @@ export interface Product {
   category: ProductCategory;
   storeId?: string;
   price: number;
-  stock: number; // You use stock instead of quantity, which is perfect
+  stock: number; 
   images: string[];
   createdAt: number;
+  
+  // Optional detailed fields for quick-listing compatibility
   condition?: string;
   description?: string;
   sellerId?: string;
@@ -33,7 +33,7 @@ export interface Product {
   status?: string;
   views?: number;
 
-  // --- NEW MONETIZATION FIELDS ---
+  // --- MONETIZATION FIELDS ---
   featured?: boolean;
   featuredUntil?: number;
   urgent?: boolean;
@@ -44,6 +44,7 @@ export interface Order {
   id: string;
   orderNumber: string;
   userId: string;
+  sellerId?: string; // Important for vendor dashboard routing
   items: Array<{
     productId: string;
     quantity: number;
@@ -61,19 +62,55 @@ export interface Store {
   name: string;
   slug: string;
   description: string;
-  phone?: string;
   isApproved: boolean;
   createdAt: number;
-
-  // --- NEW SUBSCRIPTION FIELDS ---
+  expiresAt?: number;
+  
+  // --- BRANDING ---
   logo?: string;
   banner?: string;
-  expiresAt?: number;
+
+  // --- NEW: PHYSICAL BUSINESS INFO ---
+  location?: {
+    district: string; 
+    town: string;     
+    street: string;   
+    landmark?: string; 
+    lat?: number;
+    lng?: number;
+  };
+
+  // --- NEW: CONTACT INFO ---
+  phone?: string;
+  whatsapp?: string; 
+  email?: string;
+
+  // --- NEW: DELIVERY OPTIONS ---
+  deliveryOptions?: {
+    pickupAvailable: boolean;
+    deliveryAvailable: boolean;
+  };
+
+  // --- NEW: OPERATING HOURS ---
+  operatingHours?: {
+    monday: { open: string, close: string, isClosed: boolean };
+    tuesday: { open: string, close: string, isClosed: boolean };
+    wednesday: { open: string, close: string, isClosed: boolean };
+    thursday: { open: string, close: string, isClosed: boolean };
+    friday: { open: string, close: string, isClosed: boolean };
+    saturday: { open: string, close: string, isClosed: boolean };
+    sunday: { open: string, close: string, isClosed: boolean };
+  };
+
+  // --- NEW: TRUST & ACTIVITY METRICS ---
   rating?: number;
   ratingCount?: number;
+  followersCount?: number;
+  totalSales?: number;       
+  averageResponseTimeMin?: number; 
+  lastActiveAt?: number;     
 }
 
-// --- NEW PAYMENT INTERFACE ---
 export interface Payment {
   id: string;
   transactionId?: string; // Added after successful Flutterwave verification
