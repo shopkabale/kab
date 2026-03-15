@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
     // A transaction must return a Promise
     const orderResult = await adminDb.runTransaction(async (transaction) => {
-      
+
       // ==========================================
       // PHASE 1: READ EVERYTHING FIRST
       // (Firestore rules dictate all reads must happen before any writes)
@@ -31,7 +31,9 @@ export async function POST(request: Request) {
           throw new Error(`Product ${items[index].productId} no longer exists.`);
         }
 
-        const productData = doc.data();
+        // 🚨 FIX IS RIGHT HERE: Added "as any" 
+        const productData = doc.data() as any; 
+        
         const requestedQuantity = items[index].quantity;
         const currentStock = productData?.stock || 0;
 
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
 
         // Calculate the new stock number
         const newStock = currentStock - requestedQuantity;
-        
+
         // Determine if it should be marked as sold out
         const newStatus = newStock <= 0 ? "sold_out" : (productData?.status || "active");
 
@@ -96,7 +98,7 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("Checkout Transaction Failed:", error);
-    
+
     // Check if the error is our custom inventory error
     if (error.message.includes("Out of stock") || error.message.includes("no longer exists")) {
       return NextResponse.json({ error: error.message }, { status: 409 }); // 409 Conflict
