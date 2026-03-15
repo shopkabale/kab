@@ -13,7 +13,7 @@ export default function StoreUpgradePage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  
+
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -64,7 +64,7 @@ export default function StoreUpgradePage() {
 
       if (!signRes.ok) throw new Error("Failed to get upload signature.");
       const signData = await signRes.json();
-      
+
       const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
       const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
 
@@ -101,7 +101,7 @@ export default function StoreUpgradePage() {
         logo: logoUrl,
         isApproved: false, 
         createdAt: Date.now(),
-        
+
         // New Schema Additions
         location: {
           district: "Kabale", // Hardcoded for Kabale Online
@@ -121,7 +121,7 @@ export default function StoreUpgradePage() {
           thursday: standardDay, friday: standardDay, saturday: standardDay,
           sunday: closedDay, // Default Sunday closed
         },
-        
+
         // Initialize Trust Metrics
         rating: 0,
         ratingCount: 0,
@@ -163,50 +163,53 @@ export default function StoreUpgradePage() {
   if (authLoading) return <div className="py-20 text-center text-slate-500 font-bold">Loading secure checkout...</div>;
 
   return (
-    <div className="max-w-5xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-        
+    <div className="max-w-6xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+      {/* Removed 'sticky top-8' from the layout and replaced the grid with flex-col on mobile.
+        This ensures natural, smooth scrolling on all devices. 
+      */}
+      <div className="flex flex-col lg:flex-row gap-12 items-start">
+
         {/* Left Column: The Pitch */}
-        <div className="space-y-8 sticky top-8">
+        <div className="space-y-8 w-full lg:w-5/12">
           <div>
             <span className="text-amber-600 font-black tracking-wider uppercase text-sm mb-2 block">Premium Seller</span>
             <h1 className="text-4xl font-black text-slate-900 mb-4 tracking-tight">Open Your Professional Store</h1>
-            <p className="text-lg text-slate-600 font-medium">
+            <p className="text-lg text-slate-600 font-medium leading-relaxed">
               Join the most trusted sellers in Kabale. Build your local brand, get a custom shop link, and unlock advanced analytics.
             </p>
           </div>
 
-          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 shadow-inner">
-            <p className="text-xs text-slate-500 uppercase font-black tracking-wide mb-1">Subscription Price</p>
+          <div className="bg-slate-50 p-6 rounded-3xl border border-slate-200 shadow-sm">
+            <p className="text-xs text-slate-500 uppercase font-black tracking-widest mb-1">Subscription Price</p>
             <div className="text-4xl font-black text-amber-600 mt-1 mb-2">UGX 20,000 <span className="text-lg text-slate-500 font-medium">/ 30 days</span></div>
             <p className="text-slate-600 text-sm font-medium">Cancel anytime. Secure mobile money payments powered by Flutterwave.</p>
           </div>
         </div>
 
         {/* Right Column: The Form */}
-        <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-xl">
+        <div className="bg-white p-6 sm:p-10 rounded-3xl border border-slate-200 shadow-xl w-full lg:w-7/12">
           <h2 className="text-2xl font-black text-slate-900 mb-6 uppercase tracking-tight">Store Profile Setup</h2>
-          
+
           {error && (
             <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-sm font-bold border border-red-100">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleUpgradeSubmit} className="space-y-6">
-            
+          <form onSubmit={handleUpgradeSubmit} className="space-y-8">
+
             {/* Logo Upload */}
             <div className="flex flex-col items-center justify-center mb-6">
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className="relative w-28 h-28 rounded-full border-4 border-dashed border-slate-200 hover:border-amber-500 bg-slate-50 flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-all group shadow-sm"
+                className="relative w-32 h-32 rounded-full border-4 border-dashed border-slate-200 hover:border-amber-500 bg-slate-50 flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-all group shadow-sm"
               >
                 {logoPreview ? (
                   <Image src={logoPreview} alt="Logo Preview" fill className="object-cover" />
                 ) : (
                   <>
-                    <span className="text-3xl text-slate-400 mb-1 group-hover:text-amber-500 transition-colors">📷</span>
-                    <span className="text-[10px] text-slate-500 font-black uppercase group-hover:text-amber-600">Upload Logo</span>
+                    <span className="text-4xl text-slate-400 mb-1 group-hover:text-amber-500 transition-colors">📷</span>
+                    <span className="text-[10px] text-slate-500 font-black uppercase tracking-widest group-hover:text-amber-600 mt-1">Upload Logo</span>
                   </>
                 )}
               </div>
@@ -214,42 +217,42 @@ export default function StoreUpgradePage() {
             </div>
 
             {/* Section 1: Basic Identity */}
-            <div className="space-y-4">
+            <div className="space-y-5">
               <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">1. Identity</h3>
-              
+
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-2">Store Name *</label>
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Store Name *</label>
                 <input required type="text" placeholder="e.g. John Electronics Kabale" 
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                  className="w-full rounded-xl border border-slate-300 px-5 py-4 focus:ring-2 focus:ring-amber-500 outline-none font-bold text-slate-900"
                   value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} 
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-black text-slate-700 uppercase mb-2">Store Description *</label>
-                <textarea required rows={2} placeholder="What do you sell? E.g. Top quality laptops and phones..." 
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-amber-500 outline-none resize-none font-medium"
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Store Description *</label>
+                <textarea required rows={3} placeholder="What do you sell? E.g. Top quality laptops and phones..." 
+                  className="w-full rounded-xl border border-slate-300 px-5 py-4 focus:ring-2 focus:ring-amber-500 outline-none resize-none font-medium text-slate-900"
                   value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} 
                 />
               </div>
             </div>
 
             {/* Section 2: Contact Info */}
-            <div className="space-y-4 pt-2">
+            <div className="space-y-5">
               <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">2. Contact</h3>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase mb-2">Calls Number *</label>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Calls Number *</label>
                   <input required type="tel" placeholder="07..." 
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                    className="w-full rounded-xl border border-slate-300 px-5 py-4 focus:ring-2 focus:ring-amber-500 outline-none font-bold text-slate-900"
                     value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} 
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase mb-2">WhatsApp Number *</label>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">WhatsApp Number *</label>
                   <input required type="tel" placeholder="07..." 
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#25D366] outline-none font-medium"
+                    className="w-full rounded-xl border border-slate-300 px-5 py-4 focus:ring-2 focus:ring-[#25D366] outline-none font-bold text-slate-900"
                     value={formData.whatsapp} onChange={e => setFormData({...formData, whatsapp: e.target.value})} 
                   />
                 </div>
@@ -257,33 +260,33 @@ export default function StoreUpgradePage() {
             </div>
 
             {/* Section 3: Location & Delivery */}
-            <div className="space-y-4 pt-2">
+            <div className="space-y-5">
               <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">3. Location in Kabale</h3>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase mb-2">Street / Area *</label>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Street / Area *</label>
                   <input required type="text" placeholder="e.g. Kigongi Road" 
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                    className="w-full rounded-xl border border-slate-300 px-5 py-4 focus:ring-2 focus:ring-amber-500 outline-none font-bold text-slate-900"
                     value={formData.street} onChange={e => setFormData({...formData, street: e.target.value})} 
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-black text-slate-700 uppercase mb-2">Nearby Landmark</label>
+                  <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">Nearby Landmark</label>
                   <input type="text" placeholder="e.g. Opp. Kabale University" 
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-amber-500 outline-none font-medium"
+                    className="w-full rounded-xl border border-slate-300 px-5 py-4 focus:ring-2 focus:ring-amber-500 outline-none font-bold text-slate-900"
                     value={formData.landmark} onChange={e => setFormData({...formData, landmark: e.target.value})} 
                   />
                 </div>
               </div>
 
-              <div className="flex gap-6 mt-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={formData.pickupAvailable} onChange={e => setFormData({...formData, pickupAvailable: e.target.checked})} className="w-5 h-5 text-amber-500 rounded focus:ring-amber-500" />
+              <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 mt-2 bg-slate-50 p-5 rounded-xl border border-slate-200">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={formData.pickupAvailable} onChange={e => setFormData({...formData, pickupAvailable: e.target.checked})} className="w-6 h-6 text-amber-500 rounded focus:ring-amber-500" />
                   <span className="text-sm font-bold text-slate-700">Allow Pickup</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" checked={formData.deliveryAvailable} onChange={e => setFormData({...formData, deliveryAvailable: e.target.checked})} className="w-5 h-5 text-amber-500 rounded focus:ring-amber-500" />
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input type="checkbox" checked={formData.deliveryAvailable} onChange={e => setFormData({...formData, deliveryAvailable: e.target.checked})} className="w-6 h-6 text-amber-500 rounded focus:ring-amber-500" />
                   <span className="text-sm font-bold text-slate-700">Offer Delivery</span>
                 </label>
               </div>
@@ -292,12 +295,12 @@ export default function StoreUpgradePage() {
             <button 
               disabled={loading} 
               type="submit" 
-              className="w-full bg-amber-500 text-white py-4 rounded-xl font-black text-lg hover:bg-amber-600 transition-colors disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg mt-6 uppercase tracking-wide"
+              className="w-full bg-amber-500 text-white py-4.5 rounded-xl font-black text-lg hover:bg-amber-600 transition-colors disabled:opacity-70 flex justify-center items-center gap-2 shadow-xl mt-6 uppercase tracking-widest"
             >
               {loading ? "Preparing Payment..." : "Pay UGX 20,000 to Create Store"}
             </button>
-            <p className="text-center text-xs text-slate-500 mt-4">
-              You will be redirected to a secure payment gateway to complete your transaction.
+            <p className="text-center text-xs font-bold text-slate-400 uppercase tracking-widest mt-4">
+              You will be redirected to a secure payment gateway
             </p>
           </form>
         </div>
