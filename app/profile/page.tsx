@@ -3,15 +3,17 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Order, Product } from "@/types";
-import SellerDashboard from "@/components/SellerDashboard"; // <-- 1. IMPORT ADDED HERE
+import SellerDashboard from "@/components/SellerDashboard";
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
-  // 2. STATE UPDATED TO INCLUDE "seller" TAB
+  // 1. PULL signIn AND signOut DIRECTLY FROM YOUR AUTH PROVIDER
+  const { user, loading: authLoading, signIn, signOut } = useAuth();
+  const router = useRouter(); 
   const [activeTab, setActiveTab] = useState<"purchases" | "listings" | "seller">("purchases");
-  
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [listings, setListings] = useState<Product[]>([]);
@@ -72,6 +74,11 @@ export default function ProfilePage() {
     }
   };
 
+  const handleLogout = () => {
+    signOut();
+    router.push("/"); // Gently redirect them to the home page after logging out
+  };
+
   if (authLoading) return <div className="py-20 text-center text-slate-500">Loading profile...</div>;
 
   if (!user) {
@@ -80,6 +87,13 @@ export default function ProfilePage() {
         <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">🔒</div>
         <h2 className="text-2xl font-bold text-slate-900 mb-4">Please Log In</h2>
         <p className="text-slate-600 mb-8">You must be logged in to view your profile and manage items.</p>
+        {/* 2. USING YOUR signIn LOGIC */}
+        <button 
+          onClick={signIn}
+          className="bg-[#D97706] text-white px-8 py-3 rounded-xl font-bold hover:bg-amber-600 transition-colors shadow-sm"
+        >
+          Log In to Continue
+        </button>
       </div>
     );
   }
@@ -93,35 +107,59 @@ export default function ProfilePage() {
     <div className="py-8 max-w-4xl mx-auto px-4 sm:px-0">
 
       {/* Profile Header */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 mb-8 flex flex-col sm:flex-row items-center gap-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 mb-8 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
         {user.photoURL ? (
           <Image src={user.photoURL} alt={safeDisplayName} width={96} height={96} className="rounded-full border-4 border-slate-50 object-cover" />
         ) : (
-          <div className="w-24 h-24 bg-primary text-white rounded-full flex items-center justify-center text-3xl font-bold">{safeInitial}</div>
+          <div className="w-24 h-24 bg-[#D97706] text-white rounded-full flex items-center justify-center text-3xl font-bold flex-shrink-0">{safeInitial}</div>
         )}
-        <div className="text-center sm:text-left flex-grow">
+        
+        <div className="flex-grow">
           <h1 className="text-2xl font-bold text-slate-900">{safeDisplayName}</h1>
-          <p className="text-slate-500 mb-2">{user.email || "No email provided"}</p>
-          <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-sky-100 text-sky-800 uppercase tracking-wide">
+          <p className="text-slate-500 mb-3">{user.email || "No email provided"}</p>
+          <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 uppercase tracking-wide">
             {safeRole}
           </div>
         </div>
-        <Link href="/sell" className="hidden sm:flex bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors items-center gap-2 shadow-sm">
-          <span>➕</span> Post New Ad
-        </Link>
+
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row w-full sm:w-auto gap-3 mt-4 sm:mt-0">
+          <Link href="/sell" className="flex justify-center bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors items-center gap-2 shadow-sm">
+            <span>➕</span> Post New Ad
+          </Link>
+          {/* 3. USING YOUR signOut LOGIC */}
+          <button 
+            onClick={handleLogout} 
+            className="flex justify-center bg-red-50 text-red-600 border border-transparent hover:border-red-200 px-6 py-3 rounded-xl font-bold text-sm hover:bg-red-100 transition-colors items-center gap-2"
+          >
+            Log Out
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-slate-200 mb-8 overflow-x-auto scrollbar-hide">
-        <button onClick={() => setActiveTab("purchases")} className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === "purchases" ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-          My Purchases ({orders.length})
+      <div className="grid grid-cols-3 sm:flex sm:flex-row border-b border-slate-200 mb-8">
+        <button 
+          onClick={() => setActiveTab("purchases")} 
+          className={`px-2 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center sm:text-left border-b-2 transition-colors flex flex-col sm:block items-center justify-center ${activeTab === "purchases" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+        >
+          <span>Purchases</span>
+          <span className="sm:ml-1 opacity-70">({orders.length})</span>
         </button>
-        <button onClick={() => setActiveTab("listings")} className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === "listings" ? "border-primary text-primary" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-          My Ads & Listings ({listings.length})
+        <button 
+          onClick={() => setActiveTab("listings")} 
+          className={`px-2 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center sm:text-left border-b-2 transition-colors flex flex-col sm:block items-center justify-center ${activeTab === "listings" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+        >
+          <span>My Ads</span>
+          <span className="sm:ml-1 opacity-70">({listings.length})</span>
         </button>
-        {/* 3. NEW SELLER DASHBOARD TAB */}
-        <button onClick={() => setActiveTab("seller")} className={`px-6 py-4 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === "seller" ? "border-amber-500 text-amber-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-          Sales Dashboard 📈
+        <button 
+          onClick={() => setActiveTab("seller")} 
+          className={`px-2 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center sm:text-left border-b-2 transition-colors flex flex-col sm:block items-center justify-center ${activeTab === "seller" ? "border-amber-500 text-amber-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+        >
+          <span>Dashboard</span>
+          <span className="sm:hidden mt-1">📈</span>
+          <span className="hidden sm:inline sm:ml-1">📈</span>
         </button>
       </div>
 
@@ -135,7 +173,7 @@ export default function ProfilePage() {
            ) : orders.length === 0 ? (
              <div className="bg-slate-50 rounded-2xl border border-slate-200 border-dashed p-12 text-center">
                <p className="text-slate-600 mb-4 font-medium">You haven't placed any orders yet.</p>
-               <Link href="/products" className="text-primary font-bold hover:underline">Start shopping</Link>
+               <Link href="/products" className="text-[#D97706] font-bold hover:underline">Start shopping</Link>
              </div>
            ) : (
              <div className="space-y-4">
@@ -148,7 +186,7 @@ export default function ProfilePage() {
                  return (
                    <div key={order.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                      <div>
-                       <p className="font-mono text-sm font-extrabold text-primary mb-1">{safeOrderNumber}</p>
+                       <p className="font-mono text-sm font-extrabold text-[#D97706] mb-1">{safeOrderNumber}</p>
                        <p className="text-xs text-slate-500 mb-2">{safeDate}</p>
                        <div className="text-sm text-slate-700">
                          <span className="font-medium">Total:</span> UGX {safeTotal.toLocaleString()} (COD)
@@ -180,22 +218,22 @@ export default function ProfilePage() {
             ) : listings.length === 0 ? (
               <div className="bg-slate-50 rounded-2xl border border-slate-200 border-dashed p-12 text-center">
                 <p className="text-slate-600 mb-4 font-medium">You haven't posted any items for sale yet.</p>
-                <Link href="/sell" className="inline-block bg-primary text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-sky-500 transition-colors">
+                <Link href="/sell" className="inline-block bg-[#D97706] text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-amber-600 transition-colors">
                   Post your first Ad
                 </Link>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {listings.map((product) => {
                   const safeName = product.name || "Unnamed Item";
                   const safePrice = Number(product.price) || 0;
-                  const safeStatus = product.status || "active";
                   const safeId = product.publicId || product.id;
                   const hasImages = Array.isArray(product.images) && product.images.length > 0;
 
                   return (
-                    <div key={product.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col sm:flex-row gap-4">
-                      <Link href={`/product/${safeId}`} className="relative h-24 w-24 sm:h-20 sm:w-20 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200 group">
+                    <div key={product.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                      {/* Image - Now takes full width of the card */}
+                      <Link href={`/product/${safeId}`} className="relative aspect-square w-full rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200 group">
                         {hasImages ? (
                           <Image src={product.images[0]} alt={safeName} fill className="object-cover group-hover:scale-105 transition-transform" />
                         ) : (
@@ -203,28 +241,27 @@ export default function ProfilePage() {
                         )}
                       </Link>
 
-                      <div className="flex-grow flex flex-col justify-between">
-                        <div>
-                          <Link href={`/product/${safeId}`} className="text-sm font-bold text-slate-900 hover:text-primary line-clamp-1">
-                            {safeName}
-                          </Link>
-                          <p className="text-xs text-slate-500 mt-1">ID: {product.publicId || product.id.slice(0, 8)}</p>
-                        </div>
-                        <div className="text-sm font-bold text-slate-900 mt-2 sm:mt-0">
+                      {/* Text Details */}
+                      <div className="flex-grow flex flex-col">
+                        <Link href={`/product/${safeId}`} className="text-sm font-bold text-slate-900 hover:text-[#D97706] line-clamp-2 leading-tight mb-1">
+                          {safeName}
+                        </Link>
+                        <div className="text-sm font-extrabold text-slate-900 mt-auto">
                           UGX {safePrice.toLocaleString()}
                         </div>
                       </div>
 
-                      <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between border-t sm:border-t-0 border-slate-100 pt-3 sm:pt-0 gap-2 sm:gap-0">
+                      {/* Action Buttons */}
+                      <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-1 gap-2">
                         <Link 
                           href={`/edit/${safeId}`}
-                          className="text-xs font-bold text-sky-600 hover:text-sky-800 bg-sky-50 px-3 py-1.5 rounded-md transition-colors"
+                          className="text-xs font-bold text-sky-600 hover:bg-sky-50 px-2 py-1.5 rounded flex-1 text-center border border-transparent hover:border-sky-100 transition-all"
                         >
-                          Edit Ad
+                          Edit
                         </Link>
                         <button 
                           onClick={() => handleDeleteAd(product.id)}
-                          className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-3 py-1.5 rounded-md transition-colors sm:mt-2"
+                          className="text-xs font-bold text-red-600 hover:bg-red-50 px-2 py-1.5 rounded flex-1 text-center border border-transparent hover:border-red-100 transition-all"
                         >
                           Delete
                         </button>
@@ -237,7 +274,7 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* === 4. SELLER DASHBOARD TAB === */}
+        {/* === SELLER DASHBOARD TAB === */}
         {activeTab === "seller" && (
           <SellerDashboard userId={user.id} />
         )}
