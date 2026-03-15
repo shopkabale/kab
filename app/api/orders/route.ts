@@ -5,6 +5,7 @@ import {
   sendSellerNotification, 
   sendAdminAlert 
 } from "@/lib/brevo";
+import { NotificationService } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   try {
@@ -18,26 +19,28 @@ export async function POST(request: Request) {
     // 1. Generate a beautiful Kabale Order Number
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // 2. Fetch Buyer Details (to send them the confirmation email)
+    // 2. Fetch Buyer Details
     const buyerSnap = await adminDb.collection("users").doc(userId).get();
     const buyerData = buyerSnap.exists ? buyerSnap.data() : null;
     const buyerEmail = buyerData?.email;
     const buyerName = buyerData?.displayName || "Valued Customer";
 
-    // 3. Fetch Product & Seller Details (to send the seller an alert)
+    // 3. Fetch Product & Seller Details
     const productSnap = await adminDb.collection("products").doc(productId).get();
     const productData = productSnap.exists ? productSnap.data() : null;
     const itemName = productData?.name || "an item";
-    
-    // We need the seller's email. It might be on the product, or we might need to look up the seller in the users collection.
+
     let sellerEmail = productData?.sellerEmail;
     let sellerName = productData?.sellerName || "Seller";
-    
-    if (!sellerEmail && sellerId && sellerId !== "SYSTEM") {
+    let sellerPhone = productData?.sellerPhone; 
+
+    // If details are missing on the product, try fetching from the users collection
+    if ((!sellerEmail || !sellerPhone) && sellerId && sellerId !== "SYSTEM") {
       const sellerSnap = await adminDb.collection("users").doc(sellerId).get();
       if (sellerSnap.exists) {
-        sellerEmail = sellerSnap.data()?.email;
+        sellerEmail = sellerSnap.data()?.email || sellerEmail;
         sellerName = sellerSnap.data()?.displayName || sellerName;
+        sellerPhone = sellerSnap.data()?.phone || sellerPhone; 
       }
     }
 
@@ -58,19 +61,18 @@ export async function POST(request: Request) {
 
     const docRef = await adminDb.collection("orders").add(orderData);
 
-    // 5. Fire off all Brevo Emails concurrently (Non-blocking)
-    const emailPromises = [];
+    // 5. Fire off all Notifications (Email + WhatsApp) concurrently
+    const notificationPromises = [];
 
-    // A. Email the Buyer
+    // --- EMAIL PROMISES ---
     if (buyerEmail) {
-      emailPromises.push(
+      notificationPromises.push(
         sendOrderConfirmation(buyerEmail, buyerName, orderNumber, Number(total))
       );
     }
 
-    // B. Email the Seller
     if (sellerEmail) {
-      emailPromises.push(
+      notificationPromises.push(
         sendSellerNotification(
           sellerEmail, 
           sellerName, 
@@ -82,8 +84,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // C. Email the Admin
-    emailPromises.push(
+    notificationPromises.push(
       sendAdminAlert(
         orderNumber, 
         itemName, 
@@ -93,8 +94,37 @@ export async function POST(request: Request) {
       )
     );
 
-    // Run all email tasks in the background so the user isn't waiting
-    await Promise.allSettled(emailPromises);
+    // --- WHATSAPP PROMISES ---
+    if (contactPhone) {
+      // Set your admin fallback number, formatted for Meta API (256 instead of 0)
+      const fallbackPhone = "256759997376";
+      
+      // Check if seller provided a phone, and format it for Meta if it starts with '0'
+      let activeSellerPhone = sellerPhone;
+      if (activeSellerPhone && activeSellerPhone.startsWith('0')) {
+        activeSellerPhone = `256${activeSellerPhone.slice(1)}`;
+      }
+
+      // Use the formatted seller phone, OR fallback to your number if it's completely missing
+      const finalSellerPhone = activeSellerPhone || fallbackPhone;
+
+      // Format the buyer's phone number for Meta API as well
+      let finalBuyerPhone = contactPhone;
+      if (finalBuyerPhone.startsWith('0')) {
+        finalBuyerPhone = `256${finalBuyerPhone.slice(1)}`;
+      }
+
+      notificationPromises.push(
+        NotificationService.orderCreated(
+          finalSellerPhone, 
+          finalBuyerPhone, 
+          itemName
+        ).catch(err => console.error("WhatsApp OrderCreated Error:", err))
+      );
+    }
+
+    // Run all tasks in the background so the user isn't waiting
+    await Promise.allSettled(notificationPromises);
 
     return NextResponse.json({ success: true, orderId: docRef.id }, { status: 200 });
 
