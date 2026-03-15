@@ -1,4 +1,4 @@
-import { sendWhatsAppMessage } from "./whatsapp";
+import { sendWhatsAppTemplate } from "./whatsapp";
 
 const sendMultiple = async (messages: Promise<any>[]) => {
   const results = await Promise.allSettled(messages);
@@ -10,43 +10,48 @@ const sendMultiple = async (messages: Promise<any>[]) => {
 };
 
 export const NotificationService = {
+  
+  // Using the templates we just created
   async orderCreated(sellerPhone: string, buyerPhone: string, productName: string) {
     await sendMultiple([
-      sendWhatsAppMessage(sellerPhone, `You have received a new order for ${productName} on Kabale Online.`),
-      sendWhatsAppMessage(buyerPhone, `Your order for ${productName} has been received. The seller will process it shortly.`)
+      // Sends: "You have received a new order for {{1}} on Kabale Online."
+      sendWhatsAppTemplate(sellerPhone, "order_created_seller", [productName]),
+      
+      // Sends: "Your order for {{1}} has been received. The seller will process it shortly."
+      sendWhatsAppTemplate(buyerPhone, "order_created_buyer", [productName])
     ]);
   },
 
+  // You will need to create matching templates in Meta for the rest of these:
   async orderAccepted(buyerPhone: string, productName: string) {
-    await sendWhatsAppMessage(buyerPhone, `Good news! The seller has accepted your order for ${productName}.`);
+    await sendWhatsAppTemplate(buyerPhone, "order_accepted", [productName]);
   },
 
   async orderReady(buyerPhone: string, agentPhone: string | null, productName: string) {
     const tasks = [
-      sendWhatsAppMessage(buyerPhone, `Your order for ${productName} is packed and ready for delivery.`)
+      sendWhatsAppTemplate(buyerPhone, "order_ready_buyer", [productName])
     ];
     if (agentPhone) {
-      tasks.push(sendWhatsAppMessage(agentPhone, `New pickup available: ${productName} is ready to be delivered to the buyer.`));
+      tasks.push(sendWhatsAppTemplate(agentPhone, "order_ready_agent", [productName]));
     }
     await sendMultiple(tasks);
   },
 
   async orderDelivered(buyerPhone: string, sellerPhone: string, productName: string) {
     await sendMultiple([
-      sendWhatsAppMessage(buyerPhone, `Your order for ${productName} has been successfully delivered. Thank you for shopping on Kabale Online!`),
-      sendWhatsAppMessage(sellerPhone, `Delivery complete: Your sale of ${productName} has been successfully delivered.`)
+      sendWhatsAppTemplate(buyerPhone, "order_delivered_buyer", [productName]),
+      sendWhatsAppTemplate(sellerPhone, "order_delivered_seller", [productName])
     ]);
   },
 
   async orderCancelled(buyerPhone: string, sellerPhone: string, productName: string) {
-    const msg = `Order Cancelled: The order for ${productName} has been cancelled.`;
     await sendMultiple([
-      sendWhatsAppMessage(buyerPhone, msg),
-      sendWhatsAppMessage(sellerPhone, msg)
+      sendWhatsAppTemplate(buyerPhone, "order_cancelled", [productName]),
+      sendWhatsAppTemplate(sellerPhone, "order_cancelled", [productName])
     ]);
   },
 
   async buyerInquiry(sellerPhone: string, productName: string) {
-    await sendWhatsAppMessage(sellerPhone, `You have a new inquiry about your product ${productName} on Kabale Online.`);
+    await sendWhatsAppTemplate(sellerPhone, "buyer_inquiry", [productName]);
   }
 };
