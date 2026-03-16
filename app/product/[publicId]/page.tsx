@@ -5,6 +5,7 @@ import { getProductByPublicId } from "@/lib/firebase/firestore";
 import ImageGallery from "@/components/ImageGallery";
 import ProductActions from "@/components/ProductActions";
 import ProductTracker from "@/components/ProductTracker";
+import { optimizeImage } from "@/lib/utils"; // 👈 1. Import our magic function
 
 export const revalidate = 60; 
 
@@ -15,9 +16,12 @@ export async function generateMetadata({ params }: { params: { publicId: string 
 
   const safeName = product.name || "Unnamed Item";
   const formattedPrice = `UGX ${(Number(product.price) || 0).toLocaleString()}`;
-  
+
   const title = `${safeName} - Available in Kabale | ${formattedPrice}`;
   const description = product.description?.slice(0, 150) || `Buy this ${safeName} for ${formattedPrice}. Pay strictly Cash on Delivery in Kabale town.`;
+  
+  // Note: We deliberately DO NOT use optimizeImage() here because social media scrapers 
+  // (like WhatsApp or Facebook) prefer raw JPGs with specific 1200x630 dimensions.
   const imageUrl = product.images?.[0] || "https://www.kabaleonline.com/og-image.jpg";
 
   return {
@@ -44,11 +48,11 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const safePrice = Number(product.price) || 0;
   const safeCondition = product.condition || "used";
   const safeCategory = product.category || "general";
-  
+
   // ==========================================
-  // 1. BULLETPROOF STOCK PARSING (No String Checks!)
+  // 1. BULLETPROOF STOCK PARSING
   // ==========================================
-  let safeStock = 1; // Default to 1 so old items can still be bought
+  let safeStock = 1; 
   if (product.stock !== undefined && product.stock !== null) {
     const parsed = Number(product.stock);
     if (!isNaN(parsed)) {
@@ -56,7 +60,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
     }
   }
 
-  // Determine FOMO text strictly based on our clean safeStock number
   const fomoStockText = safeStock <= 1 ? "Very few left!" : "Few remaining!";
 
   // ==========================================
@@ -68,6 +71,10 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // Fake FOMO Math
   const fakeViews = (safeName.length * 3) + 12;
   const fakeBought = (safeName.length % 4) + 2;
+
+  // 🔥 3. OPTIMIZE THE IMAGE GALLERY 🔥
+  // Map through the array and apply our Cloudinary WebP cheat code
+  const optimizedImages = product.images?.map((img: string) => optimizeImage(img)) || [];
 
   return (
     <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6">
@@ -89,7 +96,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
           {/* LEFT COLUMN: Image Gallery & Color Notice */}
           <div className="w-full mb-8 lg:mb-0 flex flex-col">
-            <ImageGallery images={product.images || []} title={safeName} />
+            {/* 👈 Pass the optimized images down to the gallery component */}
+            <ImageGallery images={optimizedImages} title={safeName} />
             <p className="text-[11px] text-slate-400 mt-4 text-center italic">
               * Note: Actual color variations may occur due to lighting or screen settings.
             </p>
@@ -121,7 +129,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </span>
             </div>
 
-            {/* 2. STOCK STATUS (Alone on one line, respecting actual quantity) */}
+            {/* 2. STOCK STATUS */}
             <div className="mb-6">
               <span className={`text-sm font-bold px-4 py-1.5 rounded-md ${
                 safeStock > 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
@@ -130,31 +138,25 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </span>
             </div>
 
-            {/* 3. FOMO SECTION (Each item strictly on its own line) */}
+            {/* 3. FOMO SECTION */}
             <div className="flex flex-col gap-3 mb-6 bg-slate-50 border border-slate-100 p-4 rounded-xl">
-              
-              {/* Line 1: Views */}
               <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
                 <span className="animate-pulse text-lg">🔥</span>
                 <span>{fakeViews} viewing today</span>
               </div>
-              
-              {/* Line 2: Bought (Admin Only) */}
               {isAdmin && (
                 <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
                   <span className="text-lg">🛒</span>
                   <span>{fakeBought} bought this week</span>
                 </div>
               )}
-              
-              {/* Line 3: Urgency */}
               <div className="flex items-center gap-2 text-sm font-bold text-red-600">
                 <span className="text-lg">⏳</span>
                 <span>{fomoStockText}</span>
               </div>
             </div>
 
-            {/* 4. DELIVERY BANNER (Alone on one line) */}
+            {/* 4. DELIVERY BANNER */}
             <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 mb-6 flex items-start gap-3">
               <span className="text-xl">🚚</span>
               <div>
@@ -163,7 +165,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </div>
             </div>
 
-            {/* 5. SELLER INFO (Clean stacked block) */}
+            {/* 5. SELLER INFO */}
             <div className="bg-white border border-slate-200 rounded-xl p-4 mb-8 flex items-center gap-4 shadow-sm">
               <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl flex-shrink-0 ${isAdmin ? 'bg-[#D97706] text-white' : 'bg-slate-200 text-slate-700'}`}>
                 {isAdmin ? "K" : (product.sellerName ? product.sellerName.charAt(0).toUpperCase() : "S")}
@@ -190,16 +192,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </div>
             </div>
 
-            {/* ACTIONS: Checkout & Extras */}
-            <div className="mt-auto border-t border-slate-100 pt-6 space-y-4">
-              <Link 
-                href={`/checkout/${product.publicId || product.id}`}
-                className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold text-lg hover:bg-slate-800 transition-all hover:shadow-lg hover:-translate-y-1 flex items-center justify-center gap-2"
-              >
-                🛒 Proceed to Checkout
-              </Link>
-              {/* Product Actions Component handles the Buy Now modal and WhatsApp sharing */}
-              <ProductActions product={product} />
+            {/* ACTIONS: Fast Checkout & WhatsApp (Old Cart button removed!) */}
+            <div className="mt-auto border-t border-slate-100 pt-6">
+              <ProductActions product={{...product, images: optimizedImages}} />
             </div>
 
           </div>
