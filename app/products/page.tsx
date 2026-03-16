@@ -1,6 +1,7 @@
 import { getProducts } from "@/lib/firebase/firestore";
 import ClientProductGrid from "@/components/ClientProductGrid";
-import SearchBar from "@/components/SearchBar"; // 👈 1. Imported the SearchBar
+import SearchBar from "@/components/SearchBar"; 
+import { optimizeImage } from "@/lib/utils"; // 👈 1. Import our magic function
 
 // Force dynamic ensures we fetch fresh data
 export const dynamic = "force-dynamic";
@@ -27,10 +28,22 @@ function getDailyRandomScore(id: string) {
 
 export default async function AllProductsPage() {
   // 1. Fetch ALL products 
-  const allProducts = await getProducts();
+  const rawProducts = await getProducts();
 
   // 2. SHUFFLE THEM (Stable Daily Randomization)
-  allProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
+  rawProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
+
+  // 3. 🔥 OPTIMIZE ALL IMAGES 🔥
+  // We do this on the server so the ClientGrid just receives fast URLs automatically!
+  const allProducts = rawProducts.map((product) => {
+    if (!product.images || product.images.length === 0) return product;
+
+    return {
+      ...product,
+      // Map through every image in the product's gallery and optimize it
+      images: product.images.map((img: string) => optimizeImage(img))
+    };
+  });
 
   return (
     <div className="flex flex-col bg-white dark:bg-[#0a0a0a] min-h-screen">
@@ -52,7 +65,7 @@ export default async function AllProductsPage() {
         </div>
       </section>
 
-      {/* 👈 2. ADDED SEARCH BAR HERE */}
+      {/* SEARCH BAR */}
       <div className="w-full max-w-2xl mx-auto px-4 pb-6 md:pb-8">
         <SearchBar />
       </div>
