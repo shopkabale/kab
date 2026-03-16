@@ -7,7 +7,7 @@ import ImageGallery from "@/components/ImageGallery";
 import ProductActions from "@/components/ProductActions";
 import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker"; 
-import SaveProductButton from "@/components/SaveProductButton"; // 🔥 IMPORTED THE SAVE BUTTON
+import SaveProductButton from "@/components/SaveProductButton";
 import { optimizeImage } from "@/lib/utils"; 
 
 export const revalidate = 60; 
@@ -136,20 +136,25 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               {safeName} <span className="text-lg font-medium text-slate-500 block sm:inline mt-1 sm:mt-0">(Available in Kabale)</span>
             </h1>
 
-            {/* 🔥 1. PRICE & SAVE BUTTON TOGETHER 🔥 */}
-            <div className="mb-6 flex items-center justify-between">
+            {/* 🔥 1. PRICE (Alone on its line again) 🔥 */}
+            <div className="mb-3">
               <span className="text-4xl font-black text-[#D97706]">
                 UGX {safePrice.toLocaleString()}
               </span>
-              <SaveProductButton product={product} />
             </div>
 
+            {/* 🔥 2. STOCK STATUS 🔥 */}
             <div className="mb-6">
               <span className={`text-sm font-bold px-4 py-1.5 rounded-md ${
                 safeStock > 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
               }`}>
                 {safeStock > 0 ? 'In Stock' : 'Out of Stock'}
               </span>
+            </div>
+
+            {/* 🔥 3. THE NEW EXPLICIT SAVE BUTTON (Wider, on its own line) 🔥 */}
+            <div className="mb-6">
+              <SaveProductButton product={product} />
             </div>
 
             <div className="flex flex-col gap-3 mb-6 bg-slate-50 border border-slate-100 p-4 rounded-xl">
@@ -195,6 +200,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </div>
             </div>
 
+            {/* DESCRIPTION */}
             <div className="mb-8 flex-grow">
               <h3 className="text-sm font-bold text-slate-900 mb-3 border-b border-slate-100 pb-2 uppercase tracking-wider">Description</h3>
               <div className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
@@ -202,6 +208,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </div>
             </div>
 
+            {/* ACTIONS: Checkout & Extras */}
             <div className="mt-auto border-t border-slate-100 pt-6">
               <ProductActions product={{...product, images: optimizedImages}} />
             </div>
