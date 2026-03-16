@@ -6,6 +6,7 @@ import HeroCarousel from "@/components/HeroCarousel";
 import QuickCartButton from "@/components/QuickCartButton"; 
 import ScrollReveal from "@/components/ScrollReveal";
 import SearchBar from "@/components/SearchBar"; 
+import { optimizeImage } from "@/lib/utils"; // <-- NEW IMPORT
 
 // 🔥 24-HOUR RANDOMIZER (86400 seconds = 24 hours)
 export const revalidate = 86400;
@@ -24,7 +25,7 @@ export default async function Home() {
   const mixedFeatured = getRandom12(allProducts);
   const electronicsFeatured = getRandom12(electronics);
   const studentsFeatured = getRandom12(students);
-  const agricultureFeatured = getRandom12(agriculture); // NEW: Get random agriculture items
+  const agricultureFeatured = getRandom12(agriculture);
 
   // 3. Fetch latest blogs
   let latestBlogs: any[] = [];
@@ -168,6 +169,7 @@ export default async function Home() {
               return (
                 <Link key={blog.id} href={`/blog/${blog.id}`} className="flex items-center gap-6 group bg-slate-50 dark:bg-[#151515] p-4 rounded-2xl border border-slate-100 dark:border-slate-800 hover:shadow-md transition-all">
                   <div className="relative w-28 h-28 md:w-32 md:h-32 rounded-xl overflow-hidden shrink-0 bg-slate-200">
+                    {/* Notice I didn't optimize blog images here, assuming they are hosted elsewhere. If they are Cloudinary, you can wrap them too! */}
                     <img src={blog.featuredImage || "/og-image.jpg"} alt={blog.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                   </div>
                   <div className="flex flex-col flex-1 py-1">
@@ -207,34 +209,45 @@ function ProductSection({ title, products, linkHref, linkText }: { title?: strin
         </div>
       )}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-        {products.map((p, i) => (
-          <ScrollReveal key={p.id} index={i}>
-            <div className="relative group flex flex-col bg-white dark:bg-[#151515] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-lg transition-all h-full">
+        {products.map((p, i) => {
+          // 🔥 APPLIED OPTIMIZATION HERE 🔥
+          const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
 
-              <Link href={`/product/${p.publicId || p.id}`} className="flex flex-col flex-grow">
-                <div className="relative aspect-square overflow-hidden bg-slate-50 dark:bg-slate-900">
-                   {p.images?.[0] ? (
-                     <Image src={p.images[0]} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover group-hover:scale-105 transition-transform duration-500" />
-                   ) : (
-                     <div className="m-auto flex items-center justify-center h-full text-[10px] font-bold text-slate-400 uppercase">No Image</div>
-                   )}
-                </div>
-                <div className="p-4 flex flex-col flex-grow">
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate mb-1">{p.category?.replace('_', ' ')}</p>
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-2 mb-4">{p.name}</h3>
-                  <div className="mt-auto">
-                    <span className="text-sm font-black text-yellow-500">UGX {Number(p.price).toLocaleString()}</span>
+          return (
+            <ScrollReveal key={p.id} index={i}>
+              <div className="relative group flex flex-col bg-white dark:bg-[#151515] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-lg transition-all h-full">
+
+                <Link href={`/product/${p.publicId || p.id}`} className="flex flex-col flex-grow">
+                  <div className="relative aspect-square overflow-hidden bg-slate-50 dark:bg-slate-900">
+                    {optimizedImage ? (
+                      <Image 
+                        src={optimizedImage} // <-- USING COMPRESSED URL
+                        alt={p.name} 
+                        fill 
+                        sizes="(max-width: 768px) 50vw, 25vw" 
+                        className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                      />
+                    ) : (
+                      <div className="m-auto flex items-center justify-center h-full text-[10px] font-bold text-slate-400 uppercase">No Image</div>
+                    )}
                   </div>
+                  <div className="p-4 flex flex-col flex-grow">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate mb-1">{p.category?.replace('_', ' ')}</p>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-2 mb-4">{p.name}</h3>
+                    <div className="mt-auto">
+                      <span className="text-sm font-black text-yellow-500">UGX {Number(p.price).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </Link>
+
+                <div className="absolute bottom-4 right-4 z-20">
+                  <QuickCartButton product={p} />
                 </div>
-              </Link>
 
-              <div className="absolute bottom-4 right-4 z-20">
-                <QuickCartButton product={p} />
               </div>
-
-            </div>
-          </ScrollReveal>
-        ))}
+            </ScrollReveal>
+          );
+        })}
       </div>
 
       {linkHref && linkText && (
