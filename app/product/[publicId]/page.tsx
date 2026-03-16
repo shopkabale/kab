@@ -6,7 +6,8 @@ import { getProductByPublicId, getProducts } from "@/lib/firebase/firestore";
 import ImageGallery from "@/components/ImageGallery";
 import ProductActions from "@/components/ProductActions";
 import ProductTracker from "@/components/ProductTracker";
-import RecentlyViewedTracker from "@/components/RecentlyViewedTracker"; // 👈 IMPORTED TRACKER
+import RecentlyViewedTracker from "@/components/RecentlyViewedTracker"; 
+import SaveProductButton from "@/components/SaveProductButton"; // 🔥 IMPORTED THE SAVE BUTTON
 import { optimizeImage } from "@/lib/utils"; 
 
 export const revalidate = 60; 
@@ -81,13 +82,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const rawCategoryProducts = await getProducts(safeCategory);
   
   const relatedProducts = rawCategoryProducts
-    // Remove the current product from the list
     .filter((p) => p.id !== product.id && p.publicId !== product.publicId)
-    // Randomize them so it feels fresh every time
     .sort(() => 0.5 - Math.random())
-    // Keep only 4 to keep the page clean and fast
     .slice(0, 4)
-    // Optimize their thumbnail images!
     .map((p) => ({
       ...p,
       images: p.images?.map((img: string) => optimizeImage(img)) || []
@@ -97,7 +94,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
     <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6">
       <ProductTracker productId={product.id} />
       
-      {/* 👈 THE NEW TRACKER RUNNING IN THE BACKGROUND */}
       <RecentlyViewedTracker product={product} /> 
 
       {/* BREADCRUMBS */}
@@ -140,10 +136,12 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               {safeName} <span className="text-lg font-medium text-slate-500 block sm:inline mt-1 sm:mt-0">(Available in Kabale)</span>
             </h1>
 
-            <div className="mb-3">
+            {/* 🔥 1. PRICE & SAVE BUTTON TOGETHER 🔥 */}
+            <div className="mb-6 flex items-center justify-between">
               <span className="text-4xl font-black text-[#D97706]">
                 UGX {safePrice.toLocaleString()}
               </span>
+              <SaveProductButton product={product} />
             </div>
 
             <div className="mb-6">
@@ -236,7 +234,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                   {relProduct.images?.[0] ? (
                     <Image 
                       src={relProduct.images[0]} 
-                      alt={relProduct.name} // 👈 FIXED: TypeScript safe
+                      alt={relProduct.name}
                       fill 
                       sizes="(max-width: 768px) 50vw, 25vw"
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -252,7 +250,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                     {safeCategory.replace(/_/g, ' ')}
                   </span>
                   <h3 className="text-sm font-bold text-slate-900 line-clamp-2 mb-2 group-hover:text-[#D97706] transition-colors">
-                    {relProduct.name} {/* 👈 FIXED: TypeScript safe */}
+                    {relProduct.name}
                   </h3>
                   <div className="mt-auto pt-2">
                     <p className="text-base font-black text-[#D97706]">UGX {Number(relProduct.price).toLocaleString()}</p>
