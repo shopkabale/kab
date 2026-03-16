@@ -1,11 +1,12 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import Image from "next/image"; // 👈 Added for the related products grid
+import Image from "next/image";
 import { notFound } from "next/navigation";
-import { getProductByPublicId, getProducts } from "@/lib/firebase/firestore"; // 👈 Imported getProducts
+import { getProductByPublicId, getProducts } from "@/lib/firebase/firestore"; 
 import ImageGallery from "@/components/ImageGallery";
 import ProductActions from "@/components/ProductActions";
 import ProductTracker from "@/components/ProductTracker";
+import RecentlyViewedTracker from "@/components/RecentlyViewedTracker"; // 👈 IMPORTED TRACKER
 import { optimizeImage } from "@/lib/utils"; 
 
 export const revalidate = 60; 
@@ -95,6 +96,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   return (
     <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6">
       <ProductTracker productId={product.id} />
+      
+      {/* 👈 THE NEW TRACKER RUNNING IN THE BACKGROUND */}
+      <RecentlyViewedTracker product={product} /> 
 
       {/* BREADCRUMBS */}
       <div className="mb-6 flex items-center text-sm text-slate-500 font-medium overflow-x-auto whitespace-nowrap scrollbar-hide">
@@ -208,7 +212,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         </div>
       </div>
 
-            {/* ========================================== */}
+      {/* ========================================== */}
       {/* RELATED PRODUCTS SECTION                   */}
       {/* ========================================== */}
       {relatedProducts.length > 0 && (
@@ -232,7 +236,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                   {relProduct.images?.[0] ? (
                     <Image 
                       src={relProduct.images[0]} 
-                      alt={relProduct.name} // 👈 FIXED: Only use .name
+                      alt={relProduct.name} // 👈 FIXED: TypeScript safe
                       fill 
                       sizes="(max-width: 768px) 50vw, 25vw"
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -248,7 +252,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                     {safeCategory.replace(/_/g, ' ')}
                   </span>
                   <h3 className="text-sm font-bold text-slate-900 line-clamp-2 mb-2 group-hover:text-[#D97706] transition-colors">
-                    {relProduct.name} {/* 👈 FIXED: Only use .name */}
+                    {relProduct.name} {/* 👈 FIXED: TypeScript safe */}
                   </h3>
                   <div className="mt-auto pt-2">
                     <p className="text-base font-black text-[#D97706]">UGX {Number(relProduct.price).toLocaleString()}</p>
@@ -264,7 +268,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
           </Link>
         </div>
       )}
-
 
     </div>
   );
