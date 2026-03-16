@@ -9,8 +9,8 @@ export default function MakeOfferButton({ product }: { product: any }) {
   const safeName = product.name || "this item";
   const currentPrice = Number(product.price) || 0;
   
-  // 🔥 THE PSYCHOLOGY HACK: Calculate a fair 15% discount, rounded to the nearest 1000
-  const suggestedOffer = Math.max(1000, Math.round((currentPrice * 0.85) / 1000) * 1000);
+  // 🔥 THE MATH HACK: Changed to 0.92 for an 8% discount, rounded to the nearest 1000
+  const suggestedOffer = Math.max(1000, Math.round((currentPrice * 0.92) / 1000) * 1000);
   
   // Clean the phone number (remove spaces/pluses) for the WhatsApp link
   const cleanPhone = product.sellerPhone ? product.sellerPhone.replace(/[^0-9]/g, "") : "";
@@ -87,14 +87,12 @@ export default function MakeOfferButton({ product }: { product: any }) {
                     type="number" 
                     required
                     min="1000"
-                    // 🔥 DYNAMIC PLACEHOLDER
                     placeholder={`e.g. ${suggestedOffer}`}
                     value={offerAmount}
                     onChange={(e) => setOfferAmount(e.target.value)}
                     className="w-full pl-14 pr-4 py-4 rounded-xl border-2 border-slate-200 focus:border-[#D97706] focus:ring-4 focus:ring-amber-50 outline-none text-lg font-bold text-slate-900 transition-all"
                   />
                 </div>
-                {/* 🔥 DYNAMIC PSYCHOLOGICAL HINT */}
                 <p className="text-xs text-slate-500 mt-2 font-medium">
                   💡 Hint: A fair offer is usually around <span className="text-slate-700 font-bold">UGX {suggestedOffer.toLocaleString()}</span>
                 </p>
