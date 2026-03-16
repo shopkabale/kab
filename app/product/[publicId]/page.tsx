@@ -8,7 +8,9 @@ import ProductActions from "@/components/ProductActions";
 import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker"; 
 import SaveProductButton from "@/components/SaveProductButton";
-import { optimizeImage } from "@/lib/utils"; 
+import { optimizeImage } from "@/lib/utils";
+import MakeOfferButton from "@/components/MakeOfferButton"; // 🔥 ADD THIS IMPORT
+ 
 
 export const revalidate = 60; 
 
@@ -136,14 +138,17 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               {safeName} <span className="text-lg font-medium text-slate-500 block sm:inline mt-1 sm:mt-0">(Available in Kabale)</span>
             </h1>
 
-            {/* 🔥 1. PRICE (Alone on its line again) 🔥 */}
-            <div className="mb-3">
+                        {/* 🔥 1. PRICE (Alone on its line) 🔥 */}
+            <div className="mb-4">
               <span className="text-4xl font-black text-[#D97706]">
                 UGX {safePrice.toLocaleString()}
               </span>
             </div>
 
-            {/* 🔥 2. STOCK STATUS 🔥 */}
+            {/* 🔥 2. THE NEW HAGGLE PROMPT (Right below the price) 🔥 */}
+            <MakeOfferButton product={product} />
+
+            {/* 🔥 3. STOCK STATUS 🔥 */}
             <div className="mb-6">
               <span className={`text-sm font-bold px-4 py-1.5 rounded-md ${
                 safeStock > 0 ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
@@ -152,10 +157,11 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </span>
             </div>
 
-            {/* 🔥 3. THE NEW EXPLICIT SAVE BUTTON (Wider, on its own line) 🔥 */}
+            {/* 🔥 4. THE EXPLICIT SAVE BUTTON (Wider, on its own line) 🔥 */}
             <div className="mb-6">
               <SaveProductButton product={product} />
             </div>
+
 
             <div className="flex flex-col gap-3 mb-6 bg-slate-50 border border-slate-100 p-4 rounded-xl">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-700">
