@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import imageCompression from "browser-image-compression"; // <-- NEW IMPORT
+import imageCompression from "browser-image-compression"; // <-- BROUGHT THIS BACK!
 
 export default function SellPage() {
   const router = useRouter();
   const { user, signIn, loading: authLoading } = useAuth();
 
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // For the main submit button
+  const [isCompressing, setIsCompressing] = useState(false); // Specifically for the image upload box
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [successData, setSuccessData] = useState<{ publicId: string; title: string } | null>(null);
 
@@ -29,59 +30,51 @@ export default function SellPage() {
     quantity: "1", 
     condition: "used",
     description: "",
-    sellerPhone: "",
+    sellerPhone: "", // Left blank for manual entry to avoid TS errors
   });
 
-  // Auto-fill user data if available
   useEffect(() => {
-    if (user) {
-      if (showLoginModal) {
-        setShowLoginModal(false);
-        submitProductData(user); 
-      }
-      if (user.phoneNumber && !formData.sellerPhone) {
-        setFormData(prev => ({ ...prev, sellerPhone: user.phoneNumber }));
-      }
+    if (user && showLoginModal) {
+      setShowLoginModal(false);
+      submitProductData(user); 
     }
   }, [user, showLoginModal]);
 
   // ==========================================
-  // NEW COMPRESSION LOGIC HERE
+  // CLIENT-SIDE COMPRESSION LOGIC
   // ==========================================
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
-      
       if (imageFiles.length + newFiles.length > 5) {
         alert("You can only upload a maximum of 5 images.");
         return;
       }
 
-      // We set loading to true just in case the phone is slow at compressing
-      setLoading(true); 
+      setIsCompressing(true); // Trigger the loading spinner on the image box
 
       try {
         const options = {
-          maxSizeMB: 0.8, // Compress to max 800KB
-          maxWidthOrHeight: 1200, // Scale down huge 4K phone photos
-          useWebWorker: true, // Use background threads to keep UI smooth
+          maxSizeMB: 0.8, // 800KB Max
+          maxWidthOrHeight: 1200,
+          useWebWorker: true,
         };
 
-        // Compress all selected images concurrently
+        // Compress all selected images
         const compressedFilesPromises = newFiles.map(file => imageCompression(file, options));
         const compressedFiles = await Promise.all(compressedFilesPromises);
 
         setImageFiles(prev => [...prev, ...compressedFiles]);
 
-        // Generate previews for the UI
+        // Generate previews
         const newPreviews = compressedFiles.map(file => URL.createObjectURL(file));
         setImagePreviews(prev => [...prev, ...newPreviews]);
         
       } catch (error) {
-        console.error("Error compressing image:", error);
-        alert("There was an issue processing your images. Please try different ones.");
+        console.error("Compression error:", error);
+        alert("There was an issue processing your images. Please try again.");
       } finally {
-        setLoading(false);
+        setIsCompressing(false); // Turn off the spinner
       }
     }
   };
@@ -96,6 +89,11 @@ export default function SellPage() {
 
     if (imageFiles.length === 0) {
       alert("Please upload at least one photo of your item.");
+      return;
+    }
+
+    if (isCompressing) {
+      alert("Please wait for your images to finish optimizing.");
       return;
     }
 
@@ -150,7 +148,13 @@ export default function SellPage() {
         });
 
         const uploadResults = await Promise.all(uploadPromises);
-        imageUrls = uploadResults.map(data => data.secure_url).filter(url => url);
+        
+        // Let Cloudinary convert to WebP/AVIF when serving to buyers
+        imageUrls = uploadResults.map(data => {
+          const originalUrl = data.secure_url;
+          if (!originalUrl) return null;
+          return originalUrl.replace('/upload/', '/upload/f_auto,q_auto,w_800/');
+        }).filter(url => url) as string[];
       }
 
       const dbRes = await fetch("/api/products", {
@@ -244,7 +248,7 @@ export default function SellPage() {
           <button 
             onClick={() => {
               setSuccessData(null);
-              setFormData({ ...formData, title: "", price: "", description: "" });
+              setFormData({ ...formData, title: "", price: "", description: "", sellerPhone: "" });
               setImageFiles([]);
               setImagePreviews([]);
               setShowOptional(false);
@@ -285,25 +289,25 @@ export default function SellPage() {
 
             {imageFiles.length < 5 && (
               <div 
-                onClick={() => fileInputRef.current?.click()}
-                className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-colors ${
-                  loading 
+                onClick={() => !isCompressing && fileInputRef.current?.click()}
+                className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-colors ${
+                  isCompressing 
                     ? "border-slate-300 bg-slate-50 cursor-not-allowed" 
-                    : "border-[#D97706]/50 bg-amber-50 hover:bg-amber-100"
+                    : "border-[#D97706]/50 bg-amber-50 hover:bg-amber-100 cursor-pointer"
                 }`}
               >
-                {loading ? (
-                  <div className="w-6 h-6 border-2 border-[#D97706] border-t-transparent rounded-full animate-spin"></div>
+                {isCompressing ? (
+                  <div className="w-6 h-6 border-2 border-[#D97706] border-t-transparent rounded-full animate-spin mb-1"></div>
                 ) : (
-                  <>
-                    <span className="text-2xl text-[#D97706] mb-1">📷</span>
-                    <span className="text-xs text-[#D97706] font-bold">Add Photo</span>
-                  </>
+                  <span className="text-2xl text-[#D97706] mb-1">📷</span>
                 )}
+                <span className="text-xs text-[#D97706] font-bold">
+                  {isCompressing ? "Optimizing..." : "Add Photo"}
+                </span>
               </div>
             )}
           </div>
-          <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleImageSelect} disabled={loading} />
+          <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleImageSelect} disabled={isCompressing} />
         </div>
 
         {/* STEP 2: MAIN DETAILS */}
@@ -376,11 +380,11 @@ export default function SellPage() {
         </div>
 
         {/* SUBMIT BUTTON */}
-        <button disabled={loading} type="submit" className="w-full bg-[#D97706] text-white py-4 rounded-xl font-black text-xl hover:bg-amber-600 transition-colors disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg mt-4">
+        <button disabled={loading || isCompressing} type="submit" className="w-full bg-[#D97706] text-white py-4 rounded-xl font-black text-xl hover:bg-amber-600 transition-colors disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg mt-4">
           {loading ? (
              <>
                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-               Processing...
+               Publishing...
              </>
           ) : (
             "Post Product Now"
