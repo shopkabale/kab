@@ -8,6 +8,8 @@ import ScrollReveal from "@/components/ScrollReveal";
 import SearchBar from "@/components/SearchBar"; 
 import { optimizeImage } from "@/lib/utils"; // <-- NEW IMPORT
 import RecentlyViewed from "@/components/RecentlyViewed";
+import UrgentStories from "@/components/UrgentStories"; // 🔥 IMPORT THIS
+
 
 
 // 🔥 24-HOUR RANDOMIZER (86400 seconds = 24 hours)
@@ -40,6 +42,9 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col pb-16 md:pb-24 bg-white dark:bg-[#0a0a0a] overflow-hidden">
+
+ {/* 🔥 PLACE THE STORIES RIGHT UNDER THE HEADER 🔥 */}
+      <UrgentStories />
 
       {/* ============================== */}
       {/* 1. HERO & CATEGORIES           */}
