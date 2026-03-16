@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, getDoc, updateDoc, increment } from "firebase/firestore";
@@ -14,7 +14,7 @@ export default function UrgentStories() {
   const router = useRouter();
   const { user } = useAuth();
 
-  const [activeStories, setActiveStories] = useState<any[]>([]);
+  const [stories, setStories] = useState<any[]>([]); // Stable sorted array
   const [viewedStoriesMap, setViewedStoriesMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
@@ -33,7 +33,7 @@ export default function UrgentStories() {
   };
 
   // ==========================================
-  // 1. DATA FETCHING & CLEANUP (TTL LOGIC)
+  // 1. DATA FETCHING & STABLE SORTING
   // ==========================================
   useEffect(() => {
     const fetchData = async () => {
@@ -49,23 +49,27 @@ export default function UrgentStories() {
           .filter(product => product.urgentExpiresAt && product.urgentExpiresAt > now)
           .sort((a, b) => a.urgentExpiresAt - b.urgentExpiresAt);
 
-        setActiveStories(productsData);
-
-        // B. Fetch viewed stories and clean up expired ones
+        // B. Fetch viewed stories map
+        let fetchedViewedMap: Record<string, number> = {};
         if (user) {
           const viewedRef = doc(db, "users", user.id, "system", "viewed_stories");
           const viewedSnap = await getDoc(viewedRef);
 
           if (viewedSnap.exists()) {
             const data = viewedSnap.data().viewedStories || {};
-            
-            // Keeps Firestore doc lean by only retaining active stories
-            const cleanedMap = Object.fromEntries(
+            fetchedViewedMap = Object.fromEntries(
               Object.entries(data).filter(([_, expiry]) => (expiry as number) > now)
-            );
-            setViewedStoriesMap(cleanedMap as Record<string, number>);
+            ) as Record<string, number>;
           }
         }
+        
+        setViewedStoriesMap(fetchedViewedMap);
+
+        // C. Sort once on load (Unviewed first, Viewed last)
+        const unviewed = productsData.filter(s => !fetchedViewedMap[s.id]);
+        const viewed = productsData.filter(s => fetchedViewedMap[s.id]);
+        setStories([...unviewed, ...viewed]);
+
       } catch (error) {
         console.error("Error fetching stories:", error);
       } finally {
@@ -75,45 +79,51 @@ export default function UrgentStories() {
     fetchData();
   }, [user]);
 
+  const activeStory = activeIndex !== null ? stories[activeIndex] : null;
+
   // ==========================================
-  // 2. VIEW TRACKING & MARKING
+  // 2. VIEW TRACKING (ALWAYS INCREMENT)
   // ==========================================
-  const markAsViewed = async (story: any) => {
-    if (!user || viewedStoriesMap[story.id]) return;
-
-    // Update Local State Immediately
-    const newMap = { ...viewedStoriesMap, [story.id]: story.urgentExpiresAt };
-    setViewedStoriesMap(newMap);
-
-    try {
-      // Save TTL Map to User Document
-      const viewedRef = doc(db, "users", user.id, "system", "viewed_stories");
-      await setDoc(viewedRef, { viewedStories: newMap, lastUpdated: serverTimestamp() }, { merge: true });
-
-      // Increment Global View Count for Urgency Psychology
-      const productRef = doc(db, "products", story.id);
-      await updateDoc(productRef, { storyViews: increment(1) });
-    } catch (e) {
-      console.error("View tracking error:", e);
-    }
-  };
-
-  const activeStory = activeIndex !== null ? activeStories[activeIndex] : null;
-
-  // Instagram-style: Mark viewed as soon as it opens
   useEffect(() => {
-    if (activeStory) markAsViewed(activeStory);
-  }, [activeStory]);
+    if (!activeStory) return;
+
+    // 1. ALWAYS increment the view count (Database + Local UI)
+    const incrementGlobalViews = async () => {
+      try {
+        // Update local state instantly so the number goes up on screen
+        setStories(prevStories => prevStories.map(s => 
+          s.id === activeStory.id 
+            ? { ...s, storyViews: (s.storyViews || 0) + 1 } 
+            : s
+        ));
+
+        // Update database (Fire & Forget)
+        const productRef = doc(db, "products", activeStory.id);
+        await updateDoc(productRef, { storyViews: increment(1) });
+      } catch (e) {
+        console.error("Failed to increment views:", e);
+      }
+    };
+
+    incrementGlobalViews();
+
+    // 2. ONLY update the gray circle/user database if it's their FIRST time seeing it
+    if (!viewedStoriesMap[activeStory.id]) {
+      const newMap = { ...viewedStoriesMap, [activeStory.id]: activeStory.urgentExpiresAt };
+      setViewedStoriesMap(newMap);
+
+      if (user) {
+        const viewedRef = doc(db, "users", user.id, "system", "viewed_stories");
+        setDoc(viewedRef, { viewedStories: newMap, lastUpdated: serverTimestamp() }, { merge: true })
+          .catch(e => console.error("Failed to sync views:", e));
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStory?.id]); // Only run when the specific story ID changes
 
   // ==========================================
-  // 3. SORTING & AUTO-ADVANCE LOGIC
+  // 3. AUTO-ADVANCE LOGIC
   // ==========================================
-  const stories = useMemo(() => {
-    const unviewed = activeStories.filter(s => !viewedStoriesMap[s.id]);
-    const viewed = activeStories.filter(s => viewedStoriesMap[s.id]);
-    return [...unviewed, ...viewed];
-  }, [activeStories, viewedStoriesMap]);
-
   useEffect(() => {
     if (activeIndex === null || isPaused) return;
     const interval = setInterval(() => {
@@ -147,14 +157,13 @@ export default function UrgentStories() {
     }
   }, [activeIndex, stories.length]);
 
-  if (loading || activeStories.length === 0) return null;
+  if (loading || stories.length === 0) return null;
 
   return (
     <>
       {/* ========================================== */}
-      {/* 1. HOMEPAGE ROW (TRANSPARENT & CLEAN)        */}
+      {/* 1. HOMEPAGE ROW                            */}
       {/* ========================================== */}
-      {/* Removed backgrounds and borders so it sits naturally on the website */}
       <div className="w-full pt-4 pb-2 mb-6">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           
@@ -172,10 +181,9 @@ export default function UrgentStories() {
                 onClick={() => { setActiveIndex(index); setProgress(0); }}
                 className="flex flex-col items-center gap-1.5 shrink-0 snap-start outline-none group"
               >
-                {/* Clean Image Circle */}
                 <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full p-[3px] transition-transform group-hover:scale-105 shadow-sm ${
                   viewedStoriesMap[story.id] 
-                    ? "bg-slate-300" // Grayed out if viewed
+                    ? "bg-slate-300" 
                     : "bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600"
                 }`}>
                   <div className="w-full h-full rounded-full border-[2.5px] border-transparent overflow-hidden relative bg-slate-100">
@@ -187,7 +195,6 @@ export default function UrgentStories() {
                   </div>
                 </div>
                 
-                {/* Floating Price without background */}
                 <span className={`text-[11px] sm:text-xs font-bold truncate w-16 sm:w-20 text-center ${
                   viewedStoriesMap[story.id] ? "text-slate-500 font-medium" : "text-slate-900"
                 }`}>
@@ -259,7 +266,7 @@ export default function UrgentStories() {
                 <div className="flex items-end justify-between">
                   <p className="text-3xl font-black text-amber-500 drop-shadow-md">UGX {Number(activeStory.price).toLocaleString()}</p>
                 </div>
-                {/* Viewer Count */}
+                {/* Viewer Count - Now updates instantly! */}
                 <p className="text-white/80 text-xs font-medium mt-2 flex items-center gap-1.5">
                   <span className="text-base">👀</span> {activeStory.storyViews || 1} people viewed this
                 </p>
