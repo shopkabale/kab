@@ -7,23 +7,22 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Order, Product } from "@/types";
 import SellerDashboard from "@/components/SellerDashboard";
-import { collection, query, orderBy, onSnapshot, doc, deleteDoc } from "firebase/firestore"; // 🔥 Added Firestore imports
+// 🔥 Added updateDoc to the imports
+import { collection, query, orderBy, onSnapshot, doc, deleteDoc, updateDoc } from "firebase/firestore"; 
 import { db } from "@/lib/firebase/config";
 
 export default function ProfilePage() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
   const router = useRouter(); 
-  
-  // Added "saved" to active tabs
+
   const [activeTab, setActiveTab] = useState<"purchases" | "saved" | "listings" | "seller">("purchases");
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
-  
-  const [listings, setListings] = useState<Product[]>([]);
+
+  const [listings, setListings] = useState<any[]>([]); // Changed to any[] to easily accommodate the new urgent fields
   const [loadingListings, setLoadingListings] = useState(true);
-  
-  // New state for Wishlist
+
   const [savedItems, setSavedItems] = useState<any[]>([]);
   const [loadingSaved, setLoadingSaved] = useState(true);
 
@@ -67,7 +66,7 @@ export default function ProfilePage() {
     const fetchWishlist = () => {
       const wishlistRef = collection(db, "users", user.id, "wishlist");
       const q = query(wishlistRef, orderBy("savedAt", "desc"));
-      
+
       const unsubscribe = onSnapshot(q, (snapshot) => {
         const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setSavedItems(items);
@@ -94,10 +93,39 @@ export default function ProfilePage() {
     if (!user) return;
     try {
       await deleteDoc(doc(db, "users", user.id, "wishlist", productId));
-      // No need to update state manually, onSnapshot handles it!
     } catch (error) {
       console.error("Failed to remove item from wishlist", error);
       alert("Failed to remove item.");
+    }
+  };
+
+  // 🔥 THE NEW URGENT TOGGLE LOGIC 🔥
+  const handleToggleUrgent = async (product: any) => {
+    if (!user) return;
+    
+    const now = Date.now();
+    const isCurrentlyUrgent = product.isUrgent && product.urgentExpiresAt && product.urgentExpiresAt > now;
+    
+    const newIsUrgent = !isCurrentlyUrgent;
+    const newExpiresAt = newIsUrgent ? now + (24 * 60 * 60 * 1000) : null; // 24 hours
+
+    try {
+      const productRef = doc(db, "products", product.id);
+      await updateDoc(productRef, {
+        isUrgent: newIsUrgent,
+        urgentExpiresAt: newExpiresAt
+      });
+
+      // Instantly update the local UI
+      setListings(prev => prev.map(item => 
+        item.id === product.id 
+          ? { ...item, isUrgent: newIsUrgent, urgentExpiresAt: newExpiresAt }
+          : item
+      ));
+
+    } catch (error) {
+      console.error("Failed to update urgency:", error);
+      alert("Failed to update status. Check your connection.");
     }
   };
 
@@ -205,7 +233,7 @@ export default function ProfilePage() {
           <span>My Ads</span>
           <span className="opacity-70">({listings.length})</span>
         </button>
-        
+
         <button 
           onClick={() => setActiveTab("seller")} 
           className={`shrink-0 px-4 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center border-b-2 transition-colors flex flex-col sm:flex-row items-center justify-center gap-1 ${activeTab === "seller" ? "border-amber-500 text-amber-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
@@ -336,9 +364,20 @@ export default function ProfilePage() {
                   const safePrice = Number(product.price) || 0;
                   const safeId = product.publicId || product.id;
                   const hasImages = Array.isArray(product.images) && product.images.length > 0;
+                  
+                  // Check if it's currently urgent
+                  const isCurrentlyUrgent = product.isUrgent && product.urgentExpiresAt && product.urgentExpiresAt > Date.now();
 
                   return (
-                    <div key={product.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                    <div key={product.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-3 hover:shadow-md transition-shadow relative">
+                      
+                      {/* Show visual indicator on the card if it's currently urgent */}
+                      {isCurrentlyUrgent && (
+                        <div className="absolute top-4 right-4 z-10 bg-gradient-to-tr from-amber-400 to-rose-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md animate-pulse">
+                          Urgent
+                        </div>
+                      )}
+
                       <Link href={`/product/${safeId}`} className="relative aspect-square w-full rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200 group">
                         {hasImages ? (
                           <Image src={product.images[0]} alt={safeName} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover group-hover:scale-105 transition-transform" />
@@ -356,19 +395,41 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-1 gap-2">
-                        <Link 
-                          href={`/edit/${safeId}`}
-                          className="text-xs font-bold text-sky-600 hover:bg-sky-50 px-2 py-1.5 rounded flex-1 text-center border border-transparent hover:border-sky-100 transition-all"
-                        >
-                          Edit
-                        </Link>
+                      {/* 🔥 THE UPGRADED ACTIONS ROW WITH THE URGENCY TOGGLE 🔥 */}
+                      <div className="flex flex-col border-t border-slate-100 pt-3 mt-1 gap-2">
+                        
+                        {/* Toggle Button */}
                         <button 
-                          onClick={() => handleDeleteAd(product.id)}
-                          className="text-xs font-bold text-red-600 hover:bg-red-50 px-2 py-1.5 rounded flex-1 text-center border border-transparent hover:border-red-100 transition-all"
+                          onClick={() => handleToggleUrgent(product)}
+                          className={`w-full text-[11px] font-bold py-2 rounded-lg border transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 ${
+                            isCurrentlyUrgent
+                              ? "bg-rose-50 text-rose-600 border-rose-200 hover:bg-rose-100"
+                              : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+                          }`}
                         >
-                          Delete
+                          {isCurrentlyUrgent ? (
+                            <><span>🔴</span> Cancel Urgency</>
+                          ) : (
+                            <><span>⚡</span> Make Urgent (24h)</>
+                          )}
                         </button>
+
+                        {/* Edit & Delete */}
+                        <div className="flex items-center justify-between gap-2">
+                          <Link 
+                            href={`/edit/${safeId}`}
+                            className="text-xs font-bold text-sky-600 bg-sky-50 px-2 py-1.5 rounded flex-1 text-center border border-transparent hover:border-sky-100 transition-all"
+                          >
+                            Edit
+                          </Link>
+                          <button 
+                            onClick={() => handleDeleteAd(product.id)}
+                            className="text-xs font-bold text-slate-500 hover:text-red-600 hover:bg-red-50 px-2 py-1.5 rounded flex-1 text-center border border-transparent hover:border-red-100 transition-all"
+                          >
+                            Delete
+                          </button>
+                        </div>
+
                       </div>
                     </div>
                   );
