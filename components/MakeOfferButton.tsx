@@ -9,6 +9,9 @@ export default function MakeOfferButton({ product }: { product: any }) {
   const safeName = product.name || "this item";
   const currentPrice = Number(product.price) || 0;
   
+  // 🔥 THE PSYCHOLOGY HACK: Calculate a fair 15% discount, rounded to the nearest 1000
+  const suggestedOffer = Math.max(1000, Math.round((currentPrice * 0.85) / 1000) * 1000);
+  
   // Clean the phone number (remove spaces/pluses) for the WhatsApp link
   const cleanPhone = product.sellerPhone ? product.sellerPhone.replace(/[^0-9]/g, "") : "";
 
@@ -39,7 +42,7 @@ export default function MakeOfferButton({ product }: { product: any }) {
 
   return (
     <>
-      {/* 🔥 THE NEW HAGGLE PROMPT BOX 🔥 */}
+      {/* THE HAGGLE PROMPT BOX */}
       <div className="mb-6 bg-amber-50 border border-amber-100 rounded-xl p-4 shadow-sm">
         <p className="text-sm font-medium text-amber-900 mb-3 leading-snug">
           Feel this price is high for this product? Make an offer with your price.
@@ -52,7 +55,7 @@ export default function MakeOfferButton({ product }: { product: any }) {
         </button>
       </div>
 
-      {/* THE MODAL (Unchanged) */}
+      {/* THE MODAL */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
@@ -84,12 +87,17 @@ export default function MakeOfferButton({ product }: { product: any }) {
                     type="number" 
                     required
                     min="1000"
-                    placeholder="e.g. 50000"
+                    // 🔥 DYNAMIC PLACEHOLDER
+                    placeholder={`e.g. ${suggestedOffer}`}
                     value={offerAmount}
                     onChange={(e) => setOfferAmount(e.target.value)}
                     className="w-full pl-14 pr-4 py-4 rounded-xl border-2 border-slate-200 focus:border-[#D97706] focus:ring-4 focus:ring-amber-50 outline-none text-lg font-bold text-slate-900 transition-all"
                   />
                 </div>
+                {/* 🔥 DYNAMIC PSYCHOLOGICAL HINT */}
+                <p className="text-xs text-slate-500 mt-2 font-medium">
+                  💡 Hint: A fair offer is usually around <span className="text-slate-700 font-bold">UGX {suggestedOffer.toLocaleString()}</span>
+                </p>
               </div>
 
               <button 
