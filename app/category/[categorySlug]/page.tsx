@@ -2,6 +2,7 @@ import { Metadata } from "next";
 import { getProducts } from "@/lib/firebase/firestore";
 import ClientProductGrid from "@/components/ClientProductGrid";
 import SearchBar from "@/components/SearchBar";
+import { optimizeImage } from "@/lib/utils"; // 👈 1. Import the magic function
 
 // Force dynamic ensures we fetch fresh data
 export const dynamic = "force-dynamic";
@@ -44,7 +45,7 @@ export async function generateMetadata({ params }: { params: { categorySlug: str
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.kabaleonline.com";
 
   const currentUrl = `${baseUrl}/category/${slug}`;
-  
+
   // The new dynamic image URL powered by Vercel OG
   const ogImageUrl = `${baseUrl}/api/og?title=${encodeURIComponent(info.title)}&desc=${encodeURIComponent("Fast Local Delivery in Kabale")}`;
 
@@ -111,12 +112,23 @@ export default async function CategoryPage({
   params: { categorySlug: string };
 }) {
   // 1. Fetch products strictly for this category
-  const allCategoryProducts = await getProducts(params.categorySlug);
+  const rawCategoryProducts = await getProducts(params.categorySlug);
 
   // 2. SHUFFLE THEM (Stable Daily Randomization)
-  allCategoryProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
+  rawCategoryProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
 
-  // 3. Get the dynamic UI details for the hero banner
+  // 3. 🔥 OPTIMIZE ALL IMAGES 🔥
+  // Instantly apply the Cloudinary WebP cheat code before passing to the client component
+  const allCategoryProducts = rawCategoryProducts.map((product) => {
+    if (!product.images || product.images.length === 0) return product;
+
+    return {
+      ...product,
+      images: product.images.map((img: string) => optimizeImage(img))
+    };
+  });
+
+  // 4. Get the dynamic UI details for the hero banner
   const info = categoryDetails[params.categorySlug] || {
     title: params.categorySlug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
     description: `Browse all items in ${params.categorySlug.replace(/_/g, ' ')}.`,
