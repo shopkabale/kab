@@ -13,6 +13,7 @@
     "@uiw/react-md-editor": "^4.0.5",
     "@vercel/analytics": "^1.2.2",
     "algoliasearch": "^4.22.0",
+    "browser-image-compression": "^2.0.2",
     "cloudinary": "^2.0.0",
     "easymde": "^2.18.0",
     "firebase": "^10.8.0",
