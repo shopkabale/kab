@@ -7,21 +7,38 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Order, Product } from "@/types";
 import SellerDashboard from "@/components/SellerDashboard";
+import { collection, query, orderBy, onSnapshot, doc, deleteDoc } from "firebase/firestore"; // 🔥 Added Firestore imports
+import { db } from "@/lib/firebase/config";
 
 export default function ProfilePage() {
-  // 1. PULL signIn AND signOut DIRECTLY FROM YOUR AUTH PROVIDER
   const { user, loading: authLoading, signIn, signOut } = useAuth();
   const router = useRouter(); 
-  const [activeTab, setActiveTab] = useState<"purchases" | "listings" | "seller">("purchases");
+  
+  // Added "saved" to active tabs
+  const [activeTab, setActiveTab] = useState<"purchases" | "saved" | "listings" | "seller">("purchases");
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
+  
   const [listings, setListings] = useState<Product[]>([]);
   const [loadingListings, setLoadingListings] = useState(true);
+  
+  // New state for Wishlist
+  const [savedItems, setSavedItems] = useState<any[]>([]);
+  const [loadingSaved, setLoadingSaved] = useState(true);
 
   useEffect(() => {
+    if (!user) {
+      if (!authLoading) {
+        setLoadingOrders(false); 
+        setLoadingListings(false);
+        setLoadingSaved(false);
+      }
+      return;
+    }
+
+    // 1. Fetch Orders
     const fetchOrders = async () => {
-      if (!user) return;
       try {
         const res = await fetch(`/api/orders/user?userId=${user.id}`);
         if (res.ok) {
@@ -33,8 +50,8 @@ export default function ProfilePage() {
       } finally { setLoadingOrders(false); }
     };
 
+    // 2. Fetch Listings
     const fetchListings = async () => {
-      if (!user) return;
       try {
         const res = await fetch(`/api/products/user?userId=${user.id}`);
         if (res.ok) {
@@ -46,12 +63,43 @@ export default function ProfilePage() {
       } finally { setLoadingListings(false); }
     };
 
-    if (user) {
-      fetchOrders(); fetchListings();
-    } else if (!authLoading) {
-      setLoadingOrders(false); setLoadingListings(false);
-    }
+    // 3. Fetch Wishlist (Real-time listener from Firestore)
+    const fetchWishlist = () => {
+      const wishlistRef = collection(db, "users", user.id, "wishlist");
+      const q = query(wishlistRef, orderBy("savedAt", "desc"));
+      
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setSavedItems(items);
+        setLoadingSaved(false);
+      }, (error) => {
+        console.error("Error fetching wishlist:", error);
+        setLoadingSaved(false);
+      });
+
+      return unsubscribe;
+    };
+
+    fetchOrders(); 
+    fetchListings();
+    const unsubscribeWishlist = fetchWishlist();
+
+    return () => {
+      if (unsubscribeWishlist) unsubscribeWishlist();
+    };
   }, [user, authLoading]);
+
+  // Handle removing a saved item directly from the profile
+  const handleRemoveSaved = async (productId: string) => {
+    if (!user) return;
+    try {
+      await deleteDoc(doc(db, "users", user.id, "wishlist", productId));
+      // No need to update state manually, onSnapshot handles it!
+    } catch (error) {
+      console.error("Failed to remove item from wishlist", error);
+      alert("Failed to remove item.");
+    }
+  };
 
   const handleDeleteAd = async (productId: string) => {
     if (!user) return;
@@ -59,9 +107,7 @@ export default function ProfilePage() {
     if (!isConfirmed) return;
 
     try {
-      const res = await fetch(`/api/products/${productId}?userId=${user.id}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(`/api/products/${productId}?userId=${user.id}`, { method: "DELETE" });
       if (res.ok) {
         setListings(prev => prev.filter(item => item.id !== productId));
         alert("Ad deleted successfully.");
@@ -76,7 +122,7 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     signOut();
-    router.push("/"); // Gently redirect them to the home page after logging out
+    router.push("/"); 
   };
 
   if (authLoading) return <div className="py-20 text-center text-slate-500">Loading profile...</div>;
@@ -87,7 +133,6 @@ export default function ProfilePage() {
         <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">🔒</div>
         <h2 className="text-2xl font-bold text-slate-900 mb-4">Please Log In</h2>
         <p className="text-slate-600 mb-8">You must be logged in to view your profile and manage items.</p>
-        {/* 2. USING YOUR signIn LOGIC */}
         <button 
           onClick={signIn}
           className="bg-[#D97706] text-white px-8 py-3 rounded-xl font-bold hover:bg-amber-600 transition-colors shadow-sm"
@@ -98,7 +143,6 @@ export default function ProfilePage() {
     );
   }
 
-  // SAFE FALLBACKS FOR USER DATA
   const safeDisplayName = user.displayName || "Kabale User";
   const safeInitial = safeDisplayName.charAt(0).toUpperCase();
   const safeRole = user.role || "customer";
@@ -113,7 +157,7 @@ export default function ProfilePage() {
         ) : (
           <div className="w-24 h-24 bg-[#D97706] text-white rounded-full flex items-center justify-center text-3xl font-bold flex-shrink-0">{safeInitial}</div>
         )}
-        
+
         <div className="flex-grow">
           <h1 className="text-2xl font-bold text-slate-900">{safeDisplayName}</h1>
           <p className="text-slate-500 mb-3">{user.email || "No email provided"}</p>
@@ -127,7 +171,6 @@ export default function ProfilePage() {
           <Link href="/sell" className="flex justify-center bg-slate-900 text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-slate-800 transition-colors items-center gap-2 shadow-sm">
             <span>➕</span> Post New Ad
           </Link>
-          {/* 3. USING YOUR signOut LOGIC */}
           <button 
             onClick={handleLogout} 
             className="flex justify-center bg-red-50 text-red-600 border border-transparent hover:border-red-200 px-6 py-3 rounded-xl font-bold text-sm hover:bg-red-100 transition-colors items-center gap-2"
@@ -138,28 +181,37 @@ export default function ProfilePage() {
       </div>
 
       {/* Tabs */}
-      <div className="grid grid-cols-3 sm:flex sm:flex-row border-b border-slate-200 mb-8">
+      <div className="flex overflow-x-auto border-b border-slate-200 mb-8 no-scrollbar">
         <button 
           onClick={() => setActiveTab("purchases")} 
-          className={`px-2 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center sm:text-left border-b-2 transition-colors flex flex-col sm:block items-center justify-center ${activeTab === "purchases" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+          className={`shrink-0 px-4 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center border-b-2 transition-colors flex flex-col sm:flex-row items-center justify-center gap-1 ${activeTab === "purchases" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
         >
           <span>Purchases</span>
-          <span className="sm:ml-1 opacity-70">({orders.length})</span>
+          <span className="opacity-70">({orders.length})</span>
         </button>
+
+        <button 
+          onClick={() => setActiveTab("saved")} 
+          className={`shrink-0 px-4 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center border-b-2 transition-colors flex flex-col sm:flex-row items-center justify-center gap-1 ${activeTab === "saved" ? "border-rose-500 text-rose-500" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+        >
+          <span>❤️ Saved</span>
+          <span className="opacity-70">({savedItems.length})</span>
+        </button>
+
         <button 
           onClick={() => setActiveTab("listings")} 
-          className={`px-2 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center sm:text-left border-b-2 transition-colors flex flex-col sm:block items-center justify-center ${activeTab === "listings" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+          className={`shrink-0 px-4 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center border-b-2 transition-colors flex flex-col sm:flex-row items-center justify-center gap-1 ${activeTab === "listings" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
         >
           <span>My Ads</span>
-          <span className="sm:ml-1 opacity-70">({listings.length})</span>
+          <span className="opacity-70">({listings.length})</span>
         </button>
+        
         <button 
           onClick={() => setActiveTab("seller")} 
-          className={`px-2 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center sm:text-left border-b-2 transition-colors flex flex-col sm:block items-center justify-center ${activeTab === "seller" ? "border-amber-500 text-amber-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+          className={`shrink-0 px-4 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center border-b-2 transition-colors flex flex-col sm:flex-row items-center justify-center gap-1 ${activeTab === "seller" ? "border-amber-500 text-amber-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
         >
           <span>Dashboard</span>
-          <span className="sm:hidden mt-1">📈</span>
-          <span className="hidden sm:inline sm:ml-1">📈</span>
+          <span>📈</span>
         </button>
       </div>
 
@@ -210,6 +262,61 @@ export default function ProfilePage() {
          </div>
         )}
 
+        {/* === SAVED ITEMS TAB === */}
+        {activeTab === "saved" && (
+          <div>
+            {loadingSaved ? (
+              <div className="text-center py-12 text-slate-500">Loading your wishlist...</div>
+            ) : savedItems.length === 0 ? (
+              <div className="bg-slate-50 rounded-2xl border border-slate-200 border-dashed p-12 text-center">
+                <span className="text-5xl block mb-4">💔</span>
+                <p className="text-slate-600 mb-4 font-medium">Your wishlist is completely empty.</p>
+                <Link href="/" className="inline-block bg-[#D97706] text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-amber-600 transition-colors">
+                  Find Something to Buy
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {savedItems.map((item) => {
+                  const safeName = item.name || "Unnamed Item";
+                  const safePrice = Number(item.price) || 0;
+                  const safeId = item.publicId || item.id;
+
+                  return (
+                    <div key={item.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-3 hover:shadow-md transition-shadow">
+                      <Link href={`/product/${safeId}`} className="relative aspect-square w-full rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200 group">
+                        {item.image ? (
+                          <Image src={item.image} alt={safeName} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover group-hover:scale-105 transition-transform" />
+                        ) : (
+                          <span className="text-[10px] text-slate-400 absolute inset-0 flex items-center justify-center">No Img</span>
+                        )}
+                      </Link>
+
+                      <div className="flex-grow flex flex-col">
+                        <Link href={`/product/${safeId}`} className="text-sm font-bold text-slate-900 hover:text-[#D97706] line-clamp-2 leading-tight mb-1">
+                          {safeName}
+                        </Link>
+                        <div className="text-sm font-extrabold text-slate-900 mt-auto">
+                          UGX {safePrice.toLocaleString()}
+                        </div>
+                      </div>
+
+                      <div className="pt-2 mt-1 border-t border-slate-100">
+                        <button 
+                          onClick={() => handleRemoveSaved(item.id)}
+                          className="w-full text-xs font-bold text-slate-500 hover:text-red-600 hover:bg-red-50 py-2 rounded transition-colors"
+                        >
+                          ✕ Remove from Wishlist
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* === LISTINGS TAB === */}
         {activeTab === "listings" && (
           <div>
@@ -232,16 +339,14 @@ export default function ProfilePage() {
 
                   return (
                     <div key={product.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-3 hover:shadow-md transition-shadow">
-                      {/* Image - Now takes full width of the card */}
                       <Link href={`/product/${safeId}`} className="relative aspect-square w-full rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden border border-slate-200 group">
                         {hasImages ? (
-                          <Image src={product.images[0]} alt={safeName} fill className="object-cover group-hover:scale-105 transition-transform" />
+                          <Image src={product.images[0]} alt={safeName} fill sizes="(max-width: 768px) 50vw, 25vw" className="object-cover group-hover:scale-105 transition-transform" />
                         ) : (
                           <span className="text-[10px] text-slate-400 absolute inset-0 flex items-center justify-center">No Img</span>
                         )}
                       </Link>
 
-                      {/* Text Details */}
                       <div className="flex-grow flex flex-col">
                         <Link href={`/product/${safeId}`} className="text-sm font-bold text-slate-900 hover:text-[#D97706] line-clamp-2 leading-tight mb-1">
                           {safeName}
@@ -251,7 +356,6 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      {/* Action Buttons */}
                       <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-1 gap-2">
                         <Link 
                           href={`/edit/${safeId}`}
