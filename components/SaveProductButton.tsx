@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { doc, setDoc, deleteDoc, onSnapshot } from "firebase/firestore";
-import { db } from "@/lib/firebase/config"; // Ensure this matches your config path
+import { db } from "@/lib/firebase/config";
 
 export default function SaveProductButton({ product }: { product: any }) {
   const { user, signIn } = useAuth();
@@ -11,12 +11,10 @@ export default function SaveProductButton({ product }: { product: any }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // If no user or no product ID, do nothing
     if (!user || !product?.id) return;
 
-    // Listen in real-time to see if this item is in the user's wishlist
+    // Listen in real-time
     const wishlistDocRef = doc(db, "users", user.id, "wishlist", product.id);
-    
     const unsubscribe = onSnapshot(wishlistDocRef, (docSnap) => {
       setIsSaved(docSnap.exists());
     });
@@ -26,7 +24,7 @@ export default function SaveProductButton({ product }: { product: any }) {
 
   const toggleSave = async () => {
     if (!user) {
-      alert("Please log in to save items to your wishlist.");
+      // Don't alert, just trigger the login process
       signIn();
       return;
     }
@@ -36,10 +34,8 @@ export default function SaveProductButton({ product }: { product: any }) {
 
     try {
       if (isSaved) {
-        // Remove it from Firestore
         await deleteDoc(wishlistDocRef);
       } else {
-        // Add it to Firestore with the necessary display info
         await setDoc(wishlistDocRef, {
           id: product.id,
           publicId: product.publicId || product.id,
@@ -52,22 +48,34 @@ export default function SaveProductButton({ product }: { product: any }) {
       }
     } catch (error) {
       console.error("Wishlist error:", error);
-      alert("Failed to update wishlist. Check your connection.");
     } finally {
       setLoading(false);
     }
   };
 
+  // 🔥 Explicit text based on state
+  const buttonText = loading 
+    ? "Processing..." 
+    : (isSaved ? "Remove from wishlist" : "Save for later");
+
   return (
     <button 
       onClick={toggleSave}
       disabled={loading}
-      className="flex items-center justify-center w-12 h-12 rounded-full border border-slate-200 bg-white hover:bg-slate-50 transition-all shadow-sm active:scale-90"
-      title={isSaved ? "Remove from Saved" : "Save for Later"}
+      // 🔥 NEW STYLING: Wider, standard button with text
+      className={`flex items-center gap-2.5 px-6 py-3 rounded-xl border transition-all text-sm font-bold shadow-sm active:scale-95 disabled:opacity-70 ${
+        isSaved 
+          ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100" 
+          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+      }`}
     >
-      <span className={`text-xl transition-all ${isSaved ? "scale-110" : "grayscale opacity-40"}`}>
-        {loading ? "⌛" : (isSaved ? "❤️" : "🤍")}
+      {/* Icon always present */}
+      <span className={`text-base transition-all ${isSaved ? "scale-110" : "grayscale opacity-50"}`}>
+        {isSaved ? "❤️" : "🤍"}
       </span>
+      
+      {/* 🔥 THE EXPLICIT TEXT 🔥 */}
+      <span>{buttonText}</span>
     </button>
   );
 }
