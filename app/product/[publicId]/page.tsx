@@ -208,7 +208,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         </div>
       </div>
 
-      {/* ========================================== */}
+            {/* ========================================== */}
       {/* RELATED PRODUCTS SECTION                   */}
       {/* ========================================== */}
       {relatedProducts.length > 0 && (
@@ -232,7 +232,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                   {relProduct.images?.[0] ? (
                     <Image 
                       src={relProduct.images[0]} 
-                      alt={relProduct.title || relProduct.name} 
+                      alt={relProduct.name} // 👈 FIXED: Only use .name
                       fill 
                       sizes="(max-width: 768px) 50vw, 25vw"
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -248,7 +248,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                     {safeCategory.replace(/_/g, ' ')}
                   </span>
                   <h3 className="text-sm font-bold text-slate-900 line-clamp-2 mb-2 group-hover:text-[#D97706] transition-colors">
-                    {relProduct.title || relProduct.name}
+                    {relProduct.name} {/* 👈 FIXED: Only use .name */}
                   </h3>
                   <div className="mt-auto pt-2">
                     <p className="text-base font-black text-[#D97706]">UGX {Number(relProduct.price).toLocaleString()}</p>
@@ -264,6 +264,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
           </Link>
         </div>
       )}
+
 
     </div>
   );
