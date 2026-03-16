@@ -9,11 +9,19 @@ export default function MakeOfferButton({ product }: { product: any }) {
   const safeName = product.name || "this item";
   const currentPrice = Number(product.price) || 0;
   
-  // 🔥 THE MATH HACK: Changed to 0.92 for an 8% discount, rounded to the nearest 1000
+  // THE MATH HACK: Changed to 0.92 for an 8% discount, rounded to the nearest 1000
   const suggestedOffer = Math.max(1000, Math.round((currentPrice * 0.92) / 1000) * 1000);
   
-  // Clean the phone number (remove spaces/pluses) for the WhatsApp link
-  const cleanPhone = product.sellerPhone ? product.sellerPhone.replace(/[^0-9]/g, "") : "";
+  // 🔥 UGANDAN PHONE NUMBER STABILIZATION (+256) 🔥
+  let cleanPhone = product.sellerPhone ? String(product.sellerPhone).replace(/[^0-9]/g, "") : "";
+  // If it starts with 0 and is 10 digits long (e.g., 0772123456) -> turn to 256772123456
+  if (cleanPhone.startsWith("0") && cleanPhone.length === 10) {
+    cleanPhone = "256" + cleanPhone.substring(1);
+  } 
+  // If it's just 9 digits starting with 7 (e.g., 772123456) -> turn to 256772123456
+  else if (cleanPhone.length === 9 && cleanPhone.startsWith("7")) {
+    cleanPhone = "256" + cleanPhone;
+  }
 
   const handleSendOffer = (e: React.FormEvent) => {
     e.preventDefault();
