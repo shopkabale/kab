@@ -27,10 +27,11 @@ export default function UrgentStories() {
         const q = query(collection(db, "products"), where("isUrgent", "==", true));
         const querySnapshot = await getDocs(q);
         const now = Date.now();
-        const activeStories = querySnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() }))
+                const activeStories = querySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() } as any)) // 🔥 ADDED "as any" HERE
           .filter(product => product.urgentExpiresAt && product.urgentExpiresAt > now)
           .sort((a, b) => a.urgentExpiresAt - b.urgentExpiresAt);
+
 
         setStories(activeStories);
       } catch (error) {
