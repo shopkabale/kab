@@ -48,7 +48,7 @@ export async function sendWhatsAppTemplate(
     type: "template",
     template: {
       name: templateName,
-      language: { code: "en_US" }, // Make sure this matches the language you selected in Meta
+      language: { code: "en" }, // Make sure this matches the language you selected in Meta
       components: variables.length > 0 ? [
         {
           type: "body",
