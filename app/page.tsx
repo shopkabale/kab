@@ -7,6 +7,8 @@ import QuickCartButton from "@/components/QuickCartButton";
 import ScrollReveal from "@/components/ScrollReveal";
 import SearchBar from "@/components/SearchBar"; 
 import { optimizeImage } from "@/lib/utils"; // <-- NEW IMPORT
+import RecentlyViewed from "@/components/RecentlyViewed";
+
 
 // 🔥 24-HOUR RANDOMIZER (86400 seconds = 24 hours)
 export const revalidate = 86400;
@@ -72,6 +74,15 @@ export default async function Home() {
       {/* DIVIDER */}
       <div className="h-2 w-full bg-slate-50 dark:bg-[#111] my-8 md:my-12 border-y border-slate-100 dark:border-slate-800/50"></div>
 
+      {/* ============================== */}
+      {/* 1.2. RECENTLY VIEWED (NEW!)      */}
+      {/* ============================== */}
+      <RecentlyViewed />
+
+      {/* DIVIDER */}
+      <div className="h-2 w-full bg-slate-50 dark:bg-[#111] my-8 md:my-12 border-y border-slate-100 dark:border-slate-800/50"></div>
+      
+      
       {/* ============================== */}
       {/* 2. ELECTRONICS SECTION         */}
       {/* ============================== */}
