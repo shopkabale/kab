@@ -3,19 +3,19 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, doc, setDoc, serverTimestamp, getDoc, updateDoc, increment } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { optimizeImage } from "@/lib/utils";
-import { useAuth } from "@/components/AuthProvider"; // IMPORT YOUR AUTH PROVIDER
+import { useAuth } from "@/components/AuthProvider";
 
 const STORY_DURATION = 7000; // 7 seconds per story
 
 export default function UrgentStories() {
   const router = useRouter();
-  const { user } = useAuth(); // GET THE USER TO TRACK VIEWED STORIES
+  const { user } = useAuth();
 
-  const [activeStories, setActiveStories] = useState<any[]>([]); // To store un-expired urgent products
-  const [viewedStoryIds, setViewedStoryIds] = useState<string[]>([]); // Stories the user has viewed
+  const [activeStories, setActiveStories] = useState<any[]>([]);
+  const [viewedStoriesMap, setViewedStoriesMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
 
   // Story Viewer Modal State
@@ -23,39 +23,51 @@ export default function UrgentStories() {
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
+  // --- HELPER: GET TIME LEFT ---
+  const getTimeLeft = (expiry: number) => {
+    const diff = expiry - Date.now();
+    if (diff <= 0) return "Expired";
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${mins}m`;
+  };
+
   // ==========================================
-  // 1. DATA FETCHING (PRODUCTS & VIEWED LIST)
+  // 1. DATA FETCHING & CLEANUP (TTL LOGIC)
   // ==========================================
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         const now = Date.now();
-        
+
         // A. Fetch urgent products
         const productsQ = query(collection(db, "products"), where("isUrgent", "==", true));
         const querySnapshot = await getDocs(productsQ);
         const productsData = querySnapshot.docs
-          .map(doc => ({ id: doc.id, ...doc.data() } as any)) // 🔥 Added 'as any' to fix TypeScript build error
+          .map(doc => ({ id: doc.id, ...doc.data() } as any))
           .filter(product => product.urgentExpiresAt && product.urgentExpiresAt > now)
           .sort((a, b) => a.urgentExpiresAt - b.urgentExpiresAt);
 
         setActiveStories(productsData);
 
-        // B. Fetch viewed stories if user is logged in
+        // B. Fetch viewed stories and clean up expired ones
         if (user) {
           const viewedRef = doc(db, "users", user.id, "system", "viewed_stories");
           const viewedSnap = await getDoc(viewedRef);
-          
+
           if (viewedSnap.exists()) {
-            const data = viewedSnap.data();
-            const viewedIds = data.viewedIds || [];
-            // Optional: Clean up ancient viewedIds here in a real app to save space
-            setViewedStoryIds(viewedIds);
+            const data = viewedSnap.data().viewedStories || {};
+            
+            // Keeps Firestore doc lean by only retaining active stories
+            const cleanedMap = Object.fromEntries(
+              Object.entries(data).filter(([_, expiry]) => (expiry as number) > now)
+            );
+            setViewedStoriesMap(cleanedMap as Record<string, number>);
           }
         }
       } catch (error) {
-        console.error("Error fetching stories data:", error);
+        console.error("Error fetching stories:", error);
       } finally {
         setLoading(false);
       }
@@ -64,261 +76,211 @@ export default function UrgentStories() {
   }, [user]);
 
   // ==========================================
-  // 2. INTELLIGENT UNVIEWED-FIRST SORTING
+  // 2. VIEW TRACKING & MARKING
   // ==========================================
-  // We compute this sorted list memoized so it only changes when the data does.
-  // It puts unwatched stories first (sorted by expiry), then watched stories.
+  const markAsViewed = async (story: any) => {
+    if (!user || viewedStoriesMap[story.id]) return;
+
+    // Update Local State Immediately
+    const newMap = { ...viewedStoriesMap, [story.id]: story.urgentExpiresAt };
+    setViewedStoriesMap(newMap);
+
+    try {
+      // Save TTL Map to User Document
+      const viewedRef = doc(db, "users", user.id, "system", "viewed_stories");
+      await setDoc(viewedRef, { viewedStories: newMap, lastUpdated: serverTimestamp() }, { merge: true });
+
+      // Increment Global View Count for Urgency Psychology
+      const productRef = doc(db, "products", story.id);
+      await updateDoc(productRef, { storyViews: increment(1) });
+    } catch (e) {
+      console.error("View tracking error:", e);
+    }
+  };
+
+  const activeStory = activeIndex !== null ? activeStories[activeIndex] : null;
+
+  // Instagram-style: Mark viewed as soon as it opens
+  useEffect(() => {
+    if (activeStory) markAsViewed(activeStory);
+  }, [activeStory]);
+
+  // ==========================================
+  // 3. SORTING & AUTO-ADVANCE LOGIC
+  // ==========================================
   const stories = useMemo(() => {
-    // If no user or viewed history, use the natural fetch sorting (by urgency expiry)
-    if (!user || viewedStoryIds.length === 0) return activeStories;
-
-    const unviewed = activeStories.filter(s => !viewedStoryIds.includes(s.id));
-    const viewed = activeStories.filter(s => viewedStoryIds.includes(s.id));
-
+    const unviewed = activeStories.filter(s => !viewedStoriesMap[s.id]);
+    const viewed = activeStories.filter(s => viewedStoriesMap[s.id]);
     return [...unviewed, ...viewed];
-  }, [activeStories, user, viewedStoryIds]);
+  }, [activeStories, viewedStoriesMap]);
 
-
-  // ==========================================
-  // 3. AUTO-ADVANCE LOOPING LOGIC
-  // ==========================================
   useEffect(() => {
     if (activeIndex === null || isPaused) return;
-
     const interval = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
-          // Time is up for this story
           if (activeIndex < stories.length - 1) {
-            // Move to next story
             setActiveIndex(activeIndex + 1);
             return 0;
           } else {
-            // Reached the very end, loop back to the first story! 🔄
             setActiveIndex(0); 
             return 0;
           }
         }
-        return prev + (100 / (STORY_DURATION / 50)); // Smooth update every 50ms
+        return prev + (100 / (STORY_DURATION / 50));
       });
     }, 50);
-
     return () => clearInterval(interval);
   }, [activeIndex, isPaused, stories.length]);
 
-
-  // ==========================================
-  // 4. NAVIGATION CONTROLS (TAP LEFT/RIGHT)
-  // ==========================================
   const handleNext = useCallback(() => {
     if (activeIndex !== null) {
-      if (activeIndex < stories.length - 1) {
-        setActiveIndex(activeIndex + 1);
-      } else {
-        // At the last story, tapping right loops to the first one
-        setActiveIndex(0);
-      }
+      setActiveIndex(activeIndex < stories.length - 1 ? activeIndex + 1 : 0);
       setProgress(0);
     }
   }, [activeIndex, stories.length]);
 
   const handlePrev = useCallback(() => {
     if (activeIndex !== null) {
-      if (activeIndex > 0) {
-        setActiveIndex(activeIndex - 1);
-      } else {
-        // At the first story, tapping left loops to the last one
-        setActiveIndex(stories.length - 1);
-      }
+      setActiveIndex(activeIndex > 0 ? activeIndex - 1 : stories.length - 1);
       setProgress(0);
     }
   }, [activeIndex, stories.length]);
 
-  const closeViewer = () => {
-    setActiveIndex(null);
-    setProgress(0);
-  };
-
-  // Function to save viewed status to Firestore
-  const markAsViewed = async (storyId: string) => {
-    if (!user || viewedStoryIds.includes(storyId)) return;
-
-    const newViewedIds = [...viewedStoryIds, storyId];
-    setViewedStoryIds(newViewedIds); // Update local state for immediate gray ring
-
-    try {
-      const viewedRef = doc(db, "users", user.id, "system", "viewed_stories");
-      await setDoc(viewedRef, {
-        viewedIds: newViewedIds,
-        lastUpdated: serverTimestamp()
-      }, { merge: true });
-    } catch (e) {
-      console.error("Failed to mark story as viewed in Firestore", e);
-    }
-  };
-
   if (loading || activeStories.length === 0) return null;
-
-  const activeStory = activeIndex !== null ? stories[activeIndex] : null;
-
-  // Find the index of the first viewed item for placing the | separator
-  const firstViewedIndex = stories.findIndex(s => user && viewedStoryIds.includes(s.id));
 
   return (
     <>
       {/* ========================================== */}
-      {/* 1. THE CIRCLES ROW ON HOMEPAGE             */}
+      {/* 1. HOMEPAGE ROW (TRANSPARENT & CLEAN)        */}
       {/* ========================================== */}
-      <div className="w-full bg-white pt-6 pb-4 border-b border-slate-100 mb-6">
+      {/* Removed backgrounds and borders so it sits naturally on the website */}
+      <div className="w-full pt-4 pb-2 mb-6">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           
-          <div className="flex items-center gap-2 mb-3">
+          <div className="flex items-center gap-2 mb-4">
             <span className="animate-pulse text-red-500">🔴</span>
             <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">
-              Urgent Local Sales (24h)
+              Urgent Local Sales
             </h2>
           </div>
 
-          {/* Scollable Row */}
           <div className="flex overflow-x-auto gap-4 pb-2 no-scrollbar snap-x">
-            
-            {stories.map((story, index) => {
-              const optimizedImg = story.images?.[0] ? optimizeImage(story.images[0]) : null;
-              
-              // 🔥 Check if this item is watched to change ring color
-              const isWatched = user && viewedStoryIds.includes(story.id);
-
-              return (
-                <div key={story.id} className="flex shrink-0 snap-start items-center">
-                  
-                  {/* Circle Item */}
-                  <button 
-                    onClick={() => { setActiveIndex(index); setProgress(0); }}
-                    className="flex flex-col items-center gap-1 group outline-none focus:ring-2 focus:ring-[#D97706] rounded-full"
-                  >
-                    {/* Ring: Conditional Gradient or Gray */}
-                    <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full p-[3px] transition-transform group-hover:scale-105 shadow-md flex items-center justify-center ${
-                      isWatched
-                        ? "bg-slate-300" // Gray ring for viewed
-                        : "bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600" // Rainbow ring for unviewed
-                    }`}>
-                      <div className="w-full h-full rounded-full border-[2.5px] border-white overflow-hidden relative bg-slate-100">
-                        {optimizedImg ? (
-                          <Image src={optimizedImg} alt={story.name} fill sizes="80px" className="object-cover" />
-                        ) : (
-                          <span className="text-[10px] absolute inset-0 flex items-center justify-center text-slate-400 font-bold">No Img</span>
-                        )}
-                      </div>
-                    </div>
-                    {/* Price */}
-                    <span className={`text-[11px] font-bold text-slate-900 truncate w-16 sm:w-20 text-center ${isWatched ? "text-slate-500 font-medium" : ""}`}>
-                      UGX {(Number(story.price)/1000).toFixed(0)}k
-                    </span>
-                  </button>
-
-                  {/* 🔥 THE INTENTIONAL | SEPARATOR BETWEEN UNVIEWED AND VIEWED 🔥 */}
-                  {user && firstViewedIndex !== -1 && index === firstViewedIndex - 1 && index !== stories.length - 1 && (
-                    <span className="shrink-0 self-center mx-1.5 text-3xl font-black text-slate-300 pointer-events-none">|</span>
-                  )}
+            {stories.map((story, index) => (
+              <button 
+                key={story.id}
+                onClick={() => { setActiveIndex(index); setProgress(0); }}
+                className="flex flex-col items-center gap-1.5 shrink-0 snap-start outline-none group"
+              >
+                {/* Clean Image Circle */}
+                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full p-[3px] transition-transform group-hover:scale-105 shadow-sm ${
+                  viewedStoriesMap[story.id] 
+                    ? "bg-slate-300" // Grayed out if viewed
+                    : "bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600"
+                }`}>
+                  <div className="w-full h-full rounded-full border-[2.5px] border-transparent overflow-hidden relative bg-slate-100">
+                    {story.images?.[0] ? (
+                      <Image src={optimizeImage(story.images[0])} alt={story.name || "Story"} fill sizes="80px" className="object-cover" />
+                    ) : (
+                      <span className="text-[10px] absolute inset-0 flex items-center justify-center text-slate-400 font-bold">No Img</span>
+                    )}
+                  </div>
                 </div>
-              );
-            })}
+                
+                {/* Floating Price without background */}
+                <span className={`text-[11px] sm:text-xs font-bold truncate w-16 sm:w-20 text-center ${
+                  viewedStoriesMap[story.id] ? "text-slate-500 font-medium" : "text-slate-900"
+                }`}>
+                  UGX {(Number(story.price)/1000).toFixed(0)}k
+                </span>
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* ========================================== */}
-      {/* 2. THE STORY VIEWER MODAL (NEW DESIGN)     */}
+      {/* 2. THE STORY VIEWER MODAL                  */}
       {/* ========================================== */}
       {activeStory && (
-        // Changed overlay to transparent with slight blur
-        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex flex-col sm:p-4 animate-in fade-in duration-300">
-          
-          {/* Main Card: Removed background, added shadow */}
-          <div className="relative flex-grow sm:rounded-3xl overflow-hidden mx-auto w-full max-w-md shadow-3xl flex flex-col">
+        <div className="fixed inset-0 z-[100] bg-black/95 sm:bg-black/80 sm:backdrop-blur-md flex flex-col items-center justify-center animate-in fade-in duration-200">
+          <div className="relative w-full max-w-md h-full sm:h-[90vh] flex flex-col overflow-hidden sm:rounded-[2rem] shadow-2xl bg-black">
             
-            {/* --- TOP: Progress Bars & Seller (Gradients kept for readability) --- */}
-            <div className="absolute top-0 left-0 right-0 z-20 px-2 pt-4 sm:pt-6 bg-gradient-to-b from-black/85 to-transparent pb-10">
-              
-              {/* Bars */}
-              <div className="flex gap-1 mb-5">
-                {stories.map((s, i) => {
-                  const isActive = i === activeIndex;
-                  const isPast = i < activeIndex!;
-                  return (
-                    <div key={s.id} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden relative">
-                      <div 
-                        className={`absolute top-0 left-0 h-full rounded-full transition-all duration-75 ease-linear ${
-                          user && viewedStoryIds.includes(s.id) ? "bg-white/60" : "bg-white"
-                        }`}
-                        style={{ width: isActive ? `${progress}%` : isPast ? '100%' : '0%' }}
-                      />
-                    </div>
-                  );
-                })}
+            {/* Top UI */}
+            <div className="absolute top-0 w-full z-30 p-4 pt-6 bg-gradient-to-b from-black/90 to-transparent pb-10">
+              <div className="flex gap-1 mb-4">
+                {stories.map((_, i) => (
+                  <div key={i} className="flex-1 h-1 bg-white/30 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-white transition-all duration-75 ease-linear"
+                      style={{ width: i === activeIndex ? `${progress}%` : i < activeIndex! ? '100%' : '0%' }}
+                    />
+                  </div>
+                ))}
               </div>
-
-              {/* Header */}
-              <div className="flex items-center justify-between px-2">
+              <div className="flex justify-between items-center text-white px-1">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-full bg-[#D97706] text-white flex items-center justify-center font-black text-base shadow-md border-2 border-white/50">
-                    {activeStory.sellerName ? activeStory.sellerName.charAt(0).toUpperCase() : "S"}
-                  </div>
-                  <div className="text-white drop-shadow-lg">
-                    <p className="text-sm font-extrabold flex items-center gap-1.5">
-                      {activeStory.sellerName || "Kabale Seller"}
-                      {/* Optional: Add verified student badge here if you build it */}
-                    </p>
-                    <p className="text-[10px] uppercase tracking-wider text-white/90 font-bold bg-white/10 px-1.5 py-0.5 rounded">Urgent Sale</p>
-                  </div>
+                   <div className="w-9 h-9 rounded-full bg-amber-600 flex items-center justify-center font-bold text-lg border border-white/20">
+                     {activeStory.sellerName?.[0]?.toUpperCase() || "S"}
+                   </div>
+                   <div>
+                     <p className="text-sm font-bold shadow-sm">{activeStory.sellerName || "Local Seller"}</p>
+                     <p className="text-[10px] text-amber-400 font-bold tracking-wide uppercase mt-0.5">
+                       ⏳ Ends in {getTimeLeft(activeStory.urgentExpiresAt)}
+                     </p>
+                   </div>
                 </div>
-                <button onClick={closeViewer} className="text-white/80 p-2 hover:text-white transition-colors active:scale-95">
-                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                <button onClick={() => { setActiveIndex(null); setProgress(0); }} className="text-white/70 hover:text-white p-2 active:scale-95">
+                  <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
                 </button>
               </div>
             </div>
 
-            {/* --- MIDDLE: IMAGE & TAP ZONES --- */}
+            {/* Content & Tap Zones */}
             <div 
-              className="flex-grow relative bg-transparent" // Transparent image background
-              onMouseDown={() => setIsPaused(true)}
-              onMouseUp={() => { setIsPaused(false); markAsViewed(activeStory.id); }} // Mark watched on release
-              onMouseLeave={() => setIsPaused(false)}
+              className="flex-grow relative bg-black flex items-center" 
+              onMouseDown={() => setIsPaused(true)} 
+              onMouseUp={() => setIsPaused(false)}
               onTouchStart={() => setIsPaused(true)}
-              onTouchEnd={() => { setIsPaused(false); markAsViewed(activeStory.id); }} // Mark watched on release
+              onTouchEnd={() => setIsPaused(false)}
             >
               {activeStory.images?.[0] && (
-                <Image 
-                  src={activeStory.images[0]} 
-                  alt={activeStory.name} 
-                  fill 
-                  priority
-                  sizes="100vw"
-                  className="object-contain" // 🔥 Use object-contain to avoid zooming/cropping
-                />
+                <Image src={activeStory.images[0]} alt={activeStory.name} fill className="object-contain" priority sizes="(max-width: 768px) 100vw, 400px" />
               )}
-
-              {/* Invisible Tap Controls */}
-              <div onClick={() => { handlePrev(); markAsViewed(activeStory.id); }} className="absolute top-0 left-0 w-[35%] h-full z-10 cursor-pointer" aria-label="Previous story" />
-              <div onClick={() => { handleNext(); markAsViewed(activeStory.id); }} className="absolute top-0 right-0 w-[65%] h-full z-10 cursor-pointer" aria-label="Next story" />
+              
+              <div onClick={handlePrev} className="absolute left-0 w-1/3 h-full z-10 cursor-pointer" aria-label="Previous" />
+              <div onClick={handleNext} className="absolute right-0 w-2/3 h-full z-10 cursor-pointer" aria-label="Next" />
             </div>
 
-            {/* --- BOTTOM: PRODUCT DETAILS & CTA (Gradients kept for readability) --- */}
-            <div className="absolute bottom-0 left-0 right-0 z-20 p-6 sm:p-8 bg-gradient-to-t from-black/95 via-black/85 to-transparent pt-16">
-              <h2 className="text-2xl sm:text-3xl font-black text-white mb-1.5 drop-shadow-xl line-clamp-2 leading-tight">
-                {activeStory.name}
-              </h2>
-              <p className="text-3xl sm:text-4xl font-black text-[#D97706] mb-6 drop-shadow-lg">
-                UGX {Number(activeStory.price).toLocaleString()}
-              </p>
-              
-              {/* CLEAN CTA: No bouncing arrow */}
-              <button 
-                onClick={() => router.push(`/product/${activeStory.publicId || activeStory.id}`)}
-                className="w-full bg-white text-slate-950 py-4 sm:py-5 rounded-2xl font-black text-lg sm:text-xl hover:bg-slate-100 transition-colors shadow-2xl flex flex-col items-center justify-center gap-0.5 active:scale-95"
-              >
-                Tap to View & Make Offer
-              </button>
+            {/* Bottom UI */}
+            <div className="absolute bottom-0 w-full z-30 p-5 sm:p-6 bg-gradient-to-t from-black/95 via-black/80 to-transparent pt-16">
+              <div className="mb-5">
+                <h3 className="text-2xl font-black text-white leading-tight mb-1 drop-shadow-md line-clamp-2">{activeStory.name}</h3>
+                <div className="flex items-end justify-between">
+                  <p className="text-3xl font-black text-amber-500 drop-shadow-md">UGX {Number(activeStory.price).toLocaleString()}</p>
+                </div>
+                {/* Viewer Count */}
+                <p className="text-white/80 text-xs font-medium mt-2 flex items-center gap-1.5">
+                  <span className="text-base">👀</span> {activeStory.storyViews || 1} people viewed this
+                </p>
+              </div>
+
+              {/* ACTION BUTTONS */}
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => window.open(`https://wa.me/${activeStory.sellerPhone?.replace(/\+/g, '')}?text=${encodeURIComponent(`Hi, I saw your urgent story for the ${activeStory.name}. Is it still available?`)}`, '_blank')}
+                  className="w-full bg-[#25D366] text-white py-4 rounded-2xl font-black text-lg flex items-center justify-center gap-2 active:scale-95 transition-transform shadow-lg"
+                >
+                  <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+                  Ask Seller
+                </button>
+                <button 
+                  onClick={() => router.push(`/product/${activeStory.id}`)}
+                  className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white py-3.5 rounded-2xl font-bold active:scale-95 transition-transform"
+                >
+                  View Full Details
+                </button>
+              </div>
             </div>
 
           </div>
