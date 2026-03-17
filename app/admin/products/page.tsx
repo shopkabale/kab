@@ -204,7 +204,7 @@ export default function AdminProductsPage() {
 
                     <td className="px-6 py-4 text-right whitespace-nowrap space-x-2">
                       <Link
-                        href={`/admin/upload?edit=${product.publicId || product.id}`}
+                        href={`/admin/upload?edit=${product.id}`}
                         className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg transition-colors inline-block"
                       >
                         Edit Full
