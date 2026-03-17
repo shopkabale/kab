@@ -1,3 +1,5 @@
+// lib/brevo.ts
+
 export async function sendOrderConfirmation(
   userEmail: string, 
   userName: string, 
@@ -13,16 +15,8 @@ export async function sendOrderConfirmation(
   }
 
   const emailData = {
-    sender: {
-      name: "Kabale Online",
-      email: senderEmail,
-    },
-    to: [
-      {
-        email: userEmail,
-        name: userName,
-      },
-    ],
+    sender: { name: "Kabale Online", email: senderEmail },
+    to: [{ email: userEmail, name: userName }],
     subject: `Order Confirmation - ${orderNumber} | Kabale Online`,
     htmlContent: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
@@ -52,20 +46,10 @@ export async function sendOrderConfirmation(
   try {
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "api-key": brevoApiKey,
-        "accept": "application/json"
-      },
+      headers: { "Content-Type": "application/json", "api-key": brevoApiKey, "accept": "application/json" },
       body: JSON.stringify(emailData),
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Brevo API Error:", errorData);
-      return false;
-    }
-
+    if (!response.ok) return false;
     return true;
   } catch (error) {
     console.error("Failed to send email via Brevo:", error);
@@ -145,16 +129,12 @@ export async function sendAdminAlert(
     htmlContent: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f1f5f9; border-radius: 10px;">
         <h2 style="color: #0f172a; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">🚨 System Alert: New Order</h2>
-
-        <!-- Order Summary Card -->
         <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
           <h3 style="margin-top: 0; color: #333;">🛒 Order Details</h3>
           <p style="margin: 5px 0;"><strong>Order ID:</strong> ${orderNumber}</p>
           <p style="margin: 5px 0;"><strong>Item:</strong> ${itemName}</p>
           <p style="margin: 5px 0;"><strong>Total Amount:</strong> UGX ${totalAmount.toLocaleString()}</p>
         </div>
-
-        <!-- Buyer Card -->
         <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
           <h3 style="margin-top: 0; color: #2563eb;">👤 Buyer Overview</h3>
           <p style="margin: 5px 0;"><strong>Name:</strong> ${buyerName}</p>
@@ -163,8 +143,6 @@ export async function sendAdminAlert(
             <a href="https://wa.me/${buyerPhone.replace(/\D/g, '')}" style="color: #25D366; text-decoration: none; font-weight: bold;">💬 Chat with Buyer</a>
           </p>
         </div>
-
-        <!-- Seller Card -->
         <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
           <h3 style="margin-top: 0; color: #16a34a;">🏪 Seller Overview</h3>
           <p style="margin: 5px 0;"><strong>Name:</strong> ${sellerName}</p>
@@ -173,7 +151,6 @@ export async function sendAdminAlert(
             <a href="https://wa.me/${(sellerPhone || "").replace(/\D/g, '')}" style="color: #25D366; text-decoration: none; font-weight: bold;">💬 Chat with Seller</a>
           </p>
         </div>
-        
       </div>
     `,
   };
@@ -187,6 +164,65 @@ export async function sendAdminAlert(
     return true;
   } catch (error) {
     console.error("Admin alert failed:", error);
+    return false;
+  }
+}
+
+// ============================================================================
+// 🔥 NEW: THE MAGIC LINK WHATSAPP NOTIFICATION
+// ============================================================================
+export async function sendWhatsAppReplyAlert(
+  sellerEmail: string,
+  buyerPhone: string,
+  messageContent: string,
+  messageId: string
+) {
+  const brevoApiKey = process.env.BREVO_API_KEY;
+  const senderEmail = process.env.SENDER_EMAIL || "support@kabaleonline.com";
+
+  if (!brevoApiKey || !sellerEmail) return false;
+
+  // Uses your live domain if available, otherwise defaults to localhost for testing
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
+  const magicLink = `${baseUrl}/reply/${messageId}`;
+
+  const emailData = {
+    sender: { name: "Kabale Online Secure Chat", email: senderEmail },
+    to: [{ email: sellerEmail, name: "Seller / Admin" }],
+    subject: `💬 New WhatsApp Reply from Customer (${buyerPhone})`,
+    htmlContent: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; border-radius: 10px;">
+        <h2 style="color: #D97706; margin-top: 0;">You have a new WhatsApp message!</h2>
+        <p>A customer has replied to an automated WhatsApp order notification.</p>
+        
+        <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; border-left: 4px solid #D97706; margin: 20px 0; font-size: 16px; color: #333;">
+          <p style="margin: 0; font-size: 12px; color: #64748b; margin-bottom: 8px;">Customer Phone: ${buyerPhone}</p>
+          <em style="font-size: 18px;">"${messageContent}"</em>
+        </div>
+        
+        <p style="margin-top: 30px; text-align: center;">
+          <a href="${magicLink}" 
+             style="background-color: #0f172a; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
+            Click Here to Reply Securely
+          </a>
+        </p>
+        
+        <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
+          Your reply will be automatically routed back to their WhatsApp.
+        </p>
+      </div>
+    `,
+  };
+
+  try {
+    await fetch("https://api.brevo.com/v3/smtp/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "api-key": brevoApiKey, "accept": "application/json" },
+      body: JSON.stringify(emailData),
+    });
+    return true;
+  } catch (error) {
+    console.error("Magic link email failed:", error);
     return false;
   }
 }
