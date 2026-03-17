@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebase/config";
-import { collection, addDoc, serverTimestamp, query, where, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, limit, getDocs } from "firebase/firestore";
 import { sendWhatsAppReplyAlert } from "@/lib/brevo";
 
 // Helper to normalize phone numbers for database lookups
-// WhatsApp sends "256771234567". Your DB might store "0771234567" or "+256771234567".
 function getPhoneVariations(whatsappPhone: string) {
   const cleanPhone = whatsappPhone.replace(/\D/g, "");
   if (cleanPhone.startsWith("256")) {
@@ -14,6 +13,7 @@ function getPhoneVariations(whatsappPhone: string) {
   return [cleanPhone];
 }
 
+// 1. Handle Webhook Verification (GET)
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const mode = url.searchParams.get("hub.mode");
@@ -22,90 +22,125 @@ export async function GET(request: Request) {
 
   const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
 
-  if (mode === "subscribe" && token === verifyToken) {
-    console.log("✅ Webhook verified!");
-    return new NextResponse(challenge, { status: 200 });
+  if (mode && token) {
+    if (mode === "subscribe" && token === verifyToken) {
+      console.log("✅ Webhook verified successfully!");
+      return new NextResponse(challenge, { status: 200 });
+    }
+    return new NextResponse("Forbidden", { status: 403 });
   }
-  return new NextResponse("Forbidden", { status: 403 });
+  return new NextResponse("Bad Request", { status: 400 });
 }
 
+// 2. Handle Incoming WhatsApp Events (POST)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+
+    // 🚨 DIAGNOSTIC LOG 1: See exactly what Meta is sending us
+    console.log("==========================================");
+    console.log("🚨 RAW WEBHOOK RECEIVED FROM META:");
+    console.log(JSON.stringify(body, null, 2));
+    console.log("==========================================");
 
     if (body.object === "whatsapp_business_account") {
       for (const entry of body.entry) {
         for (const change of entry.changes) {
           const value = change.value;
 
-          if (value.messages) {
+          // Check if this is an actual message (and not just a 'delivered' or 'read' receipt)
+          if (value.messages && value.messages.length > 0) {
+            console.log(`✅ FOUND ${value.messages.length} INCOMING MESSAGE(S)`);
+
             for (const message of value.messages) {
-              const fromPhone = message.from; // e.g., "256771234567"
-              const text = message.text?.body || "[Media/Voice Note Received]";
+              const fromPhone = message.from; 
+              const text = message.text?.body || "[Media/Voice Note]"; 
               const messageId = message.id;
 
-              console.log(`📥 Routing incoming message from ${fromPhone}`);
+              console.log(`💬 Processing message from ${fromPhone}: "${text}"`);
 
+              let savedDocId = "failed_to_save";
+
+              // 🔥 STEP 1: SAVE TO FIREBASE
               try {
-                // 1. Save the message to Firebase immediately so no data is lost
-                const messageRef = await addDoc(collection(db, "whatsapp_messages"), {
+                console.log("⏳ Saving message to Firebase...");
+                const docRef = await addDoc(collection(db, "whatsapp_messages"), {
                   metaMessageId: messageId,
                   senderPhone: fromPhone,
                   content: text,
                   status: "unread",
                   timestamp: serverTimestamp(),
                 });
+                savedDocId = docRef.id;
+                console.log(`✅ Firebase Save SUCCESS! Document ID: ${savedDocId}`);
+              } catch (dbError: any) {
+                console.error("❌ FIREBASE SAVE FAILED:", dbError.message);
+                // We do NOT throw here so the email can still try to send
+              }
 
-                // 2. DYNAMIC ROUTING: Find the recent order for this buyer
-                let targetEmail = process.env.SENDER_EMAIL || "shopkabale@gmail.com"; // Fallback Admin Email
-                let orderIdContext = "General Inquiry";
-                
+              // 🔥 STEP 2: FIND THE SELLER EMAIL
+              let targetEmail = process.env.SENDER_EMAIL || "shopkabale@gmail.com"; 
+              let orderIdContext = "General Inquiry";
+              
+              try {
+                console.log("⏳ Looking up recent order for phone:", fromPhone);
                 const phoneVariations = getPhoneVariations(fromPhone);
-                const ordersRef = collection(db, "orders"); // Adjust if your collection is named differently
-                
-                // Query orders where the buyerPhone matches one of the variations, get the newest one
                 const orderQuery = query(
-                  ordersRef, 
+                  collection(db, "orders"), 
                   where("buyerPhone", "in", phoneVariations),
-                  // orderBy("createdAt", "desc"), // Ensure you have a composite index in Firestore for this
                   limit(1)
                 );
-
                 const orderSnapshot = await getDocs(orderQuery);
 
                 if (!orderSnapshot.empty) {
                   const recentOrder = orderSnapshot.docs[0].data();
-                  // Assuming your order document contains the seller's email and order ID
                   if (recentOrder.sellerEmail) {
                     targetEmail = recentOrder.sellerEmail;
                     orderIdContext = recentOrder.orderId || orderSnapshot.docs[0].id;
-                    console.log(`🎯 Found matching order ${orderIdContext}. Routing to seller: ${targetEmail}`);
+                    console.log(`🎯 Found matching order ${orderIdContext}. Routing to: ${targetEmail}`);
                   }
                 } else {
-                  console.log("⚠️ No recent order found for this phone. Routing to Admin fallback.");
+                  console.log("⚠️ No recent order found. Routing to Admin fallback.");
                 }
+              } catch (lookupError: any) {
+                console.error("❌ ORDER LOOKUP FAILED:", lookupError.message);
+              }
 
-                // 3. Send the Magic Link via Brevo
+              // 🔥 STEP 3: SEND BREVO EMAIL
+              try {
+                console.log(`⏳ Sending Brevo Magic Link to ${targetEmail}...`);
                 await sendWhatsAppReplyAlert(
                   targetEmail,
                   fromPhone,
                   text,
-                  messageRef.id,
+                  savedDocId,
                   orderIdContext
                 );
-
-              } catch (dbError) {
-                console.error("🔥 Firebase/Routing Error:", dbError);
+                console.log("✅ Brevo Email SUCCESS!");
+              } catch (emailError: any) {
+                console.error("❌ BREVO EMAIL FAILED:", emailError.message);
               }
             }
+          } else if (value.statuses) {
+            // It's just a delivery receipt (sent, delivered, read)
+            console.log(`ℹ️ Ignoring status update: ${value.statuses[0].status}`);
+          } else {
+            console.log("ℹ️ Webhook received, but no messages or statuses found.");
           }
         }
       }
+      
+      // Always return 200 OK to Meta so they don't disable your webhook
       return NextResponse.json({ success: true }, { status: 200 });
+
+    } else {
+      console.error("❌ Webhook event not from whatsapp_business_account");
+      return new NextResponse("Not Found", { status: 404 });
     }
-    return new NextResponse("Not Found", { status: 404 });
-  } catch (error) {
-    console.error("🚨 Webhook Critical Error:", error);
-    return new NextResponse("Internal Server Error", { status: 500 });
+
+  } catch (error: any) {
+    console.error("🚨 FATAL WEBHOOK CRASH:", error.message);
+    // Still returning 200 sometimes prevents Meta from blocking the webhook during a code bug
+    return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
   }
 }
