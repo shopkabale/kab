@@ -73,15 +73,12 @@ export async function sendOrderConfirmation(
   }
 }
 
-
-
 export async function sendSellerNotification(
   sellerEmail: string,
   sellerName: string,
   itemName: string,
   buyerName: string,
-  buyerPhone: string,
-  buyerLocation: string
+  buyerPhone: string
 ) {
   const brevoApiKey = process.env.BREVO_API_KEY;
   const senderEmail = process.env.SENDER_EMAIL || "noreply@okaynotice.com";
@@ -98,9 +95,8 @@ export async function sendSellerNotification(
         <p>Someone wants to buy your <strong>${itemName}</strong>.</p>
         
         <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #333;">Delivery Details</h3>
-          <p><strong>Buyer Name:</strong> ${buyerName}</p>
-          <p><strong>Location:</strong> ${buyerLocation}</p>
+          <h3 style="margin-top: 0; color: #333;">Buyer Details</h3>
+          <p><strong>Name:</strong> ${buyerName}</p>
           <p><strong>Phone:</strong> ${buyerPhone}</p>
         </div>
         
@@ -132,25 +128,52 @@ export async function sendAdminAlert(
   itemName: string,
   totalAmount: number,
   buyerName: string,
-  buyerPhone: string
+  buyerPhone: string,
+  sellerName: string,       
+  sellerPhone: string      
 ) {
   const brevoApiKey = process.env.BREVO_API_KEY;
   const senderEmail = process.env.SENDER_EMAIL || "support@kabaleonline.com";
-  const adminEmail = "shopkabale@gmail.com"; // Your actual admin receiving email
+  const adminEmail = "shopkabale@gmail.com"; 
 
   if (!brevoApiKey) return false;
 
   const emailData = {
     sender: { name: "System Alert", email: senderEmail },
     to: [{ email: adminEmail, name: "Admin" }],
-    subject: `🔔 New Sale Alert: ${itemName} (${orderNumber})`,
+    subject: `🚨 KABALE ADMIN: Sale Alert - ${itemName} (${orderNumber})`,
     htmlContent: `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h3 style="color: #333;">New Order Placed on Kabale Online</h3>
-        <p><strong>Order ID:</strong> ${orderNumber}</p>
-        <p><strong>Item:</strong> ${itemName}</p>
-        <p><strong>Amount:</strong> UGX ${totalAmount.toLocaleString()}</p>
-        <p><strong>Buyer:</strong> ${buyerName} (${buyerPhone})</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f1f5f9; border-radius: 10px;">
+        <h2 style="color: #0f172a; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">🚨 System Alert: New Order</h2>
+
+        <!-- Order Summary Card -->
+        <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+          <h3 style="margin-top: 0; color: #333;">🛒 Order Details</h3>
+          <p style="margin: 5px 0;"><strong>Order ID:</strong> ${orderNumber}</p>
+          <p style="margin: 5px 0;"><strong>Item:</strong> ${itemName}</p>
+          <p style="margin: 5px 0;"><strong>Total Amount:</strong> UGX ${totalAmount.toLocaleString()}</p>
+        </div>
+
+        <!-- Buyer Card -->
+        <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
+          <h3 style="margin-top: 0; color: #2563eb;">👤 Buyer Overview</h3>
+          <p style="margin: 5px 0;"><strong>Name:</strong> ${buyerName}</p>
+          <p style="margin: 5px 0;"><strong>Phone:</strong> ${buyerPhone}</p>
+          <p style="margin-top: 10px;">
+            <a href="https://wa.me/${buyerPhone.replace(/\D/g, '')}" style="color: #25D366; text-decoration: none; font-weight: bold;">💬 Chat with Buyer</a>
+          </p>
+        </div>
+
+        <!-- Seller Card -->
+        <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
+          <h3 style="margin-top: 0; color: #16a34a;">🏪 Seller Overview</h3>
+          <p style="margin: 5px 0;"><strong>Name:</strong> ${sellerName}</p>
+          <p style="margin: 5px 0;"><strong>Phone:</strong> ${sellerPhone || "No Phone Provided"}</p>
+          <p style="margin-top: 10px;">
+            <a href="https://wa.me/${(sellerPhone || "").replace(/\D/g, '')}" style="color: #25D366; text-decoration: none; font-weight: bold;">💬 Chat with Seller</a>
+          </p>
+        </div>
+        
       </div>
     `,
   };
