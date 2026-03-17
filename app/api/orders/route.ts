@@ -5,12 +5,22 @@ import {
   sendSellerNotification, 
   sendAdminAlert 
 } from "@/lib/brevo";
-import { NotificationService } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, productId, sellerId, total, deliveryLocation, contactPhone, items } = body;
+    
+    // Extract buyerName (sent from guest checkout) along with standard fields
+    const { 
+      userId, 
+      productId, 
+      sellerId, 
+      total, 
+      deliveryLocation, 
+      contactPhone, 
+      items, 
+      buyerName: guestName 
+    } = body;
 
     if (!userId || !productId) {
       return NextResponse.json({ error: "Missing user or product ID" }, { status: 400 });
@@ -19,11 +29,23 @@ export async function POST(request: Request) {
     // 1. Generate a beautiful Kabale Order Number
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // 2. Fetch Buyer Details
-    const buyerSnap = await adminDb.collection("users").doc(userId).get();
-    const buyerData = buyerSnap.exists ? buyerSnap.data() : null;
-    const buyerEmail = buyerData?.email;
-    const buyerName = buyerData?.displayName || "Valued Customer";
+    // 2. Fetch Buyer Details (Guest-Safe Logic)
+    let buyerEmail = null;
+    let finalBuyerName = guestName || "Valued Customer"; // Fallback to frontend input
+
+    // Only query Firebase if they are NOT a guest
+    if (userId !== "GUEST") {
+      const buyerSnap = await adminDb.collection("users").doc(userId).get();
+      if (buyerSnap.exists) {
+        const buyerData = buyerSnap.data();
+        buyerEmail = buyerData?.email || null;
+        
+        // If frontend didn't send a name, use the one from their profile
+        if (!guestName) {
+          finalBuyerName = buyerData?.displayName || finalBuyerName;
+        }
+      }
+    }
 
     // 3. Fetch Product & Seller Details
     const productSnap = await adminDb.collection("products").doc(productId).get();
@@ -38,9 +60,10 @@ export async function POST(request: Request) {
     if ((!sellerEmail || !sellerPhone) && sellerId && sellerId !== "SYSTEM") {
       const sellerSnap = await adminDb.collection("users").doc(sellerId).get();
       if (sellerSnap.exists) {
-        sellerEmail = sellerSnap.data()?.email || sellerEmail;
-        sellerName = sellerSnap.data()?.displayName || sellerName;
-        sellerPhone = sellerSnap.data()?.phone || sellerPhone; 
+        const sData = sellerSnap.data();
+        sellerEmail = sData?.email || sellerEmail;
+        sellerName = sData?.displayName || sellerName;
+        sellerPhone = sData?.phone || sellerPhone; 
       }
     }
 
@@ -48,6 +71,7 @@ export async function POST(request: Request) {
     const orderData = {
       orderNumber,
       userId,
+      buyerName: finalBuyerName, // Save guest name directly to the order
       sellerId: sellerId || "SYSTEM",
       items: items || [{ productId, quantity: 1, price: total }],
       total: Number(total),
@@ -61,69 +85,58 @@ export async function POST(request: Request) {
 
     const docRef = await adminDb.collection("orders").add(orderData);
 
-    // 5. Fire off all Notifications (Email + WhatsApp) concurrently
+    // 5. Fire off all Notifications Concurrently
     const notificationPromises = [];
 
-    // --- EMAIL PROMISES ---
-    if (buyerEmail) {
+    // --- EMAILS ---
+    
+    // Only send if the buyer actually has an email (Guests will skip this safely)
+    if (buyerEmail) { 
       notificationPromises.push(
-        sendOrderConfirmation(buyerEmail, buyerName, orderNumber, Number(total))
+        sendOrderConfirmation(buyerEmail, finalBuyerName, orderNumber, Number(total))
+          .catch(err => console.error("Buyer Email Error:", err))
       );
     }
 
+    // Sellers always have an email, so this always fires
     if (sellerEmail) {
       notificationPromises.push(
-        sendSellerNotification(
-          sellerEmail, 
-          sellerName, 
-          itemName, 
-          buyerName, 
-          contactPhone || "No phone provided", 
-          deliveryLocation || "Kabale Town"
-        )
+        sendSellerNotification(sellerEmail, sellerName, itemName, finalBuyerName, contactPhone || "No phone", deliveryLocation || "Kabale Town")
+          .catch(err => console.error("Seller Email Error:", err))
       );
     }
 
+    // Admin alert
     notificationPromises.push(
-      sendAdminAlert(
-        orderNumber, 
-        itemName, 
-        Number(total), 
-        buyerName, 
-        contactPhone || "No phone provided"
-      )
+      sendAdminAlert(orderNumber, itemName, Number(total), finalBuyerName, contactPhone || "No phone")
+        .catch(err => console.error("Admin Email Error:", err))
     );
 
-    // --- WHATSAPP PROMISES ---
-    if (contactPhone) {
-      // Set your admin fallback number, formatted for Meta API (256 instead of 0)
-      const fallbackPhone = "256759997376";
-      
-      // Check if seller provided a phone, and format it for Meta if it starts with '0'
-      let activeSellerPhone = sellerPhone;
-      if (activeSellerPhone && activeSellerPhone.startsWith('0')) {
-        activeSellerPhone = `256${activeSellerPhone.slice(1)}`;
-      }
+    // --- WHATSAPP ---
+    
+    const fallbackAdminPhone = "256759997376"; 
+    // Dynamically grab the base URL so it works in both local development and Vercel production
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "http://localhost:3000";
+    
+    // Call your internal notify route to trigger the Meta API
+    notificationPromises.push(
+      fetch(`${baseUrl}/api/orders/notify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventType: "ORDER_CREATED",
+          payload: {
+            productName: itemName,
+            buyerPhone: contactPhone,
+            sellerPhone: sellerPhone || fallbackAdminPhone,
+            buyerName: finalBuyerName, // Required for your verified buyer template
+            orderNumber: orderNumber   // Required for your verified buyer template
+          }
+        })
+      }).catch(err => console.error("WhatsApp Trigger Error:", err))
+    );
 
-      // Use the formatted seller phone, OR fallback to your number if it's completely missing
-      const finalSellerPhone = activeSellerPhone || fallbackPhone;
-
-      // Format the buyer's phone number for Meta API as well
-      let finalBuyerPhone = contactPhone;
-      if (finalBuyerPhone.startsWith('0')) {
-        finalBuyerPhone = `256${finalBuyerPhone.slice(1)}`;
-      }
-
-      notificationPromises.push(
-        NotificationService.orderCreated(
-          finalSellerPhone, 
-          finalBuyerPhone, 
-          itemName
-        ).catch(err => console.error("WhatsApp OrderCreated Error:", err))
-      );
-    }
-
-    // Run all tasks in the background so the user isn't waiting
+    // Await all promises so Vercel doesn't kill the function before they send
     await Promise.allSettled(notificationPromises);
 
     return NextResponse.json({ success: true, orderId: docRef.id }, { status: 200 });
