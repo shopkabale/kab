@@ -1,3 +1,4 @@
+// lib/notifications.ts
 import { sendWhatsAppTemplate } from "./whatsapp";
 
 const sendMultiple = async (messages: Promise<any>[]) => {
@@ -10,32 +11,37 @@ const sendMultiple = async (messages: Promise<any>[]) => {
 };
 
 export const NotificationService = {
-  // This is the one we are testing now!
-  async orderCreated(sellerPhone: string, buyerPhone: string, productName: string) {
+  // UPDATED: Added buyerName and orderNumber to match your Meta template
+  async orderCreated(
+    sellerPhone: string, 
+    buyerPhone: string, 
+    productName: string, 
+    buyerName: string, 
+    orderNumber: string
+  ) {
     await sendMultiple([
-      sendWhatsAppTemplate(sellerPhone, "order_created_seller", [productName]),
-      sendWhatsAppTemplate(buyerPhone, "order_created_buyer", [productName])
+      // Seller Template: Unverified, using 1 variable [productName]
+      sendWhatsAppTemplate(sellerPhone, "order_created_seller", [productName], "en_US"),
+      
+      // Buyer Template: VERIFIED, using 2 variables: [{{1}} Name, {{2}} OrderNumber]
+      sendWhatsAppTemplate(buyerPhone, "order_received_buyer", [buyerName || "Customer", orderNumber], "en_US")
     ]);
   },
 
-  // Added back as placeholders so the build passes
+  // Placeholders remain unchanged
   async orderAccepted(buyerPhone: string, productName: string) {
-    console.log("Order Accepted notification triggered (Template not yet created in Meta)");
+    console.log("Order Accepted triggered");
   },
-
   async orderReady(buyerPhone: string, agentPhone: string | null, productName: string) {
-    console.log("Order Ready notification triggered (Template not yet created in Meta)");
+    console.log("Order Ready triggered");
   },
-
   async orderDelivered(buyerPhone: string, sellerPhone: string, productName: string) {
-    console.log("Order Delivered notification triggered (Template not yet created in Meta)");
+    console.log("Order Delivered triggered");
   },
-
   async orderCancelled(buyerPhone: string, sellerPhone: string, productName: string) {
-    console.log("Order Cancelled notification triggered (Template not yet created in Meta)");
+    console.log("Order Cancelled triggered");
   },
-
   async buyerInquiry(sellerPhone: string, productName: string) {
-    await sendWhatsAppTemplate(sellerPhone, "buyer_inquiry", [productName]);
+    await sendWhatsAppTemplate(sellerPhone, "buyer_inquiry", [productName], "en_US");
   }
 };
