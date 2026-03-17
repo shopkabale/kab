@@ -6,11 +6,15 @@ import { useAuth } from "@/components/AuthProvider";
 import { Product } from "@/types";
 
 export default function ProductActions({ product }: { product: Product }) {
-  const { user, signIn } = useAuth();
+  const { user } = useAuth(); // Removed signIn, as we no longer force it
   const router = useRouter();
+  
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  
+  // Checkout States
   const [contactPhone, setContactPhone] = useState("");
+  const [buyerName, setBuyerName] = useState(""); // NEW: To capture guest names
   const [copied, setCopied] = useState(false);
 
   const formatWhatsAppNumber = (phone: string) => {
@@ -55,16 +59,19 @@ export default function ProductActions({ product }: { product: Product }) {
 
   // 4. Fast Checkout Modals & Logic
   const handleBuyNowClick = () => {
-    if (!user) {
-      alert("Please log in to place an official order.");
-      signIn();
-      return;
+    // If the user IS logged in, be helpful and pre-fill their name
+    if (user && user.displayName) {
+      setBuyerName(user.displayName);
     }
+    // We no longer block guests!
     setShowModal(true);
   };
 
   const executeFastCheckout = async () => {
-    if (!user) return; 
+    if (!buyerName.trim()) {
+      alert("Please provide your name so the seller knows who to ask for.");
+      return;
+    }
 
     if (!contactPhone.trim()) {
       alert("Please provide your phone number so the seller can call you for delivery.");
@@ -78,7 +85,9 @@ export default function ProductActions({ product }: { product: Product }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: user.id,
+          // Send "GUEST" if not logged in, otherwise send their ID
+          userId: user ? user.id : "GUEST",
+          buyerName: buyerName, // Send the newly captured name
           productId: product.id,
           sellerId: product.sellerId || "SYSTEM",
           total: product.price,
@@ -150,7 +159,7 @@ export default function ProductActions({ product }: { product: Product }) {
 
         {/* --- SECONDARY ACTIONS --- */}
         <div className="flex flex-col gap-6">
-          
+
           {/* BUY VIA WHATSAPP */}
           <div className="flex flex-col gap-2">
             <p className="text-sm font-medium text-slate-500 text-center">
@@ -218,7 +227,7 @@ export default function ProductActions({ product }: { product: Product }) {
         )}
       </div>
 
-      {/* FAST CHECKOUT MODAL (Unchanged) */}
+      {/* FAST CHECKOUT MODAL */}
       {showModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl relative overflow-hidden">
@@ -232,6 +241,19 @@ export default function ProductActions({ product }: { product: Product }) {
                 <span className="text-sm font-medium text-slate-500">Pay on delivery:</span>
                 <span className="font-black text-[#D97706] text-lg">UGX {Number(product.price).toLocaleString()}</span>
               </div>
+            </div>
+
+            {/* NEW: Buyer Name Field */}
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-slate-900 mb-2">Your Name *</label>
+              <input 
+                required 
+                type="text" 
+                placeholder="e.g. John Doe"
+                className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-[#D97706] transition-shadow"
+                value={buyerName} 
+                onChange={e => setBuyerName(e.target.value)} 
+              />
             </div>
 
             <div className="mb-6">
@@ -251,7 +273,7 @@ export default function ProductActions({ product }: { product: Product }) {
 
             <div className="flex gap-3">
               <button 
-                onClick={() => { setShowModal(false); setContactPhone(""); }}
+                onClick={() => { setShowModal(false); setContactPhone(""); setBuyerName(""); }}
                 disabled={loading}
                 className="flex-1 bg-white border-2 border-slate-200 text-slate-700 py-3 rounded-xl font-bold hover:bg-slate-50 transition-colors"
               >
@@ -259,7 +281,7 @@ export default function ProductActions({ product }: { product: Product }) {
               </button>
               <button 
                 onClick={executeFastCheckout}
-                disabled={loading || !contactPhone.trim()}
+                disabled={loading || !contactPhone.trim() || !buyerName.trim()}
                 className="flex-1 bg-[#D97706] text-white py-3 rounded-xl font-bold hover:bg-amber-600 transition-colors shadow-md disabled:opacity-50"
               >
                 {loading ? "Sending..." : "Proceed & Order"}
