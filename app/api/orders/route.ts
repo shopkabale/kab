@@ -10,13 +10,12 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     
-    // Extract buyerName (sent from guest checkout) along with standard fields
+    // Extracted exactly what we need, NO delivery location
     const { 
       userId, 
       productId, 
       sellerId, 
       total, 
-      deliveryLocation, 
       contactPhone, 
       items, 
       buyerName: guestName 
@@ -31,7 +30,7 @@ export async function POST(request: Request) {
 
     // 2. Fetch Buyer Details (Guest-Safe Logic)
     let buyerEmail = null;
-    let finalBuyerName = guestName || "Valued Customer"; // Fallback to frontend input
+    let finalBuyerName = guestName || "Valued Customer";
 
     // Only query Firebase if they are NOT a guest
     if (userId !== "GUEST") {
@@ -71,13 +70,12 @@ export async function POST(request: Request) {
     const orderData = {
       orderNumber,
       userId,
-      buyerName: finalBuyerName, // Save guest name directly to the order
+      buyerName: finalBuyerName, 
       sellerId: sellerId || "SYSTEM",
       items: items || [{ productId, quantity: 1, price: total }],
       total: Number(total),
       paymentMethod: "cash_on_delivery",
       status: "pending",
-      deliveryLocation: deliveryLocation || "Kabale Town",
       contactPhone: contactPhone || "",
       createdAt: Date.now(),
       updatedAt: Date.now()
@@ -90,7 +88,6 @@ export async function POST(request: Request) {
 
     // --- EMAILS ---
     
-    // Only send if the buyer actually has an email (Guests will skip this safely)
     if (buyerEmail) { 
       notificationPromises.push(
         sendOrderConfirmation(buyerEmail, finalBuyerName, orderNumber, Number(total))
@@ -98,27 +95,36 @@ export async function POST(request: Request) {
       );
     }
 
-    // Sellers always have an email, so this always fires
     if (sellerEmail) {
       notificationPromises.push(
-        sendSellerNotification(sellerEmail, sellerName, itemName, finalBuyerName, contactPhone || "No phone", deliveryLocation || "Kabale Town")
-          .catch(err => console.error("Seller Email Error:", err))
+        sendSellerNotification(
+          sellerEmail, 
+          sellerName, 
+          itemName, 
+          finalBuyerName, 
+          contactPhone || "No phone"
+        ).catch(err => console.error("Seller Email Error:", err))
       );
     }
 
-    // Admin alert
+    // Admin alert (with all the detailed cards)
     notificationPromises.push(
-      sendAdminAlert(orderNumber, itemName, Number(total), finalBuyerName, contactPhone || "No phone")
-        .catch(err => console.error("Admin Email Error:", err))
+      sendAdminAlert(
+        orderNumber, 
+        itemName, 
+        Number(total), 
+        finalBuyerName, 
+        contactPhone || "No phone",
+        sellerName,
+        sellerPhone || "No phone"
+      ).catch(err => console.error("Admin Email Error:", err))
     );
 
     // --- WHATSAPP ---
     
     const fallbackAdminPhone = "256759997376"; 
-    // Dynamically grab the base URL so it works in both local development and Vercel production
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "http://localhost:3000";
     
-    // Call your internal notify route to trigger the Meta API
     notificationPromises.push(
       fetch(`${baseUrl}/api/orders/notify`, {
         method: 'POST',
@@ -129,14 +135,13 @@ export async function POST(request: Request) {
             productName: itemName,
             buyerPhone: contactPhone,
             sellerPhone: sellerPhone || fallbackAdminPhone,
-            buyerName: finalBuyerName, // Required for your verified buyer template
-            orderNumber: orderNumber   // Required for your verified buyer template
+            buyerName: finalBuyerName, 
+            orderNumber: orderNumber   
           }
         })
       }).catch(err => console.error("WhatsApp Trigger Error:", err))
     );
 
-    // Await all promises so Vercel doesn't kill the function before they send
     await Promise.allSettled(notificationPromises);
 
     return NextResponse.json({ success: true, orderId: docRef.id }, { status: 200 });
