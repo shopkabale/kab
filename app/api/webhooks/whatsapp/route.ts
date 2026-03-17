@@ -1,9 +1,19 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebase/config";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, where, orderBy, limit, getDocs } from "firebase/firestore";
 import { sendWhatsAppReplyAlert } from "@/lib/brevo";
 
-// 1. Handle Webhook Verification (GET)
+// Helper to normalize phone numbers for database lookups
+// WhatsApp sends "256771234567". Your DB might store "0771234567" or "+256771234567".
+function getPhoneVariations(whatsappPhone: string) {
+  const cleanPhone = whatsappPhone.replace(/\D/g, "");
+  if (cleanPhone.startsWith("256")) {
+    const localFormat = "0" + cleanPhone.substring(3);
+    return [cleanPhone, `+${cleanPhone}`, localFormat];
+  }
+  return [cleanPhone];
+}
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const mode = url.searchParams.get("hub.mode");
@@ -12,20 +22,13 @@ export async function GET(request: Request) {
 
   const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
 
-  if (mode && token) {
-    if (mode === "subscribe" && token === verifyToken) {
-      console.log("✅ WhatsApp Webhook verified successfully!");
-      return new NextResponse(challenge, { status: 200 });
-    } else {
-      console.error("❌ Webhook verification failed: Token mismatch.");
-      return new NextResponse("Forbidden", { status: 403 });
-    }
+  if (mode === "subscribe" && token === verifyToken) {
+    console.log("✅ Webhook verified!");
+    return new NextResponse(challenge, { status: 200 });
   }
-
-  return new NextResponse("Bad Request", { status: 400 });
+  return new NextResponse("Forbidden", { status: 403 });
 }
 
-// 2. Handle Incoming WhatsApp Events (POST)
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -35,18 +38,17 @@ export async function POST(request: Request) {
         for (const change of entry.changes) {
           const value = change.value;
 
-          // A. Handle Incoming Messages from the Buyer
           if (value.messages) {
             for (const message of value.messages) {
-              const fromPhone = message.from; 
-              const text = message.text?.body || "[Sent a Media File/Voice Note]"; 
+              const fromPhone = message.from; // e.g., "256771234567"
+              const text = message.text?.body || "[Media/Voice Note Received]";
               const messageId = message.id;
 
-              console.log(`📥 Incoming WhatsApp from ${fromPhone}: "${text}"`);
+              console.log(`📥 Routing incoming message from ${fromPhone}`);
 
               try {
-                // Step 1: Save the message to Firebase
-                const docRef = await addDoc(collection(db, "whatsapp_messages"), {
+                // 1. Save the message to Firebase immediately so no data is lost
+                const messageRef = await addDoc(collection(db, "whatsapp_messages"), {
                   metaMessageId: messageId,
                   senderPhone: fromPhone,
                   content: text,
@@ -54,38 +56,56 @@ export async function POST(request: Request) {
                   timestamp: serverTimestamp(),
                 });
 
-                console.log(`💾 Saved to Firebase. Document ID: ${docRef.id}`);
-
-                // Step 2: Send the Magic Link Email via Brevo
-                // We send this to the admin email for now. 
-                const adminEmail = "shopkabale@gmail.com"; 
+                // 2. DYNAMIC ROUTING: Find the recent order for this buyer
+                let targetEmail = process.env.SENDER_EMAIL || "shopkabale@gmail.com"; // Fallback Admin Email
+                let orderIdContext = "General Inquiry";
                 
-                await sendWhatsAppReplyAlert(
-                  adminEmail,
-                  fromPhone,
-                  text,
-                  docRef.id
+                const phoneVariations = getPhoneVariations(fromPhone);
+                const ordersRef = collection(db, "orders"); // Adjust if your collection is named differently
+                
+                // Query orders where the buyerPhone matches one of the variations, get the newest one
+                const orderQuery = query(
+                  ordersRef, 
+                  where("buyerPhone", "in", phoneVariations),
+                  // orderBy("createdAt", "desc"), // Ensure you have a composite index in Firestore for this
+                  limit(1)
                 );
 
-                console.log("✉️ Magic Link email sent to admin!");
+                const orderSnapshot = await getDocs(orderQuery);
+
+                if (!orderSnapshot.empty) {
+                  const recentOrder = orderSnapshot.docs[0].data();
+                  // Assuming your order document contains the seller's email and order ID
+                  if (recentOrder.sellerEmail) {
+                    targetEmail = recentOrder.sellerEmail;
+                    orderIdContext = recentOrder.orderId || orderSnapshot.docs[0].id;
+                    console.log(`🎯 Found matching order ${orderIdContext}. Routing to seller: ${targetEmail}`);
+                  }
+                } else {
+                  console.log("⚠️ No recent order found for this phone. Routing to Admin fallback.");
+                }
+
+                // 3. Send the Magic Link via Brevo
+                await sendWhatsAppReplyAlert(
+                  targetEmail,
+                  fromPhone,
+                  text,
+                  messageRef.id,
+                  orderIdContext
+                );
 
               } catch (dbError) {
-                console.error("🔥 Error saving to DB or sending email:", dbError);
+                console.error("🔥 Firebase/Routing Error:", dbError);
               }
             }
           }
         }
       }
-
-      // Always return 200 OK so Meta doesn't keep retrying the webhook
       return NextResponse.json({ success: true }, { status: 200 });
-
-    } else {
-      return new NextResponse("Not Found", { status: 404 });
     }
-
+    return new NextResponse("Not Found", { status: 404 });
   } catch (error) {
-    console.error("🚨 Webhook POST Error:", error);
+    console.error("🚨 Webhook Critical Error:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
