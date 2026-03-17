@@ -68,7 +68,6 @@ export default function AdminProductsPage() {
     setUpdatingId(productId);
 
     try {
-      // FIXED: Pointing exactly to /api/products/
       const res = await fetch(`/api/products/${productId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -98,7 +97,6 @@ export default function AdminProductsPage() {
     if (!confirm) return;
 
     try {
-      // FIXED: Pointing to /api/products/ and appending the proper isAdmin query params
       const res = await fetch(`/api/products/${productId}?isAdmin=true&adminId=${user.id}`, {
         method: "DELETE",
       });
@@ -131,17 +129,19 @@ export default function AdminProductsPage() {
                 <th className="px-6 py-4">Price</th>
                 <th className="px-6 py-4">Quick Category Fix</th>
                 <th className="px-6 py-4">Seller</th>
+                {/* NEW PHONE HEADER */}
+                <th className="px-6 py-4">Phone</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500">Loading products...</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500">Loading products...</td>
                 </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-slate-500 font-medium">No products found in the marketplace.</td>
+                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-medium">No products found in the marketplace.</td>
                 </tr>
               ) : (
                 products.map((product) => (
@@ -185,8 +185,24 @@ export default function AdminProductsPage() {
                     <td className="px-6 py-4">
                       <p className="text-sm font-semibold text-slate-700 truncate max-w-[120px]">{product.sellerName || "Unknown"}</p>
                     </td>
+
+                    {/* NEW PHONE CELL */}
+                    <td className="px-6 py-4">
+                      {product.sellerPhone ? (
+                        <div className="flex items-center gap-2">
+                          <span className="text-green-500 text-lg">📱</span>
+                          <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded border border-slate-200">
+                            {product.sellerPhone}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded border border-red-100 uppercase tracking-wider">
+                          No Phone
+                        </span>
+                      )}
+                    </td>
+
                     <td className="px-6 py-4 text-right whitespace-nowrap space-x-2">
-                      {/* Full Edit Link */}
                       <Link
                         href={`/admin/upload?edit=${product.publicId || product.id}`}
                         className="text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-2 rounded-lg transition-colors inline-block"
