@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
+import imageCompression from "browser-image-compression"; // Added client-side compression
 
 function AdminUploadContent() {
   const router = useRouter();
@@ -16,7 +17,8 @@ function AdminUploadContent() {
   const [loading, setLoading] = useState(false);
   const [initialFetchLoading, setInitialFetchLoading] = useState(!!editPublicId);
   const [successMessage, setSuccessMessage] = useState(""); 
-  const [isGeneratingAi, setIsGeneratingAi] = useState(false); // NEW: AI Loading state
+  const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false); // Added compression state
 
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -32,7 +34,7 @@ function AdminUploadContent() {
     quantity: "1",
     condition: "new",
     description: "",
-    metaDescription: "", // NEW: Added SEO field
+    metaDescription: "", 
     sellerPhone: "", 
   });
 
@@ -55,7 +57,7 @@ function AdminUploadContent() {
               quantity: data.stock !== undefined ? data.stock.toString() : "1",
               condition: data.condition || "new",
               description: data.description || "",
-              metaDescription: data.metaDescription || "", // NEW: Pre-fill SEO field
+              metaDescription: data.metaDescription || "",
               sellerPhone: data.sellerPhone || "",
             });
           }
@@ -70,7 +72,7 @@ function AdminUploadContent() {
   }, [editPublicId, user]);
 
   // ============================================================================
-  // AI GENERATION LOGIC (NEW)
+  // AI GENERATION LOGIC
   // ============================================================================
   const handleGenerateAI = async () => {
     if (!formData.title) {
@@ -80,7 +82,6 @@ function AdminUploadContent() {
 
     setIsGeneratingAi(true);
     try {
-      // Pass the title and category to give the AI context
       const response = await fetch("https://bio-generator.ali3nplumb3r.workers.dev/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -127,17 +128,36 @@ function AdminUploadContent() {
   }
 
   // ============================================================================
-  // UPLOAD / UPDATE LOGIC
+  // IMAGE HANDLING & CLIENT-SIDE COMPRESSION
   // ============================================================================
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files);
       if (existingImages.length + imageFiles.length + newFiles.length > 5) {
         alert("Maximum 5 images allowed total.");
         return;
       }
-      setImageFiles(prev => [...prev, ...newFiles]);
-      setImagePreviews(prev => [...prev, ...newFiles.map(file => URL.createObjectURL(file))]);
+
+      setIsCompressing(true);
+
+      try {
+        const options = {
+          maxSizeMB: 0.8, // 800KB Max
+          maxWidthOrHeight: 1200,
+          useWebWorker: true,
+        };
+
+        const compressedFilesPromises = newFiles.map(file => imageCompression(file, options));
+        const compressedFiles = await Promise.all(compressedFilesPromises);
+
+        setImageFiles(prev => [...prev, ...compressedFiles]);
+        setImagePreviews(prev => [...prev, ...compressedFiles.map(file => URL.createObjectURL(file))]);
+      } catch (error) {
+        console.error("Compression error:", error);
+        alert("There was an issue processing your images. Please try again.");
+      } finally {
+        setIsCompressing(false);
+      }
     }
   };
 
@@ -150,11 +170,19 @@ function AdminUploadContent() {
     setImagePreviews(prev => prev.filter((_, i) => i !== index));
   };
 
+  // ============================================================================
+  // UPLOAD / UPDATE LOGIC
+  // ============================================================================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (existingImages.length === 0 && imageFiles.length === 0) {
       alert("Please have at least one image.");
+      return;
+    }
+
+    if (isCompressing) {
+      alert("Please wait for your images to finish optimizing.");
       return;
     }
 
@@ -190,7 +218,13 @@ function AdminUploadContent() {
         });
 
         const uploadResults = await Promise.all(uploadPromises);
-        newlyUploadedUrls = uploadResults.map(data => data.secure_url).filter(url => url);
+        
+        // Cloudinary URL Optimization: Auto format, quality, and width capping
+        newlyUploadedUrls = uploadResults.map(data => {
+          const originalUrl = data.secure_url;
+          if (!originalUrl) return null;
+          return originalUrl.replace('/upload/', '/upload/f_auto,q_auto,w_800/');
+        }).filter(url => url) as string[];
       }
 
       const finalImagesList = [...existingImages, ...newlyUploadedUrls];
@@ -207,7 +241,7 @@ function AdminUploadContent() {
           stock: Number(formData.quantity),
           condition: formData.condition,
           description: formData.description,
-          metaDescription: formData.metaDescription, // NEW: Include SEO field in DB save
+          metaDescription: formData.metaDescription, 
           sellerPhone: formData.sellerPhone,
           images: finalImagesList,
           sellerId: user.id, 
@@ -238,7 +272,7 @@ function AdminUploadContent() {
             quantity: "1",
             condition: "new",
             description: "",
-            metaDescription: "", // NEW: Clear SEO field
+            metaDescription: "", 
             sellerPhone: prev.sellerPhone, 
           }));
           setImageFiles([]);
@@ -336,7 +370,7 @@ function AdminUploadContent() {
             </div>
           </div>
 
-          {/* NEW: AI GENERATION UI */}
+          {/* AI GENERATION UI */}
           <div className="pt-4 border-t border-slate-100">
             <div className="flex justify-between items-end mb-2">
               <label className="block text-sm font-semibold text-slate-900">Description *</label>
@@ -353,7 +387,7 @@ function AdminUploadContent() {
               value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Full product description..." />
           </div>
 
-          {/* NEW: SEO META DESCRIPTION FIELD */}
+          {/* SEO META DESCRIPTION FIELD */}
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">SEO Meta Description (for Google Search)</label>
             <textarea rows={2} maxLength={160} className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition-shadow text-sm"
@@ -386,17 +420,30 @@ function AdminUploadContent() {
             ))}
 
             {(existingImages.length + imageFiles.length) < 5 && (
-              <div onClick={() => fileInputRef.current?.click()} className="aspect-square rounded-xl border-2 border-dashed border-slate-300 flex flex-col items-center justify-center cursor-pointer hover:bg-amber-50 hover:border-[#D97706] transition-colors">
-                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mb-2"><span className="text-xl text-slate-500">+</span></div>
-                <span className="text-xs text-slate-600 font-bold">Add Photo</span>
+              <div 
+                onClick={() => !isCompressing && fileInputRef.current?.click()} 
+                className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-colors ${
+                  isCompressing 
+                    ? "border-slate-300 bg-slate-50 cursor-not-allowed" 
+                    : "border-slate-300 cursor-pointer hover:bg-amber-50 hover:border-[#D97706]"
+                }`}
+              >
+                {isCompressing ? (
+                  <div className="w-6 h-6 border-2 border-[#D97706] border-t-transparent rounded-full animate-spin mb-1"></div>
+                ) : (
+                  <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mb-2"><span className="text-xl text-slate-500">+</span></div>
+                )}
+                <span className="text-xs text-slate-600 font-bold">
+                  {isCompressing ? "Optimizing..." : "Add Photo"}
+                </span>
               </div>
             )}
           </div>
-          <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleImageSelect} />
+          <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleImageSelect} disabled={isCompressing} />
         </div>
 
         {/* DYNAMIC SUBMIT BUTTON */}
-        <button disabled={loading} type="submit" className="w-full bg-[#D97706] text-white py-5 rounded-xl font-black text-xl hover:bg-amber-600 transition-all hover:-translate-y-1 hover:shadow-xl disabled:opacity-70 disabled:hover:translate-y-0 flex justify-center items-center gap-3">
+        <button disabled={loading || isCompressing} type="submit" className="w-full bg-[#D97706] text-white py-5 rounded-xl font-black text-xl hover:bg-amber-600 transition-all hover:-translate-y-1 hover:shadow-xl disabled:opacity-70 disabled:hover:translate-y-0 flex justify-center items-center gap-3">
           {loading ? (
              <>
                <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
