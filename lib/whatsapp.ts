@@ -1,44 +1,42 @@
-// 1. Standard Text Message (Only works if user messaged you in last 24 hours)
+// lib/whatsapp.ts
+
+// 1. Standard Text Message (unchanged)
 export async function sendWhatsAppMessage(phoneNumber: string, messageText: string) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
-  if (!token || !phoneNumberId) {
-    console.error("Missing WhatsApp Cloud API credentials.");
-    throw new Error("Server configuration error");
-  }
+  if (!token || !phoneNumberId) throw new Error("Missing WhatsApp Cloud API credentials.");
 
   const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
-
   const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
 
   const payload = {
     messaging_product: "whatsapp",
     to: cleanPhoneNumber,
     type: "text",
-    text: {
-      body: messageText,
-    },
+    text: { body: messageText },
   };
 
   return await executeRequest(url, token, payload);
 }
 
-// 2. Template Message (Required for initiating conversations/alerts)
+// 2. Template Message (UPDATED: Added languageCode parameter)
 export async function sendWhatsAppTemplate(
   phoneNumber: string, 
   templateName: string, 
-  variables: string[]
+  variables: string[],
+  languageCode: string = "en_US" // <-- CRITICAL: Default to en_US for your template
 ) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
-  if (!token || !phoneNumberId) {
-    console.error("Missing WhatsApp Cloud API credentials.");
-    throw new Error("Server configuration error");
-  }
+  if (!token || !phoneNumberId) throw new Error("Missing WhatsApp Cloud API credentials.");
 
-  const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
+  // Format Ugandan numbers correctly for Meta
+  let cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
+  if (cleanPhoneNumber.startsWith('0')) {
+    cleanPhoneNumber = `256${cleanPhoneNumber.slice(1)}`;
+  }
 
   const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
 
@@ -48,11 +46,11 @@ export async function sendWhatsAppTemplate(
     type: "template",
     template: {
       name: templateName,
-      language: { code: "en" }, // Make sure this matches the language you selected in Meta
+      language: { code: languageCode }, 
       components: variables.length > 0 ? [
         {
           type: "body",
-          parameters: variables.map(text => ({ type: "text", text }))
+          parameters: variables.map(text => ({ type: "text", text: String(text) })) // Ensure variables are strings
         }
       ] : []
     }
@@ -61,7 +59,7 @@ export async function sendWhatsAppTemplate(
   return await executeRequest(url, token, payload);
 }
 
-// 3. Shared helper to execute the HTTP request cleanly
+// 3. Shared helper (unchanged)
 async function executeRequest(url: string, token: string, payload: any) {
   try {
     const response = await fetch(url, {
