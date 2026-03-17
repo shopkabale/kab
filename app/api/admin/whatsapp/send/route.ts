@@ -53,11 +53,11 @@ export async function POST(request: Request) {
 
     console.log(`✅ Message sent to ${toPhone} successfully! Meta ID:`, metaData.messages?.[0]?.id);
 
-    // 3. Save your outbound reply to Firebase (Optional but highly recommended)
-    // This gives you a history of what you replied to the customer.
+    // 3. Save your outbound reply to Firebase
+    // This gives you a history of what the seller replied to the customer.
     try {
       await addDoc(collection(db, "whatsapp_messages"), {
-        senderPhone: "Kabale Online (System)",
+        senderPhone: "Kabale Online (Seller/Admin)",
         recipientPhone: toPhone,
         content: text,
         status: "sent",
