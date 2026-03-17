@@ -158,7 +158,7 @@ export default function OfficialProductsManager() {
                     </td>
                     <td className="p-4 px-6 text-right">
                       <Link 
-                        href={`/admin/upload?edit=${product.publicId || product.id}`}
+                        href={`/admin/upload?edit=${product.id}`}
                         className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100 text-slate-600 hover:bg-[#D97706] hover:text-white transition-colors shadow-sm"
                         title="Edit Official Item"
                       >
