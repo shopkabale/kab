@@ -175,7 +175,8 @@ export async function sendWhatsAppReplyAlert(
   sellerEmail: string,
   buyerPhone: string,
   messageContent: string,
-  messageId: string
+  messageId: string,
+  orderId: string = "Recent Order" // ✅ 5th argument added here
 ) {
   const brevoApiKey = process.env.BREVO_API_KEY;
   const senderEmail = process.env.SENDER_EMAIL || "support@kabaleonline.com";
@@ -193,7 +194,7 @@ export async function sendWhatsAppReplyAlert(
     htmlContent: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; border-radius: 10px;">
         <h2 style="color: #D97706; margin-top: 0;">You have a new WhatsApp message!</h2>
-        <p>A customer has replied to an automated WhatsApp order notification.</p>
+        <p>A customer has replied to an automated WhatsApp order notification for <strong>${orderId}</strong>.</p>
         
         <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; border-left: 4px solid #D97706; margin: 20px 0; font-size: 16px; color: #333;">
           <p style="margin: 0; font-size: 12px; color: #64748b; margin-bottom: 8px;">Customer Phone: ${buyerPhone}</p>
