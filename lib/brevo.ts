@@ -95,11 +95,12 @@ export async function sendSellerNotification(
   };
 
   try {
-    await fetch("https://api.brevo.com/v3/smtp/email", {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: { "Content-Type": "application/json", "api-key": brevoApiKey, "accept": "application/json" },
       body: JSON.stringify(emailData),
     });
+    if (!response.ok) return false;
     return true;
   } catch (error) {
     console.error("Seller email failed:", error);
@@ -156,11 +157,12 @@ export async function sendAdminAlert(
   };
 
   try {
-    await fetch("https://api.brevo.com/v3/smtp/email", {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
       headers: { "Content-Type": "application/json", "api-key": brevoApiKey, "accept": "application/json" },
       body: JSON.stringify(emailData),
     });
+    if (!response.ok) return false;
     return true;
   } catch (error) {
     console.error("Admin alert failed:", error);
@@ -176,14 +178,13 @@ export async function sendWhatsAppReplyAlert(
   buyerPhone: string,
   messageContent: string,
   messageId: string,
-  orderId: string = "Recent Order" // ✅ 5th argument added here
+  orderId: string = "Recent Order"
 ) {
   const brevoApiKey = process.env.BREVO_API_KEY;
   const senderEmail = process.env.SENDER_EMAIL || "support@kabaleonline.com";
 
   if (!brevoApiKey || !sellerEmail) return false;
 
-  // Uses your live domain if available, otherwise defaults to localhost for testing
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
   const magicLink = `${baseUrl}/reply/${messageId}`;
 
@@ -216,14 +217,29 @@ export async function sendWhatsAppReplyAlert(
   };
 
   try {
-    await fetch("https://api.brevo.com/v3/smtp/email", {
+    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "api-key": brevoApiKey, "accept": "application/json" },
+      headers: { 
+        "Content-Type": "application/json", 
+        "api-key": brevoApiKey, 
+        "accept": "application/json" 
+      },
       body: JSON.stringify(emailData),
     });
+
+    // 🚨 THIS IS THE NEW ERROR CATCHER
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("🚨 REAL BREVO ERROR:", JSON.stringify(errorData, null, 2));
+      return false;
+    }
+
+    const successData = await response.json();
+    console.log("✅ Brevo actually accepted it! Message ID:", successData.messageId);
     return true;
-  } catch (error) {
-    console.error("Magic link email failed:", error);
+
+  } catch (error: any) {
+    console.error("❌ Network failed to reach Brevo:", error.message);
     return false;
   }
 }
