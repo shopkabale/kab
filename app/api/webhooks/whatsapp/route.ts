@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase/config";
-import { collection, addDoc, serverTimestamp, query, where, limit, getDocs } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase/admin";
+import * as admin from "firebase-admin"; // Needed for Admin serverTimestamp
 import { sendWhatsAppReplyAlert } from "@/lib/brevo";
 
 // Helper to normalize phone numbers for database lookups
@@ -37,7 +37,6 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    // 🚨 DIAGNOSTIC LOG 1: See exactly what Meta is sending us
     console.log("==========================================");
     console.log("🚨 RAW WEBHOOK RECEIVED FROM META:");
     console.log(JSON.stringify(body, null, 2));
@@ -48,7 +47,7 @@ export async function POST(request: Request) {
         for (const change of entry.changes) {
           const value = change.value;
 
-          // Check if this is an actual message (and not just a 'delivered' or 'read' receipt)
+          // Check if this is an actual message
           if (value.messages && value.messages.length > 0) {
             console.log(`✅ FOUND ${value.messages.length} INCOMING MESSAGE(S)`);
 
@@ -61,43 +60,44 @@ export async function POST(request: Request) {
 
               let savedDocId = "failed_to_save";
 
-              // 🔥 STEP 1: SAVE TO FIREBASE
+              // 🔥 STEP 1: SAVE TO FIREBASE (USING ADMIN SDK)
               try {
-                console.log("⏳ Saving message to Firebase...");
-                const docRef = await addDoc(collection(db, "whatsapp_messages"), {
+                console.log("⏳ Saving message to Firebase via Admin SDK...");
+                const docRef = await adminDb.collection("whatsapp_messages").add({
                   metaMessageId: messageId,
                   senderPhone: fromPhone,
                   content: text,
                   status: "unread",
-                  timestamp: serverTimestamp(),
+                  timestamp: admin.firestore.FieldValue.serverTimestamp(),
                 });
                 savedDocId = docRef.id;
-                console.log(`✅ Firebase Save SUCCESS! Document ID: ${savedDocId}`);
+                console.log(`✅ Admin Save SUCCESS! Document ID: ${savedDocId}`);
               } catch (dbError: any) {
                 console.error("❌ FIREBASE SAVE FAILED:", dbError.message);
-                // We do NOT throw here so the email can still try to send
               }
 
-              // 🔥 STEP 2: FIND THE SELLER EMAIL
-              let targetEmail = "shopkabale@gmail.com"; 
+              // 🔥 STEP 2: FIND THE SELLER EMAIL (USING ADMIN SDK)
+              let targetEmail = "shopkabale@gmail.com"; // Absolute fallback
               let orderIdContext = "General Inquiry";
               
               try {
                 console.log("⏳ Looking up recent order for phone:", fromPhone);
                 const phoneVariations = getPhoneVariations(fromPhone);
-                const orderQuery = query(
-                  collection(db, "orders"), 
-                  where("buyerPhone", "in", phoneVariations),
-                  limit(1)
-                );
-                const orderSnapshot = await getDocs(orderQuery);
+                
+                const orderSnapshot = await adminDb.collection("orders")
+                  .where("buyerPhone", "in", phoneVariations)
+                  .limit(1)
+                  .get();
 
                 if (!orderSnapshot.empty) {
                   const recentOrder = orderSnapshot.docs[0].data();
                   if (recentOrder.sellerEmail) {
                     targetEmail = recentOrder.sellerEmail;
+                    // Grab the custom order ID if it exists, otherwise use the document ID
                     orderIdContext = recentOrder.orderId || orderSnapshot.docs[0].id;
                     console.log(`🎯 Found matching order ${orderIdContext}. Routing to: ${targetEmail}`);
+                  } else {
+                    console.log(`⚠️ Order ${orderIdContext} found, but no sellerEmail attached.`);
                   }
                 } else {
                   console.log("⚠️ No recent order found. Routing to Admin fallback.");
@@ -116,13 +116,12 @@ export async function POST(request: Request) {
                   savedDocId,
                   orderIdContext
                 );
-                console.log("✅ Brevo Email SUCCESS!");
+                // We know Brevo handles its own error logging now, so if it finishes, we're good!
               } catch (emailError: any) {
                 console.error("❌ BREVO EMAIL FAILED:", emailError.message);
               }
             }
           } else if (value.statuses) {
-            // It's just a delivery receipt (sent, delivered, read)
             console.log(`ℹ️ Ignoring status update: ${value.statuses[0].status}`);
           } else {
             console.log("ℹ️ Webhook received, but no messages or statuses found.");
@@ -130,7 +129,6 @@ export async function POST(request: Request) {
         }
       }
       
-      // Always return 200 OK to Meta so they don't disable your webhook
       return NextResponse.json({ success: true }, { status: 200 });
 
     } else {
@@ -140,7 +138,6 @@ export async function POST(request: Request) {
 
   } catch (error: any) {
     console.error("🚨 FATAL WEBHOOK CRASH:", error.message);
-    // Still returning 200 sometimes prevents Meta from blocking the webhook during a code bug
     return NextResponse.json({ error: "Internal Server Error", details: error.message }, { status: 500 });
   }
 }
