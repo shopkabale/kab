@@ -79,7 +79,7 @@ export async function POST(request: Request) {
               }
 
               // 🔥 STEP 2: FIND THE SELLER EMAIL
-              let targetEmail = process.env.SENDER_EMAIL || "shopkabale@gmail.com"; 
+              let targetEmail = "shopkabale@gmail.com"; 
               let orderIdContext = "General Inquiry";
               
               try {
