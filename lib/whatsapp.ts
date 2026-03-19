@@ -1,6 +1,4 @@
-// lib/whatsapp.ts
-
-// 1. Standard Text Message (unchanged)
+// 1. Standard Text Message
 export async function sendWhatsAppMessage(phoneNumber: string, messageText: string) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -20,12 +18,12 @@ export async function sendWhatsAppMessage(phoneNumber: string, messageText: stri
   return await executeRequest(url, token, payload);
 }
 
-// 2. Template Message (UPDATED: Added languageCode parameter)
+// 2. Template Message 
 export async function sendWhatsAppTemplate(
   phoneNumber: string, 
   templateName: string, 
   variables: string[],
-  languageCode: string = "en_US" // <-- CRITICAL: Default to en_US for your template
+  languageCode: string = "en_US" 
 ) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -50,7 +48,7 @@ export async function sendWhatsAppTemplate(
       components: variables.length > 0 ? [
         {
           type: "body",
-          parameters: variables.map(text => ({ type: "text", text: String(text) })) // Ensure variables are strings
+          parameters: variables.map(text => ({ type: "text", text: String(text) })) 
         }
       ] : []
     }
@@ -59,7 +57,7 @@ export async function sendWhatsAppTemplate(
   return await executeRequest(url, token, payload);
 }
 
-// 3. Shared helper (unchanged)
+// 3. Shared helper
 async function executeRequest(url: string, token: string, payload: any) {
   try {
     const response = await fetch(url, {
