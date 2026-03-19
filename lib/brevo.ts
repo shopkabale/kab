@@ -7,7 +7,7 @@ export async function sendOrderConfirmation(
   totalAmount: number
 ) {
   const brevoApiKey = process.env.BREVO_API_KEY;
-  const senderEmail = process.env.SENDER_EMAIL || "noreply@kabaleonline.com";
+  const senderEmail = process.env.SENDER_EMAIL || "support@kabaleonline.com";
 
   if (!brevoApiKey) {
     console.error("Missing BREVO_API_KEY environment variable");
