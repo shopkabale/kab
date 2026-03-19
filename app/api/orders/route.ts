@@ -1,3 +1,4 @@
+// app/api/orders/route.ts
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { 
@@ -9,7 +10,7 @@ import {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
+
     // Extracted exactly what we need, NO delivery location
     const { 
       userId, 
@@ -38,7 +39,7 @@ export async function POST(request: Request) {
       if (buyerSnap.exists) {
         const buyerData = buyerSnap.data();
         buyerEmail = buyerData?.email || null;
-        
+
         // If frontend didn't send a name, use the one from their profile
         if (!guestName) {
           finalBuyerName = buyerData?.displayName || finalBuyerName;
@@ -49,20 +50,24 @@ export async function POST(request: Request) {
     // 3. Fetch Product & Seller Details
     const productSnap = await adminDb.collection("products").doc(productId).get();
     const productData = productSnap.exists ? productSnap.data() : null;
-    const itemName = productData?.name || "an item";
+    
+    // Safely look for 'name' or 'title' based on your DB schema
+    const itemName = productData?.name || productData?.title || "an item";
 
     let sellerEmail = productData?.sellerEmail;
     let sellerName = productData?.sellerName || "Seller";
     let sellerPhone = productData?.sellerPhone; 
 
-    // If details are missing on the product, try fetching from the users collection
+    // THE FIX: Fetch from users collection ONLY to fill in missing blanks
     if ((!sellerEmail || !sellerPhone) && sellerId && sellerId !== "SYSTEM") {
       const sellerSnap = await adminDb.collection("users").doc(sellerId).get();
       if (sellerSnap.exists) {
         const sData = sellerSnap.data();
-        sellerEmail = sData?.email || sellerEmail;
-        sellerName = sData?.displayName || sellerName;
-        sellerPhone = sData?.phone || sellerPhone; 
+        
+        // ONLY replace if the original product data was missing it!
+        if (!sellerEmail) sellerEmail = sData?.email;
+        if (!sellerName || sellerName === "Seller") sellerName = sData?.displayName || sellerName;
+        if (!sellerPhone) sellerPhone = sData?.phone; 
       }
     }
 
@@ -87,7 +92,7 @@ export async function POST(request: Request) {
     const notificationPromises = [];
 
     // --- EMAILS ---
-    
+
     if (buyerEmail) { 
       notificationPromises.push(
         sendOrderConfirmation(buyerEmail, finalBuyerName, orderNumber, Number(total))
@@ -121,10 +126,10 @@ export async function POST(request: Request) {
     );
 
     // --- WHATSAPP ---
-    
+
     const fallbackAdminPhone = "256759997376"; 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "http://localhost:3000";
-    
+
     notificationPromises.push(
       fetch(`${baseUrl}/api/orders/notify`, {
         method: 'POST',
