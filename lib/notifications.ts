@@ -1,4 +1,3 @@
-// lib/notifications.ts
 import { sendWhatsAppTemplate } from "./whatsapp";
 
 const sendMultiple = async (messages: Promise<any>[]) => {
@@ -11,7 +10,6 @@ const sendMultiple = async (messages: Promise<any>[]) => {
 };
 
 export const NotificationService = {
-  // UPDATED: Added buyerName and orderNumber to match your Meta template
   async orderCreated(
     sellerPhone: string, 
     buyerPhone: string, 
@@ -20,11 +18,11 @@ export const NotificationService = {
     orderNumber: string
   ) {
     await sendMultiple([
-      // Seller Template: Unverified, using 1 variable [productName]
-      sendWhatsAppTemplate(sellerPhone, "order_created_seller", [productName], "en_US"),
-      
-      // Buyer Template: VERIFIED, using 2 variables: [{{1}} Name, {{2}} OrderNumber]
-      sendWhatsAppTemplate(buyerPhone, "order_received_buyer", [buyerName || "Customer", orderNumber], "en_US")
+      // Seller Template: Verified, uses 1 variable in the body for the product name
+      sendWhatsAppTemplate(sellerPhone, "new_order_notification", [productName], "en_US"),
+
+      // Buyer Template: Verified, uses 2 variables in the body for buyer name and order number
+      sendWhatsAppTemplate(buyerPhone, "order_confirmation_buyer", [buyerName || "Customer", orderNumber], "en_US")
     ]);
   },
 
