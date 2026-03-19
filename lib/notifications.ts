@@ -1,13 +1,5 @@
+// lib/notifications.ts
 import { sendWhatsAppTemplate } from "./whatsapp";
-
-const sendMultiple = async (messages: Promise<any>[]) => {
-  const results = await Promise.allSettled(messages);
-  results.forEach((result) => {
-    if (result.status === "rejected") {
-      console.error("Notification delivery failed:", result.reason);
-    }
-  });
-};
 
 export const NotificationService = {
   async orderCreated(
@@ -17,29 +9,62 @@ export const NotificationService = {
     buyerName: string, 
     orderNumber: string
   ) {
-    await sendMultiple([
-      // Seller Template: Verified, uses 1 variable in the body for the product name
-      sendWhatsAppTemplate(sellerPhone, "new_order_notification", [productName], "en_US"),
+    console.log(`[WhatsApp Trigger] New Order: ${orderNumber}`);
 
-      // Buyer Template: Verified, uses 2 variables in the body for buyer name and order number
-      sendWhatsAppTemplate(buyerPhone, "order_confirmation_buyer", [buyerName || "Customer", orderNumber], "en_US")
-    ]);
+    // ==========================================
+    // 1. SEND TO SELLER (new_order_notification)
+    // ==========================================
+    try {
+      console.log(`-> Attempting to notify SELLER at ${sellerPhone}...`);
+      
+      // Sending 1 variable [productName] mapped to {{1}} in your Meta template
+      await sendWhatsAppTemplate(sellerPhone, "new_order_notification", [productName], "en_US");
+      
+      console.log("✅ SELLER notification sent successfully!");
+    } catch (error: any) {
+      console.error("❌ SELLER NOTIFICATION FAILED!");
+      console.error("Meta API Error:", error.message || error);
+    }
+
+    // ==========================================
+    // 2. SEND TO BUYER (order_confirmation_buyer)
+    // ==========================================
+    try {
+      console.log(`-> Attempting to notify BUYER at ${buyerPhone}...`);
+      
+      // Sending 2 variables [buyerName, orderNumber] mapped to {{1}} and {{2}}
+      await sendWhatsAppTemplate(buyerPhone, "order_confirmation_buyer", [buyerName || "Customer", orderNumber], "en_US");
+      
+      console.log("✅ BUYER notification sent successfully!");
+    } catch (error: any) {
+      console.error("❌ BUYER NOTIFICATION FAILED!");
+      console.error("Meta API Error:", error.message || error);
+    }
   },
 
-  // Placeholders remain unchanged
   async orderAccepted(buyerPhone: string, productName: string) {
     console.log("Order Accepted triggered");
   },
+
   async orderReady(buyerPhone: string, agentPhone: string | null, productName: string) {
     console.log("Order Ready triggered");
   },
+
   async orderDelivered(buyerPhone: string, sellerPhone: string, productName: string) {
     console.log("Order Delivered triggered");
   },
+
   async orderCancelled(buyerPhone: string, sellerPhone: string, productName: string) {
     console.log("Order Cancelled triggered");
   },
+
   async buyerInquiry(sellerPhone: string, productName: string) {
-    await sendWhatsAppTemplate(sellerPhone, "buyer_inquiry", [productName], "en_US");
+    try {
+      await sendWhatsAppTemplate(sellerPhone, "buyer_inquiry", [productName], "en_US");
+      console.log("✅ BUYER INQUIRY sent successfully!");
+    } catch (error: any) {
+      console.error("❌ BUYER INQUIRY FAILED!");
+      console.error("Meta API Error:", error.message || error);
+    }
   }
 };
