@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { collection, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase"; 
+import { adminDb } from "@/lib/firebase/admin"; // <--- YOUR CORRECT ADMIN IMPORT
 
 export async function GET(req: Request) {
   try {
-    // 1. Read the secret from the URL you pasted
+    // 1. Read the secret from the URL
     const { searchParams } = new URL(req.url);
     const secret = searchParams.get("secret");
 
@@ -19,9 +18,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Missing BREVO_API_KEY" }, { status: 500 });
     }
 
-    // 2. Fetch users
-    const usersRef = collection(db, "users");
-    const snapshot = await getDocs(usersRef);
+    // 2. Fetch users using Firebase ADMIN SDK
+    const snapshot = await adminDb.collection("users").get();
     
     const allEmails: string[] = [];
     snapshot.forEach((doc) => {
@@ -100,7 +98,7 @@ export async function GET(req: Request) {
       } catch (err) {
         failedBatches.push(i / chunkSize + 1);
       }
-      // Wait 1 second between batches
+      // Wait 1 second between batches to keep Brevo happy
       await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
