@@ -19,7 +19,7 @@ export default function ProductActions({ product }: { product: Product }) {
 
   // Status checks
   const isSoldOut = product.stock <= 0 || product.status === "sold_out";
-  const isReserved = product.locked === true;
+  const isReserved = (product as any).locked === true;
   const isUnavailable = isSoldOut || isReserved;
 
   const formatWhatsAppNumber = (phone: string) => {
@@ -81,6 +81,13 @@ export default function ProductActions({ product }: { product: Product }) {
       return;  
     }  
 
+    // 🔥 NEW: Strict Phone Number Validation (Must be at least 10 digits)
+    const cleanPhone = contactPhone.replace(/\D/g, ""); // Strips spaces, dashes, etc.
+    if (cleanPhone.length < 10) {
+      alert("Please enter a valid 10-digit phone number (e.g., 077... or 075...).");
+      return;
+    }
+
     setLoading(true);  
 
     try {  
@@ -89,11 +96,11 @@ export default function ProductActions({ product }: { product: Product }) {
         headers: { "Content-Type": "application/json" },  
         body: JSON.stringify({  
           userId: user ? user.id : "GUEST",  
-          buyerName: buyerName, 
+          buyerName: buyerName.trim(), 
           productId: product.id,  
           sellerId: product.sellerId || "SYSTEM",  
           total: product.price,  
-          contactPhone: contactPhone,  
+          contactPhone: contactPhone.trim(),  
         }),  
       });  
 
