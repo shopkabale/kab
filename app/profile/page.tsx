@@ -35,7 +35,7 @@ export default function ProfilePage() {
       return;
     }
 
-    // 1. Fetch Orders (🔥 Added cache-busting to prevent stale data on refresh)
+    // 1. Fetch Orders 
     const fetchOrders = async () => {
       try {
         const res = await fetch(`/api/orders/user?userId=${user.id}&t=${Date.now()}`, {
@@ -50,7 +50,7 @@ export default function ProfilePage() {
       } finally { setLoadingOrders(false); }
     };
 
-    // 2. Fetch Listings (🔥 Added cache-busting so Urgency toggles persist on refresh)
+    // 2. Fetch Listings
     const fetchListings = async () => {
       try {
         const res = await fetch(`/api/products/user?userId=${user.id}&t=${Date.now()}`, {
@@ -65,7 +65,7 @@ export default function ProfilePage() {
       } finally { setLoadingListings(false); }
     };
 
-    // 3. Fetch Wishlist (⚡ Real-time listener from Firestore)
+    // 3. Fetch Wishlist
     const fetchWishlist = () => {
       const wishlistRef = collection(db, "users", user.id, "wishlist");
       const q = query(wishlistRef, orderBy("savedAt", "desc"));
@@ -91,7 +91,18 @@ export default function ProfilePage() {
     };
   }, [user, authLoading]);
 
-  // Handle removing a saved item directly from the profile
+  // SMART UI LOGIC: Check if user is an active seller
+  const isSeller = listings.length > 0;
+
+  // SMART UI LOGIC: If a seller deletes their last item while on a seller tab, kick them back to purchases
+  useEffect(() => {
+    if (!loadingListings && !isSeller && (activeTab === "listings" || activeTab === "seller")) {
+      setActiveTab("purchases");
+    }
+  }, [isSeller, loadingListings, activeTab]);
+
+
+  // Handle removing a saved item
   const handleRemoveSaved = async (productId: string) => {
     if (!user) return;
     try {
@@ -102,16 +113,14 @@ export default function ProfilePage() {
     }
   };
 
-  // 🔥 THE URGENT TOGGLE LOGIC 🔥
+  // Toggle Urgency
   const handleToggleUrgent = async (product: any) => {
     if (!user) return;
-    
+
     const now = Date.now();
-    // Check if it's currently urgent
     const isCurrentlyUrgent = product.isUrgent === true && product.urgentExpiresAt && product.urgentExpiresAt > now;
-    
     const newIsUrgent = !isCurrentlyUrgent;
-    const newExpiresAt = newIsUrgent ? now + (24 * 60 * 60 * 1000) : null; // 24 hours from now or null
+    const newExpiresAt = newIsUrgent ? now + (24 * 60 * 60 * 1000) : null; 
 
     try {
       const productRef = doc(db, "products", product.id);
@@ -120,7 +129,6 @@ export default function ProfilePage() {
         urgentExpiresAt: newExpiresAt
       });
 
-      // Instantly update the local UI without needing a refresh
       setListings(prev => prev.map(item => 
         item.id === product.id 
           ? { ...item, isUrgent: newIsUrgent, urgentExpiresAt: newExpiresAt }
@@ -179,7 +187,7 @@ export default function ProfilePage() {
     <div className="py-8 max-w-4xl mx-auto px-4 sm:px-0">
 
       {/* Profile Header */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 mb-8 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 mb-6 flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
         {user.photoURL ? (
           <Image src={user.photoURL} alt={safeDisplayName} width={96} height={96} className="rounded-full border-4 border-slate-50 object-cover shadow-sm flex-shrink-0" />
         ) : (
@@ -208,6 +216,34 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* 🔥 SMART SELLER HUB BANNER (Only shows if they have listings) 🔥 */}
+      {!loadingListings && isSeller && (
+        <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 sm:p-6 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+          <div className="text-center sm:text-left">
+            <h3 className="text-lg font-bold text-amber-900 flex items-center justify-center sm:justify-start gap-2">
+              <span>🛍️</span> Seller Hub
+            </h3>
+            <p className="text-amber-700 text-sm mt-1 font-medium">
+              Manage your <strong className="text-amber-900">{listings.length} active products</strong>, track orders, and view stats.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+            <button 
+              onClick={() => setActiveTab('listings')} 
+              className="bg-white text-amber-800 border border-amber-300 px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-amber-100 transition-colors active:scale-95 flex-1 sm:flex-none"
+            >
+              Manage Ads
+            </button>
+            <button 
+              onClick={() => setActiveTab('seller')} 
+              className="bg-[#D97706] text-white px-5 py-2.5 rounded-xl font-bold text-sm hover:bg-amber-600 transition-colors shadow-sm active:scale-95 flex-1 sm:flex-none"
+            >
+              Orders & Stats 📈
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex overflow-x-auto border-b border-slate-200 mb-8 no-scrollbar scroll-smooth">
         <button 
@@ -226,21 +262,26 @@ export default function ProfilePage() {
           <span className="opacity-70">({savedItems.length})</span>
         </button>
 
-        <button 
-          onClick={() => setActiveTab("listings")} 
-          className={`shrink-0 px-4 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center border-b-2 transition-colors flex flex-col sm:flex-row items-center justify-center gap-1 ${activeTab === "listings" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
-        >
-          <span>My Ads</span>
-          <span className="opacity-70">({listings.length})</span>
-        </button>
+        {/* ONLY show these tabs in the bar if they are a seller */}
+        {isSeller && (
+          <>
+            <button 
+              onClick={() => setActiveTab("listings")} 
+              className={`shrink-0 px-4 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center border-b-2 transition-colors flex flex-col sm:flex-row items-center justify-center gap-1 ${activeTab === "listings" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+            >
+              <span>My Ads</span>
+              <span className="opacity-70">({listings.length})</span>
+            </button>
 
-        <button 
-          onClick={() => setActiveTab("seller")} 
-          className={`shrink-0 px-4 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center border-b-2 transition-colors flex flex-col sm:flex-row items-center justify-center gap-1 ${activeTab === "seller" ? "border-amber-500 text-amber-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
-        >
-          <span>Dashboard</span>
-          <span>📈</span>
-        </button>
+            <button 
+              onClick={() => setActiveTab("seller")} 
+              className={`shrink-0 px-4 sm:px-6 py-4 text-xs sm:text-sm font-bold text-center border-b-2 transition-colors flex flex-col sm:flex-row items-center justify-center gap-1 ${activeTab === "seller" ? "border-amber-500 text-amber-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}
+            >
+              <span>Dashboard</span>
+              <span>📈</span>
+            </button>
+          </>
+        )}
       </div>
 
       <div className="min-h-[400px]">
@@ -278,6 +319,7 @@ export default function ProfilePage() {
                          safeStatus === 'pending' ? 'bg-amber-100 text-amber-800' :
                          safeStatus === 'confirmed' ? 'bg-blue-100 text-blue-800' :
                          safeStatus === 'out_for_delivery' ? 'bg-purple-100 text-purple-800' :
+                         safeStatus === 'cancelled' ? 'bg-red-100 text-red-800' :
                          'bg-green-100 text-green-800'
                        }`}>
                          {safeStatus.replace(/_/g, ' ')}
@@ -347,33 +389,20 @@ export default function ProfilePage() {
         )}
 
         {/* === LISTINGS TAB === */}
-        {activeTab === "listings" && (
+        {activeTab === "listings" && isSeller && (
           <div>
-            {loadingListings ? (
-              <div className="text-center py-12 text-slate-500 font-medium">Loading your items...</div>
-            ) : listings.length === 0 ? (
-              <div className="bg-slate-50 rounded-2xl border border-slate-200 border-dashed p-12 text-center max-w-lg mx-auto shadow-inner">
-                <span className="text-5xl block mb-4">📢</span>
-                <p className="text-slate-600 mb-6 font-medium text-lg">You haven't posted any items for sale yet.</p>
-                <Link href="/sell" className="inline-block bg-slate-900 text-white px-6 py-2 rounded-lg font-bold text-sm hover:bg-slate-800 transition-colors shadow-md active:scale-95">
-                  Post Your First Ad
-                </Link>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {listings.map((product) => {
                   const safeName = product.name || "Unnamed Item";
                   const safePrice = Number(product.price) || 0;
                   const safeId = product.publicId || product.id;
                   const hasImages = Array.isArray(product.images) && product.images.length > 0;
-                  
-                  // 🔥 Check if it's currently urgent
+
                   const isCurrentlyUrgent = product.isUrgent === true && product.urgentExpiresAt && product.urgentExpiresAt > Date.now();
 
                   return (
                     <div key={product.id} className="bg-white rounded-xl shadow-sm border border-slate-200 p-3 flex flex-col gap-3 hover:shadow-md transition-shadow relative">
-                      
-                      {/* Show visual indicator on the card if it's currently urgent */}
+
                       {isCurrentlyUrgent && (
                         <div className="absolute top-4 right-4 z-10 bg-gradient-to-tr from-amber-400 to-rose-500 text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md animate-pulse">
                           Urgent
@@ -397,10 +426,7 @@ export default function ProfilePage() {
                         </div>
                       </div>
 
-                      {/* 🔥 THE ACTIONS ROW WITH THE URGENCY TOGGLE 🔥 */}
                       <div className="flex flex-col border-t border-slate-100 pt-3 mt-1 gap-2">
-                        
-                        {/* Toggle Button */}
                         <button 
                           onClick={() => handleToggleUrgent(product)}
                           className={`w-full text-[11px] font-bold py-2 rounded-lg border transition-all flex items-center justify-center gap-1.5 shadow-sm active:scale-95 ${
@@ -416,7 +442,6 @@ export default function ProfilePage() {
                           )}
                         </button>
 
-                        {/* Edit & Delete */}
                         <div className="flex items-center justify-between gap-2 pt-0.5">
                           <Link 
                             href={`/edit/${safeId}`}
@@ -437,12 +462,11 @@ export default function ProfilePage() {
                   );
                 })}
               </div>
-            )}
           </div>
         )}
 
         {/* === SELLER DASHBOARD TAB === */}
-        {activeTab === "seller" && (
+        {activeTab === "seller" && isSeller && (
           <SellerDashboard userId={user.id} />
         )}
 
