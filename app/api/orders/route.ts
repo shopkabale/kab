@@ -1,158 +1,126 @@
-// app/api/orders/route.ts
+// app/api/admin/orders/route.ts
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
-import { 
-  sendOrderConfirmation, 
-  sendSellerNotification, 
-  sendAdminAlert 
-} from "@/lib/brevo";
+import { FieldValue } from "firebase-admin/firestore";
+import { sendStatusUpdateEmail } from "@/lib/brevo";
 
-export async function POST(request: Request) {
+export async function PATCH(request: Request) {
   try {
-    const body = await request.json();
+    const { adminId, orderId, newStatus } = await request.json();
 
-    // Extracted exactly what we need, NO delivery location
-    const { 
-      userId, 
-      productId, 
-      sellerId, 
-      total, 
-      contactPhone, 
-      items, 
-      buyerName: guestName 
-    } = body;
-
-    if (!userId || !productId) {
-      return NextResponse.json({ error: "Missing user or product ID" }, { status: 400 });
+    if (!adminId || !orderId || !newStatus) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // 1. Generate a beautiful Kabale Order Number
-    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
+    // 1. Verify the user is actually an admin
+    const adminSnap = await adminDb.collection("users").doc(adminId).get();
+    if (!adminSnap.exists || adminSnap.data()?.role !== "admin") {
+      return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+    }
 
-    // 2. Fetch Buyer Details (Guest-Safe Logic)
     let buyerEmail = null;
-    let finalBuyerName = guestName || "Valued Customer";
+    let buyerName = "Valued Customer";
+    let orderNumber = "";
 
-    // Only query Firebase if they are NOT a guest
-    if (userId !== "GUEST") {
-      const buyerSnap = await adminDb.collection("users").doc(userId).get();
-      if (buyerSnap.exists) {
-        const buyerData = buyerSnap.data();
-        buyerEmail = buyerData?.email || null;
+    // 2. Perform the stock, lock, and status updates atomically
+    await adminDb.runTransaction(async (transaction) => {
+      const orderRef = adminDb.collection("orders").doc(orderId);
+      const orderSnap = await transaction.get(orderRef);
+      
+      if (!orderSnap.exists) {
+        throw new Error("Order not found");
+      }
+      
+      const orderData = orderSnap.data()!;
+      
+      // Save details for the email notification later
+      buyerEmail = orderData.buyerEmail || null;
+      buyerName = orderData.buyerName || buyerName;
+      orderNumber = orderData.orderNumber;
 
-        // If frontend didn't send a name, use the one from their profile
-        if (!guestName) {
-          finalBuyerName = buyerData?.displayName || finalBuyerName;
+      // Ensure items array exists and has at least one product
+      if (!orderData.items || orderData.items.length === 0) {
+        throw new Error("Order has no items");
+      }
+
+      const productId = orderData.items[0].productId; 
+      const productRef = adminDb.collection("products").doc(productId);
+      const productSnap = await transaction.get(productRef);
+
+      // 3. Status Behavior Rules
+      if (newStatus === "cancelled") {
+        // Unlock the product and restore the stock
+        transaction.update(productRef, {
+          stock: FieldValue.increment(1),
+          locked: false,
+          status: "available",
+          updatedAt: Date.now()
+        });
+      } 
+      else if (newStatus === "delivered" && productSnap.exists) {
+        // Keep locked. If stock is 0, mark as sold out
+        const productData = productSnap.data()!;
+        if (productData.stock <= 0) {
+          transaction.update(productRef, { 
+            status: "sold_out", 
+            updatedAt: Date.now() 
+          });
         }
       }
+
+      // 4. Update the order itself
+      transaction.update(orderRef, {
+        status: newStatus,
+        updatedAt: Date.now()
+      });
+    });
+
+    // 5. Send Status Update Email (Outside the transaction for speed/reliability)
+    if (buyerEmail) {
+      // We don't await this so the admin UI updates instantly while the email sends in the background
+      sendStatusUpdateEmail(buyerEmail, buyerName, orderNumber, newStatus)
+        .catch(err => console.error("Failed to send status update email:", err));
     }
 
-    // 3. Fetch Product & Seller Details
-    const productSnap = await adminDb.collection("products").doc(productId).get();
-    const productData = productSnap.exists ? productSnap.data() : null;
-    
-    // Safely look for 'name' or 'title' based on your DB schema
-    const itemName = productData?.name || productData?.title || "an item";
+    return NextResponse.json({ success: true }, { status: 200 });
 
-    let sellerEmail = productData?.sellerEmail;
-    let sellerName = productData?.sellerName || "Seller";
-    let sellerPhone = productData?.sellerPhone; 
-
-    // THE FIX: Fetch from users collection ONLY to fill in missing blanks
-    if ((!sellerEmail || !sellerPhone) && sellerId && sellerId !== "SYSTEM") {
-      const sellerSnap = await adminDb.collection("users").doc(sellerId).get();
-      if (sellerSnap.exists) {
-        const sData = sellerSnap.data();
-        
-        // ONLY replace if the original product data was missing it!
-        if (!sellerEmail) sellerEmail = sData?.email;
-        if (!sellerName || sellerName === "Seller") sellerName = sData?.displayName || sellerName;
-        if (!sellerPhone) sellerPhone = sData?.phone; 
-      }
-    }
-
-    // 4. Save the Order to Firebase
-    const orderData = {
-      orderNumber,
-      userId,
-      buyerName: finalBuyerName, 
-      sellerId: sellerId || "SYSTEM",
-      items: items || [{ productId, quantity: 1, price: total }],
-      total: Number(total),
-      paymentMethod: "cash_on_delivery",
-      status: "pending",
-      contactPhone: contactPhone || "",
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-
-    const docRef = await adminDb.collection("orders").add(orderData);
-
-    // 5. Fire off all Notifications Concurrently
-    const notificationPromises = [];
-
-    // --- EMAILS ---
-
-    if (buyerEmail) { 
-      notificationPromises.push(
-        sendOrderConfirmation(buyerEmail, finalBuyerName, orderNumber, Number(total))
-          .catch(err => console.error("Buyer Email Error:", err))
-      );
-    }
-
-    if (sellerEmail) {
-      notificationPromises.push(
-        sendSellerNotification(
-          sellerEmail, 
-          sellerName, 
-          itemName, 
-          finalBuyerName, 
-          contactPhone || "No phone"
-        ).catch(err => console.error("Seller Email Error:", err))
-      );
-    }
-
-    // Admin alert (with all the detailed cards)
-    notificationPromises.push(
-      sendAdminAlert(
-        orderNumber, 
-        itemName, 
-        Number(total), 
-        finalBuyerName, 
-        contactPhone || "No phone",
-        sellerName,
-        sellerPhone || "No phone"
-      ).catch(err => console.error("Admin Email Error:", err))
+  } catch (error: any) {
+    console.error("Status update error:", error);
+    return NextResponse.json(
+      { error: error.message || "Failed to update status" }, 
+      { status: 500 }
     );
+  }
+}
 
-    // --- WHATSAPP ---
+// Keep the GET route here if you already have it for fetching orders
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const adminId = searchParams.get("adminId");
 
-    const fallbackAdminPhone = "256759997376"; 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "http://localhost:3000";
+    if (!adminId) {
+      return NextResponse.json({ error: "Missing admin ID" }, { status: 400 });
+    }
 
-    notificationPromises.push(
-      fetch(`${baseUrl}/api/orders/notify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          eventType: "ORDER_CREATED",
-          payload: {
-            productName: itemName,
-            buyerPhone: contactPhone,
-            sellerPhone: sellerPhone || fallbackAdminPhone,
-            buyerName: finalBuyerName, 
-            orderNumber: orderNumber   
-          }
-        })
-      }).catch(err => console.error("WhatsApp Trigger Error:", err))
-    );
+    const adminSnap = await adminDb.collection("users").doc(adminId).get();
+    if (!adminSnap.exists || adminSnap.data()?.role !== "admin") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
 
-    await Promise.allSettled(notificationPromises);
+    // Fetch all orders ordered by creation date
+    const ordersSnap = await adminDb.collection("orders")
+      .orderBy("createdAt", "desc")
+      .get();
 
-    return NextResponse.json({ success: true, orderId: docRef.id }, { status: 200 });
+    const orders = ordersSnap.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
 
+    return NextResponse.json({ orders }, { status: 200 });
   } catch (error) {
-    console.error("Order creation error:", error);
-    return NextResponse.json({ error: "Failed to place order" }, { status: 500 });
+    console.error("Failed to fetch admin orders:", error);
+    return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
   }
 }
