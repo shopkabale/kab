@@ -22,12 +22,15 @@ export default function ProductActions({ product }: { product: Product }) {
   const [isLocked, setIsLocked] = useState((product as any).locked === true);
   const [productStatus, setProductStatus] = useState(product.status);
 
-  // Sync state if Next.js passes in fresh props after initial hydration
+  // Sync state and forcefully bust the Next.js router cache
   useEffect(() => {
+    // This line forces the page to fetch fresh data from the server
+    router.refresh(); 
+
     setCurrentStock(Number(product.stock) || 0);
     setIsLocked((product as any).locked === true);
     setProductStatus(product.status);
-  }, [product.stock, (product as any).locked, product.status]);
+  }, [product.stock, (product as any).locked, product.status, router]);
 
   const isSoldOut = currentStock <= 0 || productStatus === "sold_out";
   const isReserved = isLocked;
