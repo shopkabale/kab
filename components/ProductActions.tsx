@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Product } from "@/types";
+import { doc, getDoc } from "firebase/firestore"; 
+import { db } from "@/lib/firebase/config"; // 🔥 IMPORTANT: Check that this path matches your firebase client file
 
 export default function ProductActions({ product }: { product: Product }) {
   const { user } = useAuth();
@@ -17,20 +19,31 @@ export default function ProductActions({ product }: { product: Product }) {
   const [buyerName, setBuyerName] = useState(""); 
   const [copied, setCopied] = useState(false);
 
-  // 🔥 THE FIX: Force state-based evaluation to break Next.js client caching
+  // Initialize with what the server passed, but we will overwrite it immediately
   const [currentStock, setCurrentStock] = useState(Number(product.stock) || 0);
   const [isLocked, setIsLocked] = useState((product as any).locked === true);
   const [productStatus, setProductStatus] = useState(product.status);
 
-  // Sync state and forcefully bust the Next.js router cache
+  // 🔥 THE TRUE FIX: Fetch live data directly from Firestore on page load
   useEffect(() => {
-    // This line forces the page to fetch fresh data from the server
-    router.refresh(); 
+    const fetchLiveStock = async () => {
+      try {
+        const docRef = doc(db, "products", product.id);
+        const snap = await getDoc(docRef);
+        
+        if (snap.exists()) {
+          const liveData = snap.data();
+          setCurrentStock(Number(liveData.stock) || 0);
+          setIsLocked(liveData.locked === true);
+          setProductStatus(liveData.status);
+        }
+      } catch (error) {
+        console.error("Failed to fetch live stock from database:", error);
+      }
+    };
 
-    setCurrentStock(Number(product.stock) || 0);
-    setIsLocked((product as any).locked === true);
-    setProductStatus(product.status);
-  }, [product.stock, (product as any).locked, product.status, router]);
+    fetchLiveStock();
+  }, [product.id]); // Only runs once when the component mounts
 
   const isSoldOut = currentStock <= 0 || productStatus === "sold_out";
   const isReserved = isLocked;
@@ -95,8 +108,7 @@ export default function ProductActions({ product }: { product: Product }) {
       return;  
     }  
 
-    // Strict Phone Number Validation (Must be at least 10 digits)
-    const cleanPhone = contactPhone.replace(/\D/g, ""); // Strips spaces, dashes, etc.
+    const cleanPhone = contactPhone.replace(/\D/g, ""); 
     if (cleanPhone.length < 10) {
       alert("Please enter a valid 10-digit phone number (e.g., 077... or 075...).");
       return;
@@ -124,9 +136,17 @@ export default function ProductActions({ product }: { product: Product }) {
         setShowModal(false);  
         router.push(`/success/${data.orderId}`);  
       } else {  
-        // Handle specific lock/stock errors gracefully
+        // We catch the API error and force the component to re-check the live stock
         alert(data.error || "Failed to place order. The item might have just been taken.");  
         setShowModal(false);
+        
+        // Fetch fresh data so the button greys out instantly if it was just taken
+        const docRef = doc(db, "products", product.id);
+        const snap = await getDoc(docRef);
+        if (snap.exists()) {
+          setCurrentStock(Number(snap.data().stock) || 0);
+          setIsLocked(snap.data().locked === true);
+        }
       }  
     } catch (error) {  
       console.error(error);  
@@ -164,7 +184,7 @@ export default function ProductActions({ product }: { product: Product }) {
     }
   };
 
-  // Determine Primary Button Label & Styles dynamically based on current state
+  // Determine Primary Button Label & Styles dynamically based on current live state
   let primaryButtonLabel = "Buy Now (Fast Checkout)";
   let primaryButtonClass = "bg-slate-900 text-white hover:bg-slate-800 shadow-md";
 
@@ -173,7 +193,6 @@ export default function ProductActions({ product }: { product: Product }) {
     primaryButtonClass = "bg-slate-900 text-white opacity-70 cursor-wait";
   } else if (isSoldOut) {
     primaryButtonLabel = "❌ Sold Out";
-    // Crucial: We remove the hover colors here so it looks completely dead
     primaryButtonClass = "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none";
   } else if (isReserved) {
     primaryButtonLabel = "⚡ Reserved (Pending Order)";
