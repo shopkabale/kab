@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
+import { revalidatePath } from "next/cache"; // 🔥 ADDED THIS IMPORT
 import {
   sendOrderConfirmation,
   sendSellerNotification,
@@ -9,7 +10,7 @@ import {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    
+
     // Extract everything, handling both Fast Checkout and standard Cart structures
     const { 
       userId, 
@@ -52,6 +53,7 @@ export async function POST(request: Request) {
     let sellerEmail = null;
     let sellerName = "Seller";
     let sellerPhone = null;
+    let productPublicId = actualProductId; // 🔥 Variable to store publicId for cache busting
 
     // 3. ATOMIC TRANSACTION (With BULLETPROOF math for stock)
     await adminDb.runTransaction(async (transaction) => {
@@ -67,6 +69,9 @@ export async function POST(request: Request) {
       sellerEmail = productData?.sellerEmail;
       sellerName = productData?.sellerName || "Seller";
       sellerPhone = productData?.sellerPhone;
+      
+      // Grab the publicId so we can wipe the correct URL's cache later
+      productPublicId = productData?.publicId || actualProductId; 
 
       // 🔥 BULLETPROOF MATH: Safely handle strings and force numbers
       const currentStock = Number(productData.stock) || 0;
@@ -177,7 +182,7 @@ export async function POST(request: Request) {
             productName: itemName,                          // Variable {{1}} for Seller
             buyerName: finalBuyerName,                      // Variable {{1}} for Buyer
             orderNumber: orderNumber,                       // Variable {{2}} for Buyer
-            
+
             // 🚀 PREPPED FOR YOUR NEW ADMIN WHATSAPP TEMPLATE (Once approved)
             adminPhone: fallbackAdminPhone,
             sellerName: sellerName,
@@ -189,6 +194,14 @@ export async function POST(request: Request) {
 
     // Run all concurrently
     await Promise.allSettled(notificationPromises);
+
+    // 🔥 THIS DESTROYS THE VERCEL CACHE FOR THE PRODUCT PAGE AND HOMEPAGE 🔥
+    try {
+      revalidatePath(`/product/${productPublicId}`);
+      revalidatePath(`/`); 
+    } catch (cacheError) {
+      console.error("Failed to revalidate path:", cacheError);
+    }
 
     return NextResponse.json({ success: true, orderId }, { status: 200 });
 
