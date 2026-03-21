@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,7 +14,7 @@ import { optimizeImage } from "@/lib/utils";
 import MakeOfferButton from "@/components/MakeOfferButton"; // 🔥 ADD THIS IMPORT
  
 
-export const revalidate = 60; 
+//export const revalidate = 60; 
 
 export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
   const product = await getProductByPublicId(params.publicId);
