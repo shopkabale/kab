@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Product } from "@/types";
@@ -17,10 +17,20 @@ export default function ProductActions({ product }: { product: Product }) {
   const [buyerName, setBuyerName] = useState(""); 
   const [copied, setCopied] = useState(false);
 
-  // Status checks - Safely handle strings vs numbers
-  const safeStock = Number(product.stock) || 0;
-  const isSoldOut = safeStock <= 0 || product.status === "sold_out";
-  const isReserved = (product as any).locked === true;
+  // 🔥 THE FIX: Force state-based evaluation to break Next.js client caching
+  const [currentStock, setCurrentStock] = useState(Number(product.stock) || 0);
+  const [isLocked, setIsLocked] = useState((product as any).locked === true);
+  const [productStatus, setProductStatus] = useState(product.status);
+
+  // Sync state if Next.js passes in fresh props after initial hydration
+  useEffect(() => {
+    setCurrentStock(Number(product.stock) || 0);
+    setIsLocked((product as any).locked === true);
+    setProductStatus(product.status);
+  }, [product.stock, (product as any).locked, product.status]);
+
+  const isSoldOut = currentStock <= 0 || productStatus === "sold_out";
+  const isReserved = isLocked;
   const isUnavailable = isSoldOut || isReserved;
 
   const formatWhatsAppNumber = (phone: string) => {
@@ -151,7 +161,7 @@ export default function ProductActions({ product }: { product: Product }) {
     }
   };
 
-  // Determine Primary Button Label & Styles dynamically based on safeStock
+  // Determine Primary Button Label & Styles dynamically based on current state
   let primaryButtonLabel = "Buy Now (Fast Checkout)";
   let primaryButtonClass = "bg-slate-900 text-white hover:bg-slate-800 shadow-md";
 
