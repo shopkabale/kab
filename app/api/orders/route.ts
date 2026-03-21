@@ -152,10 +152,12 @@ export async function POST(request: Request) {
       ).catch(err => console.error("Admin Email Error:", err))
     );
 
-    // --- WHATSAPP RESTORED ---
+        // --- WHATSAPP RESTORED ---
     const fallbackAdminPhone = "256759997376";   
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "http://localhost:3000";  
 
+    // We only need ONE fetch call! Your /api/orders/notify route will pass this payload 
+    // to NotificationService.orderCreated, which will text BOTH the Seller and the Buyer.
     notificationPromises.push(  
       fetch(`${baseUrl}/api/orders/notify`, {  
         method: 'POST',  
@@ -163,15 +165,16 @@ export async function POST(request: Request) {
         body: JSON.stringify({  
           eventType: "ORDER_CREATED",  
           payload: {  
-            productName: itemName,  
-            buyerPhone: contactPhone,  
-            sellerPhone: sellerPhone || fallbackAdminPhone,  
-            buyerName: finalBuyerName,   
-            orderNumber: orderNumber     
+            sellerPhone: sellerPhone || fallbackAdminPhone, // Used for Template 1 (Seller)
+            buyerPhone: contactPhone,                       // Used for Template 2 (Buyer)
+            productName: itemName,                          // Variable {{1}} for Seller
+            buyerName: finalBuyerName,                      // Variable {{1}} for Buyer
+            orderNumber: orderNumber                        // Variable {{2}} for Buyer
           }  
         })  
       }).catch(err => console.error("WhatsApp Trigger Error:", err))  
     );  
+
 
     // Run all concurrently
     await Promise.allSettled(notificationPromises);
