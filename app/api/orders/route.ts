@@ -1,7 +1,5 @@
-// app/api/orders/route.ts
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
-import { FieldValue } from "firebase-admin/firestore";
 import {
   sendOrderConfirmation,
   sendSellerNotification,
@@ -11,6 +9,8 @@ import {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    
+    // Extract everything, handling both Fast Checkout and standard Cart structures
     const { 
       userId, 
       productId, 
@@ -21,17 +21,21 @@ export async function POST(request: Request) {
       buyerName: guestName 
     } = body;
 
-    if (!userId || !productId) {
+    // Safety fallback: if productId is missing at the root, grab it from items array
+    const actualProductId = productId || (items && items.length > 0 ? items[0].productId : null);
+    const quantityToDeduct = items && items.length > 0 ? items[0].quantity : 1;
+
+    if (!userId || !actualProductId) {
       return NextResponse.json({ error: "Missing user or product ID" }, { status: 400 });
     }
 
-    // 1. Generate a clean Kabale Order Number
+    // 1. Generate Order Number
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
     let buyerEmail = null;
     let finalBuyerName = guestName || "Valued Customer";
 
-    // 2. Fetch Buyer Details (Guest-Safe)
+    // 2. Fetch Buyer Details
     if (userId !== "GUEST") {
       const buyerSnap = await adminDb.collection("users").doc(userId).get();
       if (buyerSnap.exists) {
@@ -49,10 +53,9 @@ export async function POST(request: Request) {
     let sellerName = "Seller";
     let sellerPhone = null;
 
-    // 3. THE CRITICAL ATOMIC TRANSACTION
-    // This ensures no two users can buy the item at the exact same time
+    // 3. ATOMIC TRANSACTION (With direct math for stock)
     await adminDb.runTransaction(async (transaction) => {
-      const productRef = adminDb.collection("products").doc(productId);
+      const productRef = adminDb.collection("products").doc(actualProductId);
       const productSnap = await transaction.get(productRef);
 
       if (!productSnap.exists) {
@@ -65,12 +68,12 @@ export async function POST(request: Request) {
       sellerName = productData?.sellerName || "Seller";
       sellerPhone = productData?.sellerPhone;
 
-      // VALIDATION: Prevent Double Ordering
-      if (productData.stock <= 0 || productData.locked === true) {
+      // VALIDATION: Check exact stock
+      if (productData.stock < quantityToDeduct || productData.locked === true) {
         throw new Error("Item already taken or sold out");
       }
 
-      // If seller details are missing on product, fetch from users collection
+      // Fetch fallback seller info if missing
       if ((!sellerEmail || !sellerPhone) && sellerId && sellerId !== "SYSTEM") {
         const sellerRef = adminDb.collection("users").doc(sellerId);
         const sellerSnap = await transaction.get(sellerRef);
@@ -82,7 +85,7 @@ export async function POST(request: Request) {
         }
       }
 
-      // Prepare the new Order Document
+      // Create Order Doc
       const orderRef = adminDb.collection("orders").doc();
       orderId = orderRef.id;
 
@@ -90,9 +93,9 @@ export async function POST(request: Request) {
         orderNumber,
         userId,
         buyerName: finalBuyerName,
-        buyerEmail: buyerEmail, // Saved so the cron job can use it later
+        buyerEmail: buyerEmail,
         sellerId: sellerId || "SYSTEM",
-        items: items || [{ productId, quantity: 1, price: total }],
+        items: items || [{ productId: actualProductId, quantity: quantityToDeduct, price: total }],
         total: Number(total),
         paymentMethod: "cash_on_delivery",
         status: "pending",
@@ -101,19 +104,21 @@ export async function POST(request: Request) {
         updatedAt: Date.now()
       };
 
-      // EXECUTE WRITES (Happens all at once)
+      // Write Order
       transaction.set(orderRef, orderData);
+
+      // 🔥 FIX: Direct subtraction to guarantee stock reduces correctly
       transaction.update(productRef, {
-        stock: FieldValue.increment(-1),
+        stock: productData.stock - quantityToDeduct,
         locked: true,
         updatedAt: Date.now()
       });
     });
 
-    // 4. FIRE NOTIFICATIONS (Outside the transaction to keep the lock fast)
+    // 4. FIRE ALL NOTIFICATIONS
     const notificationPromises = [];
 
-    // Notify Buyer
+    // --- EMAIL: Buyer Confirmation ---
     if (buyerEmail) {
       notificationPromises.push(
         sendOrderConfirmation(buyerEmail, finalBuyerName, orderNumber, Number(total))
@@ -121,7 +126,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Notify Seller
+    // --- EMAIL: Seller Alert ---
     if (sellerEmail) {
       notificationPromises.push(
         sendSellerNotification(
@@ -134,7 +139,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Notify Admin
+    // --- EMAIL: Admin Alert ---
     notificationPromises.push(
       sendAdminAlert(
         orderNumber, 
@@ -147,20 +152,37 @@ export async function POST(request: Request) {
       ).catch(err => console.error("Admin Email Error:", err))
     );
 
-    // Run all emails concurrently without making the user wait
+    // --- WHATSAPP RESTORED ---
+    const fallbackAdminPhone = "256759997376";   
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "http://localhost:3000";  
+
+    notificationPromises.push(  
+      fetch(`${baseUrl}/api/orders/notify`, {  
+        method: 'POST',  
+        headers: { 'Content-Type': 'application/json' },  
+        body: JSON.stringify({  
+          eventType: "ORDER_CREATED",  
+          payload: {  
+            productName: itemName,  
+            buyerPhone: contactPhone,  
+            sellerPhone: sellerPhone || fallbackAdminPhone,  
+            buyerName: finalBuyerName,   
+            orderNumber: orderNumber     
+          }  
+        })  
+      }).catch(err => console.error("WhatsApp Trigger Error:", err))  
+    );  
+
+    // Run all concurrently
     await Promise.allSettled(notificationPromises);
 
-    // 5. RETURN SUCCESS
     return NextResponse.json({ success: true, orderId }, { status: 200 });
 
   } catch (error: any) {
     console.error("Order creation error:", error);
-    
-    // Catch the specific locking error and send a 409 Conflict status back to the UI
     if (error.message === "Item already taken or sold out") {
        return NextResponse.json({ error: error.message }, { status: 409 }); 
     }
-    
     return NextResponse.json({ error: "Failed to place order" }, { status: 500 });
   }
 }
