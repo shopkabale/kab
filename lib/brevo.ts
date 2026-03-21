@@ -1,245 +1,184 @@
 // lib/brevo.ts
+const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
+const SENDER_EMAIL = "support@kabaleonline.com"; // Update with your verified Brevo sender email
+const SENDER_NAME = "Kabale Online";
+const YEAR = new Date().getFullYear();
 
-export async function sendOrderConfirmation(
-  userEmail: string, 
-  userName: string, 
-  orderNumber: string, 
-  totalAmount: number
-) {
-  const brevoApiKey = process.env.BREVO_API_KEY;
-  const senderEmail = process.env.SENDER_EMAIL || "support@kabaleonline.com";
-
-  if (!brevoApiKey) {
-    console.error("Missing BREVO_API_KEY environment variable");
-    return false;
+// --- BASE EMAIL SENDER ---
+async function sendEmail({ to, subject, htmlContent }: { to: { email: string; name: string }[], subject: string, htmlContent: string }) {
+  if (!BREVO_API_KEY) {
+    console.error("Missing BREVO_API_KEY environment variable.");
+    return;
   }
-
-  const emailData = {
-    sender: { name: "Kabale Online", email: senderEmail },
-    to: [{ email: userEmail, name: userName }],
-    subject: `Order Confirmation - ${orderNumber} | Kabale Online`,
-    htmlContent: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-        <h2 style="color: #0ea5e9;">Thank you for your order, ${userName}!</h2>
-        <p>Your order <strong>${orderNumber}</strong> has been successfully placed on Kabale Online.</p>
-        
-        <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <h3 style="margin-top: 0;">Order Summary</h3>
-          <p><strong>Order Number:</strong> ${orderNumber}</p>
-          <p><strong>Total Amount:</strong> UGX ${totalAmount.toLocaleString()}</p>
-          <p><strong>Payment Method:</strong> Cash on Delivery</p>
-          <p><strong>Status:</strong> Pending Confirmation</p>
-        </div>
-
-        <p>The vendor will contact you shortly to arrange the delivery within Kabale town.</p>
-        <p>Please have the exact cash ready upon delivery.</p>
-        
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
-        <p style="font-size: 12px; color: #64748b; text-align: center;">
-          Kabale Online - The Better Way to Inform Your Community.<br/>
-          Kabale, Uganda
-        </p>
-      </div>
-    `,
-  };
 
   try {
     const response = await fetch("https://api.brevo.com/v3/smtp/email", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "api-key": brevoApiKey, "accept": "application/json" },
-      body: JSON.stringify(emailData),
-    });
-    if (!response.ok) return false;
-    return true;
-  } catch (error) {
-    console.error("Failed to send email via Brevo:", error);
-    return false;
-  }
-}
-
-export async function sendSellerNotification(
-  sellerEmail: string,
-  sellerName: string,
-  itemName: string,
-  buyerName: string,
-  buyerPhone: string
-) {
-  const brevoApiKey = process.env.BREVO_API_KEY;
-  const senderEmail = process.env.SENDER_EMAIL || "noreply@okaynotice.com";
-
-  if (!brevoApiKey || !sellerEmail) return false;
-
-  const emailData = {
-    sender: { name: "Kabale Online Alerts", email: senderEmail },
-    to: [{ email: sellerEmail, name: sellerName || "Seller" }],
-    subject: `💰 New Order for ${itemName}!`,
-    htmlContent: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9fafb; border-radius: 10px;">
-        <h2 style="color: #D97706; margin-top: 0;">You have a new customer!</h2>
-        <p>Someone wants to buy your <strong>${itemName}</strong>.</p>
-        
-        <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin: 20px 0;">
-          <h3 style="margin-top: 0; color: #333;">Buyer Details</h3>
-          <p><strong>Name:</strong> ${buyerName}</p>
-          <p><strong>Phone:</strong> ${buyerPhone}</p>
-        </div>
-        
-        <p style="margin-top: 20px; text-align: center;">
-          <a href="https://wa.me/${buyerPhone.replace(/[^0-9]/g, '')}?text=Hi%20${buyerName},%20I%20am%20contacting%20you%20about%20your%20order%20for%20${itemName}%20on%20Kabale%20Online." 
-             style="background-color: #25D366; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-            Click here to WhatsApp the Buyer
-          </a>
-        </p>
-      </div>
-    `,
-  };
-
-  try {
-    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "api-key": brevoApiKey, "accept": "application/json" },
-      body: JSON.stringify(emailData),
-    });
-    if (!response.ok) return false;
-    return true;
-  } catch (error) {
-    console.error("Seller email failed:", error);
-    return false;
-  }
-}
-
-export async function sendAdminAlert(
-  orderNumber: string,
-  itemName: string,
-  totalAmount: number,
-  buyerName: string,
-  buyerPhone: string,
-  sellerName: string,       
-  sellerPhone: string      
-) {
-  const brevoApiKey = process.env.BREVO_API_KEY;
-  const senderEmail = process.env.SENDER_EMAIL || "support@kabaleonline.com";
-  const adminEmail = "shopkabale@gmail.com"; 
-
-  if (!brevoApiKey) return false;
-
-  const emailData = {
-    sender: { name: "System Alert", email: senderEmail },
-    to: [{ email: adminEmail, name: "Admin" }],
-    subject: `🚨 KABALE ADMIN: Sale Alert - ${itemName} (${orderNumber})`,
-    htmlContent: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f1f5f9; border-radius: 10px;">
-        <h2 style="color: #0f172a; margin-top: 0; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;">🚨 System Alert: New Order</h2>
-        <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
-          <h3 style="margin-top: 0; color: #333;">🛒 Order Details</h3>
-          <p style="margin: 5px 0;"><strong>Order ID:</strong> ${orderNumber}</p>
-          <p style="margin: 5px 0;"><strong>Item:</strong> ${itemName}</p>
-          <p style="margin: 5px 0;"><strong>Total Amount:</strong> UGX ${totalAmount.toLocaleString()}</p>
-        </div>
-        <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 15px;">
-          <h3 style="margin-top: 0; color: #2563eb;">👤 Buyer Overview</h3>
-          <p style="margin: 5px 0;"><strong>Name:</strong> ${buyerName}</p>
-          <p style="margin: 5px 0;"><strong>Phone:</strong> ${buyerPhone}</p>
-          <p style="margin-top: 10px;">
-            <a href="https://wa.me/${buyerPhone.replace(/\D/g, '')}" style="color: #25D366; text-decoration: none; font-weight: bold;">💬 Chat with Buyer</a>
-          </p>
-        </div>
-        <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-          <h3 style="margin-top: 0; color: #16a34a;">🏪 Seller Overview</h3>
-          <p style="margin: 5px 0;"><strong>Name:</strong> ${sellerName}</p>
-          <p style="margin: 5px 0;"><strong>Phone:</strong> ${sellerPhone || "No Phone Provided"}</p>
-          <p style="margin-top: 10px;">
-            <a href="https://wa.me/${(sellerPhone || "").replace(/\D/g, '')}" style="color: #25D366; text-decoration: none; font-weight: bold;">💬 Chat with Seller</a>
-          </p>
-        </div>
-      </div>
-    `,
-  };
-
-  try {
-    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "api-key": brevoApiKey, "accept": "application/json" },
-      body: JSON.stringify(emailData),
-    });
-    if (!response.ok) return false;
-    return true;
-  } catch (error) {
-    console.error("Admin alert failed:", error);
-    return false;
-  }
-}
-
-// ============================================================================
-// 🔥 NEW: THE MAGIC LINK WHATSAPP NOTIFICATION
-// ============================================================================
-export async function sendWhatsAppReplyAlert(
-  sellerEmail: string,
-  buyerPhone: string,
-  messageContent: string,
-  messageId: string,
-  orderId: string = "Recent Order"
-) {
-  const brevoApiKey = process.env.BREVO_API_KEY;
-  const senderEmail = process.env.SENDER_EMAIL || "support@kabaleonline.com";
-
-  if (!brevoApiKey || !sellerEmail) return false;
-
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-  const magicLink = `${baseUrl}/reply/${messageId}`;
-
-  const emailData = {
-    sender: { name: "Kabale Online Secure Chat", email: senderEmail },
-    to: [{ email: sellerEmail, name: "Seller / Admin" }],
-    subject: `💬 New WhatsApp Reply from Customer (${buyerPhone})`,
-    htmlContent: `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8fafc; border-radius: 10px;">
-        <h2 style="color: #D97706; margin-top: 0;">You have a new WhatsApp message!</h2>
-        <p>A customer has replied to an automated WhatsApp order notification for <strong>${orderId}</strong>.</p>
-        
-        <div style="background-color: #ffffff; padding: 20px; border-radius: 8px; border-left: 4px solid #D97706; margin: 20px 0; font-size: 16px; color: #333;">
-          <p style="margin: 0; font-size: 12px; color: #64748b; margin-bottom: 8px;">Customer Phone: ${buyerPhone}</p>
-          <em style="font-size: 18px;">"${messageContent}"</em>
-        </div>
-        
-        <p style="margin-top: 30px; text-align: center;">
-          <a href="${magicLink}" 
-             style="background-color: #0f172a; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; display: inline-block;">
-            Click Here to Reply Securely
-          </a>
-        </p>
-        
-        <p style="font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px;">
-          Your reply will be automatically routed back to their WhatsApp.
-        </p>
-      </div>
-    `,
-  };
-
-  try {
-    const response = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: { 
-        "Content-Type": "application/json", 
-        "api-key": brevoApiKey, 
-        "accept": "application/json" 
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "api-key": BREVO_API_KEY,
       },
-      body: JSON.stringify(emailData),
+      body: JSON.stringify({
+        sender: { email: SENDER_EMAIL, name: SENDER_NAME },
+        to,
+        subject,
+        htmlContent,
+      }),
     });
 
-    // 🚨 THIS IS THE NEW ERROR CATCHER
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("🚨 REAL BREVO ERROR:", JSON.stringify(errorData, null, 2));
-      return false;
+      console.error("Brevo API Error:", errorData);
     }
-
-    const successData = await response.json();
-    console.log("✅ Brevo actually accepted it! Message ID:", successData.messageId);
-    return true;
-
-  } catch (error: any) {
-    console.error("❌ Network failed to reach Brevo:", error.message);
-    return false;
+  } catch (error) {
+    console.error("Failed to send email via Brevo:", error);
   }
+}
+
+// --- SHARED EMAIL WRAPPER (For consistent branding) ---
+const emailWrapper = (content: string) => `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 20px; color: #334155;">
+  <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+    <!-- Header -->
+    <div style="background-color: #D97706; padding: 24px; text-align: center;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 900; letter-spacing: -0.5px;">Kabale Online</h1>
+    </div>
+    
+    <!-- Main Content -->
+    <div style="padding: 32px 24px;">
+      ${content}
+    </div>
+    
+    <!-- Footer -->
+    <div style="background-color: #f1f5f9; padding: 24px; text-align: center; font-size: 13px; color: #64748b; border-top: 1px solid #e2e8f0;">
+      <p style="margin: 0; font-weight: 600;">Kabale Online Marketplace</p>
+      <p style="margin: 4px 0 0 0;">Serving Kabale, Western Region, Uganda</p>
+      <p style="margin: 12px 0 0 0;">&copy; ${YEAR} Kabale Online. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+// --- 1. BUYER: ORDER PLACED (PENDING) ---
+export async function sendOrderConfirmation(email: string, name: string, orderNumber: string, total: number) {
+  const content = `
+    <h2 style="margin-top: 0; color: #0f172a; font-size: 24px;">Order Received! 🎉</h2>
+    <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
+    <p style="font-size: 16px; line-height: 1.6;">Thank you for shopping with Kabale Online! Your order has been placed successfully and the item has been reserved for you.</p>
+    
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Order Number</p>
+      <p style="margin: 0 0 16px 0; font-size: 20px; font-weight: 800; color: #D97706; font-family: monospace;">${orderNumber}</p>
+      
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Amount to Pay (Cash on Delivery)</p>
+      <p style="margin: 0; font-size: 20px; font-weight: 800; color: #0f172a;">UGX ${total.toLocaleString()}</p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.6;">The seller will review your order shortly. We will send you another email as soon as the status changes!</p>
+  `;
+  await sendEmail({ to: [{ email, name }], subject: `Order Received - ${orderNumber}`, htmlContent: emailWrapper(content) });
+}
+
+// --- 2. BUYER: STATUS UPDATES ---
+export async function sendStatusUpdateEmail(email: string, name: string, orderNumber: string, newStatus: string) {
+  const statusFormatMap: Record<string, { text: string, color: string, icon: string }> = {
+    "confirmed": { text: "Confirmed & Preparing", color: "#2563eb", icon: "✅" },
+    "out_for_delivery": { text: "Out for Delivery", color: "#9333ea", icon: "🚚" },
+    "delivered": { text: "Delivered", color: "#16a34a", icon: "🎁" },
+    "cancelled": { text: "Cancelled", color: "#dc2626", icon: "❌" }
+  };
+
+  const statusInfo = statusFormatMap[newStatus] || { text: newStatus, color: "#475569", icon: "📌" };
+  
+  const content = `
+    <h2 style="margin-top: 0; color: #0f172a; font-size: 24px;">Order Update</h2>
+    <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
+    <p style="font-size: 16px; line-height: 1.6;">There is an update regarding your order <strong>${orderNumber}</strong>.</p>
+    
+    <div style="text-align: center; margin: 32px 0;">
+      <span style="font-size: 48px;">${statusInfo.icon}</span>
+      <h3 style="margin: 12px 0 0 0; color: ${statusInfo.color}; font-size: 22px; text-transform: uppercase; letter-spacing: 1px;">${statusInfo.text}</h3>
+    </div>
+    
+    ${newStatus === 'out_for_delivery' ? '<p style="font-size: 16px; line-height: 1.6; background-color: #fffbeb; border-left: 4px solid #fbbf24; padding: 12px 16px; margin-bottom: 24px;"><strong>Action Required:</strong> Please prepare your cash for payment. The seller will be arriving soon!</p>' : ''}
+    ${newStatus === 'delivered' ? '<p style="font-size: 16px; line-height: 1.6; text-align: center; font-weight: 600;">Thank you for shopping with Kabale Online! Enjoy your new item.</p>' : ''}
+  `;
+  await sendEmail({ to: [{ email, name }], subject: `Order ${statusInfo.text} - ${orderNumber}`, htmlContent: emailWrapper(content) });
+}
+
+// --- 3. BUYER: AUTO-EXPIRY (Cron Job) ---
+export async function sendExpiryNotification(email: string, name: string, orderNumber: string) {
+  const content = `
+    <h2 style="margin-top: 0; color: #dc2626; font-size: 24px;">Order Expired ⏱️</h2>
+    <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${name}</strong>,</p>
+    <p style="font-size: 16px; line-height: 1.6;">Your pending order <strong>${orderNumber}</strong> has automatically expired due to 36 hours of inactivity.</p>
+    
+    <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <p style="margin: 0; font-size: 15px; color: #991b1b; line-height: 1.5;">To keep the marketplace fair, items are only reserved for 36 hours. The item has now been unlocked and made available to other buyers.</p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.6; font-weight: 600;">Still want it?</p>
+    <p style="font-size: 16px; line-height: 1.6;">You can still reorder the item on Kabale Online if it hasn't been purchased by someone else.</p>
+  `;
+  await sendEmail({ to: [{ email, name }], subject: `Order Expired - ${orderNumber}`, htmlContent: emailWrapper(content) });
+}
+
+// --- 4. SELLER: NEW ORDER ALERT ---
+export async function sendSellerNotification(sellerEmail: string, sellerName: string, itemName: string, buyerName: string, buyerPhone: string) {
+  const content = `
+    <h2 style="margin-top: 0; color: #0f172a; font-size: 24px;">New Order Alert! 🚀</h2>
+    <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${sellerName}</strong>,</p>
+    <p style="font-size: 16px; line-height: 1.6;">Great news! You have a new buyer for your item on Kabale Online.</p>
+    
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 24px 0;">
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #64748b; font-weight: 600;">ITEM REQUESTED</p>
+      <p style="margin: 0 0 20px 0; font-size: 18px; font-weight: 700; color: #0f172a;">${itemName}</p>
+      
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #64748b; font-weight: 600;">BUYER DETAILS</p>
+      <p style="margin: 0 0 4px 0; font-size: 16px;"><strong>Name:</strong> ${buyerName}</p>
+      <p style="margin: 0; font-size: 16px;"><strong>Phone:</strong> <a href="tel:${buyerPhone}" style="color: #D97706; text-decoration: none; font-weight: 600;">${buyerPhone}</a></p>
+    </div>
+    
+    <p style="font-size: 16px; line-height: 1.6;">Please log in to your dashboard to confirm the order or contact the buyer directly to arrange delivery.</p>
+  `;
+  await sendEmail({ to: [{ email: sellerEmail, name: sellerName }], subject: `New Order for ${itemName}!`, htmlContent: emailWrapper(content) });
+}
+
+// --- 5. ADMIN: MASTER ALERT ---
+export async function sendAdminAlert(orderNumber: string, itemName: string, total: number, buyerName: string, buyerPhone: string, sellerName: string, sellerPhone: string) {
+  const adminEmail = "admin@kabaleonline.com"; // Update with your admin email
+  
+  const content = `
+    <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Admin Alert: New Marketplace Order</h2>
+    
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
+      <p style="margin: 0 0 4px 0; font-size: 14px; color: #64748b; font-weight: 600;">ORDER INFO</p>
+      <p style="margin: 0 0 4px 0; font-size: 16px;"><strong>ID:</strong> <span style="font-family: monospace;">${orderNumber}</span></p>
+      <p style="margin: 0 0 4px 0; font-size: 16px;"><strong>Item:</strong> ${itemName}</p>
+      <p style="margin: 0; font-size: 16px;"><strong>Total:</strong> UGX ${total.toLocaleString()}</p>
+    </div>
+
+    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 200px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px;">
+        <p style="margin: 0 0 8px 0; font-size: 14px; color: #166534; font-weight: 600;">BUYER</p>
+        <p style="margin: 0 0 4px 0; font-size: 15px;">${buyerName}</p>
+        <p style="margin: 0; font-size: 15px; font-weight: 600;">${buyerPhone}</p>
+      </div>
+      
+      <div style="flex: 1; min-width: 200px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px;">
+        <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e40af; font-weight: 600;">SELLER</p>
+        <p style="margin: 0 0 4px 0; font-size: 15px;">${sellerName}</p>
+        <p style="margin: 0; font-size: 15px; font-weight: 600;">${sellerPhone}</p>
+      </div>
+    </div>
+  `;
+  await sendEmail({ to: [{ email: adminEmail, name: "Admin" }], subject: `Admin Alert: New Order ${orderNumber}`, htmlContent: emailWrapper(content) });
 }
