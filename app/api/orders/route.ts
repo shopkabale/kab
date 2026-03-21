@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     let sellerName = "Seller";
     let sellerPhone = null;
 
-    // 3. ATOMIC TRANSACTION (With direct math for stock)
+    // 3. ATOMIC TRANSACTION (With BULLETPROOF math for stock)
     await adminDb.runTransaction(async (transaction) => {
       const productRef = adminDb.collection("products").doc(actualProductId);
       const productSnap = await transaction.get(productRef);
@@ -68,8 +68,12 @@ export async function POST(request: Request) {
       sellerName = productData?.sellerName || "Seller";
       sellerPhone = productData?.sellerPhone;
 
+      // 🔥 BULLETPROOF MATH: Safely handle strings and force numbers
+      const currentStock = Number(productData.stock) || 0;
+      const deductAmount = Number(quantityToDeduct) || 1;
+
       // VALIDATION: Check exact stock
-      if (productData.stock < quantityToDeduct || productData.locked === true) {
+      if (currentStock < deductAmount || productData.locked === true) {
         throw new Error("Item already taken or sold out");
       }
 
@@ -95,7 +99,7 @@ export async function POST(request: Request) {
         buyerName: finalBuyerName,
         buyerEmail: buyerEmail,
         sellerId: sellerId || "SYSTEM",
-        items: items || [{ productId: actualProductId, quantity: quantityToDeduct, price: total }],
+        items: items || [{ productId: actualProductId, quantity: deductAmount, price: total }],
         total: Number(total),
         paymentMethod: "cash_on_delivery",
         status: "pending",
@@ -107,9 +111,12 @@ export async function POST(request: Request) {
       // Write Order
       transaction.set(orderRef, orderData);
 
-      // 🔥 FIX: Direct subtraction to guarantee stock reduces correctly
+      // 🔥 FIX: Calculate new stock safely (Ensures it never goes below 0)
+      const newStock = Math.max(0, currentStock - deductAmount);
+
+      // Write Product Update
       transaction.update(productRef, {
-        stock: productData.stock - quantityToDeduct,
+        stock: newStock,
         locked: true,
         updatedAt: Date.now()
       });
@@ -152,7 +159,7 @@ export async function POST(request: Request) {
       ).catch(err => console.error("Admin Email Error:", err))
     );
 
-        // --- WHATSAPP RESTORED ---
+    // --- WHATSAPP RESTORED ---
     const fallbackAdminPhone = "256759997376";   
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || request.headers.get("origin") || "http://localhost:3000";  
 
@@ -169,12 +176,16 @@ export async function POST(request: Request) {
             buyerPhone: contactPhone,                       // Used for Template 2 (Buyer)
             productName: itemName,                          // Variable {{1}} for Seller
             buyerName: finalBuyerName,                      // Variable {{1}} for Buyer
-            orderNumber: orderNumber                        // Variable {{2}} for Buyer
+            orderNumber: orderNumber,                       // Variable {{2}} for Buyer
+            
+            // 🚀 PREPPED FOR YOUR NEW ADMIN WHATSAPP TEMPLATE (Once approved)
+            adminPhone: fallbackAdminPhone,
+            sellerName: sellerName,
+            price: `UGX ${Number(total).toLocaleString()}`
           }  
         })  
       }).catch(err => console.error("WhatsApp Trigger Error:", err))  
     );  
-
 
     // Run all concurrently
     await Promise.allSettled(notificationPromises);
