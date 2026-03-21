@@ -17,8 +17,9 @@ export default function ProductActions({ product }: { product: Product }) {
   const [buyerName, setBuyerName] = useState(""); 
   const [copied, setCopied] = useState(false);
 
-  // Status checks
-  const isSoldOut = product.stock <= 0 || product.status === "sold_out";
+  // Status checks - Safely handle strings vs numbers
+  const safeStock = Number(product.stock) || 0;
+  const isSoldOut = safeStock <= 0 || product.status === "sold_out";
   const isReserved = (product as any).locked === true;
   const isUnavailable = isSoldOut || isReserved;
 
@@ -81,7 +82,7 @@ export default function ProductActions({ product }: { product: Product }) {
       return;  
     }  
 
-    // 🔥 NEW: Strict Phone Number Validation (Must be at least 10 digits)
+    // Strict Phone Number Validation (Must be at least 10 digits)
     const cleanPhone = contactPhone.replace(/\D/g, ""); // Strips spaces, dashes, etc.
     if (cleanPhone.length < 10) {
       alert("Please enter a valid 10-digit phone number (e.g., 077... or 075...).");
@@ -150,18 +151,20 @@ export default function ProductActions({ product }: { product: Product }) {
     }
   };
 
-  // Determine Primary Button Label & Styles
+  // Determine Primary Button Label & Styles dynamically based on safeStock
   let primaryButtonLabel = "Buy Now (Fast Checkout)";
-  let primaryButtonClass = "bg-slate-900 text-white hover:bg-slate-800";
+  let primaryButtonClass = "bg-slate-900 text-white hover:bg-slate-800 shadow-md";
 
   if (loading) {
     primaryButtonLabel = "Processing...";
+    primaryButtonClass = "bg-slate-900 text-white opacity-70 cursor-wait";
   } else if (isSoldOut) {
     primaryButtonLabel = "❌ Sold Out";
-    primaryButtonClass = "bg-slate-200 text-slate-500 cursor-not-allowed";
+    // Crucial: We remove the hover colors here so it looks completely dead
+    primaryButtonClass = "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed shadow-none";
   } else if (isReserved) {
     primaryButtonLabel = "⚡ Reserved (Pending Order)";
-    primaryButtonClass = "bg-amber-100 text-amber-700 border border-amber-300 cursor-not-allowed";
+    primaryButtonClass = "bg-amber-50 text-amber-700 border border-amber-200 cursor-not-allowed shadow-none";
   }
 
   return (
@@ -173,7 +176,7 @@ export default function ProductActions({ product }: { product: Product }) {
           <button   
             onClick={handleBuyNowClick}  
             disabled={isUnavailable || loading}  
-            className={`w-full py-4 px-8 rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 shadow-md ${primaryButtonClass}`}  
+            className={`w-full py-4 px-8 rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 ${primaryButtonClass}`}  
           >  
             {primaryButtonLabel}  
           </button>  
