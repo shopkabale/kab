@@ -77,4 +77,3 @@ export interface Store {
   isApproved: boolean;
   createdAt: number;
 }
-⁰
