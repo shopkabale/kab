@@ -152,33 +152,45 @@ export async function sendSellerNotification(sellerEmail: string, sellerName: st
   await sendEmail({ to: [{ email: sellerEmail, name: sellerName }], subject: `New Order for ${itemName}!`, htmlContent: emailWrapper(content) });
 }
 
-// --- 5. ADMIN: MASTER ALERT ---
-export async function sendAdminAlert(orderNumber: string, itemName: string, total: number, buyerName: string, buyerPhone: string, sellerName: string, sellerPhone: string) {
-  const adminEmail = "admin@kabaleonline.com"; // Update with your admin email
-  
-  const content = `
-    <h2 style="margin-top: 0; color: #0f172a; font-size: 20px;">Admin Alert: New Marketplace Order</h2>
-    
-    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin-bottom: 16px;">
-      <p style="margin: 0 0 4px 0; font-size: 14px; color: #64748b; font-weight: 600;">ORDER INFO</p>
-      <p style="margin: 0 0 4px 0; font-size: 16px;"><strong>ID:</strong> <span style="font-family: monospace;">${orderNumber}</span></p>
-      <p style="margin: 0 0 4px 0; font-size: 16px;"><strong>Item:</strong> ${itemName}</p>
-      <p style="margin: 0; font-size: 16px;"><strong>Total:</strong> UGX ${total.toLocaleString()}</p>
-    </div>
+// --- ADMIN MASTER ALERT (Hardcoded to shopkabale@gmail.com) ---
+export async function sendAdminAlert(
+  orderNumber: string, 
+  itemName: string, 
+  total: number, 
+  buyerName: string, 
+  buyerPhone: string,
+  sellerName: string,
+  sellerPhone: string
+) {
+  // 🔥 HARDCODED MASTER EMAIL
+  const masterEmail = "shopkabale@gmail.com"; 
 
-    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-      <div style="flex: 1; min-width: 200px; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px;">
-        <p style="margin: 0 0 8px 0; font-size: 14px; color: #166534; font-weight: 600;">BUYER</p>
-        <p style="margin: 0 0 4px 0; font-size: 15px;">${buyerName}</p>
-        <p style="margin: 0; font-size: 15px; font-weight: 600;">${buyerPhone}</p>
-      </div>
+  const content = `
+    <h2 style="margin-top: 0; color: #dc2626; font-size: 24px;">🚨 New Order Alert!</h2>
+    <p style="font-size: 16px; line-height: 1.6;">A new order has been placed on the Kabale Online marketplace.</p>
+    
+    <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #991b1b; font-weight: 600;">ORDER DETAILS</p>
+      <p style="margin: 0 0 4px 0;"><strong>Order ID:</strong> ${orderNumber}</p>
+      <p style="margin: 0 0 4px 0;"><strong>Item:</strong> ${itemName}</p>
+      <p style="margin: 0 0 16px 0;"><strong>Value:</strong> UGX ${total.toLocaleString()}</p>
       
-      <div style="flex: 1; min-width: 200px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 16px;">
-        <p style="margin: 0 0 8px 0; font-size: 14px; color: #1e40af; font-weight: 600;">SELLER</p>
-        <p style="margin: 0 0 4px 0; font-size: 15px;">${sellerName}</p>
-        <p style="margin: 0; font-size: 15px; font-weight: 600;">${sellerPhone}</p>
-      </div>
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #991b1b; font-weight: 600;">BUYER</p>
+      <p style="margin: 0 0 4px 0;"><strong>Name:</strong> ${buyerName}</p>
+      <p style="margin: 0 0 16px 0;"><strong>Phone:</strong> ${buyerPhone}</p>
+
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #991b1b; font-weight: 600;">SELLER</p>
+      <p style="margin: 0 0 4px 0;"><strong>Name:</strong> ${sellerName}</p>
+      <p style="margin: 0 0 0 0;"><strong>Phone:</strong> ${sellerPhone}</p>
     </div>
+    
+    <p style="font-size: 16px; line-height: 1.6; font-weight: bold;">Please ensure the seller contacts the buyer within 36 hours.</p>
   `;
-  await sendEmail({ to: [{ email: adminEmail, name: "Admin" }], subject: `Admin Alert: New Order ${orderNumber}`, htmlContent: emailWrapper(content) });
+
+  // Uses the masterEmail directly
+  await sendEmail({ 
+    to: [{ email: masterEmail, name: "Kabale Admin" }], 
+    subject: `🚨 KABALE ORDER: ${orderNumber} - ${itemName}`, 
+    htmlContent: emailWrapper(content) 
+  });
 }
