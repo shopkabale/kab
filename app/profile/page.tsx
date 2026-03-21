@@ -101,7 +101,6 @@ export default function ProfilePage() {
     }
   }, [isSeller, loadingListings, activeTab]);
 
-
   // Handle removing a saved item
   const handleRemoveSaved = async (productId: string) => {
     if (!user) return;
@@ -216,7 +215,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      {/* 🔥 SMART SELLER HUB BANNER (Only shows if they have listings) 🔥 */}
+      {/* 🔥 SMART SELLER HUB BANNER */}
       {!loadingListings && isSeller && (
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-5 sm:p-6 mb-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
           <div className="text-center sm:text-left">
@@ -302,7 +301,8 @@ export default function ProfilePage() {
                {orders.map((order) => {
                  const safeOrderNumber = order.orderNumber || "LEGACY-ORD";
                  const safeTotal = Number(order.total) || 0;
-                 const safeStatus = order.status || "pending";
+                 // 🔥 TYPESCRIPT FIX: Cast to string so TypeScript stops complaining about 'cancelled'
+                 const safeStatus = (order.status as string) || "pending";
                  const safeDate = order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "Unknown Date";
 
                  return (
