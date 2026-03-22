@@ -3,23 +3,22 @@
 import { useState } from 'react';
 
 export default function ClearCacheButton() {
-  // Explicitly type the state as a boolean
   const [isClearing, setIsClearing] = useState<boolean>(false);
 
-  // Explicitly type the function return as a Promise
   const handleClearCache = async (): Promise<void> => {
     setIsClearing(true);
 
     try {
       // 1. Wipe out all the massive caches we defined in next.config
       if ('caches' in window) {
-        const cacheNames: string[] = await caches.keys();
+        const cacheNames = await caches.keys();
         await Promise.all(cacheNames.map((name) => caches.delete(name)));
       }
 
       // 2. Kill the Service Worker so it doesn't intercept the next reload
       if ('serviceWorker' in navigator) {
-        const registrations: ServiceWorkerRegistration[] = await navigator.serviceWorker.getRegistrations();
+        // FIX: Removed the explicit mutable type so TS infers the 'readonly' array perfectly
+        const registrations = await navigator.serviceWorker.getRegistrations();
         for (const registration of registrations) {
           await registration.unregister();
         }
@@ -29,9 +28,8 @@ export default function ClearCacheButton() {
       window.location.reload(); 
       
     } catch (error) {
-      // TS treats catch errors as 'unknown', which console.error handles perfectly
       console.error('Failed to clear cache:', error);
-      setIsClearing(false); // Only reset if it fails, otherwise the page reloads anyway
+      setIsClearing(false); 
     }
   };
 
