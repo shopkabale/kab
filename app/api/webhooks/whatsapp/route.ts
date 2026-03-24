@@ -58,7 +58,6 @@ export async function POST(request: Request) {
               }
 
               // 🔥 STEP 2: RELAY THE MESSAGE TO THE OTHER PARTY
-              // (If buyer sends message -> forward to seller. If seller -> forward to buyer)
               try {
                 const targetPhone = await getActiveChatPartner(fromPhone);
 
@@ -66,7 +65,7 @@ export async function POST(request: Request) {
                   // Format the message so they know who it's from
                   const forwardedText = `*New Message:*\n${text}`;
 
-                  // ✅ Updated function call to use your existing plain text sender
+                  // Send the plain text reply
                   await sendWhatsAppMessage(targetPhone, forwardedText);
                   console.log(`✅ Relayed message from ${fromPhone} to ${targetPhone}`);
                 } else {
@@ -102,16 +101,8 @@ export async function POST(request: Request) {
 async function getActiveChatPartner(senderPhone: string): Promise<string | null> {
   try {
     const ordersRef = adminDb.collection("orders"); 
-    const activeStatuses = ["pending", "confirmed", "out for delivery"];
-
-    // ==========================================
-// HELPER FUNCTION: Find who to send it to
-// ==========================================
-async function getActiveChatPartner(senderPhone: string): Promise<string | null> {
-  try {
-    const ordersRef = adminDb.collection("orders"); 
     const productsRef = adminDb.collection("products"); 
-    
+
     const activeStatuses = ["pending", "confirmed", "out for delivery"];
 
     // 💡 CREATE VARIATIONS: Meta sends "256784655792", but your DB has "0784655792"
