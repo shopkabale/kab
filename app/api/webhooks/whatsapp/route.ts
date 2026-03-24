@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import * as admin from "firebase-admin";
 
+// We will create this function in your next step!
+import { sendWhatsAppText } from "@/lib/whatsapp"; 
+
 // 1. Handle Webhook Verification (GET)
-// Meta requires this to confirm your endpoint is active
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const mode = url.searchParams.get("hub.mode");
@@ -41,7 +43,7 @@ export async function POST(request: Request) {
 
               console.log(`💬 Incoming message from ${fromPhone}: "${text}"`);
 
-              // 🔥 STEP 1: JUST SAVE TO FIREBASE FOR RECORD KEEPING
+              // 🔥 STEP 1: SAVE TO FIREBASE FOR RECORD KEEPING
               try {
                 await adminDb.collection("whatsapp_messages").add({
                   metaMessageId: messageId,
@@ -54,6 +56,26 @@ export async function POST(request: Request) {
               } catch (dbError: any) {
                 console.error("❌ FIREBASE SAVE FAILED:", dbError.message);
               }
+
+              // 🔥 STEP 2: RELAY THE MESSAGE TO THE OTHER PARTY
+              // (If buyer sends message -> forward to seller. If seller -> forward to buyer)
+              try {
+                const targetPhone = await getActiveChatPartner(fromPhone);
+
+                if (targetPhone) {
+                  // Format the message so they know who it's from
+                  const forwardedText = `*New Message:*\n${text}`;
+                  
+                  // Send it!
+                  await sendWhatsAppText(targetPhone, forwardedText);
+                  console.log(`✅ Relayed message from ${fromPhone} to ${targetPhone}`);
+                } else {
+                  console.log(`ℹ️ No active order found for ${fromPhone}. Message saved but not relayed.`);
+                }
+              } catch (relayError: any) {
+                console.error("❌ FAILED TO RELAY MESSAGE:", relayError.message);
+              }
+
             }
           } else if (value.statuses) {
             console.log(`ℹ️ Status update received: ${value.statuses[0].status}`);
@@ -71,5 +93,43 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("🚨 FATAL WEBHOOK CRASH:", error.message);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+// ==========================================
+// HELPER FUNCTION: Find who to send it to
+// ==========================================
+async function getActiveChatPartner(senderPhone: string): Promise<string | null> {
+  try {
+    const ordersRef = adminDb.collection("orders"); 
+
+    // 1. Check if the sender is a BUYER in an active order
+    const buyerQuery = await ordersRef
+      .where("buyerPhone", "==", senderPhone)
+      .where("status", "in", ["pending", "accepted", "ready"]) // Only relay if order is active
+      .limit(1)
+      .get();
+
+    if (!buyerQuery.empty) {
+      // Sender is the buyer, return the seller's phone
+      return buyerQuery.docs[0].data().sellerPhone;
+    }
+
+    // 2. Check if the sender is a SELLER in an active order
+    const sellerQuery = await ordersRef
+      .where("sellerPhone", "==", senderPhone)
+      .where("status", "in", ["pending", "accepted", "ready"]) 
+      .limit(1)
+      .get();
+
+    if (!sellerQuery.empty) {
+      // Sender is the seller, return the buyer's phone
+      return sellerQuery.docs[0].data().buyerPhone;
+    }
+
+    return null; // Not part of any active transaction
+  } catch (error) {
+    console.error("Error looking up chat partner in Firebase:", error);
+    return null;
   }
 }
