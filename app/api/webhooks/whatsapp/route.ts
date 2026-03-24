@@ -104,41 +104,67 @@ async function getActiveChatPartner(senderPhone: string): Promise<string | null>
     const ordersRef = adminDb.collection("orders"); 
     const activeStatuses = ["pending", "confirmed", "out for delivery"];
 
-    // 💡 THE FIX: Create variations of the incoming number to match your Firebase database
-    // If Meta sends "256784655792", we create an array of possibilities:
-    const phoneVariations = [
-      senderPhone,                             // 1. Meta format: "256784655792"
-      `+${senderPhone}`,                       // 2. Plus format: "+256784655792"
-    ];
+    // ==========================================
+// HELPER FUNCTION: Find who to send it to
+// ==========================================
+async function getActiveChatPartner(senderPhone: string): Promise<string | null> {
+  try {
+    const ordersRef = adminDb.collection("orders"); 
+    const productsRef = adminDb.collection("products"); 
+    
+    const activeStatuses = ["pending", "confirmed", "out for delivery"];
 
-    // 3. Local format: "0784655792"
+    // 💡 CREATE VARIATIONS: Meta sends "256784655792", but your DB has "0784655792"
+    const phoneVariations = [senderPhone, `+${senderPhone}`];
     if (senderPhone.startsWith("256")) {
-      phoneVariations.push(`0${senderPhone.substring(3)}`);
+      phoneVariations.push(`0${senderPhone.substring(3)}`); // Creates the 07... version
     }
 
-    // 1. Check if the sender is a BUYER in an active order
+    // ==========================================
+    // SCENARIO 1: SENDER IS THE BUYER
+    // ==========================================
     const buyerQuery = await ordersRef
-      // Use 'in' to check if the database phone number matches ANY of our variations
-      .where("buyerPhone", "in", phoneVariations)
+      .where("contactPhone", "in", phoneVariations) // Matches your exact DB field
       .where("status", "in", activeStatuses) 
       .limit(1)
       .get();
 
     if (!buyerQuery.empty) {
-      // Sender is the buyer, return the seller's phone
-      return buyerQuery.docs[0].data().sellerPhone;
+      const orderData = buyerQuery.docs[0].data();
+      const productId = orderData.items?.[0]?.productId;
+
+      if (productId) {
+        // We found the order! Now look up the product to get the seller's phone
+        const productDoc = await productsRef.doc(productId).get();
+        if (productDoc.exists && productDoc.data()?.sellerPhone) {
+          return productDoc.data()?.sellerPhone; 
+        }
+      }
     }
 
-    // 2. Check if the sender is a SELLER in an active order
-    const sellerQuery = await ordersRef
+    // ==========================================
+    // SCENARIO 2: SENDER IS THE SELLER
+    // ==========================================
+    // Step A: Find the sellerId by checking the products collection
+    const productQuery = await productsRef
       .where("sellerPhone", "in", phoneVariations)
-      .where("status", "in", activeStatuses) 
       .limit(1)
       .get();
 
-    if (!sellerQuery.empty) {
-      // Sender is the seller, return the buyer's phone
-      return sellerQuery.docs[0].data().buyerPhone;
+    if (!productQuery.empty) {
+      const sellerId = productQuery.docs[0].data().sellerId;
+
+      // Step B: Find an active order belonging to this sellerId
+      const sellerOrderQuery = await ordersRef
+        .where("sellerId", "==", sellerId)
+        .where("status", "in", activeStatuses) 
+        .limit(1)
+        .get();
+
+      if (!sellerOrderQuery.empty) {
+        // Return the buyer's contact phone
+        return sellerOrderQuery.docs[0].data().contactPhone;
+      }
     }
 
     return null; // Not part of any active transaction
