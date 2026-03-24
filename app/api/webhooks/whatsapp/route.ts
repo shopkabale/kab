@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import * as admin from "firebase-admin";
 
-// We will create this function in your next step!
-import { sendWhatsAppText } from "@/lib/whatsapp"; 
+// ✅ Updated import to match your upgraded lib/whatsapp.ts file
+import { sendWhatsAppMessage } from "@/lib/whatsapp"; 
 
 // 1. Handle Webhook Verification (GET)
 export async function GET(request: Request) {
@@ -65,9 +65,9 @@ export async function POST(request: Request) {
                 if (targetPhone) {
                   // Format the message so they know who it's from
                   const forwardedText = `*New Message:*\n${text}`;
-                  
-                  // Send it!
-                  await sendWhatsAppText(targetPhone, forwardedText);
+
+                  // ✅ Updated function call to use your existing plain text sender
+                  await sendWhatsAppMessage(targetPhone, forwardedText);
                   console.log(`✅ Relayed message from ${fromPhone} to ${targetPhone}`);
                 } else {
                   console.log(`ℹ️ No active order found for ${fromPhone}. Message saved but not relayed.`);
