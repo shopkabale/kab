@@ -102,13 +102,24 @@ export async function POST(request: Request) {
 async function getActiveChatPartner(senderPhone: string): Promise<string | null> {
   try {
     const ordersRef = adminDb.collection("orders"); 
-
-    // ✅ Updated statuses to match your Kabale Online database
     const activeStatuses = ["pending", "confirmed", "out for delivery"];
+
+    // 💡 THE FIX: Create variations of the incoming number to match your Firebase database
+    // If Meta sends "256784655792", we create an array of possibilities:
+    const phoneVariations = [
+      senderPhone,                             // 1. Meta format: "256784655792"
+      `+${senderPhone}`,                       // 2. Plus format: "+256784655792"
+    ];
+
+    // 3. Local format: "0784655792"
+    if (senderPhone.startsWith("256")) {
+      phoneVariations.push(`0${senderPhone.substring(3)}`);
+    }
 
     // 1. Check if the sender is a BUYER in an active order
     const buyerQuery = await ordersRef
-      .where("buyerPhone", "==", senderPhone)
+      // Use 'in' to check if the database phone number matches ANY of our variations
+      .where("buyerPhone", "in", phoneVariations)
       .where("status", "in", activeStatuses) 
       .limit(1)
       .get();
@@ -120,7 +131,7 @@ async function getActiveChatPartner(senderPhone: string): Promise<string | null>
 
     // 2. Check if the sender is a SELLER in an active order
     const sellerQuery = await ordersRef
-      .where("sellerPhone", "==", senderPhone)
+      .where("sellerPhone", "in", phoneVariations)
       .where("status", "in", activeStatuses) 
       .limit(1)
       .get();
