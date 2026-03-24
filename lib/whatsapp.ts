@@ -5,7 +5,12 @@ export async function sendWhatsAppMessage(phoneNumber: string, messageText: stri
 
   if (!token || !phoneNumberId) throw new Error("Missing WhatsApp Cloud API credentials.");
 
-  const cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
+  // Format Ugandan numbers correctly for Meta
+  let cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
+  if (cleanPhoneNumber.startsWith('0')) {
+    cleanPhoneNumber = `256${cleanPhoneNumber.slice(1)}`;
+  }
+
   const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
 
   const payload = {
