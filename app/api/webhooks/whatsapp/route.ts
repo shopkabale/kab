@@ -103,10 +103,13 @@ async function getActiveChatPartner(senderPhone: string): Promise<string | null>
   try {
     const ordersRef = adminDb.collection("orders"); 
 
+    // ✅ Updated statuses to match your Kabale Online database
+    const activeStatuses = ["pending", "confirmed", "out for delivery"];
+
     // 1. Check if the sender is a BUYER in an active order
     const buyerQuery = await ordersRef
       .where("buyerPhone", "==", senderPhone)
-      .where("status", "in", ["pending", "accepted", "ready"]) // Only relay if order is active
+      .where("status", "in", activeStatuses) 
       .limit(1)
       .get();
 
@@ -118,7 +121,7 @@ async function getActiveChatPartner(senderPhone: string): Promise<string | null>
     // 2. Check if the sender is a SELLER in an active order
     const sellerQuery = await ordersRef
       .where("sellerPhone", "==", senderPhone)
-      .where("status", "in", ["pending", "accepted", "ready"]) 
+      .where("status", "in", activeStatuses) 
       .limit(1)
       .get();
 
