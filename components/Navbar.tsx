@@ -1,3 +1,4 @@
+// components/Navbar.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -24,6 +25,9 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
     return null; 
   }
 
+  // Helper to check if a link is active
+  const isActive = (path: string) => pathname === path;
+
   return (
     <>
       {isMobileMenuOpen && (
@@ -47,25 +51,36 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
               <SearchBar />
             </div>
 
-            {/* DESKTOP MENU */}
+            {/* ============================================== */}
+            {/* DESKTOP MENU                                   */}
+            {/* ============================================== */}
             <div className="hidden xl:flex items-center space-x-6">
-              <Link href="/products" className="text-slate-600 hover:text-[#D97706] text-sm font-semibold transition-colors">
+              <Link href="/products" className={`text-sm font-semibold transition-colors ${isActive('/products') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>
                 All Items
               </Link>
-              <Link href="/category/electronics" className="text-slate-600 hover:text-[#D97706] text-sm font-semibold transition-colors">
+              <Link href="/category/electronics" className={`text-sm font-semibold transition-colors ${isActive('/category/electronics') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>
                 Electronics
               </Link>
-              <Link href="/category/agriculture" className="text-slate-600 hover:text-[#D97706] text-sm font-semibold transition-colors">
+              <Link href="/category/agriculture" className={`text-sm font-semibold transition-colors ${isActive('/category/agriculture') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>
                 Agriculture
               </Link>
-              <Link href="/category/student_item" className="text-slate-600 hover:text-[#D97706] text-sm font-semibold transition-colors">
+              <Link href="/category/student_item" className={`text-sm font-semibold transition-colors ${isActive('/category/student_item') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>
                 Student Market
               </Link>
-              <Link href="/requests" className="text-slate-600 hover:text-[#D97706] text-sm font-semibold transition-colors">
+              <Link href="/requests" className={`text-sm font-semibold transition-colors ${isActive('/requests') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>
                 Requests
               </Link>
-              <Link href="/blog" className="text-slate-600 hover:text-[#D97706] text-sm font-semibold transition-colors">
+              <Link href="/blog" className={`text-sm font-semibold transition-colors ${isActive('/blog') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>
                 Journal
+              </Link>
+
+              {/* 🚀 ADDED: Desktop AI Guide Link 🚀 */}
+              <Link 
+                href="/ai" 
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-colors ${isActive('/ai') ? 'text-[#D97706] bg-amber-50' : 'text-slate-700 hover:text-[#D97706] hover:bg-slate-50'}`}
+              >
+                <span className="text-[#D97706] text-base leading-none">✨</span> 
+                <span className="text-sm font-bold">AI Guide</span>
               </Link>
 
               <div className="h-5 w-px bg-slate-200 mx-2"></div>
@@ -74,6 +89,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 <span>➕</span> Post Your Item
               </Link>
 
+              {/* User Authentication Display */}
               {loading ? (
                 <div className="h-6 w-6 rounded-full border-2 border-[#D97706] border-t-transparent animate-spin ml-4"></div>
               ) : user ? (
@@ -139,27 +155,28 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
           </div>
         </div>
 
-        {/* MOBILE DROPDOWN MENU */}
+        {/* ============================================== */}
+        {/* MOBILE DROPDOWN MENU                           */}
+        {/* ============================================== */}
         <div className={`xl:hidden absolute w-full bg-white border-t border-slate-200 shadow-xl transition-all duration-300 ease-in-out origin-top ${isMobileMenuOpen ? 'opacity-100 scale-y-100' : 'opacity-0 scale-y-0 pointer-events-none'} max-h-[85vh] overflow-y-auto`}>
 
           <div className="px-4 pt-4 pb-2 md:hidden">
-            {/* FIXED: Passed the onSearch prop to close the menu */}
             <SearchBar onSearch={() => setIsMobileMenuOpen(false)} />
           </div>
 
           {/* GROUP 1: Shop By Category */}
           <div className="px-2 py-3">
             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-4 mb-2">Shop by Category</h3>
-            <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2.5 rounded-lg text-base font-semibold text-slate-700 hover:text-[#D97706] hover:bg-amber-50">
+            <Link href="/products" onClick={() => setIsMobileMenuOpen(false)} className={`block px-4 py-2.5 rounded-lg text-base font-semibold ${isActive('/products') ? 'bg-slate-100 text-[#D97706]' : 'text-slate-700 hover:text-[#D97706] hover:bg-amber-50'}`}>
               Browse All Items
             </Link>
-            <Link href="/category/electronics" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2.5 rounded-lg text-base font-semibold text-slate-700 hover:text-[#D97706] hover:bg-amber-50">
+            <Link href="/category/electronics" onClick={() => setIsMobileMenuOpen(false)} className={`block px-4 py-2.5 rounded-lg text-base font-semibold ${isActive('/category/electronics') ? 'bg-slate-100 text-[#D97706]' : 'text-slate-700 hover:text-[#D97706] hover:bg-amber-50'}`}>
               Electronics
             </Link>
-            <Link href="/category/agriculture" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2.5 rounded-lg text-base font-semibold text-slate-700 hover:text-[#D97706] hover:bg-amber-50">
+            <Link href="/category/agriculture" onClick={() => setIsMobileMenuOpen(false)} className={`block px-4 py-2.5 rounded-lg text-base font-semibold ${isActive('/category/agriculture') ? 'bg-slate-100 text-[#D97706]' : 'text-slate-700 hover:text-[#D97706] hover:bg-amber-50'}`}>
               Agriculture
             </Link>
-            <Link href="/category/student_item" onClick={() => setIsMobileMenuOpen(false)} className="block px-4 py-2.5 rounded-lg text-base font-semibold text-slate-700 hover:text-[#D97706] hover:bg-amber-50">
+            <Link href="/category/student_item" onClick={() => setIsMobileMenuOpen(false)} className={`block px-4 py-2.5 rounded-lg text-base font-semibold ${isActive('/category/student_item') ? 'bg-slate-100 text-[#D97706]' : 'text-slate-700 hover:text-[#D97706] hover:bg-amber-50'}`}>
               Student Market
             </Link>
           </div>
@@ -169,11 +186,21 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
           {/* GROUP 2: Community & News */}
           <div className="px-2 py-3">
             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest px-4 mb-2">Community & News</h3>
-            <Link href="/requests" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-semibold text-slate-700 hover:text-[#D97706] hover:bg-amber-50">
+            <Link href="/requests" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-semibold ${isActive('/requests') ? 'bg-slate-100 text-[#D97706]' : 'text-slate-700 hover:text-[#D97706] hover:bg-amber-50'}`}>
               <span>📢</span> Buyer Requests
             </Link>
-            <Link href="/blog" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-semibold text-slate-700 hover:text-[#D97706] hover:bg-amber-50">
+            <Link href="/blog" onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-semibold ${isActive('/blog') ? 'bg-slate-100 text-[#D97706]' : 'text-slate-700 hover:text-[#D97706] hover:bg-amber-50'}`}>
               <span>📰</span> Journal & News
+            </Link>
+
+            {/* 🚀 ADDED: Mobile AI Guide Link 🚀 */}
+            <Link 
+              href="/ai" 
+              onClick={() => setIsMobileMenuOpen(false)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-base font-bold transition-colors mt-1 ${isActive('/ai') ? 'bg-amber-100 text-[#D97706]' : 'bg-amber-50 text-[#D97706] hover:bg-amber-100'}`}
+            >
+              <span className="text-xl leading-none">✨</span> 
+              AI Shopping Guide
             </Link>
           </div>
 
