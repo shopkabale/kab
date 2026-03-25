@@ -53,7 +53,6 @@ export default function SaveProductButton({ product }: { product: any }) {
     }
   };
 
-  // 🔥 Explicit text based on state
   const buttonText = loading 
     ? "Processing..." 
     : (isSaved ? "Remove from wishlist" : "Save for later");
@@ -62,19 +61,15 @@ export default function SaveProductButton({ product }: { product: any }) {
     <button 
       onClick={toggleSave}
       disabled={loading}
-      // 🔥 NEW STYLING: Wider, standard button with text
-      className={`flex items-center gap-2.5 px-6 py-3 rounded-xl border transition-all text-sm font-bold shadow-sm active:scale-95 disabled:opacity-70 ${
+      className={`w-full py-3 rounded-xl font-bold text-sm flex justify-center items-center gap-2 border disabled:opacity-70 ${
         isSaved 
-          ? "bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100" 
-          : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50 hover:border-slate-300"
+          ? "bg-rose-50 text-rose-700 border-rose-200" 
+          : "bg-white text-slate-700 border-slate-200"
       }`}
     >
-      {/* Icon always present */}
-      <span className={`text-base transition-all ${isSaved ? "scale-110" : "grayscale opacity-50"}`}>
+      <span className={isSaved ? "" : "grayscale opacity-50"}>
         {isSaved ? "❤️" : "🤍"}
       </span>
-      
-      {/* 🔥 THE EXPLICIT TEXT 🔥 */}
       <span>{buttonText}</span>
     </button>
   );
