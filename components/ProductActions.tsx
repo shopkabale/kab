@@ -131,7 +131,7 @@ export default function ProductActions({ product, children }: { product: Product
     }
   };
 
-  let btnLabel = "Chat Seller";
+  let btnLabel = "Chat With Seller";
   let btnClass = "bg-[#25D366] text-white";
 
   if (loading) {
