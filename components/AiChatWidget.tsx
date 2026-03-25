@@ -18,11 +18,11 @@ const index = searchClient.initIndex(process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME 
 type SearchResult = { objectID: string; name: string; category: string; price: number; image: string; };
 
 type Message = { 
-  id: string; // Unique ID to track feedback
+  id: string; 
   role: "user" | "agent"; 
   content: string; 
   products?: SearchResult[];
-  feedback?: "up" | "down" | null; // For success tracking
+  feedback?: "up" | "down" | null; 
 };
 
 export default function AiChatWidget() {
@@ -33,7 +33,12 @@ export default function AiChatWidget() {
   const [sessionId, setSessionId] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 1. Initialize Session & Load History from LocalStorage
+  // Dragging State
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, lastX: 0, lastY: 0, isDragging: false });
+
+  // 1. Initialize Session & Load History
   useEffect(() => {
     let currentSession = localStorage.getItem("kabale_ai_session");
     if (!currentSession) {
@@ -48,7 +53,7 @@ export default function AiChatWidget() {
     }
   }, []);
 
-  // 2. Auto-scroll to the bottom when messages change
+  // 2. Auto-scroll
   useEffect(() => {
     if (isOpen) {
       scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -58,7 +63,6 @@ export default function AiChatWidget() {
   // 3. Sync Chat to LocalStorage and Firebase
   const syncChat = async (newMessages: Message[], currentSessionId: string) => {
     localStorage.setItem(`chat_${currentSessionId}`, JSON.stringify(newMessages));
-    
     try {
       await setDoc(doc(db, "ai_conversations", currentSessionId), {
         sessionId: currentSessionId,
@@ -70,7 +74,40 @@ export default function AiChatWidget() {
     }
   };
 
-  // 4. Handle Thumbs Up / Thumbs Down Feedback
+  // Clear Chat Utility
+  const clearChat = () => {
+    setMessages([]);
+    localStorage.removeItem(`chat_${sessionId}`);
+  };
+
+  // 4. Robust Drag Logic for Mobile and Desktop
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current.isDragging = true;
+    setIsDragging(true);
+    dragRef.current.startX = e.clientX;
+    dragRef.current.startY = e.clientY;
+    dragRef.current.lastX = position.x;
+    dragRef.current.lastY = position.y;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.isDragging) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    setPosition({
+      x: dragRef.current.lastX + dx,
+      y: dragRef.current.lastY + dy
+    });
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current.isDragging = false;
+    setIsDragging(false);
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  // 5. Handle Thumbs Up / Thumbs Down
   const handleFeedback = (messageId: string, type: "up" | "down") => {
     const updatedMessages = messages.map(msg => 
       msg.id === messageId ? { ...msg, feedback: type } : msg
@@ -79,14 +116,13 @@ export default function AiChatWidget() {
     syncChat(updatedMessages, sessionId);
   };
 
-  // 5. Submit Message to Groq & Handle Algolia Tags
+  // 6. Submit Message
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
     const userText = input.trim();
-    const userMsgId = Date.now().toString();
-    const newMessages: Message[] = [...messages, { id: userMsgId, role: "user", content: userText }];
+    const newMessages: Message[] = [...messages, { id: Date.now().toString(), role: "user", content: userText }];
     
     setMessages(newMessages);
     setInput("");
@@ -94,7 +130,7 @@ export default function AiChatWidget() {
     syncChat(newMessages, sessionId);
 
     try {
-      // 🚀 THE FIX: Translate "agent" back to "assistant" so Groq doesn't reject it
+      // Ensure Groq sees "assistant" instead of "agent"
       const apiMessages = newMessages.map(m => ({ 
         role: m.role === "agent" ? "assistant" : m.role, 
         content: m.content 
@@ -111,21 +147,17 @@ export default function AiChatWidget() {
       let rawText = await res.text();
       let foundProducts: SearchResult[] = [];
 
-      // 🕵️‍♂️ INTERCEPT THE ALGOLIA SEARCH TAG
+      // Intercept ||SEARCH:keyword|| tags
       const searchRegex = /\|\|SEARCH:(.*?)\|\|/i;
       const match = rawText.match(searchRegex);
 
       if (match) {
         const query = match[1].trim();
-        rawText = rawText.replace(searchRegex, "").trim(); // Remove tag from user view
-        
+        rawText = rawText.replace(searchRegex, "").trim(); 
         try {
-          // Fetch products directly from Algolia
           const { hits } = await index.search<SearchResult>(query, { hitsPerPage: 3 });
           foundProducts = hits;
-        } catch (algoliaError) {
-          console.error("Algolia search failed:", algoliaError);
-        }
+        } catch (err) { console.error(err); }
       }
 
       const agentMessage: Message = { 
@@ -141,12 +173,14 @@ export default function AiChatWidget() {
       syncChat(finalMessages, sessionId);
 
     } catch (error) {
-      console.error("Chat Submission Error:", error);
-      setMessages((prev) => [...prev, { 
+      const errorMsg: Message = { 
         id: Date.now().toString(), 
         role: "agent", 
         content: "Oops, my circuits got tangled! 🤖 Give it another try?" 
-      }]);
+      };
+      const finalMessages = [...newMessages, errorMsg];
+      setMessages(finalMessages);
+      syncChat(finalMessages, sessionId);
     } finally {
       setIsLoading(false);
     }
@@ -157,7 +191,7 @@ export default function AiChatWidget() {
       {/* Floating Action Button */}
       {!isOpen && (
         <button 
-          onClick={() => setIsOpen(true)}
+          onClick={() => { setIsOpen(true); setPosition({x:0, y:0}); }} 
           className="fixed bottom-6 right-6 md:bottom-8 md:right-8 bg-[#D97706] text-white p-4 rounded-full shadow-2xl hover:bg-amber-600 hover:scale-105 transition-all z-50 flex items-center gap-2"
         >
           <span className="text-2xl">✨</span>
@@ -165,20 +199,54 @@ export default function AiChatWidget() {
         </button>
       )}
 
-      {/* Chat Window */}
+      {/* Chat Window - True Centered & Draggable */}
       {isOpen && (
-        <div className="fixed bottom-4 right-4 md:bottom-8 md:right-8 w-[92vw] max-w-[400px] h-[600px] max-h-[85vh] bg-white border border-slate-200 rounded-2xl shadow-2xl flex flex-col z-50 overflow-hidden animate-in slide-in-from-bottom-5">
-          {/* Header */}
-          <div className="bg-slate-900 text-white px-5 py-4 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse" />
-              <h3 className="font-bold text-sm md:text-base">Kabale AI Guide</h3>
+        <div 
+          className="fixed z-[100] flex flex-col bg-white border border-slate-200 shadow-2xl overflow-hidden"
+          style={{
+            top: '50%',
+            left: '50%',
+            transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
+            width: '92vw',
+            maxWidth: '400px',
+            height: '600px',
+            maxHeight: '85vh',
+            borderRadius: '16px',
+            // Add a subtle scale effect when dragging
+            scale: isDragging ? '1.02' : '1',
+            transition: isDragging ? 'none' : 'scale 0.2s ease'
+          }}
+        >
+          {/* DRAGGABLE HEADER */}
+          <div 
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            // touch-none is critical here. It stops the mobile browser from scrolling the page when dragging
+            className="bg-slate-900 text-white flex flex-col cursor-grab active:cursor-grabbing touch-none select-none relative"
+          >
+            {/* Visual Drag Indicator (The little pill line) */}
+            <div className="w-full flex justify-center pt-2 pb-1 pointer-events-none">
+              <div className="w-10 h-1.5 bg-slate-600 rounded-full opacity-50"></div>
             </div>
-            <button onClick={() => setIsOpen(false)} className="text-slate-300 hover:text-white text-2xl leading-none">&times;</button>
+
+            <div className="px-5 pb-4 flex items-center justify-between pointer-events-none">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse" />
+                <h3 className="font-bold text-sm md:text-base">Kabale AI Guide</h3>
+              </div>
+              
+              {/* Controls */}
+              <div className="flex items-center gap-4 pointer-events-auto">
+                <button onClick={clearChat} className="text-slate-400 hover:text-white text-sm" title="Clear Chat">🗑️</button>
+                <button onClick={() => setIsOpen(false)} className="text-slate-300 hover:text-white text-2xl leading-none">&times;</button>
+              </div>
+            </div>
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-slate-50">
+          <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-slate-50 relative">
             {messages.length === 0 && (
               <div className="text-center mt-12 text-slate-500">
                 <span className="text-5xl block mb-4">👋</span>
@@ -221,7 +289,7 @@ export default function AiChatWidget() {
                   </div>
                 )}
 
-                {/* 👍 👎 FEEDBACK TRACKING (Only for AI responses) */}
+                {/* 👍 👎 FEEDBACK TRACKING */}
                 {msg.role === "agent" && !msg.content.includes("circuits got tangled") && (
                   <div className="flex items-center gap-2 mt-1.5 ml-2">
                     <button 
