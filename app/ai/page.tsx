@@ -7,22 +7,21 @@ import Link from "next/link";
 export default function AIGuidePage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-20">
-      
+
       {/* Hero Section */}
       <div className="bg-slate-900 text-white py-16 px-4 md:py-24 text-center">
-        <div className="max-w-3xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <span className="text-5xl md:text-6xl block mb-6">✨</span>
+        <div className="max-w-3xl mx-auto">
           <h1 className="text-3xl md:text-5xl font-extrabold mb-6 leading-tight">
             Meet the Kabale Online <span className="text-[#D97706]">AI Assistant</span>
           </h1>
           <p className="text-lg md:text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
-            Your personal, 24/7 shopping guide. Whether you are hunting for a specific laptop, looking for fresh sneakers, or need help setting up your first seller account, our AI is here to help.
+            Your personal, 24/7 shopping guide. Whether you are hunting for a specific laptop, looking for professional gear, or need help setting up your first seller account, our AI is here to help.
           </p>
-          
+
           {/* THE CLEAN "TRY IT OUT" LINK */}
           <button 
             onClick={() => window.dispatchEvent(new Event('open-ai-widget'))}
-            className="text-[#D97706] font-bold text-lg md:text-xl hover:text-amber-500 underline underline-offset-8 decoration-2 transition-all flex items-center justify-center gap-2 mx-auto cursor-pointer"
+            className="text-[#D97706] font-bold text-lg md:text-xl hover:text-amber-500 underline underline-offset-8 decoration-2 transition-colors flex items-center justify-center gap-2 mx-auto cursor-pointer"
           >
             Try it out <span className="text-2xl no-underline">↗</span>
           </button>
@@ -83,30 +82,29 @@ export default function AIGuidePage() {
                   <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold flex-shrink-0">1</div>
                   <div>
                     <h4 className="font-bold text-slate-900 text-lg">Click "Try it out"</h4>
-                    <p className="text-slate-600">Click the link above, or tap the orange floating button in the bottom corner of your screen.</p>
+                    <p className="text-slate-600">Click the link above to launch the AI Assistant instantly.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold flex-shrink-0">2</div>
                   <div>
                     <h4 className="font-bold text-slate-900 text-lg">Type naturally</h4>
-                    <p className="text-slate-600">Ask a question exactly like you are texting a friend. "I need a kettle" or "How do I contact a seller?"</p>
+                    <p className="text-slate-600">Ask a question exactly like you are texting a colleague. "I need a kettle" or "How do I contact a seller?"</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold flex-shrink-0">3</div>
                   <div>
                     <h4 className="font-bold text-slate-900 text-lg">Click the products</h4>
-                    <p className="text-slate-600">When the AI shows you product cards, click them to go straight to the seller's page and make a deal!</p>
+                    <p className="text-slate-600">When the AI shows you product cards, click them to go straight to the seller's page and make a deal.</p>
                   </div>
                 </div>
               </div>
-              
+
               {/* Visual Aid */}
               <div className="flex-1 w-full bg-slate-200 rounded-2xl h-64 flex items-center justify-center relative overflow-hidden border border-slate-300">
                 <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-                <div className="relative bg-white px-6 py-4 rounded-xl shadow-lg border border-slate-100 flex items-center gap-3 animate-bounce">
-                  <span className="text-2xl">✨</span>
+                <div className="relative bg-white px-6 py-4 rounded-xl shadow-lg border border-slate-100 flex items-center gap-3">
                   <span className="font-bold text-slate-800">Ask for laptops, shoes, help...</span>
                 </div>
               </div>
@@ -125,7 +123,7 @@ export default function AIGuidePage() {
         </Link>
       </div>
 
-      {/* The floating AI widget stays active here */}
+      {/* The AI widget stays active here */}
       <AiChatWidget />
     </div>
   );
