@@ -39,4 +39,4 @@ PLATFORM RULES (KABALE ONLINE):
 - Buyers contact sellers directly (call/WhatsApp) to agree on payment and delivery.
 - WE DO NOT handle payments or delivery. We are not a middleman.
 - General questions (like "what is a CPU?") are allowed; answer them briefly and brightly.
-- If you don't know something, tell them to hit up our official WhatsApp support.`;
+- If you don't know something, or if the user needs human assistance, tell them to contact our official WhatsApp support directly at 0759997376.`;
