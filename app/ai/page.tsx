@@ -1,10 +1,15 @@
 // app/ai/page.tsx
 "use client";
 
-import AiChatWidget from "@/components/AiChatWidget";
+import FloatingHelpButton from "@/components/FloatingHelpButton";
 import Link from "next/link";
 
 export default function AIGuidePage() {
+  // Helper function to trigger the combined floating widget
+  const openWidget = () => {
+    window.dispatchEvent(new Event('open-ai-widget'));
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 pb-20">
 
@@ -20,7 +25,7 @@ export default function AIGuidePage() {
 
           {/* THE CLEAN "TRY IT OUT" LINK */}
           <button 
-            onClick={() => window.dispatchEvent(new Event('open-ai-widget'))}
+            onClick={openWidget}
             className="text-[#D97706] font-bold text-lg md:text-xl hover:text-amber-500 underline underline-offset-8 decoration-2 transition-colors flex items-center justify-center gap-2 mx-auto cursor-pointer"
           >
             Try it out <span className="text-2xl no-underline">↗</span>
@@ -101,12 +106,16 @@ export default function AIGuidePage() {
                 </div>
               </div>
 
-              {/* Visual Aid */}
+              {/* Visual Aid - NOW CLICKABLE! */}
               <div className="flex-1 w-full bg-slate-200 rounded-2xl h-64 flex items-center justify-center relative overflow-hidden border border-slate-300">
                 <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-                <div className="relative bg-white px-6 py-4 rounded-xl shadow-lg border border-slate-100 flex items-center gap-3">
-                  <span className="font-bold text-slate-800">Ask for laptops, shoes, help...</span>
-                </div>
+                <button 
+                  onClick={openWidget}
+                  className="relative bg-white px-6 py-4 rounded-xl shadow-lg border border-slate-100 flex items-center gap-3 hover:border-[#D97706] hover:shadow-xl transition-all cursor-pointer group"
+                >
+                  <span className="font-bold text-slate-800 group-hover:text-[#D97706] transition-colors">Ask for laptops, shoes, help...</span>
+                  <span className="text-[#D97706] opacity-0 group-hover:opacity-100 transition-opacity font-bold">↗</span>
+                </button>
               </div>
             </div>
           </div>
@@ -123,8 +132,8 @@ export default function AIGuidePage() {
         </Link>
       </div>
 
-      {/* The AI widget stays active here */}
-      <AiChatWidget />
+      {/* The Combined Floating Help Button is fetched and rendered here */}
+      <FloatingHelpButton />
     </div>
   );
 }
