@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import algoliasearch from "algoliasearch/lite";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase/config"; // Make sure this path matches your firebase config
+import { db } from "@/lib/firebase/config"; // Ensure this matches your path
 
 // Initialize Algolia
 const searchClient = algoliasearch(
@@ -94,8 +94,11 @@ export default function AiChatWidget() {
     syncChat(newMessages, sessionId);
 
     try {
-      // Send simplified message history to the API (no product/feedback data)
-      const apiMessages = newMessages.map(m => ({ role: m.role, content: m.content }));
+      // 🚀 THE FIX: Translate "agent" back to "assistant" so Groq doesn't reject it
+      const apiMessages = newMessages.map(m => ({ 
+        role: m.role === "agent" ? "assistant" : m.role, 
+        content: m.content 
+      }));
 
       const res = await fetch("/api/ai-agent", {
         method: "POST",
@@ -116,9 +119,13 @@ export default function AiChatWidget() {
         const query = match[1].trim();
         rawText = rawText.replace(searchRegex, "").trim(); // Remove tag from user view
         
-        // Fetch products directly from Algolia
-        const { hits } = await index.search<SearchResult>(query, { hitsPerPage: 3 });
-        foundProducts = hits;
+        try {
+          // Fetch products directly from Algolia
+          const { hits } = await index.search<SearchResult>(query, { hitsPerPage: 3 });
+          foundProducts = hits;
+        } catch (algoliaError) {
+          console.error("Algolia search failed:", algoliaError);
+        }
       }
 
       const agentMessage: Message = { 
@@ -134,6 +141,7 @@ export default function AiChatWidget() {
       syncChat(finalMessages, sessionId);
 
     } catch (error) {
+      console.error("Chat Submission Error:", error);
       setMessages((prev) => [...prev, { 
         id: Date.now().toString(), 
         role: "agent", 
@@ -180,7 +188,7 @@ export default function AiChatWidget() {
 
             {messages.map((msg) => (
               <div key={msg.id} className="flex flex-col">
-                <div className={`p-3.5 rounded-2xl max-w-[85%] text-sm shadow-sm ${
+                <div className={`p-3.5 rounded-2xl max-w-[85%] text-sm shadow-sm whitespace-pre-wrap ${
                   msg.role === "user" 
                     ? "bg-black text-white ml-auto rounded-br-sm" 
                     : "bg-white border border-slate-200 text-slate-800 mr-auto rounded-bl-sm"
@@ -199,7 +207,7 @@ export default function AiChatWidget() {
                       >
                         <div className="h-24 w-full relative bg-slate-100">
                           {product.image ? (
-                            <Image src={product.image} alt={product.name} fill className="object-cover" />
+                            <Image src={product.image} alt={product.name} fill className="object-cover" sizes="140px" />
                           ) : (
                             <div className="flex h-full items-center justify-center text-xs text-slate-400">No Image</div>
                           )}
@@ -214,7 +222,7 @@ export default function AiChatWidget() {
                 )}
 
                 {/* 👍 👎 FEEDBACK TRACKING (Only for AI responses) */}
-                {msg.role === "agent" && (
+                {msg.role === "agent" && !msg.content.includes("circuits got tangled") && (
                   <div className="flex items-center gap-2 mt-1.5 ml-2">
                     <button 
                       onClick={() => handleFeedback(msg.id, "up")}
