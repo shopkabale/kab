@@ -62,7 +62,46 @@ export async function sendWhatsAppTemplate(
   return await executeRequest(url, token, payload);
 }
 
-// 3. Shared helper
+// 3. Interactive Button Message
+export async function sendWhatsAppInteractiveButtons(
+  phoneNumber: string,
+  bodyText: string,
+  buttons: { id: string, title: string }[]
+) {
+  const token = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+  if (!token || !phoneNumberId) throw new Error("Missing WhatsApp Cloud API credentials.");
+
+  // Format Ugandan numbers correctly for Meta
+  let cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
+  if (cleanPhoneNumber.startsWith('0')) {
+    cleanPhoneNumber = `256${cleanPhoneNumber.slice(1)}`;
+  }
+
+  const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
+
+  // Meta allows a maximum of 3 buttons
+  const payload = {
+    messaging_product: "whatsapp",
+    to: cleanPhoneNumber,
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: bodyText },
+      action: {
+        buttons: buttons.slice(0, 3).map(btn => ({
+          type: "reply",
+          reply: { id: btn.id, title: btn.title }
+        }))
+      }
+    }
+  };
+
+  return await executeRequest(url, token, payload);
+}
+
+// 4. Shared helper
 async function executeRequest(url: string, token: string, payload: any) {
   try {
     const response = await fetch(url, {
