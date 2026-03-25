@@ -1,4 +1,4 @@
-// components/FloatingHelpButton
+// components/AiChatWidget.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -22,7 +22,7 @@ type Message = {
   role: "user" | "agent"; 
   content: string; 
   products?: SearchResult[];
-  searchQuery?: string; // Added to track what the AI searched for
+  searchQuery?: string; 
   feedback?: "up" | "down" | null; 
 };
 
@@ -81,7 +81,7 @@ export default function AiChatWidget() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // 4. Listen for external clicks
+  // 4. Listen for external clicks (from /ai page)
   useEffect(() => {
     const handleOpen = () => { setIsOpen(true); setPosition({x:0, y:0}); };
     window.addEventListener('open-ai-widget', handleOpen);
@@ -107,7 +107,7 @@ export default function AiChatWidget() {
     localStorage.removeItem(`chat_${sessionId}`);
   };
 
-  // 6. Drag Logic
+  // 6. Robust Drag Logic for Window
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     dragRef.current.isDragging = true;
     dragRef.current.startX = e.clientX;
@@ -137,15 +137,14 @@ export default function AiChatWidget() {
     syncChat(updatedMessages, sessionId);
   };
 
-  // 8. Submit Message
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || isLoading) return;
+  // 8. 🚀 REFACTORED: Unified Send Message Logic 🚀
+  const sendMessage = async (textToSubmit: string) => {
+    if (!textToSubmit.trim() || isLoading) return;
 
-    const userText = input.trim();
+    const userText = textToSubmit.trim();
     const newMessages: Message[] = [...messages, { id: Date.now().toString(), role: "user", content: userText }];
     setMessages(newMessages);
-    setInput("");
+    setInput(""); // Clear input bar
     setIsLoading(true);
     syncChat(newMessages, sessionId);
 
@@ -200,6 +199,12 @@ export default function AiChatWidget() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Form submit wrapper
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    sendMessage(input);
   };
 
   return (
@@ -276,14 +281,52 @@ export default function AiChatWidget() {
 
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-slate-50 relative">
+            
+            {/* 🚀 THE NEW QUICK START MENU (Empty State) 🚀 */}
             {messages.length === 0 && (
-              <div className="text-center mt-12 text-slate-500">
-                <p className="text-sm font-medium">Hello. Looking for something specific, or need help selling?</p>
+              <div className="flex flex-col h-full items-center justify-center animate-in fade-in zoom-in-95 duration-300">
+                <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Hi there 👋</h2>
+                <p className="text-slate-500 font-medium mb-8">Where should we start?</p>
+
+                <div className="flex flex-col gap-3 w-full max-w-[85%]">
+                  <button 
+                    onClick={() => sendMessage("How do I sell an item here?")}
+                    className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-colors shadow-sm text-left group"
+                  >
+                    <span className="text-xl bg-slate-50 p-2 rounded-xl group-hover:bg-white transition-colors">🏷️</span>
+                    <span className="font-bold text-slate-700 text-sm group-hover:text-[#D97706] transition-colors">How to sell</span>
+                  </button>
+
+                  <button 
+                    onClick={() => sendMessage("How do I buy an item?")}
+                    className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-colors shadow-sm text-left group"
+                  >
+                    <span className="text-xl bg-slate-50 p-2 rounded-xl group-hover:bg-white transition-colors">🛒</span>
+                    <span className="font-bold text-slate-700 text-sm group-hover:text-[#D97706] transition-colors">How to buy</span>
+                  </button>
+
+                  <button 
+                    onClick={() => sendMessage("I need to contact the admin.")}
+                    className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-colors shadow-sm text-left group"
+                  >
+                    <span className="text-xl bg-slate-50 p-2 rounded-xl group-hover:bg-white transition-colors">📞</span>
+                    <span className="font-bold text-slate-700 text-sm group-hover:text-[#D97706] transition-colors">Contact admin</span>
+                  </button>
+                  
+                  <button 
+                    onClick={() => sendMessage("Show me some electronics.")}
+                    className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-colors shadow-sm text-left group"
+                  >
+                    <span className="text-xl bg-slate-50 p-2 rounded-xl group-hover:bg-white transition-colors">💻</span>
+                    <span className="font-bold text-slate-700 text-sm group-hover:text-[#D97706] transition-colors">Find electronics</span>
+                  </button>
+                </div>
               </div>
             )}
 
+            {/* Standard Message Rendering */}
             {messages.map((msg) => (
-              <div key={msg.id} className="flex flex-col">
+              <div key={msg.id} className="flex flex-col animate-in fade-in slide-in-from-bottom-2">
                 <div className={`p-3.5 rounded-2xl max-w-[85%] text-sm shadow-sm whitespace-pre-wrap ${
                   msg.role === "user" 
                     ? "bg-slate-900 text-white ml-auto rounded-br-sm" 
@@ -316,11 +359,11 @@ export default function AiChatWidget() {
                       </Link>
                     ))}
 
-                    {/* 🚀 "VIEW MORE" BUTTON */}
+                    {/* "VIEW MORE" BUTTON */}
                     {msg.searchQuery && (
                       <Link 
                         href={`/search?q=${encodeURIComponent(msg.searchQuery)}`}
-                        onClick={() => setIsOpen(false)} // Closes widget on click
+                        onClick={() => setIsOpen(false)} 
                         className="min-w-[100px] bg-slate-100 border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors flex-shrink-0 text-slate-500 p-3 group"
                       >
                         <span className="w-8 h-8 rounded-full bg-white group-hover:bg-[#D97706] group-hover:text-white flex items-center justify-center font-bold mb-2 transition-colors shadow-sm text-lg">➔</span>
@@ -340,7 +383,7 @@ export default function AiChatWidget() {
               </div>
             ))}
 
-            {/* 🚀 NEW PROFESSIONAL LOADING ANIMATION */}
+            {/* DOTS LOADING ANIMATION */}
             {isLoading && (
               <div className="bg-white border border-slate-200 w-fit px-4 py-3.5 rounded-2xl rounded-bl-sm shadow-sm flex items-center gap-1.5">
                 <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
