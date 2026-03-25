@@ -90,7 +90,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // ==========================================
   // 5. HELPER: RENDER DESCRIPTION AS BULLETS
   // ==========================================
-  const renderDescription = (desc: string) => {
+  // Fix: Added '?' so TypeScript knows 'desc' can be undefined
+  const renderDescription = (desc?: string) => {
     if (!desc) return <p className="text-slate-700 text-sm">No description provided by the seller.</p>;
     
     // Split by newlines and remove empty lines
@@ -186,7 +187,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                 <tbody className="divide-y divide-slate-200">
                   <tr className="divide-x divide-slate-200 bg-white">
                     <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700 whitespace-nowrap">Stock Status</th>
-                    <td className="px-4 py-3 text-slate-900 font-medium">
+                    <td className="px-4 py-3 text-slate-900 font-medium flex items-center">
                       <span className={safeStock > 0 ? "text-green-700" : "text-red-600"}>
                         {safeStock > 0 ? 'In Stock' : 'Out of Stock'}
                       </span>
