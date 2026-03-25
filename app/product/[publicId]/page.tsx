@@ -81,7 +81,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const relatedProducts = rawCategoryProducts
     .filter((p) => p.id !== product.id && p.publicId !== product.publicId)
     .sort(() => 0.5 - Math.random())
-    .slice(0, 4)
+    .slice(0, 8) // Grab up to 8 for the scrollable list
     .map((p) => ({
       ...p,
       images: p.images?.map((img: string) => optimizeImage(img)) || []
@@ -90,7 +90,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // ==========================================
   // 5. HELPER: RENDER DESCRIPTION AS BULLETS
   // ==========================================
-  // Fix: Added '?' so TypeScript knows 'desc' can be undefined
   const renderDescription = (desc?: string) => {
     if (!desc) return <p className="text-slate-700 text-sm">No description provided by the seller.</p>;
     
@@ -221,23 +220,21 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
       </div>  
 
       {/* ========================================== */}  
-      {/* RELATED PRODUCTS SECTION                   */}  
+      {/* HORIZONTALLY SCROLLABLE RELATED PRODUCTS   */}  
       {/* ========================================== */}  
       {relatedProducts.length > 0 && (  
-        <div className="mt-16">  
+        <div className="mt-16 mb-8">  
           <div className="flex items-center justify-between mb-6">  
             <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">You Might Also Like</h2>  
-            <Link href={`/category/${safeCategory}`} className="text-sm font-bold text-[#D97706] hover:text-amber-600 transition-colors hidden sm:block">  
-              View more  
-            </Link>  
           </div>  
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">  
+          {/* Scrollable Container */}
+          <div className="flex overflow-x-auto gap-4 pb-6 snap-x snap-mandatory scrollbar-hide">  
             {relatedProducts.map((relProduct) => (  
               <Link   
                 key={relProduct.id}   
                 href={`/product/${relProduct.publicId || relProduct.id}`}   
-                className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1 group flex flex-col"  
+                className="flex-none w-[160px] sm:w-[220px] snap-start bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col"  
               >  
                 {/* Image */}  
                 <div className="aspect-square relative bg-slate-100 overflow-hidden">  
@@ -246,8 +243,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                       src={relProduct.images[0]}   
                       alt={relProduct.name}  
                       fill   
-                      sizes="(max-width: 768px) 50vw, 25vw"  
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"  
+                      sizes="(max-width: 768px) 160px, 220px"  
+                      className="object-cover"  
                     />  
                   ) : (  
                     <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">No Image</div>  
@@ -259,7 +256,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">  
                     {safeCategory.replace(/_/g, ' ')}  
                   </span>  
-                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 mb-2 group-hover:text-[#D97706] transition-colors">  
+                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 mb-2">  
                     {relProduct.name}  
                   </h3>  
                   <div className="mt-auto pt-2">  
@@ -268,12 +265,21 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                 </div>  
               </Link>  
             ))}  
-          </div>  
 
-          {/* Mobile 'View more' button */}  
-          <Link href={`/category/${safeCategory}`} className="block sm:hidden text-center mt-6 w-full py-3 bg-slate-50 text-slate-700 font-bold rounded-xl border border-slate-200">  
-            View more {safeCategory.replace(/_/g, ' ')}  
-          </Link>  
+            {/* View More Card at the end of the scroll */}
+            <Link 
+              href={`/category/${safeCategory}`} 
+              className="flex-none w-[160px] sm:w-[220px] snap-start bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-500 hover:text-slate-800 p-4"
+            >
+              <div className="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center mb-3 shadow-sm">
+                <span className="text-xl font-bold">→</span>
+              </div>
+              <span className="text-sm font-bold text-center">
+                View more <br/>
+                <span className="capitalize text-[#D97706]">{safeCategory.replace(/_/g, ' ')}</span>
+              </span>
+            </Link>
+          </div>  
         </div>  
       )}  
 
