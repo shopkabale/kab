@@ -60,6 +60,13 @@ export default function AiChatWidget() {
     }
   }, [messages, isLoading, isOpen]);
 
+  // 🚀 NEW: Listen for external clicks (like the "Try it out" link)
+  useEffect(() => {
+    const handleOpen = () => { setIsOpen(true); setPosition({x:0, y:0}); };
+    window.addEventListener('open-ai-widget', handleOpen);
+    return () => window.removeEventListener('open-ai-widget', handleOpen);
+  }, []);
+
   // 3. Sync Chat to LocalStorage and Firebase
   const syncChat = async (newMessages: Message[], currentSessionId: string) => {
     localStorage.setItem(`chat_${currentSessionId}`, JSON.stringify(newMessages));
@@ -123,7 +130,7 @@ export default function AiChatWidget() {
 
     const userText = input.trim();
     const newMessages: Message[] = [...messages, { id: Date.now().toString(), role: "user", content: userText }];
-    
+
     setMessages(newMessages);
     setInput("");
     setIsLoading(true);
@@ -143,7 +150,7 @@ export default function AiChatWidget() {
       });
 
       if (!res.ok) throw new Error("API Error");
-      
+
       let rawText = await res.text();
       let foundProducts: SearchResult[] = [];
 
@@ -236,7 +243,7 @@ export default function AiChatWidget() {
                 <div className="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse" />
                 <h3 className="font-bold text-sm md:text-base">Kabale AI Guide</h3>
               </div>
-              
+
               {/* Controls */}
               <div className="flex items-center gap-4 pointer-events-auto">
                 <button onClick={clearChat} className="text-slate-400 hover:text-white text-sm" title="Clear Chat">🗑️</button>
@@ -308,7 +315,7 @@ export default function AiChatWidget() {
                 )}
               </div>
             ))}
-            
+
             {isLoading && (
               <div className="bg-white border border-slate-200 text-slate-400 w-fit px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm flex gap-1 items-center">
                 <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></span>
