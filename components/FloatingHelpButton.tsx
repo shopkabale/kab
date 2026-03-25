@@ -1,22 +1,73 @@
+// components/AiChatWidget.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import algoliasearch from "algoliasearch/lite";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
 
-export default function FloatingHelpButton() {
+// Initialize Algolia
+const searchClient = algoliasearch(
+  process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "",
+  process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY || ""
+);
+const index = searchClient.initIndex(process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "products");
+
+type SearchResult = { objectID: string; name: string; category: string; price: number; image: string; };
+
+type Message = { 
+  id: string; 
+  role: "user" | "agent"; 
+  content: string; 
+  products?: SearchResult[];
+  feedback?: "up" | "down" | null; 
+};
+
+export default function AiChatWidget() {
+  // Chat States
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+  const [sessionId, setSessionId] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Floating Button Scroll States (From your FloatingHelpButton)
   const [isVisible, setIsVisible] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  // Format the WhatsApp number (Assuming Uganda +256 for 075...)
-  const whatsappNumber = "256759997376";
-  const message = encodeURIComponent("Hello! I need some help on Kabale Online.");
-  const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${message}`;
+  // Dragging States
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const dragRef = useRef({ startX: 0, startY: 0, lastX: 0, lastY: 0, isDragging: false });
 
+  // 1. Initialize Session & Load History
+  useEffect(() => {
+    let currentSession = localStorage.getItem("kabale_ai_session");
+    if (!currentSession) {
+      currentSession = `session_${Math.random().toString(36).substring(2, 11)}`;
+      localStorage.setItem("kabale_ai_session", currentSession);
+    }
+    setSessionId(currentSession);
+
+    const savedChat = localStorage.getItem(`chat_${currentSession}`);
+    if (savedChat) {
+      setMessages(JSON.parse(savedChat));
+    }
+  }, []);
+
+  // 2. Auto-scroll chat window
+  useEffect(() => {
+    if (isOpen) scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isLoading, isOpen]);
+
+  // 3. Scroll Detection for the Floating Button
   useEffect(() => {
     const handleScroll = () => {
       if (typeof window !== "undefined") {
         const currentScrollY = window.scrollY;
-
         // If scrolling DOWN and scrolled past 100px, hide the button
         if (currentScrollY > lastScrollY && currentScrollY > 100) {
           setIsVisible(false);
@@ -25,49 +76,288 @@ export default function FloatingHelpButton() {
         else if (currentScrollY < lastScrollY) {
           setIsVisible(true);
         }
-
         setLastScrollY(currentScrollY);
       }
     };
-
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // If the user explicitly closed it, don't render anything
-  if (isDismissed) return null;
+  // 4. Listen for external clicks (like the "Try it out" link on the /ai page)
+  useEffect(() => {
+    const handleOpen = () => { setIsOpen(true); setPosition({x:0, y:0}); };
+    window.addEventListener('open-ai-widget', handleOpen);
+    return () => window.removeEventListener('open-ai-widget', handleOpen);
+  }, []);
+
+  // 5. Sync Chat to LocalStorage and Firebase
+  const syncChat = async (newMessages: Message[], currentSessionId: string) => {
+    localStorage.setItem(`chat_${currentSessionId}`, JSON.stringify(newMessages));
+    try {
+      await setDoc(doc(db, "ai_conversations", currentSessionId), {
+        sessionId: currentSessionId,
+        messages: newMessages,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (error) {
+      console.error("Firebase sync error:", error);
+    }
+  };
+
+  const clearChat = () => {
+    setMessages([]);
+    localStorage.removeItem(`chat_${sessionId}`);
+  };
+
+  // 6. Robust Drag Logic for Window
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current.isDragging = true;
+    dragRef.current.startX = e.clientX;
+    dragRef.current.startY = e.clientY;
+    dragRef.current.lastX = position.x;
+    dragRef.current.lastY = position.y;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.isDragging) return;
+    setPosition({
+      x: dragRef.current.lastX + (e.clientX - dragRef.current.startX),
+      y: dragRef.current.lastY + (e.clientY - dragRef.current.startY)
+    });
+  };
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragRef.current.isDragging = false;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+  };
+
+  // 7. Handle Feedback
+  const handleFeedback = (messageId: string, type: "up" | "down") => {
+    const updatedMessages = messages.map(msg => 
+      msg.id === messageId ? { ...msg, feedback: type } : msg
+    );
+    setMessages(updatedMessages);
+    syncChat(updatedMessages, sessionId);
+  };
+
+  // 8. Submit Message
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const userText = input.trim();
+    const newMessages: Message[] = [...messages, { id: Date.now().toString(), role: "user", content: userText }];
+    setMessages(newMessages);
+    setInput("");
+    setIsLoading(true);
+    syncChat(newMessages, sessionId);
+
+    try {
+      const apiMessages = newMessages.map(m => ({ 
+        role: m.role === "agent" ? "assistant" : m.role, 
+        content: m.content 
+      }));
+
+      const res = await fetch("/api/ai-agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: apiMessages }),
+      });
+
+      if (!res.ok) throw new Error("API Error");
+
+      let rawText = await res.text();
+      let foundProducts: SearchResult[] = [];
+
+      const searchRegex = /\|\|SEARCH:(.*?)\|\|/i;
+      const match = rawText.match(searchRegex);
+
+      if (match) {
+        const query = match[1].trim();
+        rawText = rawText.replace(searchRegex, "").trim(); 
+        try {
+          const { hits } = await index.search<SearchResult>(query, { hitsPerPage: 3 });
+          foundProducts = hits;
+        } catch (err) { console.error(err); }
+      }
+
+      const agentMessage: Message = { 
+        id: (Date.now() + 1).toString(),
+        role: "agent", 
+        content: rawText, 
+        products: foundProducts.length > 0 ? foundProducts : undefined,
+        feedback: null
+      };
+
+      const finalMessages = [...newMessages, agentMessage];
+      setMessages(finalMessages);
+      syncChat(finalMessages, sessionId);
+
+    } catch (error) {
+      const errorMsg: Message = { id: Date.now().toString(), role: "agent", content: "Oops, my circuits got tangled! Give it another try?" };
+      const finalMessages = [...newMessages, errorMsg];
+      setMessages(finalMessages);
+      syncChat(finalMessages, sessionId);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
-    <div 
-      // 🔥 UPGRADED: Changed bottom-6 to bottom-24 for mobile, xl:bottom-6 for desktop
-      className={`fixed bottom-24 xl:bottom-6 right-4 md:right-6 z-50 flex flex-col items-end transition-all duration-500 ease-in-out ${
-        isVisible ? "translate-y-0 opacity-100" : "translate-y-24 opacity-0 pointer-events-none"
-      }`}
-    >
-      {/* The Close 'X' Button */}
-      <button 
-        onClick={() => setIsDismissed(true)}
-        className="bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-sm border border-slate-200 mb-2 transition-colors z-10"
-        aria-label="Close Help Button"
-      >
-        ✕
-      </button>
+    <>
+      {/* ========================================= */}
+      {/* 🌟 THE MERGED FLOATING TRIGGER BUTTON 🌟  */}
+      {/* ========================================= */}
+      {!isOpen && !isDismissed && (
+        <div 
+          className={`fixed bottom-24 xl:bottom-6 right-4 md:right-6 z-50 flex flex-col items-end transition-all duration-500 ease-in-out ${
+            isVisible ? "translate-y-0 opacity-100" : "translate-y-24 opacity-0 pointer-events-none"
+          }`}
+        >
+          {/* The Close 'X' Button */}
+          <button 
+            onClick={() => setIsDismissed(true)}
+            className="bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-sm border border-slate-200 mb-2 transition-colors z-10"
+            aria-label="Dismiss AI Button"
+          >
+            ✕
+          </button>
 
-      {/* The Main WhatsApp Button */}
-      <a 
-        href={whatsappUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="group relative flex items-center justify-center bg-[#25D366] text-white py-3 px-5 rounded-full shadow-lg hover:bg-green-600 hover:scale-105 hover:shadow-xl transition-all duration-300"
-      >
-        <div className="flex items-center gap-2">
-          {/* WhatsApp SVG Icon */}
-          <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-          </svg>
-          <span className="font-bold tracking-wide">Need Help?</span>
+          {/* The Main AI Trigger Button (Styled with your Kabale Orange instead of WhatsApp Green) */}
+          <button 
+            onClick={() => { setIsOpen(true); setPosition({x:0, y:0}); }}
+            className="group relative flex items-center justify-center bg-[#D97706] text-white py-3 px-5 rounded-full shadow-lg hover:bg-amber-600 hover:scale-105 hover:shadow-xl transition-all duration-300"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-xl leading-none">✨</span>
+              <span className="font-bold tracking-wide">Ask AI</span>
+            </div>
+          </button>
         </div>
-      </a>
-    </div>
+      )}
+
+      {/* ========================================= */}
+      {/* 💬 THE CLEAN, CENTERED CHAT WINDOW 💬     */}
+      {/* ========================================= */}
+      {isOpen && (
+        <div 
+          className="fixed z-[100] flex flex-col bg-white border border-slate-200 shadow-2xl overflow-hidden"
+          style={{
+            top: '50%',
+            left: '50%',
+            transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
+            width: '92vw',
+            maxWidth: '400px',
+            height: '600px',
+            maxHeight: '85vh',
+            borderRadius: '16px',
+          }}
+        >
+          {/* DRAGGABLE HEADER */}
+          <div 
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            className="bg-slate-900 text-white flex flex-col cursor-grab active:cursor-grabbing touch-none select-none relative"
+          >
+            {/* Visual Drag Indicator */}
+            <div className="w-full flex justify-center pt-2 pb-1 pointer-events-none">
+              <div className="w-10 h-1.5 bg-slate-600 rounded-full opacity-50"></div>
+            </div>
+
+            <div className="px-5 pb-4 flex items-center justify-between pointer-events-none">
+              <div className="flex items-center gap-2">
+                <div className="w-2.5 h-2.5 bg-green-500 rounded-full" />
+                <h3 className="font-bold text-sm md:text-base">Kabale AI Guide</h3>
+              </div>
+              {/* Controls */}
+              <div className="flex items-center gap-4 pointer-events-auto">
+                <button onClick={clearChat} className="text-slate-400 hover:text-white text-sm" title="Clear Chat">🗑️</button>
+                <button onClick={() => setIsOpen(false)} className="text-slate-300 hover:text-white text-2xl leading-none">&times;</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-slate-50 relative">
+            {messages.length === 0 && (
+              <div className="text-center mt-12 text-slate-500">
+                <p className="text-sm font-medium">Hello. Looking for something specific, or need help selling?</p>
+              </div>
+            )}
+
+            {messages.map((msg) => (
+              <div key={msg.id} className="flex flex-col">
+                <div className={`p-3.5 rounded-2xl max-w-[85%] text-sm shadow-sm whitespace-pre-wrap ${
+                  msg.role === "user" 
+                    ? "bg-slate-900 text-white ml-auto rounded-br-sm" 
+                    : "bg-white border border-slate-200 text-slate-800 mr-auto rounded-bl-sm"
+                }`}>
+                  {msg.content}
+                </div>
+
+                {/* 🛍️ ALGOLIA PRODUCT RENDERER */}
+                {msg.products && msg.products.length > 0 && (
+                  <div className="mt-3 ml-2 flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                    {msg.products.map((product) => (
+                      <Link 
+                        key={product.objectID} 
+                        href={`/product/${product.objectID}`}
+                        className="min-w-[140px] max-w-[140px] bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:border-slate-400 flex-shrink-0"
+                      >
+                        <div className="h-24 w-full relative bg-slate-100">
+                          {product.image ? (
+                            <Image src={product.image} alt={product.name} fill className="object-cover" sizes="140px" />
+                          ) : (
+                            <div className="flex h-full items-center justify-center text-xs text-slate-400">No Image</div>
+                          )}
+                        </div>
+                        <div className="p-2">
+                          <p className="text-xs font-bold text-slate-800 truncate">{product.name}</p>
+                          <p className="text-sm font-black text-slate-900 mt-1">UGX {product.price.toLocaleString()}</p>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
+                {/* 👍 👎 FEEDBACK TRACKING */}
+                {msg.role === "agent" && !msg.content.includes("circuits got tangled") && (
+                  <div className="flex items-center gap-2 mt-1.5 ml-2">
+                    <button onClick={() => handleFeedback(msg.id, "up")} className={`text-xs p-1 rounded ${msg.feedback === 'up' ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'}`}>👍</button>
+                    <button onClick={() => handleFeedback(msg.id, "down")} className={`text-xs p-1 rounded ${msg.feedback === 'down' ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'}`}>👎</button>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {isLoading && (
+              <div className="bg-white border border-slate-200 text-slate-500 w-fit px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm text-sm">
+                Typing...
+              </div>
+            )}
+            <div ref={scrollRef} />
+          </div>
+
+          {/* Input Area */}
+          <form onSubmit={handleSubmit} className="p-3 bg-white border-t border-slate-100 flex gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask a question..."
+              className="flex-1 px-4 py-3 bg-slate-100 border-transparent focus:bg-white focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-full outline-none text-sm"
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || isLoading}
+              className="bg-slate-900 text-white w-11 h-11 rounded-full flex items-center justify-center disabled:opacity-50 hover:bg-slate-800 shadow-sm flex-shrink-0"
+            >
+               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+            </button>
+          </form>
+        </div>
+      )}
+    </>
   );
 }
