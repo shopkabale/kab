@@ -137,7 +137,7 @@ export default function AiChatWidget() {
     syncChat(updatedMessages, sessionId);
   };
 
-  // 8. 🚀 REFACTORED: Unified Send Message Logic 🚀
+  // 8. Unified Send Message Logic
   const sendMessage = async (textToSubmit: string) => {
     if (!textToSubmit.trim() || isLoading) return;
 
@@ -242,176 +242,185 @@ export default function AiChatWidget() {
       {/* 💬 THE CLEAN, CENTERED CHAT WINDOW 💬     */}
       {/* ========================================= */}
       {isOpen && (
-        <div 
-          className="fixed z-[100] flex flex-col bg-white border border-slate-200 shadow-2xl overflow-hidden"
-          style={{
-            top: '50%',
-            left: '50%',
-            transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
-            width: '92vw',
-            maxWidth: '400px',
-            height: '600px',
-            maxHeight: '85vh',
-            borderRadius: '16px',
-          }}
-        >
-          {/* DRAGGABLE HEADER */}
+        <>
+          {/* 🚀 NEW: GLASS BACKGROUND BACKDROP 🚀 */}
           <div 
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
-            className="bg-slate-900 text-white flex flex-col cursor-grab active:cursor-grabbing touch-none select-none relative"
+            className="fixed inset-0 z-[90] bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300"
+            onClick={() => setIsOpen(false)} // Clicking the glass closes the widget
+            aria-label="Close chat background"
+          />
+
+          <div 
+            className="fixed z-[100] flex flex-col bg-white border border-slate-200 shadow-2xl overflow-hidden"
+            style={{
+              top: '50%',
+              left: '50%',
+              transform: `translate(calc(-50% + ${position.x}px), calc(-50% + ${position.y}px))`,
+              width: '92vw',
+              maxWidth: '400px',
+              height: '600px',
+              maxHeight: '85vh',
+              borderRadius: '16px',
+            }}
           >
-            <div className="w-full flex justify-center pt-2 pb-1 pointer-events-none">
-              <div className="w-10 h-1.5 bg-slate-600 rounded-full opacity-50"></div>
-            </div>
-
-            <div className="px-5 pb-4 flex items-center justify-between pointer-events-none">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 bg-green-500 rounded-full" />
-                <h3 className="font-bold text-sm md:text-base">Kabale AI Guide</h3>
-              </div>
-              <div className="flex items-center gap-4 pointer-events-auto">
-                <button onClick={clearChat} className="text-slate-400 hover:text-white text-sm" title="Clear Chat">🗑️</button>
-                <button onClick={() => setIsOpen(false)} className="text-slate-300 hover:text-white text-2xl leading-none">&times;</button>
-              </div>
-            </div>
-          </div>
-
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-slate-50 relative">
-            
-            {/* 🚀 THE NEW QUICK START MENU (Empty State) 🚀 */}
-            {messages.length === 0 && (
-              <div className="flex flex-col h-full items-center justify-center animate-in fade-in zoom-in-95 duration-300">
-                <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Hi there 👋</h2>
-                <p className="text-slate-500 font-medium mb-8">Where should we start?</p>
-
-                <div className="flex flex-col gap-3 w-full max-w-[85%]">
-                  <button 
-                    onClick={() => sendMessage("How do I sell an item here?")}
-                    className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-colors shadow-sm text-left group"
-                  >
-                    <span className="text-xl bg-slate-50 p-2 rounded-xl group-hover:bg-white transition-colors">🏷️</span>
-                    <span className="font-bold text-slate-700 text-sm group-hover:text-[#D97706] transition-colors">How to sell</span>
-                  </button>
-
-                  <button 
-                    onClick={() => sendMessage("How do I buy an item?")}
-                    className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-colors shadow-sm text-left group"
-                  >
-                    <span className="text-xl bg-slate-50 p-2 rounded-xl group-hover:bg-white transition-colors">🛒</span>
-                    <span className="font-bold text-slate-700 text-sm group-hover:text-[#D97706] transition-colors">How to buy</span>
-                  </button>
-
-                  <button 
-                    onClick={() => sendMessage("I need to contact the admin.")}
-                    className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-colors shadow-sm text-left group"
-                  >
-                    <span className="text-xl bg-slate-50 p-2 rounded-xl group-hover:bg-white transition-colors">📞</span>
-                    <span className="font-bold text-slate-700 text-sm group-hover:text-[#D97706] transition-colors">Contact admin</span>
-                  </button>
-                  
-                  <button 
-                    onClick={() => sendMessage("Show me some electronics.")}
-                    className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-colors shadow-sm text-left group"
-                  >
-                    <span className="text-xl bg-slate-50 p-2 rounded-xl group-hover:bg-white transition-colors">💻</span>
-                    <span className="font-bold text-slate-700 text-sm group-hover:text-[#D97706] transition-colors">Find electronics</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Standard Message Rendering */}
-            {messages.map((msg) => (
-              <div key={msg.id} className="flex flex-col animate-in fade-in slide-in-from-bottom-2">
-                <div className={`p-3.5 rounded-2xl max-w-[85%] text-sm shadow-sm whitespace-pre-wrap ${
-                  msg.role === "user" 
-                    ? "bg-slate-900 text-white ml-auto rounded-br-sm" 
-                    : "bg-white border border-slate-200 text-slate-800 mr-auto rounded-bl-sm"
-                }`}>
-                  {msg.content}
-                </div>
-
-                {/* 🛍️ ALGOLIA PRODUCT RENDERER */}
-                {msg.products && msg.products.length > 0 && (
-                  <div className="mt-3 ml-2 flex gap-3 overflow-x-auto pb-2 scrollbar-hide items-stretch">
-                    {msg.products.map((product) => (
-                      <Link 
-                        key={product.objectID} 
-                        href={`/product/${product.objectID}`}
-                        onClick={() => setIsOpen(false)} // 🚀 CLOSES WIDGET ON CLICK
-                        className="min-w-[140px] max-w-[140px] bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:border-[#D97706] transition-colors flex-shrink-0 flex flex-col group"
-                      >
-                        <div className="h-24 w-full relative bg-slate-100">
-                          {product.image ? (
-                            <Image src={product.image} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="140px" />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-xs text-slate-400">No Image</div>
-                          )}
-                        </div>
-                        <div className="p-2 flex-1 flex flex-col justify-between">
-                          <p className="text-xs font-bold text-slate-800 line-clamp-2">{product.name}</p>
-                          <p className="text-sm font-black text-slate-900 mt-1">UGX {product.price.toLocaleString()}</p>
-                        </div>
-                      </Link>
-                    ))}
-
-                    {/* "VIEW MORE" BUTTON */}
-                    {msg.searchQuery && (
-                      <Link 
-                        href={`/search?q=${encodeURIComponent(msg.searchQuery)}`}
-                        onClick={() => setIsOpen(false)} 
-                        className="min-w-[100px] bg-slate-100 border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors flex-shrink-0 text-slate-500 p-3 group"
-                      >
-                        <span className="w-8 h-8 rounded-full bg-white group-hover:bg-[#D97706] group-hover:text-white flex items-center justify-center font-bold mb-2 transition-colors shadow-sm text-lg">➔</span>
-                        <span className="text-xs font-bold text-center">View More</span>
-                      </Link>
-                    )}
-                  </div>
-                )}
-
-                {/* 👍 👎 FEEDBACK TRACKING */}
-                {msg.role === "agent" && !msg.content.includes("circuits got tangled") && (
-                  <div className="flex items-center gap-2 mt-1.5 ml-2">
-                    <button onClick={() => handleFeedback(msg.id, "up")} className={`text-xs p-1 rounded ${msg.feedback === 'up' ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'}`}>👍</button>
-                    <button onClick={() => handleFeedback(msg.id, "down")} className={`text-xs p-1 rounded ${msg.feedback === 'down' ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'}`}>👎</button>
-                  </div>
-                )}
-              </div>
-            ))}
-
-            {/* DOTS LOADING ANIMATION */}
-            {isLoading && (
-              <div className="bg-white border border-slate-200 w-fit px-4 py-3.5 rounded-2xl rounded-bl-sm shadow-sm flex items-center gap-1.5">
-                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-              </div>
-            )}
-            <div ref={scrollRef} />
-          </div>
-
-          {/* Input Area */}
-          <form onSubmit={handleSubmit} className="p-3 bg-white border-t border-slate-100 flex gap-2">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask a question..."
-              className="flex-1 px-4 py-3 bg-slate-100 border-transparent focus:bg-white focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-full outline-none text-sm"
-            />
-            <button
-              type="submit"
-              disabled={!input.trim() || isLoading}
-              className="bg-slate-900 text-white w-11 h-11 rounded-full flex items-center justify-center disabled:opacity-50 hover:bg-slate-800 shadow-sm flex-shrink-0"
+            {/* DRAGGABLE HEADER */}
+            <div 
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              onPointerCancel={handlePointerUp}
+              className="bg-slate-900 text-white flex flex-col cursor-grab active:cursor-grabbing touch-none select-none relative"
             >
-               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-            </button>
-          </form>
-        </div>
+              <div className="w-full flex justify-center pt-2 pb-1 pointer-events-none">
+                <div className="w-10 h-1.5 bg-slate-600 rounded-full opacity-50"></div>
+              </div>
+
+              <div className="px-5 pb-4 flex items-center justify-between pointer-events-none">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 bg-green-500 rounded-full" />
+                  <h3 className="font-bold text-sm md:text-base">Kabale AI Guide</h3>
+                </div>
+                <div className="flex items-center gap-4 pointer-events-auto">
+                  <button onClick={clearChat} className="text-slate-400 hover:text-white text-sm" title="Clear Chat">🗑️</button>
+                  <button onClick={() => setIsOpen(false)} className="text-slate-300 hover:text-white text-2xl leading-none">&times;</button>
+                </div>
+              </div>
+            </div>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-slate-50 relative">
+
+              {/* THE QUICK START MENU (Empty State) */}
+              {messages.length === 0 && (
+                <div className="flex flex-col h-full items-center justify-center animate-in fade-in zoom-in-95 duration-300">
+                  <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Hi there 👋</h2>
+                  <p className="text-slate-500 font-medium mb-8">Where should we start?</p>
+
+                  <div className="flex flex-col gap-3 w-full max-w-[85%]">
+                    <button 
+                      onClick={() => sendMessage("How do I sell an item here?")}
+                      className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-colors shadow-sm text-left group"
+                    >
+                      <span className="text-xl bg-slate-50 p-2 rounded-xl group-hover:bg-white transition-colors">🏷️</span>
+                      <span className="font-bold text-slate-700 text-sm group-hover:text-[#D97706] transition-colors">How to sell</span>
+                    </button>
+
+                    <button 
+                      onClick={() => sendMessage("How do I buy an item?")}
+                      className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-colors shadow-sm text-left group"
+                    >
+                      <span className="text-xl bg-slate-50 p-2 rounded-xl group-hover:bg-white transition-colors">🛒</span>
+                      <span className="font-bold text-slate-700 text-sm group-hover:text-[#D97706] transition-colors">How to buy</span>
+                    </button>
+
+                    <button 
+                      onClick={() => sendMessage("I need to contact the admin.")}
+                      className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-colors shadow-sm text-left group"
+                    >
+                      <span className="text-xl bg-slate-50 p-2 rounded-xl group-hover:bg-white transition-colors">📞</span>
+                      <span className="font-bold text-slate-700 text-sm group-hover:text-[#D97706] transition-colors">Contact admin</span>
+                    </button>
+
+                    <button 
+                      onClick={() => sendMessage("Show me some electronics.")}
+                      className="flex items-center gap-3 bg-white border border-slate-200 p-3 rounded-2xl hover:bg-amber-50 hover:border-amber-200 transition-colors shadow-sm text-left group"
+                    >
+                      <span className="text-xl bg-slate-50 p-2 rounded-xl group-hover:bg-white transition-colors">💻</span>
+                      <span className="font-bold text-slate-700 text-sm group-hover:text-[#D97706] transition-colors">Find electronics</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Standard Message Rendering */}
+              {messages.map((msg) => (
+                <div key={msg.id} className="flex flex-col animate-in fade-in slide-in-from-bottom-2">
+                  <div className={`p-3.5 rounded-2xl max-w-[85%] text-sm shadow-sm whitespace-pre-wrap ${
+                    msg.role === "user" 
+                      ? "bg-slate-900 text-white ml-auto rounded-br-sm" 
+                      : "bg-white border border-slate-200 text-slate-800 mr-auto rounded-bl-sm"
+                  }`}>
+                    {msg.content}
+                  </div>
+
+                  {/* 🛍️ ALGOLIA PRODUCT RENDERER */}
+                  {msg.products && msg.products.length > 0 && (
+                    <div className="mt-3 ml-2 flex gap-3 overflow-x-auto pb-2 scrollbar-hide items-stretch">
+                      {msg.products.map((product) => (
+                        <Link 
+                          key={product.objectID} 
+                          href={`/product/${product.objectID}`}
+                          onClick={() => setIsOpen(false)} // CLOSES WIDGET ON CLICK
+                          className="min-w-[140px] max-w-[140px] bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:border-[#D97706] transition-colors flex-shrink-0 flex flex-col group"
+                        >
+                          <div className="h-24 w-full relative bg-slate-100">
+                            {product.image ? (
+                              <Image src={product.image} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="140px" />
+                            ) : (
+                              <div className="flex h-full items-center justify-center text-xs text-slate-400">No Image</div>
+                            )}
+                          </div>
+                          <div className="p-2 flex-1 flex flex-col justify-between">
+                            <p className="text-xs font-bold text-slate-800 line-clamp-2">{product.name}</p>
+                            <p className="text-sm font-black text-slate-900 mt-1">UGX {product.price.toLocaleString()}</p>
+                          </div>
+                        </Link>
+                      ))}
+
+                      {/* "VIEW MORE" BUTTON */}
+                      {msg.searchQuery && (
+                        <Link 
+                          href={`/search?q=${encodeURIComponent(msg.searchQuery)}`}
+                          onClick={() => setIsOpen(false)} 
+                          className="min-w-[100px] bg-slate-100 border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors flex-shrink-0 text-slate-500 p-3 group"
+                        >
+                          <span className="w-8 h-8 rounded-full bg-white group-hover:bg-[#D97706] group-hover:text-white flex items-center justify-center font-bold mb-2 transition-colors shadow-sm text-lg">➔</span>
+                          <span className="text-xs font-bold text-center">View More</span>
+                        </Link>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 👍 👎 FEEDBACK TRACKING */}
+                  {msg.role === "agent" && !msg.content.includes("circuits got tangled") && (
+                    <div className="flex items-center gap-2 mt-1.5 ml-2">
+                      <button onClick={() => handleFeedback(msg.id, "up")} className={`text-xs p-1 rounded ${msg.feedback === 'up' ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'}`}>👍</button>
+                      <button onClick={() => handleFeedback(msg.id, "down")} className={`text-xs p-1 rounded ${msg.feedback === 'down' ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'}`}>👎</button>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {/* DOTS LOADING ANIMATION */}
+              {isLoading && (
+                <div className="bg-white border border-slate-200 w-fit px-4 py-3.5 rounded-2xl rounded-bl-sm shadow-sm flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              )}
+              <div ref={scrollRef} />
+            </div>
+
+            {/* Input Area */}
+            <form onSubmit={handleSubmit} className="p-3 bg-white border-t border-slate-100 flex gap-2">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Ask a question..."
+                className="flex-1 px-4 py-3 bg-slate-100 border-transparent focus:bg-white focus:border-slate-900 focus:ring-1 focus:ring-slate-900 rounded-full outline-none text-sm"
+              />
+              <button
+                type="submit"
+                disabled={!input.trim() || isLoading}
+                className="bg-slate-900 text-white w-11 h-11 rounded-full flex items-center justify-center disabled:opacity-50 hover:bg-slate-800 shadow-sm flex-shrink-0"
+              >
+                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+              </button>
+            </form>
+          </div>
+        </>
       )}
     </>
   );
