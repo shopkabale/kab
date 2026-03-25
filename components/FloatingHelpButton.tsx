@@ -1,4 +1,4 @@
-// components/AiChatWidget.tsx
+// components/FloatingHelpButton
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -22,6 +22,7 @@ type Message = {
   role: "user" | "agent"; 
   content: string; 
   products?: SearchResult[];
+  searchQuery?: string; // Added to track what the AI searched for
   feedback?: "up" | "down" | null; 
 };
 
@@ -34,7 +35,7 @@ export default function AiChatWidget() {
   const [sessionId, setSessionId] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Floating Button Scroll States (From your FloatingHelpButton)
+  // Floating Button Scroll States
   const [isVisible, setIsVisible] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
   const [lastScrollY, setLastScrollY] = useState(0);
@@ -68,12 +69,9 @@ export default function AiChatWidget() {
     const handleScroll = () => {
       if (typeof window !== "undefined") {
         const currentScrollY = window.scrollY;
-        // If scrolling DOWN and scrolled past 100px, hide the button
         if (currentScrollY > lastScrollY && currentScrollY > 100) {
           setIsVisible(false);
-        } 
-        // If scrolling UP, show the button
-        else if (currentScrollY < lastScrollY) {
+        } else if (currentScrollY < lastScrollY) {
           setIsVisible(true);
         }
         setLastScrollY(currentScrollY);
@@ -83,7 +81,7 @@ export default function AiChatWidget() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // 4. Listen for external clicks (like the "Try it out" link on the /ai page)
+  // 4. Listen for external clicks
   useEffect(() => {
     const handleOpen = () => { setIsOpen(true); setPosition({x:0, y:0}); };
     window.addEventListener('open-ai-widget', handleOpen);
@@ -109,7 +107,7 @@ export default function AiChatWidget() {
     localStorage.removeItem(`chat_${sessionId}`);
   };
 
-  // 6. Robust Drag Logic for Window
+  // 6. Drag Logic
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     dragRef.current.isDragging = true;
     dragRef.current.startX = e.clientX;
@@ -167,15 +165,16 @@ export default function AiChatWidget() {
 
       let rawText = await res.text();
       let foundProducts: SearchResult[] = [];
+      let usedSearchQuery = "";
 
       const searchRegex = /\|\|SEARCH:(.*?)\|\|/i;
       const match = rawText.match(searchRegex);
 
       if (match) {
-        const query = match[1].trim();
+        usedSearchQuery = match[1].trim();
         rawText = rawText.replace(searchRegex, "").trim(); 
         try {
-          const { hits } = await index.search<SearchResult>(query, { hitsPerPage: 3 });
+          const { hits } = await index.search<SearchResult>(usedSearchQuery, { hitsPerPage: 3 });
           foundProducts = hits;
         } catch (err) { console.error(err); }
       }
@@ -185,6 +184,7 @@ export default function AiChatWidget() {
         role: "agent", 
         content: rawText, 
         products: foundProducts.length > 0 ? foundProducts : undefined,
+        searchQuery: usedSearchQuery || undefined,
         feedback: null
       };
 
@@ -213,7 +213,6 @@ export default function AiChatWidget() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-24 opacity-0 pointer-events-none"
           }`}
         >
-          {/* The Close 'X' Button */}
           <button 
             onClick={() => setIsDismissed(true)}
             className="bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-sm border border-slate-200 mb-2 transition-colors z-10"
@@ -222,7 +221,6 @@ export default function AiChatWidget() {
             ✕
           </button>
 
-          {/* The Main AI Trigger Button (Styled with your Kabale Orange instead of WhatsApp Green) */}
           <button 
             onClick={() => { setIsOpen(true); setPosition({x:0, y:0}); }}
             className="group relative flex items-center justify-center bg-[#D97706] text-white py-3 px-5 rounded-full shadow-lg hover:bg-amber-600 hover:scale-105 hover:shadow-xl transition-all duration-300"
@@ -260,7 +258,6 @@ export default function AiChatWidget() {
             onPointerCancel={handlePointerUp}
             className="bg-slate-900 text-white flex flex-col cursor-grab active:cursor-grabbing touch-none select-none relative"
           >
-            {/* Visual Drag Indicator */}
             <div className="w-full flex justify-center pt-2 pb-1 pointer-events-none">
               <div className="w-10 h-1.5 bg-slate-600 rounded-full opacity-50"></div>
             </div>
@@ -270,7 +267,6 @@ export default function AiChatWidget() {
                 <div className="w-2.5 h-2.5 bg-green-500 rounded-full" />
                 <h3 className="font-bold text-sm md:text-base">Kabale AI Guide</h3>
               </div>
-              {/* Controls */}
               <div className="flex items-center gap-4 pointer-events-auto">
                 <button onClick={clearChat} className="text-slate-400 hover:text-white text-sm" title="Clear Chat">🗑️</button>
                 <button onClick={() => setIsOpen(false)} className="text-slate-300 hover:text-white text-2xl leading-none">&times;</button>
@@ -298,26 +294,39 @@ export default function AiChatWidget() {
 
                 {/* 🛍️ ALGOLIA PRODUCT RENDERER */}
                 {msg.products && msg.products.length > 0 && (
-                  <div className="mt-3 ml-2 flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
+                  <div className="mt-3 ml-2 flex gap-3 overflow-x-auto pb-2 scrollbar-hide items-stretch">
                     {msg.products.map((product) => (
                       <Link 
                         key={product.objectID} 
                         href={`/product/${product.objectID}`}
-                        className="min-w-[140px] max-w-[140px] bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:border-slate-400 flex-shrink-0"
+                        onClick={() => setIsOpen(false)} // 🚀 CLOSES WIDGET ON CLICK
+                        className="min-w-[140px] max-w-[140px] bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:border-[#D97706] transition-colors flex-shrink-0 flex flex-col group"
                       >
                         <div className="h-24 w-full relative bg-slate-100">
                           {product.image ? (
-                            <Image src={product.image} alt={product.name} fill className="object-cover" sizes="140px" />
+                            <Image src={product.image} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="140px" />
                           ) : (
                             <div className="flex h-full items-center justify-center text-xs text-slate-400">No Image</div>
                           )}
                         </div>
-                        <div className="p-2">
-                          <p className="text-xs font-bold text-slate-800 truncate">{product.name}</p>
+                        <div className="p-2 flex-1 flex flex-col justify-between">
+                          <p className="text-xs font-bold text-slate-800 line-clamp-2">{product.name}</p>
                           <p className="text-sm font-black text-slate-900 mt-1">UGX {product.price.toLocaleString()}</p>
                         </div>
                       </Link>
                     ))}
+
+                    {/* 🚀 "VIEW MORE" BUTTON */}
+                    {msg.searchQuery && (
+                      <Link 
+                        href={`/search?q=${encodeURIComponent(msg.searchQuery)}`}
+                        onClick={() => setIsOpen(false)} // Closes widget on click
+                        className="min-w-[100px] bg-slate-100 border border-slate-200 rounded-xl flex flex-col items-center justify-center shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors flex-shrink-0 text-slate-500 p-3 group"
+                      >
+                        <span className="w-8 h-8 rounded-full bg-white group-hover:bg-[#D97706] group-hover:text-white flex items-center justify-center font-bold mb-2 transition-colors shadow-sm text-lg">➔</span>
+                        <span className="text-xs font-bold text-center">View More</span>
+                      </Link>
+                    )}
                   </div>
                 )}
 
@@ -331,9 +340,12 @@ export default function AiChatWidget() {
               </div>
             ))}
 
+            {/* 🚀 NEW PROFESSIONAL LOADING ANIMATION */}
             {isLoading && (
-              <div className="bg-white border border-slate-200 text-slate-500 w-fit px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm text-sm">
-                Typing...
+              <div className="bg-white border border-slate-200 w-fit px-4 py-3.5 rounded-2xl rounded-bl-sm shadow-sm flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
               </div>
             )}
             <div ref={scrollRef} />
