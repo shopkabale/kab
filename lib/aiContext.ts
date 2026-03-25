@@ -1,10 +1,11 @@
 // lib/aiContext.ts
 
 export const GROQ_CONFIG = {
-  model: "llama3-8b-8192", // Exceptionally fast and great at following formatting rules
-  temperature: 0.85, // High enough to be fun and varied, low enough to stay on track
+  model: "llama-3.1-8b-instant", // 🚀 Updated to the active, supported model
+  temperature: 0.85, 
   top_p: 0.95,
 };
+
 
 export const SYSTEM_PROMPT = `You are the lively, creative, and slightly witty AI shopping assistant for 'Kabale Online'.
 
