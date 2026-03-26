@@ -1,14 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
-import { adminDb } from "@/lib/firebase/admin";
 import SearchBar from "@/components/SearchBar"; 
 import { optimizeImage } from "@/lib/utils";
-import RecentlyViewed from "@/components/RecentlyViewed";
 import UrgentStories from "@/components/UrgentStories";
+import PersonalizedFeed from "@/components/PersonalizedFeed";
 
-// 🔥 24-HOUR CACHE
-export const revalidate = 86400;
+// 🔥 FORCE DYNAMIC: Ensures random items shuffle on EVERY refresh
+export const dynamic = "force-dynamic";
 
 export default async function Home() {
   // 1. Fetch products
@@ -18,17 +17,25 @@ export default async function Home() {
 
   const allProducts = [...electronics, ...agriculture, ...students];
 
-  // 2. Helper to randomly pick 12
-  const getRandom12 = (arr: any[]) => [...arr].sort(() => 0.5 - Math.random()).slice(0, 12);
+  // 2. Real "Just Posted" Sorting
+  // Safely grab timestamp whether it's a Firebase Timestamp object or ISO string
+  const sortedByDate = [...allProducts].sort((a, b) => {
+    const dateA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt || 0).getTime();
+    const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt || 0).getTime();
+    return dateB - dateA;
+  });
+  
+  const justPostedProducts = sortedByDate.slice(0, 12);
 
-  const mixedFeatured = getRandom12(allProducts);
-  const electronicsFeatured = getRandom12(electronics);
+  // 3. Randomizer for Trending
+  const getRandom12 = (arr: any[]) => [...arr].sort(() => 0.5 - Math.random()).slice(0, 12);
+  const trendingNow = getRandom12(allProducts);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-24 font-sans selection:bg-[#D97706] selection:text-white">
       
       {/* ========================================== */}
-      {/* 1. URGENT STORIES (Top Priority)           */}
+      {/* 1. URGENT STORIES                          */}
       {/* ========================================== */}
       <div className="bg-white dark:bg-[#111] pt-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div className="px-4 mb-2 flex items-center gap-2 max-w-[1600px] mx-auto">
@@ -72,8 +79,7 @@ export default async function Home() {
             </div>
             
             <div className="flex flex-col gap-4">
-               {/* Initial Load / SSR Mock Items - Replace with SWR hook later */}
-               {allProducts.slice(0, 8).map((p) => {
+               {justPostedProducts.slice(0, 8).map((p) => {
                  const optimizedThumb = p.images?.[0] ? optimizeImage(p.images[0]) : null;
                  return (
                    <Link href={`/product/${p.publicId || p.id}`} key={`live-${p.id}`} className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-xl cursor-pointer transition-colors group">
@@ -91,7 +97,7 @@ export default async function Home() {
           </div>
         </aside>
 
-        {/* Mobile Live Feed Header (Products render in horizontal scroll below if desired) */}
+        {/* Mobile Live Feed Header */}
         <div className="block lg:hidden lg:col-span-12">
            <div className="flex items-center justify-between mb-2 px-2">
              <h2 className="text-lg font-black uppercase text-slate-900 dark:text-white">Happening Now 🔥</h2>
@@ -104,21 +110,21 @@ export default async function Home() {
         {/* ------------------------------------------ */}
         <main className="lg:col-span-9 space-y-10 md:space-y-14">
 
-          {/* 3. TRENDING (Dense Grid) */}
+          {/* 3. TRENDING (Random on refresh) */}
           <section>
             <ProductSection 
-              title="🔥 Trending in Kabale" 
-              products={mixedFeatured} 
+              title="🔥 Trending Now" 
+              products={trendingNow} 
             />
           </section>
 
-          {/* 4. SELLER CTA (The Growth Loop) */}
-          <section className="relative overflow-hidden bg-gradient-to-br from-[#D97706] to-amber-600 rounded-3xl p-8 md:p-12 text-center text-white shadow-xl">
-            <div className="relative z-10 max-w-xl mx-auto flex flex-col items-center">
-              <h2 className="text-3xl md:text-5xl font-black mb-4 uppercase tracking-tight leading-none text-white drop-shadow-sm">
+          {/* 4. SELLER CTA (Clean, No background) */}
+          <section className="py-12 md:py-16 text-center border-y border-slate-200 dark:border-slate-800">
+            <div className="max-w-xl mx-auto flex flex-col items-center">
+              <h2 className="text-3xl md:text-5xl font-black mb-4 uppercase tracking-tight leading-none text-slate-900 dark:text-white">
                 Sell Your Item in <br/> 60 Seconds 🚀
               </h2>
-              <p className="text-base md:text-lg font-medium mb-8 text-amber-50">
+              <p className="text-base md:text-lg font-medium mb-8 text-slate-600 dark:text-slate-400">
                 No account needed. Just send a picture to our WhatsApp bot and it goes live instantly.
               </p>
               
@@ -126,46 +132,39 @@ export default async function Home() {
                 href="https://wa.me/256740373021?text=Hi%2C%20I%20want%20to%20sell%20an%20item"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="bg-white text-slate-900 px-8 py-4 rounded-full font-black text-sm md:text-base flex items-center gap-3 hover:scale-105 active:scale-95 transition-transform shadow-lg"
+                className="bg-[#D97706] text-white px-8 py-4 rounded-full font-black text-sm md:text-base flex items-center gap-3 hover:scale-105 active:scale-95 transition-transform shadow-lg hover:shadow-xl"
               >
-                <svg className="w-6 h-6 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                   <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
                 </svg>
                 Start Selling Now
               </a>
-              <p className="mt-6 text-xs text-amber-100 font-medium tracking-wide">Need seller support? Email shopkabale@gmail.com</p>
+              <p className="mt-6 text-xs text-slate-500 font-bold">Need seller support? Email shopkabale@gmail.com</p>
             </div>
-            {/* Background decorative elements */}
-            <span className="absolute -left-10 -bottom-10 text-[200px] opacity-10 rotate-12 pointer-events-none">📱</span>
-            <span className="absolute -right-10 -top-10 text-[200px] opacity-10 -rotate-12 pointer-events-none">💸</span>
           </section>
 
-          {/* 5. JUST POSTED (Freshness Engine) */}
+          {/* 5. JUST POSTED (Real Timestamp Based) */}
           <section>
             <ProductSection 
               title="🆕 Just Posted" 
-              products={allProducts.slice(0, 12)} 
+              products={justPostedProducts} 
             />
           </section>
 
-          {/* 6. PERSONALIZED (Because you viewed) */}
-          <section className="bg-white dark:bg-[#151515] rounded-3xl p-6 md:p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
-             <h2 className="text-xl font-black uppercase mb-6 tracking-tight text-slate-900 dark:text-white">👀 Because you looked at Phones</h2>
-             <ProductSection products={electronicsFeatured.slice(0, 5)} hideTitle />
-          </section>
-          
-          {/* Client-Side Recently Viewed (If you want to keep your existing hook) */}
-          <div className="hidden">
-            <RecentlyViewed />
-          </div>
+          {/* 6. PERSONALIZED (Client Side Logic) */}
+          <PersonalizedFeed allProducts={allProducts} />
 
-          {/* 7. LIGHTWEIGHT CATEGORIES (Bottom Directory) */}
+          {/* 7. CATEGORIES (Only 3) */}
           <section className="py-8 border-t border-slate-200 dark:border-slate-800">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-6">Explore Directory</h3>
             <div className="flex flex-wrap justify-center gap-3">
-              {["Electronics", "Agriculture", "Student Items", "Fashion", "Vehicles", "Real Estate"].map((cat) => (
-                <Link key={cat} href={`/category/${cat.toLowerCase().replace(' ', '_')}`} className="px-5 py-2.5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:border-[#D97706] hover:text-[#D97706] transition-colors shadow-sm">
-                  {cat}
+              {[
+                { name: "Student Market", link: "student_item" }, 
+                { name: "Electronics", link: "electronics" }, 
+                { name: "Agriculture", link: "agriculture" }
+              ].map((cat) => (
+                <Link key={cat.name} href={`/category/${cat.link}`} className="px-5 py-2.5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:border-[#D97706] hover:text-[#D97706] transition-colors shadow-sm">
+                  {cat.name}
                 </Link>
               ))}
             </div>
@@ -180,21 +179,27 @@ export default async function Home() {
 // ==========================================
 // REUSABLE HIGH-CONVERSION PRODUCT GRID
 // ==========================================
-function ProductSection({ title, products, hideTitle }: { title?: string, products: any[], hideTitle?: boolean }) {
+export function ProductSection({ title, products, hideTitle }: { title?: string, products: any[], hideTitle?: boolean }) {
   if (!products || products.length === 0) return null;
 
+  // Helper to dynamically check if an item is less than 7 days old
+  const checkIsNew = (p: any) => {
+    const pDate = p.createdAt?.seconds ? p.createdAt.seconds * 1000 : new Date(p.createdAt || 0).getTime();
+    return pDate > 0 && (Date.now() - pDate) < (7 * 24 * 60 * 60 * 1000); 
+  };
+
   return (
-    <div>
+    <div className="w-full">
       {!hideTitle && title && (
         <div className="flex items-center justify-between mb-6 px-2 lg:px-0">
           <h2 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{title}</h2>
         </div>
       )}
       
-      {/* 🔥 DENSE GRID: 2 on mobile, 3 tablet, 4 desktop, 5-6 xl */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4 px-2 lg:px-0">
         {products.map((p) => {
           const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
+          const isJustPosted = checkIsNew(p);
           
           return (
             <div key={p.id} className="group flex flex-col bg-white dark:bg-[#151515] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all h-full relative">
@@ -213,11 +218,14 @@ function ProductSection({ title, products, hideTitle }: { title?: string, produc
                   ) : (
                     <div className="m-auto flex items-center justify-center h-full text-[10px] font-bold text-slate-400 uppercase">No Image</div>
                   )}
-                  {/* Micro-signals Overlay (Urgency) */}
-                  <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-sm">
-                     <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-                     Just Posted
-                  </div>
+                  
+                  {/* Conditional "Just Posted" Overlay */}
+                  {isJustPosted && (
+                    <div className="absolute top-2 left-2 bg-black/70 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg flex items-center gap-1 shadow-sm">
+                       <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                       Just Posted
+                    </div>
+                  )}
                 </div>
 
                 {/* Details Area */}
@@ -228,14 +236,10 @@ function ProductSection({ title, products, hideTitle }: { title?: string, produc
                       UGX {Number(p.price).toLocaleString()}
                     </span>
                   </div>
-                  {/* Social Proof */}
-                  <p className="text-[10px] text-slate-500 font-medium mt-2 flex items-center gap-1">
-                    👀 3 active inquiries
-                  </p>
                 </div>
               </Link>
 
-              {/* Bottom Quick Actions (WhatsApp & Wishlist) */}
+              {/* Bottom Quick Actions */}
               <div className="grid grid-cols-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#111]">
                  <a 
                    href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I am interested in this item on Kabale Online: *${p.name}*\n\nProduct ID: [${p.id}]`)}`}
