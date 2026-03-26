@@ -12,16 +12,15 @@ export default function ProductActions({ product, children }: { product: Product
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
-  const [showModal, setShowModal] = useState(false);
   const [showMore, setShowMore] = useState(false);
-
-  const [contactPhone, setContactPhone] = useState("");
-  const [buyerName, setBuyerName] = useState("");
   const [copied, setCopied] = useState(false);
 
   const [currentStock, setCurrentStock] = useState(Number(product.stock) || 0);
   const [isLocked, setIsLocked] = useState((product as any).locked === true);
   const [productStatus, setProductStatus] = useState(product.status);
+
+  // The official Kabale Online Bot Number (Include country code, no '+')
+  const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256700000000";
 
   useEffect(() => {
     const fetchLiveStock = async () => {
@@ -45,23 +44,14 @@ export default function ProductActions({ product, children }: { product: Product
   const isReserved = isLocked;
   const isUnavailable = isSoldOut || isReserved;
 
-  const formatWhatsAppNumber = (phone: string) => {
-    if (!phone) return "";
-    const cleanPhone = phone.replace(/\D/g, "");
-    return cleanPhone.startsWith("0") ? `256${cleanPhone.slice(1)}` : cleanPhone;
-  };
-
-  const handleBuyViaWhatsApp = () => {
-    if (!product.sellerPhone) return alert("Seller did not provide a WhatsApp number.");
-    const phone = formatWhatsAppNumber(product.sellerPhone);
-    const message = encodeURIComponent(`Hello ${product.sellerName || "there"}, I am interested in buying your item on Kabale Online:\n\n*${product.name}*\nPrice: UGX ${Number(product.price).toLocaleString()}\nID: ${product.publicId || product.id}\n\nIs it still available?`);
-    window.open(`https://wa.me/${phone}?text=${message}`, "_blank");
-  };
-
-  const handleShareToWhatsApp = () => {
-    const url = `${window.location.origin}/product/${product.publicId || product.id}`;
-    const message = encodeURIComponent(`Check out this ${product.name} for UGX ${Number(product.price).toLocaleString()} on Kabale Online! \n\nSee it here: ${url}`);
-    window.open(`https://wa.me/?text=${message}`, "_blank");
+  // 🔥 THE NEW CORE ACTION: Route inquiries through the bot
+  const handleBotInquiry = () => {
+    // 1. Format the exact Regex string our bot is listening for
+    const rawMessage = `Hi! I am interested in this item on Kabale Online: *${product.title || product.name}*\n\nProduct ID: [${product.id}]`;
+    
+    // 2. Encode and open WhatsApp
+    const encodedMessage = encodeURIComponent(rawMessage);
+    window.open(`https://wa.me/${botPhoneNumber}?text=${encodedMessage}`, "_blank");
   };
 
   const handleCopyLink = () => {
@@ -70,46 +60,6 @@ export default function ProductActions({ product, children }: { product: Product
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
-  };
-
-  const executeFastCheckout = async () => {
-    if (!buyerName.trim()) return alert("Please provide your name.");
-    if (!contactPhone.trim() || contactPhone.replace(/\D/g, "").length < 10) return alert("Please enter a valid 10-digit phone number.");
-    
-    setLoading(true);
-    try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user ? user.id : "GUEST",
-          buyerName: buyerName.trim(),
-          productId: product.id,
-          sellerId: product.sellerId || "SYSTEM",
-          total: product.price,
-          contactPhone: contactPhone.trim(),
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setShowModal(false);
-        router.push(`/success/${data.orderId}`);
-      } else {
-        alert(data.error || "Failed to place order.");
-        setShowModal(false);
-        // Re-fetch live stock on failure
-        const docRef = doc(db, "products", product.id);
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          setCurrentStock(Number(snap.data().stock) || 0);
-          setIsLocked(snap.data().locked === true);
-        }
-      }
-    } catch (error) {
-      alert("Connection error.");
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleAdminDelete = async () => {
@@ -131,8 +81,9 @@ export default function ProductActions({ product, children }: { product: Product
     }
   };
 
-  let btnLabel = "Chat With Seller";
-  let btnClass = "bg-[#25D366] text-white";
+  // Dynamic Button Styling based on Stock Status
+  let btnLabel = "Inquire on WhatsApp";
+  let btnClass = "bg-[#25D366] text-white hover:bg-[#1EBE57] active:scale-[0.98]";
 
   if (loading) {
     btnLabel = "Processing...";
@@ -141,93 +92,51 @@ export default function ProductActions({ product, children }: { product: Product
     btnLabel = "Sold Out";
     btnClass = "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed";
   } else if (isReserved) {
-    btnLabel = "Reserved (Pending)";
+    btnLabel = "Reserved (Pending Delivery)";
     btnClass = "bg-amber-50 text-amber-700 border border-amber-200 cursor-not-allowed";
   }
 
   return (
-    <>
-      <div className="mt-6 flex flex-col gap-3">
-        {/* 1. PRIMARY ACTION: WHATSAPP CHAT */}
+    <div className="mt-6 flex flex-col gap-3">
+      
+      {/* 1. PRIMARY ACTION: THE WHATSAPP BOT INQUIRY */}
+      <button 
+        onClick={handleBotInquiry}
+        disabled={isUnavailable || loading}
+        className={`w-full py-4 rounded-xl font-black text-lg flex items-center justify-center gap-3 transition-all shadow-sm ${btnClass}`}
+      >
+        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+        </svg>
+        {btnLabel}
+      </button>
+
+      {/* 2. COLLAPSIBLE MORE ACTIONS */}
+      <div className="mt-2">
         <button 
-          onClick={handleBuyViaWhatsApp}
-          disabled={isUnavailable || !product.sellerPhone || loading}
-          className={`w-full py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 ${btnClass}`}
+          onClick={() => setShowMore(!showMore)}
+          className="text-sm font-bold text-slate-500 flex items-center gap-1 py-2 px-1"
         >
-          💬 {btnLabel}
+          {showMore ? "− Hide options" : "+ More options"}
         </button>
 
-        {/* 2. SECONDARY ACTION: FAST CHECKOUT */}
-        <button 
-          onClick={() => {
-            if (user?.displayName) setBuyerName(user.displayName);
-            setShowModal(true);
-          }}
-          disabled={isUnavailable || loading}
-          className="w-full py-4 rounded-xl font-bold text-md bg-white border-2 border-slate-900 text-slate-900 flex items-center justify-center"
-        >
-          Buy Now (Fast Checkout)
-        </button>
+        {showMore && (
+          <div className="mt-3 bg-slate-50 rounded-xl p-4 flex flex-col gap-3 border border-slate-100">
+            <button onClick={handleCopyLink} disabled={loading} className="w-full bg-white text-slate-700 border border-slate-200 py-3 rounded-xl font-bold text-sm flex justify-center gap-2">
+              {copied ? "✅ Link Copied!" : "🔗 Copy Link"}
+            </button>
 
-        {/* 3. COLLAPSIBLE MORE ACTIONS */}
-        <div className="mt-2">
-          <button 
-            onClick={() => setShowMore(!showMore)}
-            className="text-sm font-bold text-slate-500 flex items-center gap-1 py-2 px-1"
-          >
-            {showMore ? "− Hide actions" : "+ More actions"}
-          </button>
-          
-          {showMore && (
-            <div className="mt-3 bg-slate-50 rounded-xl p-4 flex flex-col gap-3 border border-slate-100">
-              <button onClick={handleShareToWhatsApp} disabled={loading} className="w-full bg-white text-slate-700 border border-slate-200 py-3 rounded-xl font-bold text-sm flex justify-center gap-2">
-                📤 Share via WhatsApp
+            {/* Slot for SaveProductButton (Wishlist) */}
+            {children}
+
+            {user?.role === "admin" && (
+              <button onClick={handleAdminDelete} disabled={loading} className="w-full bg-red-50 text-red-600 border border-red-200 py-3 rounded-xl font-bold text-sm flex justify-center mt-2">
+                🗑️ Admin Delete
               </button>
-              <button onClick={handleCopyLink} disabled={loading} className="w-full bg-white text-slate-700 border border-slate-200 py-3 rounded-xl font-bold text-sm flex justify-center gap-2">
-                {copied ? "✅ Copied" : "🔗 Copy Link"}
-              </button>
-              
-              {/* Slot for SaveProductButton */}
-              {children}
-
-              {user?.role === "admin" && (
-                <button onClick={handleAdminDelete} disabled={loading} className="w-full bg-red-50 text-red-600 border border-red-200 py-3 rounded-xl font-bold text-sm flex justify-center mt-2">
-                  🗑️ Admin Delete
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* MODAL (Stripped of animations for a professional, snappy feel) */}
-      {showModal && (
-        <div className="fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md relative overflow-hidden">
-            <h2 className="text-2xl font-black text-slate-900 mb-2">Fast Checkout</h2>
-            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4 mt-4">
-              <p className="font-bold text-lg text-slate-900 leading-tight line-clamp-2">{product.name}</p>
-              <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">
-                <span className="text-sm font-medium text-slate-500">Pay on delivery:</span>
-                <span className="font-black text-[#D97706] text-lg">UGX {Number(product.price).toLocaleString()}</span>
-              </div>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Your Name *</label>
-              <input required type="text" placeholder="John Doe" className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none" value={buyerName} onChange={e => setBuyerName(e.target.value)} />
-            </div>
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-slate-900 mb-2">WhatsApp Number *</label>
-              <input required type="tel" placeholder="077..." className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none" value={contactPhone} onChange={e => setContactPhone(e.target.value)} />
-              <p className="text-xs text-slate-500 mt-2 font-medium">The seller will call to arrange delivery in Kabale.</p>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => { setShowModal(false); setContactPhone(""); setBuyerName(""); }} disabled={loading} className="flex-1 bg-white border-2 border-slate-200 text-slate-700 py-3 rounded-xl font-bold">Cancel</button>
-              <button onClick={executeFastCheckout} disabled={loading || !contactPhone.trim() || !buyerName.trim()} className="flex-1 bg-[#D97706] text-white py-3 rounded-xl font-bold disabled:opacity-50">{loading ? "Sending..." : "Order"}</button>
-            </div>
+            )}
           </div>
-        </div>
-      )}
-    </>
+        )}
+      </div>
+    </div>
   );
 }
