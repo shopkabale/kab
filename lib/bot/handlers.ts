@@ -8,6 +8,7 @@ import {
 } from "@/lib/whatsapp";
 import { NotificationService } from "@/lib/notifications";
 import { processBotFlow } from "./botFlow"; 
+import { sendAdminAlert } from "@/lib/brevo"; // 🔥 IMPORTED BREVO ALERT
 
 // ==========================================
 // MAIN ROUTER: IS THIS A BOT COMMAND?
@@ -291,6 +292,15 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
       createdAt: Date.now() 
     });
 
+    // 🔥 NEW: Trigger the silent Admin Email Ledger!
+    sendAdminAlert(
+      orderNumber, 
+      product.title || product.name || "Unknown Item", 
+      productPrice, 
+      buyerPhone, 
+      product.sellerPhone
+    ).catch(console.error);
+
     await NotificationService.orderCreated(
       product.sellerPhone, 
       buyerPhone, 
@@ -340,6 +350,15 @@ async function handleNewWebsiteInquiry(buyerPhone: string, productId: string, or
       }],
       createdAt: Date.now() 
     });
+
+    // 🔥 NEW: Trigger the silent Admin Email Ledger!
+    sendAdminAlert(
+      orderNumber, 
+      product.title || product.name || "Unknown Item", 
+      productPrice, 
+      buyerPhone, 
+      product.sellerPhone
+    ).catch(console.error);
 
     // 🔥 THE FIX: Send the seller the actual message the buyer wrote!
     const sellerNotification = `🛍️ *New Order Inquiry!*\n\nSomeone is interested in your item: *${product.title || product.name || "Unknown Item"}*\n\n*Buyer says:*\n"${originalMessage}"\n\n_Reply directly to this message to chat with the buyer._`;
