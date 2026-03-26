@@ -2,7 +2,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
 import SearchBar from "@/components/SearchBar"; 
-import { optimizeImage } from "@/lib/utils";
 import UrgentStories from "@/components/UrgentStories";
 import PersonalizedFeed from "@/components/PersonalizedFeed";
 import ProductSection from "@/components/ProductSection";
@@ -20,8 +19,8 @@ export default async function Home() {
   const allProducts = [...electronics, ...agriculture, ...students];
 
   // 2. Real "Just Posted" Sorting
-  // Safely grab timestamp whether it's a Firebase Timestamp object or ISO string
-  const sortedByDate = [...allProducts].sort((a, b) => {
+  // Added (a: any, b: any) to stop TypeScript from complaining about .seconds on numbers
+  const sortedByDate = [...allProducts].sort((a: any, b: any) => {
     const dateA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt || 0).getTime();
     const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt || 0).getTime();
     return dateB - dateA;
