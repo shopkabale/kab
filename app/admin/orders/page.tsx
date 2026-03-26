@@ -31,7 +31,7 @@ export default function AdminOrdersPage() {
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
     if (!user || user.role !== "admin") return;
-    
+
     setProcessingId(orderId);
     try {
       const res = await fetch("/api/admin/orders", {
@@ -72,6 +72,34 @@ export default function AdminOrdersPage() {
     }
   };
 
+  // 🔥 ULTIMATE BULLETPROOF DATE PARSER
+  const formatSafeDate = (createdAt: any) => {
+    if (!createdAt) return "Unknown Date";
+
+    try {
+      // 1. Assume it's a normal number (Date.now()) or ISO string from the website
+      let parsedDate = new Date(createdAt);
+
+      // 2. Catch mangled Firebase Timestamp objects from the old WhatsApp orders
+      if (typeof createdAt === 'object') {
+        if (createdAt._seconds) {
+          parsedDate = new Date(createdAt._seconds * 1000);
+        } else if (createdAt.seconds) {
+          parsedDate = new Date(createdAt.seconds * 1000);
+        }
+      }
+
+      // 3. Return a clean string if valid
+      if (!isNaN(parsedDate.getTime())) {
+        return parsedDate.toLocaleString();
+      }
+
+      return "Unknown Date";
+    } catch {
+      return "Unknown Date";
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto pb-20 md:pb-0">
       <div className="mb-8 border-b border-slate-200 pb-6">
@@ -103,12 +131,17 @@ export default function AdminOrdersPage() {
               ) : (
                 orders.map((order) => {
                   const safeTotal = Number(order.total) || 0;
-                  const safeDate = order.createdAt ? new Date(order.createdAt).toLocaleString() : "Unknown Date";
+                  
+                  // 🔥 USE THE BULLETPROOF DATE PARSER HERE
+                  const safeDate = formatSafeDate(order.createdAt);
+                  
+                  // Better fallback for older orders without a KAB- number
+                  const displayId = order.orderNumber || order.id.substring(0, 8).toUpperCase();
 
                   return (
                     <tr key={order.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
-                        <p className="font-mono font-bold text-primary">{order.orderNumber || "LEGACY-ORD"}</p>
+                        <p className="font-mono font-bold text-primary">{displayId}</p>
                         <p className="text-xs text-slate-500 mt-1">{safeDate}</p>
                       </td>
                       <td className="px-6 py-4">
