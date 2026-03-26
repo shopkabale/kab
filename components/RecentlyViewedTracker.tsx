@@ -4,39 +4,45 @@ import { useEffect } from "react";
 
 export default function RecentlyViewedTracker({ product }: { product: any }) {
   useEffect(() => {
-    if (!product || !product.id) return;
+    if (!product?.id) return;
 
     try {
-      // 1. Check if they already have a history
-      const storedHistory = localStorage.getItem("kabale_recent");
-      let recent = storedHistory ? JSON.parse(storedHistory) : [];
-
-      // 2. Remove this product if it's already in the list (so we don't duplicate it)
-      recent = recent.filter((p: any) => p.id !== product.id);
-
-      // 3. Add this product to the very front of the line
-      recent.unshift({
-        id: product.id,
-        publicId: product.publicId,
-        name: product.name,
-        price: product.price,
-        image: product.images?.[0] || null, // Best image!
-        category: product.category || "general",
-      });
-
-      // 4. Keep it clean: Only remember the last 6 items so we don't bloat their phone memory
-      if (recent.length > 6) {
-        recent = recent.slice(0, 6);
+      // 1. Get existing viewed items from browser storage
+      const savedJSON = localStorage.getItem("recentlyViewed");
+      let saved = [];
+      if (savedJSON) {
+        saved = JSON.parse(savedJSON);
       }
 
-      // 5. Save it back to their phone
-      localStorage.setItem("kabale_recent", JSON.stringify(recent));
+      // 2. Create a lightweight version of the product to save storage space
+      // We explicitly save the 'category' here so the PersonalizedFeed can read it later!
+      const lightProduct = {
+        id: product.id,
+        publicId: product.publicId || product.id,
+        name: product.name,
+        price: product.price,
+        category: product.category,
+        images: product.images || [],
+      };
 
+      // 3. Remove this product if it's already in the list (to avoid duplicates)
+      const filtered = saved.filter((p: any) => {
+        // Fallback just in case older items were saved as strings
+        const pId = typeof p === 'string' ? p : p.id;
+        return pId !== product.id;
+      });
+
+      // 4. Add the new item to the very front, and keep only the latest 10 items
+      const updatedViews = [lightProduct, ...filtered].slice(0, 10);
+
+      // 5. Save it back to local storage
+      localStorage.setItem("recentlyViewed", JSON.stringify(updatedViews));
+      
     } catch (error) {
-      console.error("Could not save to recently viewed:", error);
+      console.error("Failed to track recently viewed item", error);
     }
-  }, [product.id]);
+  }, [product]);
 
-  // This component doesn't render any UI, it just works in the background!
-  return null; 
+  // This component doesn't render any UI. It's a silent background tracker.
+  return null;
 }
