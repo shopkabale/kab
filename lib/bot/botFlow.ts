@@ -1,11 +1,11 @@
 import { adminDb } from "@/lib/firebase/admin";
 import * as admin from "firebase-admin";
-import { sendWhatsAppMessage, sendWhatsAppListMenu } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, sendWhatsAppListMenu, sendWhatsAppInteractiveButtons } from "@/lib/whatsapp";
 import { processWhatsAppImage } from "./media"; 
 import algoliasearch from "algoliasearch";
 
 // ==========================================
-// INITIALIZE ALGOLIA (Backend Safe)
+// INITIALIZE ALGOLIA 
 // ==========================================
 const searchClient = algoliasearch(
   process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "",
@@ -73,12 +73,11 @@ export async function processBotFlow(senderPhone: string, messageData: { type: s
           return true;
         }
         
-        await sessionRef.delete(); // Clear the search session
+        await sessionRef.delete(); 
         const searchTerm = messageData.text.trim();
         await sendWhatsAppMessage(senderPhone, `🔍 Searching Kabale Online for "*${searchTerm}*"...`);
 
         try {
-          // Hit the Algolia Index
           const { hits } = await index.search(searchTerm, { hitsPerPage: 10 });
 
           if (hits.length === 0) {
@@ -89,14 +88,12 @@ export async function processBotFlow(senderPhone: string, messageData: { type: s
             return true;
           }
 
-          // Format Algolia hits into a WhatsApp List Menu
           const rows = hits.map((hit: any) => ({
             id: `item_${hit.objectID}`, 
-            title: hit.name.substring(0, 24), // Meta limit: 24 chars
+            title: hit.name.substring(0, 24), 
             description: `UGX ${Number(hit.price).toLocaleString()} - ${hit.category.replace('_', ' ')}`.substring(0, 72)
           }));
 
-          // Send the Native Popup Menu
           await sendWhatsAppListMenu(
             senderPhone,
             `Found ${hits.length} result(s) for "*${searchTerm}*":\n\nTap the button below to view them!`,
@@ -110,13 +107,10 @@ export async function processBotFlow(senderPhone: string, messageData: { type: s
         return true;
 
       // ==========================================
-      // FLOW: SELLING AN ITEM
+      // FLOW: SELLING AN ITEM (FULL DATA UPGRADE)
       // ==========================================
       case "WAITING_FOR_NAME":
-        if (messageData.type !== "text" || !messageData.text) {
-          await sendWhatsAppMessage(senderPhone, "Please reply with a text message containing the product name.");
-          return true;
-        }
+        if (messageData.type !== "text" || !messageData.text) return true;
         
         await sessionRef.update({ 
           step: "WAITING_FOR_PRICE", 
@@ -124,65 +118,127 @@ export async function processBotFlow(senderPhone: string, messageData: { type: s
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
         
-        await sendWhatsAppMessage(
-          senderPhone, 
-          `Got it! Name set to *${messageData.text.trim()}*.\n\n💰 Next, what is the *Price in UGX*? (Numbers only, e.g. 50000)`
-        );
+        await sendWhatsAppMessage(senderPhone, `Got it! Name set to *${messageData.text.trim()}*.\n\n💰 Next, what is the *Price in UGX*? (Numbers only)`);
         return true;
 
       case "WAITING_FOR_PRICE":
-        if (messageData.type !== "text" || !messageData.text) {
-          await sendWhatsAppMessage(senderPhone, "Please reply with the price.");
-          return true;
-        }
+        if (messageData.type !== "text" || !messageData.text) return true;
 
         const rawPrice = messageData.text.replace(/\D/g, "");
         if (!rawPrice || isNaN(Number(rawPrice))) {
-          await sendWhatsAppMessage(senderPhone, "That doesn't look like a valid number. Please send the price using numbers only (e.g. 50000).");
+          await sendWhatsAppMessage(senderPhone, "Please send the price using numbers only (e.g. 50000).");
           return true;
         }
         
         await sessionRef.update({ 
-          step: "WAITING_FOR_IMAGE", 
+          step: "WAITING_FOR_CATEGORY", 
           "tempData.price": Number(rawPrice),
           updatedAt: admin.firestore.FieldValue.serverTimestamp()
         });
         
-        await sendWhatsAppMessage(
+        await sendWhatsAppInteractiveButtons(
           senderPhone, 
-          `Price saved at *UGX ${Number(rawPrice).toLocaleString()}*.\n\n📸 Finally, please send a *Photo* of the product using the attachment icon.`
+          `Price saved at *UGX ${Number(rawPrice).toLocaleString()}*.\n\n🏷️ What category does this belong to?`,
+          [
+            { id: "sell_cat_elec", title: "Electronics" },
+            { id: "sell_cat_agri", title: "Agriculture" },
+            { id: "sell_cat_stu", title: "Student Market" }
+          ]
         );
+        return true;
+
+      case "WAITING_FOR_CATEGORY":
+        if (messageData.type !== "text" || !messageData.text) return true;
+        
+        const catInput = messageData.text.toLowerCase();
+        let category = "electronics"; // fallback
+        if (catInput.includes("agriculture")) category = "agriculture";
+        else if (catInput.includes("student")) category = "student_item";
+
+        await sessionRef.update({ 
+          step: "WAITING_FOR_CONDITION", 
+          "tempData.category": category,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        await sendWhatsAppInteractiveButtons(
+          senderPhone, 
+          `Category set!\n\n✨ What is the condition of the item?`,
+          [
+            { id: "sell_cond_new", title: "Brand New" },
+            { id: "sell_cond_used", title: "Used" }
+          ]
+        );
+        return true;
+
+      case "WAITING_FOR_CONDITION":
+        if (messageData.type !== "text" || !messageData.text) return true;
+
+        const condInput = messageData.text.toLowerCase();
+        const condition = condInput.includes("new") ? "new" : "used";
+
+        await sessionRef.update({ 
+          step: "WAITING_FOR_QUANTITY", 
+          "tempData.condition": condition,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        await sendWhatsAppMessage(senderPhone, "Condition saved!\n\n📦 How many of these do you have in stock? (Reply with a number, e.g. 1)");
+        return true;
+
+      case "WAITING_FOR_QUANTITY":
+        if (messageData.type !== "text" || !messageData.text) return true;
+
+        const rawQty = messageData.text.replace(/\D/g, "");
+        const stock = parseInt(rawQty) || 1;
+
+        await sessionRef.update({ 
+          step: "WAITING_FOR_DESCRIPTION", 
+          "tempData.stock": stock,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        await sendWhatsAppMessage(senderPhone, "Stock saved!\n\n📝 Please write a short *Description* (features, flaws, or details).");
+        return true;
+
+      case "WAITING_FOR_DESCRIPTION":
+        if (messageData.type !== "text" || !messageData.text) return true;
+
+        await sessionRef.update({ 
+          step: "WAITING_FOR_IMAGE", 
+          "tempData.description": messageData.text.trim(),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        await sendWhatsAppMessage(senderPhone, "📝 Description saved!\n\n📸 Finally, please send a *Photo* of the product.\n\n_(Note: Send 1 main photo here. You can add more later on our website!)_");
         return true;
 
       case "WAITING_FOR_IMAGE":
         if (messageData.type !== "image" || !messageData.mediaId) {
-          await sendWhatsAppMessage(senderPhone, "Please use the attachment icon 📎 to upload a photo of the product.");
+          await sendWhatsAppMessage(senderPhone, "Please use the attachment icon 📎 to upload a photo.");
           return true;
         }
         
         await sendWhatsAppMessage(senderPhone, "Processing your image... ⏳");
         
-        // Process Media & Save to DB
         const optimizedImageUrl = await processWhatsAppImage(messageData.mediaId);
         
+        // Exact match to your Web Upload Data Model
         const newProduct = {
           ...tempData,
           images: [optimizedImageUrl], 
           sellerPhone: senderPhone,
           sellerId: senderPhone, 
-          category: "electronics", // Defaulting to electronics for quick upload
-          condition: "used",
-          stock: 1,
-          description: "Listed via Kabale Online WhatsApp",
+          sellerName: "WhatsApp Seller", 
           createdAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
         const savedProductRef = await adminDb.collection("products").add(newProduct);
         await savedProductRef.update({ publicId: savedProductRef.id });
 
-        await sessionRef.delete(); // Clear session
+        await sessionRef.delete(); 
         
-        const successText = `🎉 *Success!*\n\nYour *${newProduct.title}* is now live on Kabale Online!\n\nLink: https://kabaleonline.com/product/${savedProductRef.id}`;
+        const successText = `🎉 *Success!*\n\nYour *${newProduct.title}* is now live on Kabale Online!\n\nShare this link to get buyers fast: https://kabaleonline.com/product/${savedProductRef.id}`;
         await sendWhatsAppMessage(senderPhone, successText);
         
         return true;
