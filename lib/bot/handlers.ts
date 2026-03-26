@@ -251,7 +251,7 @@ async function handleProductSelection(phone: string, productId: string) {
     const safePrice = Number(productData.price || 0).toLocaleString();
     const safeCondition = productData.condition || "Used";
     const safeDesc = productData.description || "No description provided.";
-    
+
     // 🔥 Grab the primary product image to pass to WhatsApp!
     const safeImage = (productData.images && productData.images.length > 0) ? productData.images[0] : undefined;
 
@@ -284,14 +284,14 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
     const product = productDoc.data()!;
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // 1. Save the Order to Firebase
+    // 1. Save the Order to Firebase (🔥 FIXED DATE FORMAT TO MATCH WEBSITE)
     await adminDb.collection("orders").doc(orderNumber).set({
       orderId: orderNumber,
       productId: productId,
       buyerPhone: buyerPhone,
       sellerPhone: product.sellerPhone,
       status: "pending",
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+      createdAt: Date.now() 
     });
 
     // Trigger the official Order Created Notification!
@@ -328,13 +328,14 @@ async function handleNewWebsiteInquiry(buyerPhone: string, productId: string) {
     const product = productDoc.data()!;
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    // 🔥 FIXED DATE FORMAT TO MATCH WEBSITE
     await adminDb.collection("orders").doc(orderNumber).set({
       orderId: orderNumber,
       productId: productId,
       buyerPhone: buyerPhone,
       sellerPhone: product.sellerPhone,
       status: "pending",
-      createdAt: admin.firestore.FieldValue.serverTimestamp()
+      createdAt: Date.now() 
     });
 
     await NotificationService.buyerInquiry(product.sellerPhone, product.title);
