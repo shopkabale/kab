@@ -5,7 +5,6 @@ export async function sendWhatsAppMessage(phoneNumber: string, messageText: stri
 
   if (!token || !phoneNumberId) throw new Error("Missing WhatsApp Cloud API credentials.");
 
-  // Format Ugandan numbers correctly for Meta
   let cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
   if (cleanPhoneNumber.startsWith('0')) {
     cleanPhoneNumber = `256${cleanPhoneNumber.slice(1)}`;
@@ -35,7 +34,6 @@ export async function sendWhatsAppTemplate(
 
   if (!token || !phoneNumberId) throw new Error("Missing WhatsApp Cloud API credentials.");
 
-  // Format Ugandan numbers correctly for Meta
   let cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
   if (cleanPhoneNumber.startsWith('0')) {
     cleanPhoneNumber = `256${cleanPhoneNumber.slice(1)}`;
@@ -73,7 +71,6 @@ export async function sendWhatsAppInteractiveButtons(
 
   if (!token || !phoneNumberId) throw new Error("Missing WhatsApp Cloud API credentials.");
 
-  // Format Ugandan numbers correctly for Meta
   let cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
   if (cleanPhoneNumber.startsWith('0')) {
     cleanPhoneNumber = `256${cleanPhoneNumber.slice(1)}`;
@@ -101,7 +98,41 @@ export async function sendWhatsAppInteractiveButtons(
   return await executeRequest(url, token, payload);
 }
 
-// 4. Shared helper
+// 4. Interactive List Menu Message
+export async function sendWhatsAppListMenu(
+  phoneNumber: string,
+  bodyText: string,
+  buttonText: string,
+  sections: { title: string; rows: { id: string; title: string; description?: string }[] }[]
+) {
+  const token = process.env.WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+
+  if (!token || !phoneNumberId) throw new Error("Missing WhatsApp Cloud API credentials.");
+
+  let cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
+  if (cleanPhoneNumber.startsWith('0')) cleanPhoneNumber = `256${cleanPhoneNumber.slice(1)}`;
+
+  const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
+
+  const payload = {
+    messaging_product: "whatsapp",
+    to: cleanPhoneNumber,
+    type: "interactive",
+    interactive: {
+      type: "list",
+      body: { text: bodyText },
+      action: {
+        button: buttonText,
+        sections: sections
+      }
+    }
+  };
+
+  return await executeRequest(url, token, payload);
+}
+
+// 5. Shared helper
 async function executeRequest(url: string, token: string, payload: any) {
   try {
     const response = await fetch(url, {
