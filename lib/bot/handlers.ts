@@ -283,14 +283,24 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
 
     const product = productDoc.data()!;
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
+    
+    // 🔥 PROFESSIONAL FIX: Extract the price
+    const productPrice = Number(product.price) || 0;
 
-    // 1. Save the Order to Firebase (🔥 FIXED DATE FORMAT TO MATCH WEBSITE)
+    // 1. Save the Order to Firebase (🔥 FIXED DATA STRUCTURE)
     await adminDb.collection("orders").doc(orderNumber).set({
       orderId: orderNumber,
       productId: productId,
       buyerPhone: buyerPhone,
       sellerPhone: product.sellerPhone,
       status: "pending",
+      total: productPrice, // 👈 Permanently locks in the price!
+      items: [{            // 👈 Feeds your dashboard's "Items" column perfectly
+        productId: productId,
+        title: product.title || "Unknown Item",
+        price: productPrice,
+        quantity: 1
+      }],
       createdAt: Date.now() 
     });
 
@@ -328,13 +338,23 @@ async function handleNewWebsiteInquiry(buyerPhone: string, productId: string) {
     const product = productDoc.data()!;
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // 🔥 FIXED DATE FORMAT TO MATCH WEBSITE
+    // 🔥 PROFESSIONAL FIX: Extract the price
+    const productPrice = Number(product.price) || 0;
+
+    // 🔥 FIXED DATA STRUCTURE
     await adminDb.collection("orders").doc(orderNumber).set({
       orderId: orderNumber,
       productId: productId,
       buyerPhone: buyerPhone,
       sellerPhone: product.sellerPhone,
       status: "pending",
+      total: productPrice, // 👈 Permanently locks in the price!
+      items: [{            // 👈 Feeds your dashboard's "Items" column perfectly
+        productId: productId,
+        title: product.title || "Unknown Item",
+        price: productPrice,
+        quantity: 1
+      }],
       createdAt: Date.now() 
     });
 
