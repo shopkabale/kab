@@ -45,7 +45,6 @@ export default function AdminOrdersPage() {
       });
 
       if (res.ok) {
-        // Update local state instantly so UI feels snappy
         setOrders(prev => prev.map(order => 
           order.id === orderId ? { ...order, status: newStatus as any } : order
         ));
@@ -60,7 +59,6 @@ export default function AdminOrdersPage() {
     }
   };
 
-  // Helper function to color-code statuses
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-amber-100 text-amber-800';
@@ -72,15 +70,10 @@ export default function AdminOrdersPage() {
     }
   };
 
-  // 🔥 ULTIMATE BULLETPROOF DATE PARSER
   const formatSafeDate = (createdAt: any) => {
     if (!createdAt) return "Unknown Date";
-
     try {
-      // 1. Assume it's a normal number (Date.now()) or ISO string from the website
       let parsedDate = new Date(createdAt);
-
-      // 2. Catch mangled Firebase Timestamp objects from the old WhatsApp orders
       if (typeof createdAt === 'object') {
         if (createdAt._seconds) {
           parsedDate = new Date(createdAt._seconds * 1000);
@@ -88,12 +81,9 @@ export default function AdminOrdersPage() {
           parsedDate = new Date(createdAt.seconds * 1000);
         }
       }
-
-      // 3. Return a clean string if valid
       if (!isNaN(parsedDate.getTime())) {
         return parsedDate.toLocaleString();
       }
-
       return "Unknown Date";
     } catch {
       return "Unknown Date";
@@ -131,17 +121,13 @@ export default function AdminOrdersPage() {
               ) : (
                 orders.map((order) => {
                   const safeTotal = Number(order.total) || 0;
-                  
-                  // 🔥 USE THE BULLETPROOF DATE PARSER HERE
                   const safeDate = formatSafeDate(order.createdAt);
-                  
-                  // Better fallback for older orders without a KAB- number
                   const displayId = order.orderNumber || order.id.substring(0, 8).toUpperCase();
 
                   return (
                     <tr key={order.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-6 py-4">
-                        <p className="font-mono font-bold text-primary">{displayId}</p>
+                        <p className="font-mono font-bold text-[#D97706]">{displayId}</p>
                         <p className="text-xs text-slate-500 mt-1">{safeDate}</p>
                       </td>
                       <td className="px-6 py-4">
@@ -165,7 +151,7 @@ export default function AdminOrdersPage() {
                           <select
                             value={order.status || "pending"}
                             onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                            className="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white outline-none focus:border-primary focus:ring-1 focus:ring-primary font-medium text-slate-700 cursor-pointer"
+                            className="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white outline-none focus:border-[#D97706] focus:ring-1 focus:ring-[#D97706] font-medium text-slate-700 cursor-pointer"
                           >
                             <option value="pending">Pending</option>
                             <option value="confirmed">Confirmed</option>
