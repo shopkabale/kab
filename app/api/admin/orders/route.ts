@@ -1,8 +1,6 @@
-// app/api/admin/orders/route.ts
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { sendStatusUpdateEmail } from "@/lib/brevo";
 
 export async function PATCH(request: Request) {
   try {
@@ -18,25 +16,16 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
     }
 
-    let buyerEmail = null;
-    let buyerName = "Valued Customer";
-    let orderNumber = "";
-
     // 2. Perform the stock, lock, and status updates atomically
     await adminDb.runTransaction(async (transaction) => {
       const orderRef = adminDb.collection("orders").doc(orderId);
       const orderSnap = await transaction.get(orderRef);
-      
+
       if (!orderSnap.exists) {
         throw new Error("Order not found");
       }
-      
+
       const orderData = orderSnap.data()!;
-      
-      // Save details for the email notification later
-      buyerEmail = orderData.buyerEmail || null;
-      buyerName = orderData.buyerName || buyerName;
-      orderNumber = orderData.orderNumber;
 
       // Ensure items array exists and has at least one product
       if (!orderData.items || orderData.items.length === 0) {
@@ -75,13 +64,6 @@ export async function PATCH(request: Request) {
       });
     });
 
-    // 5. Send Status Update Email (Outside the transaction for speed/reliability)
-    if (buyerEmail) {
-      // We don't await this so the admin UI updates instantly while the email sends in the background
-      sendStatusUpdateEmail(buyerEmail, buyerName, orderNumber, newStatus)
-        .catch(err => console.error("Failed to send status update email:", err));
-    }
-
     return NextResponse.json({ success: true }, { status: 200 });
 
   } catch (error: any) {
@@ -93,7 +75,6 @@ export async function PATCH(request: Request) {
   }
 }
 
-// Keep the GET route here if you already have it for fetching orders
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -113,9 +94,28 @@ export async function GET(request: Request) {
       .orderBy("createdAt", "desc")
       .get();
 
-    const orders = ordersSnap.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
+    // 🔥 SMART FALLBACK: If total is 0 (WhatsApp orders), fetch the product price dynamically
+    const orders = await Promise.all(ordersSnap.docs.map(async (doc) => {
+      const data = doc.data();
+      let totalAmount = Number(data.total) || 0;
+
+      // If it's a WhatsApp order lacking a total but has a productId, fetch it!
+      if (totalAmount === 0 && data.productId) {
+        try {
+          const productDoc = await adminDb.collection("products").doc(data.productId).get();
+          if (productDoc.exists) {
+            totalAmount = Number(productDoc.data()?.price) || 0;
+          }
+        } catch (err) {
+          console.error(`Could not fetch fallback price for product ${data.productId}`);
+        }
+      }
+
+      return {
+        id: doc.id,
+        ...data,
+        total: totalAmount 
+      };
     }));
 
     return NextResponse.json({ orders }, { status: 200 });
