@@ -3,7 +3,8 @@ import { adminDb } from "@/lib/firebase/admin";
 import * as admin from "firebase-admin";
 
 import { sendWhatsAppMessage } from "@/lib/whatsapp"; 
-import { checkIsBotFlow } from "@/lib/bot/handlers"; // 🔥 Intercepts bot interactions
+import { checkIsBotFlow } from "@/lib/bot/handlers"; 
+import { logChat } from "@/lib/bot/chatLogger"; // 🔥 Imported your new chat logger!
 
 // ==========================================
 // 1. Handle Webhook Verification (GET)
@@ -46,11 +47,22 @@ export async function POST(request: Request) {
 
               console.log(`💬 Incoming message payload from ${fromPhone}`);
 
-              // 🔥 STEP 1: LET THE BOT TRY TO HANDLE IT FIRST
-              // If they clicked a menu button, typed /add, or tapped "Buy via WhatsApp", 
-              // checkIsBotFlow handles it and returns true.
-              const isBotHandled = await checkIsBotFlow(fromPhone, message);
+              // 🔥 NEW: AUTO-LOG INCOMING MESSAGES TO FIRESTORE
+              let incomingText = "Media/Other";
+              if (message.type === "text") {
+                incomingText = message.text.body;
+              } else if (message.type === "interactive" && message.interactive.type === "button_reply") {
+                incomingText = `[Button Clicked: ${message.interactive.button_reply.title}]`;
+              } else if (message.type === "interactive" && message.interactive.type === "list_reply") {
+                incomingText = `[List Item: ${message.interactive.list_reply.title}]`;
+              }
               
+              // Fire logger in the background (does not slow down the webhook)
+              logChat(fromPhone, "incoming", message.type, incomingText).catch(console.error);
+
+              // 🔥 STEP 1: LET THE BOT TRY TO HANDLE IT FIRST
+              const isBotHandled = await checkIsBotFlow(fromPhone, message);
+
               if (isBotHandled) {
                  console.log(`🤖 Bot handled the interaction for ${fromPhone}. Skipping relay.`);
                  continue; // Skip the chat relay logic below!
@@ -59,20 +71,6 @@ export async function POST(request: Request) {
               // 🔥 STEP 2: HUMAN-TO-HUMAN PROXY RELAY
               // If it wasn't a bot command, treat it as a normal chat message.
               const text = message.text?.body || "[Media/Voice Note]"; 
-
-              try {
-                // Save to Firebase for record keeping
-                await adminDb.collection("whatsapp_messages").add({
-                  metaMessageId: messageId,
-                  senderPhone: fromPhone,
-                  content: text,
-                  status: "unread",
-                  timestamp: admin.firestore.FieldValue.serverTimestamp(),
-                });
-                console.log(`✅ Saved incoming message from ${fromPhone} to database.`);
-              } catch (dbError: any) {
-                console.error("❌ FIREBASE SAVE FAILED:", dbError.message);
-              }
 
               try {
                 // Look up the anonymous chat partner
