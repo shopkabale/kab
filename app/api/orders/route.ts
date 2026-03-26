@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { sendStatusUpdateEmail } from "@/lib/brevo";
 
 export async function PATCH(request: Request) {
   try {
@@ -17,10 +16,6 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
     }
 
-    let buyerEmail = null;
-    let buyerName = "Valued Customer";
-    let orderNumber = "";
-
     // 2. Perform the stock, lock, and status updates atomically
     await adminDb.runTransaction(async (transaction) => {
       const orderRef = adminDb.collection("orders").doc(orderId);
@@ -31,11 +26,6 @@ export async function PATCH(request: Request) {
       }
 
       const orderData = orderSnap.data()!;
-
-      // Save details for the email notification later
-      buyerEmail = orderData.buyerEmail || null;
-      buyerName = orderData.buyerName || buyerName;
-      orderNumber = orderData.orderNumber;
 
       // Ensure items array exists and has at least one product
       if (!orderData.items || orderData.items.length === 0) {
@@ -73,12 +63,6 @@ export async function PATCH(request: Request) {
         updatedAt: Date.now()
       });
     });
-
-    // 5. Send Status Update Email
-    if (buyerEmail) {
-      sendStatusUpdateEmail(buyerEmail, buyerName, orderNumber, newStatus)
-        .catch(err => console.error("Failed to send status update email:", err));
-    }
 
     return NextResponse.json({ success: true }, { status: 200 });
 
@@ -130,7 +114,7 @@ export async function GET(request: Request) {
       return {
         id: doc.id,
         ...data,
-        total: totalAmount // Overwrite with the corrected amount
+        total: totalAmount 
       };
     }));
 
