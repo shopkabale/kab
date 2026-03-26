@@ -13,13 +13,18 @@ export async function GET(request: Request) {
     const adminDoc = await adminDb.collection("users").doc(adminId).get();
     if (adminDoc.data()?.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    // Count documents rapidly
+    // Count standard documents rapidly
     const usersCount = await adminDb.collection("users").count().get();
     const productsCount = await adminDb.collection("products").count().get();
     const ordersCount = await adminDb.collection("orders").count().get();
-    
-    // 👈 ADDED: Count total search queries
     const searchesCount = await adminDb.collection("search_queries").count().get();
+
+    // 🔥 NEW: Count WhatsApp Chats & Messages efficiently
+    const botChatsCount = await adminDb.collection("chats").count().get();
+    
+    // Using collectionGroup efficiently counts every message in every subcollection 
+    // across the entire database without charging you for massive document reads!
+    const totalMessagesCount = await adminDb.collectionGroup("messages").count().get();
 
     // Calculate total revenue from all orders
     const ordersSnapshot = await adminDb.collection("orders").get();
@@ -33,7 +38,9 @@ export async function GET(request: Request) {
       totalProducts: productsCount.data().count,
       totalOrders: ordersCount.data().count,
       totalRevenue,
-      totalSearches: searchesCount.data().count, // 👈 ADDED: Return it to the frontend
+      totalSearches: searchesCount.data().count,
+      totalBotChats: botChatsCount.data().count,      // 👈 ADDED: Unique people who chatted
+      totalMessages: totalMessagesCount.data().count, // 👈 ADDED: Total chat volume
     }, { status: 200 });
 
   } catch (error) {
