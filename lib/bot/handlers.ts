@@ -26,7 +26,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     buttonId = message.interactive.list_reply.id;
     text = message.interactive.list_reply.title;
   } else if (message.type === "image") {
-    // If it's an image, immediately pass to the botFlow in case they are uploading a product photo
+    // Pass image to botFlow for product uploads
     return await processBotFlow(senderPhone, { type: "image", mediaId: message.image.id });
   }
 
@@ -35,7 +35,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   if (productIdMatch) {
     const productId = productIdMatch[1];
     await handleNewWebsiteInquiry(senderPhone, productId);
-    return true; // Stop here, the bot handled it!
+    return true; 
   }
 
   // ==========================================
@@ -55,7 +55,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
         rows: [
           { id: "cat_electronics_0", title: "📱 Electronics" },
           { id: "cat_agriculture_0", title: "🥕 Agriculture" },
-          { id: "cat_student_item_0", title: "🎒 Student Market" }, // Note: 24 char limit on titles
+          { id: "cat_student_item_0", title: "🎒 Student Market" }, 
           { id: "cmd_search", title: "🔍 Search for an Item", description: "Type what you want to find" }
         ]
       }]
@@ -66,8 +66,6 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   // B. Handle Category Selection & Pagination
   if (buttonId.startsWith("cat_")) {
     const parts = buttonId.split("_");
-    // e.g. "cat_electronics_0" -> parts[1] is "electronics", parts[2] is "0"
-    // Rejoin the category name if it has multiple parts (like "student_item")
     const categoryName = parts.slice(1, -1).join("_"); 
     const pageNumber = parseInt(parts[parts.length - 1]); 
     
@@ -81,14 +79,14 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     return true;
   }
 
-  // D. Handle Product Selection (When they tap an item in the search or category list)
+  // D. Handle Product Selection (Aggressive Lookup)
   if (buttonId.startsWith("item_")) {
     const productId = buttonId.replace("item_", "");
     await handleProductSelection(senderPhone, productId);
     return true;
   }
 
-  // E. Handle "Buy Now" Checkout (Native WhatsApp Checkout)
+  // E. Handle "Buy Now" Checkout
   if (buttonId.startsWith("buy_")) {
     const productId = buttonId.replace("buy_", "");
     await handleNativeCheckout(senderPhone, productId);
@@ -99,13 +97,11 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   // EXISTING LOGIC (Sell, Help, Menu)
   // ==========================================
 
-  // Handle "Sell an Item"
   if (buttonId === "btn_sell" || text.toLowerCase() === "/add") {
     await processBotFlow(senderPhone, { type: "text", text: "/add" });
     return true;
   }
 
-  // Handle "Support"
   if (buttonId === "btn_help") {
     await sendWhatsAppMessage(
       senderPhone, 
@@ -114,20 +110,18 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     return true;
   }
 
-  // Catch Greetings & Trigger the Welcome Menu
   const greetings = ["hi", "hello", "hey", "menu", "start", "/start"];
   if (message.type === "text" && greetings.includes(text.toLowerCase().trim())) {
     await sendWelcomeMenu(senderPhone);
     return true; 
   }
 
-  // Catch active bot sessions (e.g., they are currently typing a price or search term)
   const isHandledByBotFlow = await processBotFlow(senderPhone, { type: "text", text });
   if (isHandledByBotFlow) {
     return true;
   }
 
-  // Fallback: Not a bot command, let the human-to-human proxy handle it in route.ts
+  // Fallback: Not a bot command, let the human-to-human proxy handle it
   return false; 
 }
 
@@ -147,75 +141,120 @@ async function sendWelcomeMenu(phone: string) {
 }
 
 // ==========================================
-// HELPER: FETCH CATEGORY ITEMS (PAGINATED)
+// HELPER: FETCH CATEGORY ITEMS (BULLETPROOF)
 // ==========================================
 async function handleCategoryBrowsing(phone: string, category: string, page: number) {
-  const limit = 10;
-  const offset = page * limit;
+  try {
+    const limit = 10;
+    const offset = page * limit;
 
-  // Query Firebase for active products in this category
-  const productsQuery = await adminDb.collection("products")
-    .where("category", "==", category)
-    .orderBy("createdAt", "desc")
-    .limit(limit + 1) // Get 1 extra to check if there is a next page
-    .offset(offset)
-    .get();
+    // Removed orderBy to prevent Firebase composite index crashes
+    const productsQuery = await adminDb.collection("products")
+      .where("category", "==", category)
+      .limit(limit + 1) 
+      .offset(offset)
+      .get();
 
-  if (productsQuery.empty) {
-    return await sendWhatsAppMessage(phone, `There are currently no items in the *${category.replace('_', ' ')}* category. Check back later!`);
-  }
+    if (productsQuery.empty) {
+      return await sendWhatsAppMessage(phone, `There are currently no items in the *${category.replace('_', ' ')}* category. Check back later!`);
+    }
 
-  const hasNextPage = productsQuery.docs.length > limit;
-  const docsToShow = hasNextPage ? productsQuery.docs.slice(0, limit) : productsQuery.docs;
+    const hasNextPage = productsQuery.docs.length > limit;
+    const docsToShow = hasNextPage ? productsQuery.docs.slice(0, limit) : productsQuery.docs;
 
-  const rows = docsToShow.map(doc => {
-    const data = doc.data();
-    return {
-      id: `item_${doc.id}`,
-      title: data.title.substring(0, 24), // Meta limits titles to 24 chars
-      description: `UGX ${Number(data.price).toLocaleString()}` 
-    };
-  });
+    const rows = docsToShow.map(doc => {
+      const data = doc.data();
+      
+      // Safely handle missing titles or prices
+      const safeTitle = (data.title || data.name || "Unknown Item").substring(0, 24);
+      const safePrice = Number(data.price || 0).toLocaleString();
 
-  // If there's a next page, add a "See More" button at the bottom of the list
-  if (hasNextPage) {
-    rows.push({
-      id: `cat_${category}_${page + 1}`,
-      title: "➡️ See More Items",
-      description: "Load the next page"
+      return {
+        id: `item_${doc.id}`,
+        title: safeTitle,
+        description: `UGX ${safePrice}` 
+      };
     });
+
+    if (hasNextPage) {
+      rows.push({
+        id: `cat_${category}_${page + 1}`,
+        title: "➡️ See More Items",
+        description: "Load the next page"
+      });
+    }
+
+    const formattedCategory = category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+    await sendWhatsAppListMenu(
+      phone,
+      `Here are the latest items in *${formattedCategory}*:`,
+      "View Items",
+      [{ title: "Available Items", rows: rows }]
+    );
+  } catch (error: any) {
+    console.error("❌ Category Browsing Error:", error.message);
+    await sendWhatsAppMessage(phone, "Oops, we ran into an issue loading this category. Please try again.");
   }
-
-  const formattedCategory = category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-
-  await sendWhatsAppListMenu(
-    phone,
-    `Here are the latest items in *${formattedCategory}*:`,
-    "View Items",
-    [{ title: "Available Items", rows: rows }]
-  );
 }
 
 // ==========================================
-// HELPER: SHOW PRODUCT DETAILS
+// HELPER: SHOW PRODUCT DETAILS (AGGRESSIVE LOOKUP)
 // ==========================================
 async function handleProductSelection(phone: string, productId: string) {
-  const productDoc = await adminDb.collection("products").doc(productId).get();
-  
-  if (!productDoc.exists) {
-    return await sendWhatsAppMessage(phone, "This item is no longer available.");
+  try {
+    const cleanId = productId.trim();
+    let productData = null;
+    let actualDocId = cleanId;
+
+    // 1. Try finding by the exact Firebase Document ID
+    const exactDoc = await adminDb.collection("products").doc(cleanId).get();
+    if (exactDoc.exists) {
+      productData = exactDoc.data();
+    }
+
+    // 2. FALLBACK A: Search by the 'publicId' field 
+    if (!productData) {
+      const idQuery = await adminDb.collection("products").where("publicId", "==", cleanId).limit(1).get();
+      if (!idQuery.empty) {
+        productData = idQuery.docs[0].data();
+        actualDocId = idQuery.docs[0].id; 
+      }
+    }
+
+    // 3. FALLBACK B: Search by Algolia's 'objectID' field 
+    if (!productData) {
+      const algoliaQuery = await adminDb.collection("products").where("objectID", "==", cleanId).limit(1).get();
+      if (!algoliaQuery.empty) {
+        productData = algoliaQuery.docs[0].data();
+        actualDocId = algoliaQuery.docs[0].id;
+      }
+    }
+
+    if (!productData) {
+      return await sendWhatsAppMessage(
+        phone, 
+        "This item has been removed by the seller or is no longer available. 😔\n\nPlease search for something else!"
+      );
+    }
+
+    // Safely extract fields so missing data never crashes the bot silently
+    const safeTitle = productData.title || productData.name || "Unknown Item";
+    const safePrice = Number(productData.price || 0).toLocaleString();
+    const safeCondition = productData.condition || "Used";
+    const safeDesc = productData.description || "No description provided.";
+
+    const messageText = `*${safeTitle}*\n\n💰 Price: *UGX ${safePrice}*\n📝 Condition: ${safeCondition}\n\n${safeDesc}\n\nTo buy this item, tap the button below!`;
+
+    await sendWhatsAppInteractiveButtons(
+      phone,
+      messageText,
+      [{ id: `buy_${actualDocId}`, title: "🛒 Buy Now" }] 
+    );
+  } catch (error: any) {
+    console.error("❌ Product Selection Error:", error.message);
+    await sendWhatsAppMessage(phone, "Oops, we couldn't load the details for this item right now.");
   }
-
-  const product = productDoc.data()!;
-  // We can't easily send the image with interactive buttons in a single payload without templates,
-  // so we format a beautiful text message with the button attached.
-  const messageText = `*${product.title}*\n\n💰 Price: *UGX ${Number(product.price).toLocaleString()}*\n📝 Condition: ${product.condition || "Used"}\n\n${product.description || ""}\n\nTo buy this item, tap the button below!`;
-
-  await sendWhatsAppInteractiveButtons(
-    phone,
-    messageText,
-    [{ id: `buy_${productId}`, title: "🛒 Buy Now" }]
-  );
 }
 
 // ==========================================
@@ -223,8 +262,6 @@ async function handleProductSelection(phone: string, productId: string) {
 // ==========================================
 async function handleNativeCheckout(buyerPhone: string, productId: string) {
   try {
-    console.log(`🛒 Processing native checkout for Product ID: ${productId} from ${buyerPhone}`);
-
     const productDoc = await adminDb.collection("products").doc(productId).get();
     
     if (!productDoc.exists) {
@@ -244,10 +281,8 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    // Alert the Seller using the approved template
     await NotificationService.buyerInquiry(product.sellerPhone, product.title);
 
-    // Reply to the Buyer
     const buyerConfirmation = `✅ *Purchase Request Sent!*\n\nWe have alerted the seller that you want to buy *${product.title}*.\n\nPlease wait for their reply right here in this chat to arrange delivery and payment!`;
     await sendWhatsAppMessage(buyerPhone, buyerConfirmation);
 
@@ -262,8 +297,6 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
 // ==========================================
 async function handleNewWebsiteInquiry(buyerPhone: string, productId: string) {
   try {
-    console.log(`🛒 Processing new website inquiry for Product ID: ${productId} from ${buyerPhone}`);
-
     const productDoc = await adminDb.collection("products").doc(productId).get();
     
     if (!productDoc.exists) {
@@ -283,10 +316,8 @@ async function handleNewWebsiteInquiry(buyerPhone: string, productId: string) {
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    // Alert the Seller using the approved template
     await NotificationService.buyerInquiry(product.sellerPhone, product.title);
 
-    // Reply to the Buyer
     const buyerConfirmation = `✅ *Inquiry Sent!*\n\nWe have alerted the seller about your interest in *${product.title}*.\n\nPlease wait for their reply right here in this chat.`;
     await sendWhatsAppMessage(buyerPhone, buyerConfirmation);
 
