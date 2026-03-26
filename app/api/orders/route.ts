@@ -38,7 +38,6 @@ export async function PATCH(request: Request) {
 
       // 3. Status Behavior Rules
       if (newStatus === "cancelled") {
-        // Unlock the product and restore the stock
         transaction.update(productRef, {
           stock: FieldValue.increment(1),
           locked: false,
@@ -47,7 +46,6 @@ export async function PATCH(request: Request) {
         });
       } 
       else if (newStatus === "delivered" && productSnap.exists) {
-        // Keep locked. If stock is 0, mark as sold out
         const productData = productSnap.data()!;
         if (productData.stock <= 0) {
           transaction.update(productRef, { 
@@ -89,17 +87,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Fetch all orders ordered by creation date
     const ordersSnap = await adminDb.collection("orders")
       .orderBy("createdAt", "desc")
       .get();
 
-    // 🔥 SMART FALLBACK: If total is 0 (WhatsApp orders), fetch the product price dynamically
     const orders = await Promise.all(ordersSnap.docs.map(async (doc) => {
       const data = doc.data();
       let totalAmount = Number(data.total) || 0;
 
-      // If it's a WhatsApp order lacking a total but has a productId, fetch it!
       if (totalAmount === 0 && data.productId) {
         try {
           const productDoc = await adminDb.collection("products").doc(data.productId).get();
