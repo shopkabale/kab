@@ -122,56 +122,53 @@ function normalizeForMeta(phone: string): string {
 }
 
 // ==========================================
-// HELPER FUNCTION: Find who to send it to
+// HELPER FUNCTION: Find who to send it to (BULLETPROOF EDITION)
 // ==========================================
 async function getActiveChatPartner(senderPhone: string): Promise<string | null> {
   try {
     const ordersRef = adminDb.collection("orders"); 
-    
-    // We included 'out_for_delivery' to catch any status variations
     const activeStatuses = ["pending", "confirmed", "out for delivery", "out_for_delivery"];
 
-    // 💡 CREATE VARIATIONS: Meta sends "2567...", but DB might have "07..." or "+256..."
     const phoneVariations = [senderPhone, `+${senderPhone}`];
     if (senderPhone.startsWith("256")) {
       phoneVariations.push(`0${senderPhone.substring(3)}`); 
     }
 
-    // ==========================================
-    // SCENARIO 1: SENDER IS THE BUYER
-    // ==========================================
-    const buyerQuery = await ordersRef
-      .where("buyerPhone", "in", phoneVariations) // 🔥 FIXED: Now searching new 'buyerPhone' field
-      .where("status", "in", activeStatuses) 
-      .limit(1)
-      .get();
+    // Fetch ALL active orders for this user to avoid getting stuck on an old test
+    const [buyerSnap, sellerSnap] = await Promise.all([
+      ordersRef.where("buyerPhone", "in", phoneVariations).where("status", "in", activeStatuses).get(),
+      ordersRef.where("sellerPhone", "in", phoneVariations).where("status", "in", activeStatuses).get()
+    ]);
 
-    if (!buyerQuery.empty) {
-      const orderData = buyerQuery.docs[0].data();
-      if (orderData.sellerPhone) {
-        return normalizeForMeta(orderData.sellerPhone); // 🔥 FIXED: Format perfectly for Meta
+    let allActiveOrders: any[] = [];
+    
+    buyerSnap.forEach(doc => allActiveOrders.push(doc.data()));
+    sellerSnap.forEach(doc => allActiveOrders.push(doc.data()));
+
+    // Sort by newest first so real orders beat your late-night test orders!
+    allActiveOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+    const normalizedSender = normalizeForMeta(senderPhone);
+
+    // Loop through the orders to find a valid, DIFFERENT chat partner
+    for (const order of allActiveOrders) {
+      const normalizedBuyer = normalizeForMeta(order.buyerPhone);
+      const normalizedSeller = normalizeForMeta(order.sellerPhone);
+
+      // SCENARIO 1: Sender is the Buyer. Target is the Seller.
+      if (normalizedSender === normalizedBuyer && normalizedSeller !== normalizedSender) {
+        return normalizedSeller; 
+      }
+      
+      // SCENARIO 2: Sender is the Seller. Target is the Buyer.
+      if (normalizedSender === normalizedSeller && normalizedBuyer !== normalizedSender) {
+        return normalizedBuyer; 
       }
     }
 
-    // ==========================================
-    // SCENARIO 2: SENDER IS THE SELLER
-    // ==========================================
-    const sellerQuery = await ordersRef
-      .where("sellerPhone", "in", phoneVariations) // 🔥 FIXED: Now searching new 'sellerPhone' field
-      .where("status", "in", activeStatuses) 
-      .limit(1)
-      .get();
-
-    if (!sellerQuery.empty) {
-      const orderData = sellerQuery.docs[0].data();
-      if (orderData.buyerPhone) {
-        return normalizeForMeta(orderData.buyerPhone); // 🔥 FIXED: Format perfectly for Meta
-      }
-    }
-
-    return null; // Not part of any active transaction
+    return null; // No active transaction with a DIFFERENT person
   } catch (error) {
-    console.error("❌ Error looking up chat partner in Firebase:", error);
+    console.error("❌ Error looking up chat partner:", error);
     return null;
   }
 }
