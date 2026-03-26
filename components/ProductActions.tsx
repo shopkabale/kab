@@ -19,7 +19,8 @@ export default function ProductActions({ product, children }: { product: Product
   const [isLocked, setIsLocked] = useState((product as any).locked === true);
   const [productStatus, setProductStatus] = useState(product.status);
 
-  // The official Kabale Online Bot Number (Include country code, no '+')
+  // Securely pull the WhatsApp Bot Number from Vercel Environment Variables
+  // Fallback is set to your exact number just in case!
   const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
 
   useEffect(() => {
@@ -46,8 +47,8 @@ export default function ProductActions({ product, children }: { product: Product
 
   // 🔥 THE NEW CORE ACTION: Route inquiries through the bot
   const handleBotInquiry = () => {
-    // 1. Format the exact Regex string our bot is listening for
-    const rawMessage = `Hi! I am interested in this item on Kabale Online: *${product.title || product.name}*\n\nProduct ID: [${product.id}]`;
+    // 1. Format the exact Regex string our bot is listening for (Fixed to use product.name to satisfy TypeScript)
+    const rawMessage = `Hi! I am interested in this item on Kabale Online: *${product.name}*\n\nProduct ID: [${product.id}]`;
     
     // 2. Encode and open WhatsApp
     const encodedMessage = encodeURIComponent(rawMessage);
@@ -140,3 +141,4 @@ export default function ProductActions({ product, children }: { product: Product
     </div>
   );
 }
+
