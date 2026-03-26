@@ -141,17 +141,18 @@ async function sendWelcomeMenu(phone: string) {
 }
 
 // ==========================================
-// HELPER: FETCH CATEGORY ITEMS (BULLETPROOF)
+// HELPER: FETCH CATEGORY ITEMS (THE "RULE OF 9" FIX)
 // ==========================================
 async function handleCategoryBrowsing(phone: string, category: string, page: number) {
   try {
-    const limit = 10;
+    // 💡 THE FIX: Limit to 9 items so we have 1 slot left for the "See More" button!
+    const limit = 9;
     const offset = page * limit;
 
     // Removed orderBy to prevent Firebase composite index crashes
     const productsQuery = await adminDb.collection("products")
       .where("category", "==", category)
-      .limit(limit + 1) 
+      .limit(limit + 1) // Fetch 10 to see if there's a next page
       .offset(offset)
       .get();
 
@@ -179,7 +180,7 @@ async function handleCategoryBrowsing(phone: string, category: string, page: num
     // Create the Sections Array for Meta's UI limits
     const sections: any[] = [{ title: "Available Items", rows: productRows }];
 
-    // 💡 THE FIX: Put the "See More" button in its own section to avoid the 10-row limit!
+    // Add the "See More" button (9 products + 1 button = exactly 10 rows!)
     if (hasNextPage) {
       sections.push({
         title: "Navigation",
