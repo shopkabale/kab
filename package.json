@@ -15,6 +15,7 @@
     "algoliasearch": "^4.22.0",
     "browser-image-compression": "^2.0.2",
     "cloudinary": "^2.0.0",
+    "date-fns": "^3.6.0",
     "easymde": "^2.18.0",
     "firebase": "^10.8.0",
     "firebase-admin": "^12.0.0",
@@ -25,7 +26,8 @@
     "react-dom": "^18.2.0",
     "react-icons": "^5.2.1",
     "react-simplemde-editor": "^5.2.0",
-    "swiper": "^11.0.5"
+    "swiper": "^11.0.5",
+    "swr": "^2.2.5"
   },
   "devDependencies": {
     "@types/marked": "^6.0.0",
