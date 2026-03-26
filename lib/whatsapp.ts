@@ -62,11 +62,12 @@ export async function sendWhatsAppTemplate(
   return await executeRequest(url, token, payload);
 }
 
-// 3. Interactive Button Message
+// 3. Interactive Button Message (HYBRID IMAGE LOGIC)
 export async function sendWhatsAppInteractiveButtons(
   phoneNumber: string,
   bodyText: string,
-  buttons: { id: string, title: string }[]
+  buttons: { id: string, title: string }[],
+  imageUrl?: string 
 ) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -80,8 +81,7 @@ export async function sendWhatsAppInteractiveButtons(
 
   const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
 
-  // Meta allows a maximum of 3 buttons
-  const payload = {
+  const payload: any = {
     messaging_product: "whatsapp",
     to: cleanPhoneNumber,
     type: "interactive",
@@ -96,6 +96,30 @@ export async function sendWhatsAppInteractiveButtons(
       }
     }
   };
+
+  if (imageUrl) {
+    // 🔥 HYBRID LOGIC: 
+    // Only transform the URL if it contains Cloudinary's auto-format tag.
+    // If it is one of your manual uploads, we let it pass through exactly as is.
+    let finalImageUrl = imageUrl;
+    
+    if (imageUrl.includes("f_auto")) {
+      finalImageUrl = imageUrl
+        .replace("f_auto", "f_jpg")
+        .replace("q_auto", "q_auto:good") // Ensure quality stays high but safe for WhatsApp
+        .split('?')[0]; // Strip any extra query params that might confuse Meta's CDN parser
+        
+      // Ensure the extension matches the forced JPG format
+      if (finalImageUrl.endsWith(".webp") || finalImageUrl.endsWith(".avif")) {
+        finalImageUrl = finalImageUrl.replace(/\.(webp|avif)$/, ".jpg");
+      }
+    }
+
+    payload.interactive.header = {
+      type: "image",
+      image: { link: finalImageUrl }
+    };
+  }
 
   return await executeRequest(url, token, payload);
 }
@@ -134,14 +158,14 @@ export async function sendWhatsAppListMenu(
   return await executeRequest(url, token, payload);
 }
 
-// 5. Shared helper (Now with Auto-Logging!)
+// 5. Shared helper (With Auto-Logging)
 async function executeRequest(url: string, token: string, payload: any) {
   try {
     // 🔥 AUTO-LOG OUTGOING MESSAGES
     const phoneTo = payload.to;
     const msgType = payload.type;
     let contentSnippet = "Media/Interactive";
-    
+
     if (msgType === "text") {
       contentSnippet = payload.text?.body || "Text Message";
     } else if (msgType === "template") {
@@ -150,7 +174,7 @@ async function executeRequest(url: string, token: string, payload: any) {
       contentSnippet = `[Menu/Button: ${payload.interactive?.body?.text?.substring(0, 30)}...]`;
     }
 
-    // Fire the logger in the background (we don't await it so the bot stays lightning fast)
+    // Fire the logger in the background
     logChat(phoneTo, "outgoing", msgType, contentSnippet).catch(console.error);
 
     // Send the actual request to Meta
