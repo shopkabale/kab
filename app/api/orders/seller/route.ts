@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
-import { sendStatusUpdateEmail } from "@/lib/brevo";
 
 // GET: Fetch all orders belonging to a specific seller
 export async function GET(request: Request) {
@@ -45,11 +44,6 @@ export async function PATCH(request: Request) {
 
     const orderRef = adminDb.collection("orders").doc(orderId);
 
-    // Create variables to store the data we find INSIDE the transaction
-    let emailToSendTo = null;
-    let nameForEmail = "Valued Customer";
-    let orderNumForEmail = "";
-
     // Perform this inside a transaction to ensure status and stock are synced perfectly
     await adminDb.runTransaction(async (transaction) => {
       const orderSnap = await transaction.get(orderRef);
@@ -64,11 +58,6 @@ export async function PATCH(request: Request) {
       if (orderData.sellerId !== sellerId) {
         throw new Error("Unauthorized to edit this order");
       }
-
-      // Grab the data we need for the email before we update the DB
-      emailToSendTo = orderData.buyerEmail || null;
-      nameForEmail = orderData.buyerName || nameForEmail;
-      orderNumForEmail = orderData.orderNumber;
 
       // If updating to delivered, update the product status too
       if (newStatus === "delivered" && orderData.items && orderData.items.length > 0) {
@@ -90,17 +79,6 @@ export async function PATCH(request: Request) {
         updatedAt: Date.now()
       });
     }); 
-    // <--- TRANSACTION ENDS HERE --->
-
-    // 🔥 Fire off an email to the buyer (Truly OUTSIDE the transaction now)
-    if (emailToSendTo) {
-      sendStatusUpdateEmail(
-        emailToSendTo, 
-        nameForEmail, 
-        orderNumForEmail, 
-        newStatus
-      ).catch(err => console.error("Seller triggered email fail:", err));
-    }
 
     return NextResponse.json({ success: true }, { status: 200 });
 
