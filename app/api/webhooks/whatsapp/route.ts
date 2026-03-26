@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
-import * as admin from "firebase-admin";
 
 import { sendWhatsAppMessage } from "@/lib/whatsapp"; 
 import { checkIsBotFlow } from "@/lib/bot/handlers"; 
-import { logChat } from "@/lib/bot/chatLogger"; // 🔥 Imported your new chat logger!
+import { logChat } from "@/lib/bot/chatLogger"; 
 
 // ==========================================
 // 1. Handle Webhook Verification (GET)
@@ -43,11 +42,10 @@ export async function POST(request: Request) {
           if (value.messages && value.messages.length > 0) {
             for (const message of value.messages) {
               const fromPhone = message.from; 
-              const messageId = message.id;
 
               console.log(`💬 Incoming message payload from ${fromPhone}`);
 
-              // 🔥 NEW: AUTO-LOG INCOMING MESSAGES TO FIRESTORE
+              // 🔥 AUTO-LOG INCOMING MESSAGES TO FIRESTORE
               let incomingText = "Media/Other";
               if (message.type === "text") {
                 incomingText = message.text.body;
@@ -56,7 +54,7 @@ export async function POST(request: Request) {
               } else if (message.type === "interactive" && message.interactive.type === "list_reply") {
                 incomingText = `[List Item: ${message.interactive.list_reply.title}]`;
               }
-              
+
               // Fire logger in the background (does not slow down the webhook)
               logChat(fromPhone, "incoming", message.type, incomingText).catch(console.error);
 
@@ -82,6 +80,10 @@ export async function POST(request: Request) {
 
                   // Send the plain text reply
                   await sendWhatsAppMessage(targetPhone, forwardedText);
+                  
+                  // Log the outgoing message so it appears in the Admin Dashboard
+                  logChat(targetPhone, "outgoing", "text", text).catch(console.error);
+                  
                   console.log(`✅ Relayed message from ${fromPhone} to ${targetPhone}`);
                 } else {
                   console.log(`ℹ️ No active order found for ${fromPhone}. Message saved but not relayed.`);
@@ -89,10 +91,7 @@ export async function POST(request: Request) {
               } catch (relayError: any) {
                 console.error("❌ FAILED TO RELAY MESSAGE:", relayError.message);
               }
-
             }
-          } else if (value.statuses) {
-            console.log(`ℹ️ Status update received: ${value.statuses[0].status}`);
           }
         }
       }
@@ -111,71 +110,68 @@ export async function POST(request: Request) {
 }
 
 // ==========================================
+// HELPER FUNCTION: Format Phone for Meta API
+// ==========================================
+function normalizeForMeta(phone: string): string {
+  if (!phone) return "";
+  let cleanPhone = phone.replace(/\D/g, ""); // Remove +, spaces, dashes
+  if (cleanPhone.startsWith("0")) {
+    cleanPhone = "256" + cleanPhone.substring(1); // Convert 07... to 2567...
+  }
+  return cleanPhone;
+}
+
+// ==========================================
 // HELPER FUNCTION: Find who to send it to
 // ==========================================
 async function getActiveChatPartner(senderPhone: string): Promise<string | null> {
   try {
     const ordersRef = adminDb.collection("orders"); 
-    const productsRef = adminDb.collection("products"); 
+    
+    // We included 'out_for_delivery' to catch any status variations
+    const activeStatuses = ["pending", "confirmed", "out for delivery", "out_for_delivery"];
 
-    const activeStatuses = ["pending", "confirmed", "out for delivery"];
-
-    // 💡 CREATE VARIATIONS: Meta sends "256784655792", but your DB has "0784655792"
+    // 💡 CREATE VARIATIONS: Meta sends "2567...", but DB might have "07..." or "+256..."
     const phoneVariations = [senderPhone, `+${senderPhone}`];
     if (senderPhone.startsWith("256")) {
-      phoneVariations.push(`0${senderPhone.substring(3)}`); // Creates the 07... version
+      phoneVariations.push(`0${senderPhone.substring(3)}`); 
     }
 
     // ==========================================
     // SCENARIO 1: SENDER IS THE BUYER
     // ==========================================
     const buyerQuery = await ordersRef
-      .where("contactPhone", "in", phoneVariations) // Matches your exact DB field
+      .where("buyerPhone", "in", phoneVariations) // 🔥 FIXED: Now searching new 'buyerPhone' field
       .where("status", "in", activeStatuses) 
       .limit(1)
       .get();
 
     if (!buyerQuery.empty) {
       const orderData = buyerQuery.docs[0].data();
-      const productId = orderData.items?.[0]?.productId;
-
-      if (productId) {
-        // We found the order! Now look up the product to get the seller's phone
-        const productDoc = await productsRef.doc(productId).get();
-        if (productDoc.exists && productDoc.data()?.sellerPhone) {
-          return productDoc.data()?.sellerPhone; 
-        }
+      if (orderData.sellerPhone) {
+        return normalizeForMeta(orderData.sellerPhone); // 🔥 FIXED: Format perfectly for Meta
       }
     }
 
     // ==========================================
     // SCENARIO 2: SENDER IS THE SELLER
     // ==========================================
-    // Step A: Find the sellerId by checking the products collection
-    const productQuery = await productsRef
-      .where("sellerPhone", "in", phoneVariations)
+    const sellerQuery = await ordersRef
+      .where("sellerPhone", "in", phoneVariations) // 🔥 FIXED: Now searching new 'sellerPhone' field
+      .where("status", "in", activeStatuses) 
       .limit(1)
       .get();
 
-    if (!productQuery.empty) {
-      const sellerId = productQuery.docs[0].data().sellerId;
-
-      // Step B: Find an active order belonging to this sellerId
-      const sellerOrderQuery = await ordersRef
-        .where("sellerId", "==", sellerId)
-        .where("status", "in", activeStatuses) 
-        .limit(1)
-        .get();
-
-      if (!sellerOrderQuery.empty) {
-        // Return the buyer's contact phone
-        return sellerOrderQuery.docs[0].data().contactPhone;
+    if (!sellerQuery.empty) {
+      const orderData = sellerQuery.docs[0].data();
+      if (orderData.buyerPhone) {
+        return normalizeForMeta(orderData.buyerPhone); // 🔥 FIXED: Format perfectly for Meta
       }
     }
 
     return null; // Not part of any active transaction
   } catch (error) {
-    console.error("Error looking up chat partner in Firebase:", error);
+    console.error("❌ Error looking up chat partner in Firebase:", error);
     return null;
   }
 }
