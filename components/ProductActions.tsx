@@ -20,7 +20,7 @@ export default function ProductActions({ product, children }: { product: Product
   const [productStatus, setProductStatus] = useState(product.status);
 
   // The official Kabale Online Bot Number (Include country code, no '+')
-  const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256700000000";
+  const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
 
   useEffect(() => {
     const fetchLiveStock = async () => {
