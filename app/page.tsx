@@ -39,7 +39,7 @@ export default async function Home() {
       <div className="bg-white dark:bg-[#111] pt-4 pb-2 border-b border-slate-200 dark:border-slate-800">
         <div className="px-4 mb-2 flex items-center gap-2 max-w-[1600px] mx-auto">
           <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-          <h2 className="text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white">Hot Deals Near You</h2>
+          
         </div>
         <div className="max-w-[1600px] mx-auto">
           <UrgentStories />
