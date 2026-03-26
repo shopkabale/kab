@@ -1,3 +1,5 @@
+import { logChat } from "./bot/chatLogger";
+
 // 1. Standard Text Message
 export async function sendWhatsAppMessage(phoneNumber: string, messageText: string) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
@@ -132,9 +134,26 @@ export async function sendWhatsAppListMenu(
   return await executeRequest(url, token, payload);
 }
 
-// 5. Shared helper
+// 5. Shared helper (Now with Auto-Logging!)
 async function executeRequest(url: string, token: string, payload: any) {
   try {
+    // 🔥 AUTO-LOG OUTGOING MESSAGES
+    const phoneTo = payload.to;
+    const msgType = payload.type;
+    let contentSnippet = "Media/Interactive";
+    
+    if (msgType === "text") {
+      contentSnippet = payload.text?.body || "Text Message";
+    } else if (msgType === "template") {
+      contentSnippet = `[Template: ${payload.template?.name}]`;
+    } else if (msgType === "interactive") {
+      contentSnippet = `[Menu/Button: ${payload.interactive?.body?.text?.substring(0, 30)}...]`;
+    }
+
+    // Fire the logger in the background (we don't await it so the bot stays lightning fast)
+    logChat(phoneTo, "outgoing", msgType, contentSnippet).catch(console.error);
+
+    // Send the actual request to Meta
     const response = await fetch(url, {
       method: "POST",
       headers: {
