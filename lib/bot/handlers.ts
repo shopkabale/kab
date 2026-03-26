@@ -280,6 +280,7 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
     const product = productDoc.data()!;
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    // 1. Save the Order to Firebase
     await adminDb.collection("orders").doc(orderNumber).set({
       orderId: orderNumber,
       productId: productId,
@@ -289,16 +290,26 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    await NotificationService.buyerInquiry(product.sellerPhone, product.title);
+    // 💡 THE FIX: Trigger the official Order Created Notification!
+    // This fires the approved Meta templates to BOTH the buyer and the seller.
+    await NotificationService.orderCreated(
+      product.sellerPhone, 
+      buyerPhone, 
+      product.title, 
+      "Valued Customer", // Default name since we don't know their real name yet
+      orderNumber
+    );
 
-    const buyerConfirmation = `✅ *Purchase Request Sent!*\n\nWe have alerted the seller that you want to buy *${product.title}*.\n\nPlease wait for their reply right here in this chat to arrange delivery and payment!`;
-    await sendWhatsAppMessage(buyerPhone, buyerConfirmation);
+    // 3. Drop a quick text in the chat so they know to wait for the human seller
+    const followUpText = `The seller has been notified. They will reply to you right here in this chat to arrange delivery and payment! 🤝`;
+    await sendWhatsAppMessage(buyerPhone, followUpText);
 
   } catch (error) {
     console.error("❌ Error handling native checkout:", error);
     await sendWhatsAppMessage(buyerPhone, "Oops, something went wrong setting up your chat. Please try again.");
   }
 }
+
 
 // ==========================================
 // HELPER: PROCESS NEW WEBSITE INQUIRY
