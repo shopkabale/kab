@@ -41,11 +41,11 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   // ==========================================
   // SHOPPING & CATALOG LOGIC
   // ==========================================
-  
+
   // A. Trigger the Categories Menu
   if (buttonId === "btn_shop") {
     await sendWhatsAppMessage(senderPhone, "🌐 *For easy browsing and the best experience, visit our full website:*\nhttps://kabaleonline.com\n\nOr, browse directly here on WhatsApp by tapping the menu below 👇");
-    
+
     await sendWhatsAppListMenu(
       senderPhone,
       "Select a category to view the latest items, or search for something specific.",
@@ -68,7 +68,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     const parts = buttonId.split("_");
     const categoryName = parts.slice(1, -1).join("_"); 
     const pageNumber = parseInt(parts[parts.length - 1]); 
-    
+
     await handleCategoryBrowsing(senderPhone, categoryName, pageNumber);
     return true;
   }
@@ -130,7 +130,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
 // ==========================================
 async function sendWelcomeMenu(phone: string) {
   const bodyText = "Welcome to *Kabale Online*! 🛒\n\nThe safest marketplace in town. What would you like to do today?";
-  
+
   const buttons = [
     { id: "btn_shop", title: "🛍️ Shop Products" },
     { id: "btn_sell", title: "🏪 Sell an Item" },
@@ -165,7 +165,7 @@ async function handleCategoryBrowsing(phone: string, category: string, page: num
 
     const productRows = docsToShow.map(doc => {
       const data = doc.data();
-      
+
       // Safely handle missing titles or prices
       const safeTitle = (data.title || data.name || "Unknown Item").substring(0, 24);
       const safePrice = Number(data.price || 0).toLocaleString();
@@ -207,7 +207,7 @@ async function handleCategoryBrowsing(phone: string, category: string, page: num
 }
 
 // ==========================================
-// HELPER: SHOW PRODUCT DETAILS (AGGRESSIVE LOOKUP)
+// HELPER: SHOW PRODUCT DETAILS (AGGRESSIVE LOOKUP & IMAGE DISPLAY)
 // ==========================================
 async function handleProductSelection(phone: string, productId: string) {
   try {
@@ -251,13 +251,17 @@ async function handleProductSelection(phone: string, productId: string) {
     const safePrice = Number(productData.price || 0).toLocaleString();
     const safeCondition = productData.condition || "Used";
     const safeDesc = productData.description || "No description provided.";
+    
+    // 🔥 Grab the primary product image to pass to WhatsApp!
+    const safeImage = (productData.images && productData.images.length > 0) ? productData.images[0] : undefined;
 
     const messageText = `*${safeTitle}*\n\n💰 Price: *UGX ${safePrice}*\n📝 Condition: ${safeCondition}\n\n${safeDesc}\n\nTo buy this item, tap the button below!`;
 
     await sendWhatsAppInteractiveButtons(
       phone,
       messageText,
-      [{ id: `buy_${actualDocId}`, title: "🛒 Buy Now" }] 
+      [{ id: `buy_${actualDocId}`, title: "🛒 Buy Now" }],
+      safeImage // 🔥 Pass the image to our hybrid handler
     );
   } catch (error: any) {
     console.error("❌ Product Selection Error:", error.message);
@@ -271,7 +275,7 @@ async function handleProductSelection(phone: string, productId: string) {
 async function handleNativeCheckout(buyerPhone: string, productId: string) {
   try {
     const productDoc = await adminDb.collection("products").doc(productId).get();
-    
+
     if (!productDoc.exists) {
       await sendWhatsAppMessage(buyerPhone, "Sorry, this item is no longer available or has been sold.");
       return;
@@ -290,17 +294,16 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
       createdAt: admin.firestore.FieldValue.serverTimestamp()
     });
 
-    // 💡 THE FIX: Trigger the official Order Created Notification!
-    // This fires the approved Meta templates to BOTH the buyer and the seller.
+    // Trigger the official Order Created Notification!
     await NotificationService.orderCreated(
       product.sellerPhone, 
       buyerPhone, 
       product.title, 
-      "Valued Customer", // Default name since we don't know their real name yet
+      "Valued Customer", 
       orderNumber
     );
 
-    // 3. Drop a quick text in the chat so they know to wait for the human seller
+    // 3. Drop a quick text in the chat
     const followUpText = `The seller has been notified. They will reply to you right here in this chat to arrange delivery and payment! 🤝`;
     await sendWhatsAppMessage(buyerPhone, followUpText);
 
@@ -310,14 +313,13 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
   }
 }
 
-
 // ==========================================
 // HELPER: PROCESS NEW WEBSITE INQUIRY
 // ==========================================
 async function handleNewWebsiteInquiry(buyerPhone: string, productId: string) {
   try {
     const productDoc = await adminDb.collection("products").doc(productId).get();
-    
+
     if (!productDoc.exists) {
       await sendWhatsAppMessage(buyerPhone, "Sorry, we couldn't find that product. It may have been sold or removed.");
       return;
