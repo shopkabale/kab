@@ -162,7 +162,7 @@ async function handleCategoryBrowsing(phone: string, category: string, page: num
     const hasNextPage = productsQuery.docs.length > limit;
     const docsToShow = hasNextPage ? productsQuery.docs.slice(0, limit) : productsQuery.docs;
 
-    const rows = docsToShow.map(doc => {
+    const productRows = docsToShow.map(doc => {
       const data = doc.data();
       
       // Safely handle missing titles or prices
@@ -176,11 +176,18 @@ async function handleCategoryBrowsing(phone: string, category: string, page: num
       };
     });
 
+    // Create the Sections Array for Meta's UI limits
+    const sections: any[] = [{ title: "Available Items", rows: productRows }];
+
+    // 💡 THE FIX: Put the "See More" button in its own section to avoid the 10-row limit!
     if (hasNextPage) {
-      rows.push({
-        id: `cat_${category}_${page + 1}`,
-        title: "➡️ See More Items",
-        description: "Load the next page"
+      sections.push({
+        title: "Navigation",
+        rows: [{
+          id: `cat_${category}_${page + 1}`,
+          title: "➡️ See More Items",
+          description: "Load the next page"
+        }]
       });
     }
 
@@ -190,7 +197,7 @@ async function handleCategoryBrowsing(phone: string, category: string, page: num
       phone,
       `Here are the latest items in *${formattedCategory}*:`,
       "View Items",
-      [{ title: "Available Items", rows: rows }]
+      sections
     );
   } catch (error: any) {
     console.error("❌ Category Browsing Error:", error.message);
