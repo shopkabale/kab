@@ -83,7 +83,7 @@ export default function ProductActions({ product, children }: { product: Product
   };
 
   // Dynamic Button Styling based on Stock Status
-  let btnLabel = "Inquire on WhatsApp";
+  let btnLabel = "Chat With Seller";
   let btnClass = "bg-[#25D366] text-white hover:bg-[#1EBE57] active:scale-[0.98]";
 
   if (loading) {
