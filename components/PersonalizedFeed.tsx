@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ProductSection } from "@/app/page"; // We import the UI grid from page.tsx!
+import ProductSection from "@/components/ProductSection"; // ✅ Clean, safe import!
 
 export default function PersonalizedFeed({ allProducts }: { allProducts: any[] }) {
   const [recommended, setRecommended] = useState<any[]>([]);
