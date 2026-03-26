@@ -2,14 +2,13 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { sendExpiryNotification } from "@/lib/brevo";
 
 export const dynamic = 'force-dynamic'; // Ensures Vercel doesn't cache this route
 
 export async function GET(request: Request) {
   // 1. Secure the route using the Vercel CRON_SECRET environment variable
   const authHeader = request.headers.get('authorization');
-  
+
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
@@ -30,16 +29,15 @@ export async function GET(request: Request) {
     }
 
     const batch = adminDb.batch();
-    const emailsToSend: Array<{ email: string; name: string; orderNumber: string }> = [];
 
     // 4. Process each expired order
     expiredOrdersSnap.docs.forEach(doc => {
       const orderData = doc.data();
       const orderRef = doc.ref;
-      
+
       // Safety check in case items array is malformed
       if (!orderData.items || !orderData.items[0]) return;
-      
+
       const productId = orderData.items[0].productId;
       const productRef = adminDb.collection("products").doc(productId);
 
@@ -57,28 +55,10 @@ export async function GET(request: Request) {
         status: "available",
         updatedAt: Date.now()
       });
-
-      // Queue Email if buyer provided one
-      if (orderData.buyerEmail) {
-        emailsToSend.push({
-          email: orderData.buyerEmail,
-          name: orderData.buyerName || "Valued Customer",
-          orderNumber: orderData.orderNumber
-        });
-      }
     });
 
     // 5. Commit all database updates atomically
     await batch.commit();
-
-    // 6. Send notification emails concurrently
-    if (emailsToSend.length > 0) {
-      await Promise.allSettled(
-        emailsToSend.map(user => 
-          sendExpiryNotification(user.email, user.name, user.orderNumber)
-        )
-      );
-    }
 
     return NextResponse.json({ 
       success: true, 
