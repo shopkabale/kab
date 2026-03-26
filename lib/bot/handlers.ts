@@ -34,7 +34,8 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   const productIdMatch = text.match(/Product ID:\s*\[([a-zA-Z0-9_-]+)\]/i);
   if (productIdMatch) {
     const productId = productIdMatch[1];
-    await handleNewWebsiteInquiry(senderPhone, productId);
+    // 🔥 THE FIX: Pass the 'text' variable here so the inquiry function gets the exact message
+    await handleNewWebsiteInquiry(senderPhone, productId, text); 
     return true; 
   }
 
@@ -145,14 +146,12 @@ async function sendWelcomeMenu(phone: string) {
 // ==========================================
 async function handleCategoryBrowsing(phone: string, category: string, page: number) {
   try {
-    // 💡 THE FIX: Limit to 9 items so we have 1 slot left for the "See More" button!
     const limit = 9;
     const offset = page * limit;
 
-    // Removed orderBy to prevent Firebase composite index crashes
     const productsQuery = await adminDb.collection("products")
       .where("category", "==", category)
-      .limit(limit + 1) // Fetch 10 to see if there's a next page
+      .limit(limit + 1) 
       .offset(offset)
       .get();
 
@@ -165,8 +164,6 @@ async function handleCategoryBrowsing(phone: string, category: string, page: num
 
     const productRows = docsToShow.map(doc => {
       const data = doc.data();
-
-      // Safely handle missing titles or prices
       const safeTitle = (data.title || data.name || "Unknown Item").substring(0, 24);
       const safePrice = Number(data.price || 0).toLocaleString();
 
@@ -177,10 +174,8 @@ async function handleCategoryBrowsing(phone: string, category: string, page: num
       };
     });
 
-    // Create the Sections Array for Meta's UI limits
     const sections: any[] = [{ title: "Available Items", rows: productRows }];
 
-    // Add the "See More" button (9 products + 1 button = exactly 10 rows!)
     if (hasNextPage) {
       sections.push({
         title: "Navigation",
@@ -215,13 +210,11 @@ async function handleProductSelection(phone: string, productId: string) {
     let productData = null;
     let actualDocId = cleanId;
 
-    // 1. Try finding by the exact Firebase Document ID
     const exactDoc = await adminDb.collection("products").doc(cleanId).get();
     if (exactDoc.exists) {
       productData = exactDoc.data();
     }
 
-    // 2. FALLBACK A: Search by the 'publicId' field 
     if (!productData) {
       const idQuery = await adminDb.collection("products").where("publicId", "==", cleanId).limit(1).get();
       if (!idQuery.empty) {
@@ -230,7 +223,6 @@ async function handleProductSelection(phone: string, productId: string) {
       }
     }
 
-    // 3. FALLBACK B: Search by Algolia's 'objectID' field 
     if (!productData) {
       const algoliaQuery = await adminDb.collection("products").where("objectID", "==", cleanId).limit(1).get();
       if (!algoliaQuery.empty) {
@@ -246,13 +238,11 @@ async function handleProductSelection(phone: string, productId: string) {
       );
     }
 
-    // Safely extract fields so missing data never crashes the bot silently
     const safeTitle = productData.title || productData.name || "Unknown Item";
     const safePrice = Number(productData.price || 0).toLocaleString();
     const safeCondition = productData.condition || "Used";
     const safeDesc = productData.description || "No description provided.";
 
-    // 🔥 Grab the primary product image to pass to WhatsApp!
     const safeImage = (productData.images && productData.images.length > 0) ? productData.images[0] : undefined;
 
     const messageText = `*${safeTitle}*\n\n💰 Price: *UGX ${safePrice}*\n📝 Condition: ${safeCondition}\n\n${safeDesc}\n\nTo buy this item, tap the button below!`;
@@ -261,7 +251,7 @@ async function handleProductSelection(phone: string, productId: string) {
       phone,
       messageText,
       [{ id: `buy_${actualDocId}`, title: "🛒 Buy Now" }],
-      safeImage // 🔥 Pass the image to our hybrid handler
+      safeImage 
     );
   } catch (error: any) {
     console.error("❌ Product Selection Error:", error.message);
@@ -283,37 +273,32 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
 
     const product = productDoc.data()!;
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
-    
-    // 🔥 PROFESSIONAL FIX: Extract the price
     const productPrice = Number(product.price) || 0;
 
-    // 1. Save the Order to Firebase (🔥 FIXED DATA STRUCTURE)
     await adminDb.collection("orders").doc(orderNumber).set({
       orderId: orderNumber,
       productId: productId,
       buyerPhone: buyerPhone,
       sellerPhone: product.sellerPhone,
       status: "pending",
-      total: productPrice, // 👈 Permanently locks in the price!
-      items: [{            // 👈 Feeds your dashboard's "Items" column perfectly
+      total: productPrice, 
+      items: [{            
         productId: productId,
-        title: product.title || "Unknown Item",
+        title: product.title || product.name || "Unknown Item",
         price: productPrice,
         quantity: 1
       }],
       createdAt: Date.now() 
     });
 
-    // Trigger the official Order Created Notification!
     await NotificationService.orderCreated(
       product.sellerPhone, 
       buyerPhone, 
-      product.title, 
+      product.title || product.name, 
       "Valued Customer", 
       orderNumber
     );
 
-    // 3. Drop a quick text in the chat
     const followUpText = `The seller has been notified. They will reply to you right here in this chat to arrange delivery and payment! 🤝`;
     await sendWhatsAppMessage(buyerPhone, followUpText);
 
@@ -326,7 +311,8 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
 // ==========================================
 // HELPER: PROCESS NEW WEBSITE INQUIRY
 // ==========================================
-async function handleNewWebsiteInquiry(buyerPhone: string, productId: string) {
+// 🔥 THE FIX: Added 'originalMessage' to the function parameters
+async function handleNewWebsiteInquiry(buyerPhone: string, productId: string, originalMessage: string) {
   try {
     const productDoc = await adminDb.collection("products").doc(productId).get();
 
@@ -337,30 +323,30 @@ async function handleNewWebsiteInquiry(buyerPhone: string, productId: string) {
 
     const product = productDoc.data()!;
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
-
-    // 🔥 PROFESSIONAL FIX: Extract the price
     const productPrice = Number(product.price) || 0;
 
-    // 🔥 FIXED DATA STRUCTURE
     await adminDb.collection("orders").doc(orderNumber).set({
       orderId: orderNumber,
       productId: productId,
       buyerPhone: buyerPhone,
       sellerPhone: product.sellerPhone,
       status: "pending",
-      total: productPrice, // 👈 Permanently locks in the price!
-      items: [{            // 👈 Feeds your dashboard's "Items" column perfectly
+      total: productPrice, 
+      items: [{            
         productId: productId,
-        title: product.title || "Unknown Item",
+        title: product.title || product.name || "Unknown Item",
         price: productPrice,
         quantity: 1
       }],
       createdAt: Date.now() 
     });
 
-    await NotificationService.buyerInquiry(product.sellerPhone, product.title);
+    // 🔥 THE FIX: Send the seller the actual message the buyer wrote!
+    const sellerNotification = `🛍️ *New Order Inquiry!*\n\nSomeone is interested in your item: *${product.title || product.name || "Unknown Item"}*\n\n*Buyer says:*\n"${originalMessage}"\n\n_Reply directly to this message to chat with the buyer._`;
+    await sendWhatsAppMessage(product.sellerPhone, sellerNotification);
 
-    const buyerConfirmation = `✅ *Inquiry Sent!*\n\nWe have alerted the seller about your interest in *${product.title}*.\n\nPlease wait for their reply right here in this chat.`;
+    // Confirm to the Buyer
+    const buyerConfirmation = `✅ *Inquiry Sent!*\n\nWe have alerted the seller about your interest in *${product.title || product.name || "Unknown Item"}*.\n\nPlease wait for their reply right here in this chat.`;
     await sendWhatsAppMessage(buyerPhone, buyerConfirmation);
 
   } catch (error) {
