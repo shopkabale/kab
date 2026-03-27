@@ -1,64 +1,154 @@
-"use client";
+import Link from "next/link";
+import { getProducts } from "@/lib/firebase/firestore";
+import ClientProductGrid from "@/components/ClientProductGrid";
+import SearchBar from "@/components/SearchBar"; 
+import { optimizeImage } from "@/lib/utils"; 
 
-import { useState } from "react";
-// 🌟 IMPORT THE EXACT HOMEPAGE COMPONENT
-import ProductSection from "@/components/ProductSection";
+// Force dynamic ensures we fetch fresh data
+export const dynamic = "force-dynamic";
 
-export default function ClientProductGrid({ products }: { products: any[] }) {
-  const [visibleCount, setVisibleCount] = useState(12);
-  const [loading, setLoading] = useState(false);
+export const metadata = {
+  title: "All Products | Kabale Online",
+  description: "Browse all items available for sale in Kabale town.",
+};
 
-  // Calculate visible items and if there are more to show
-  const visibleProducts = products.slice(0, visibleCount);
-  const hasMore = visibleCount < products.length;
+// ==========================================
+// THE DAILY SHUFFLE ALGORITHM
+// ==========================================
+function getDailyRandomScore(id: string) {
+  const today = new Date().toISOString().split('T')[0];
+  const seedString = id + today; 
 
-  const handleLoadMore = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setVisibleCount((prev) => prev + 12);
-      setLoading(false);
-    }, 600);
-  };
-
-  if (products.length === 0) {
-    return (
-      <div className="text-center py-16 bg-slate-50 dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm">
-        <span className="text-5xl block mb-4">🛒</span>
-        <h3 className="text-xl font-bold text-slate-900 dark:text-white">No products found</h3>
-        <p className="mt-2 text-slate-500 dark:text-slate-400">
-          Check back soon! We are adding new items every day.
-        </p>
-      </div>
-    );
+  let hash = 0;
+  for (let i = 0; i < seedString.length; i++) {
+    hash = (hash << 5) - hash + seedString.charCodeAt(i);
+    hash |= 0; 
   }
+  return hash;
+}
+
+export default async function AllProductsPage() {
+  // 1. Fetch ALL products 
+  const rawProducts = await getProducts();
+
+  // 2. SHUFFLE THEM (Stable Daily Randomization)
+  rawProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
+
+  // 3. 🔥 OPTIMIZE ALL IMAGES 🔥
+  const allProducts = rawProducts.map((product) => {
+    if (!product.images || product.images.length === 0) return product;
+
+    return {
+      ...product,
+      images: product.images.map((img: string) => optimizeImage(img))
+    };
+  });
 
   return (
-    <>
-      {/* 🌟 USE THE HOMEPAGE COMPONENT (hideTitle makes it fit perfectly) */}
-      <ProductSection products={visibleProducts} hideTitle={true} />
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] font-sans selection:bg-[#D97706] selection:text-white">
 
-      {/* ANIMATED LOAD MORE BUTTON */}
-      {hasMore && (
-        <div className="mt-12 flex justify-center pb-8">
-          <button 
-            onClick={handleLoadMore}
-            disabled={loading}
-            className="flex items-center justify-center gap-3 w-full sm:w-auto px-10 py-4 bg-[#D97706] text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-md hover:bg-amber-600 transition-all disabled:opacity-80 disabled:cursor-wait"
-          >
-            {loading ? (
-              <>
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Loading...
-              </>
-            ) : (
-              "Load More Items"
-            )}
-          </button>
+      {/* ========================================== */}
+      {/* PROFESSIONAL HERO & SEARCH SECTION         */}
+      {/* ========================================== */}
+      <section className="bg-white dark:bg-[#111] py-12 md:py-16 border-b border-slate-200 dark:border-slate-800 shadow-sm px-4">
+        <div className="max-w-3xl mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl font-black mb-4 text-slate-900 dark:text-white tracking-tight uppercase">
+            All Marketplace Items
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base font-medium max-w-xl mx-auto mb-8">
+            Discover everything our local Kabale vendors have to offer. Fast delivery, pay strictly on arrival.
+          </p>
+          
+          {/* Integrated Search Bar */}
+          <div className="max-w-xl mx-auto">
+            <SearchBar />
+          </div>
         </div>
-      )}
-    </>
+      </section>
+
+      {/* ========================================== */}
+      {/* 🧩 MAIN CONTENT AREA                       */}
+      {/* ========================================== */}
+      <div className="max-w-[1600px] mx-auto mt-8 space-y-6">
+
+        {/* STATS HEADER */}
+        <div className="px-4 sm:px-6 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">
+            Explore Directory ({allProducts.length} Items)
+          </h2>
+        </div>
+
+        {/* THE CLIENT GRID (Edge-to-edge px-2 padding on mobile) */}
+        <div className="px-2 sm:px-4 pb-12">
+          <ClientProductGrid products={allProducts} />
+        </div>
+
+        {/* ========================================== */}
+        {/* CATEGORIES LIST ROW                        */}
+        {/* ========================================== */}
+        <section className="py-12 border-t border-slate-200 dark:border-slate-800 px-4">
+          <div className="max-w-3xl mx-auto">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
+              Explore by Category
+            </h3>
+
+            <div className="flex flex-col gap-3 sm:gap-4">
+              {[
+                { 
+                  name: "Student Market", 
+                  link: "student_item",
+                  desc: "Hostel items, textbooks, gadgets, and campus essentials",
+                  icon: "🎓"
+                }, 
+                { 
+                  name: "Electronics", 
+                  link: "electronics",
+                  desc: "Smartphones, laptops, TVs, audio, and accessories",
+                  icon: "💻"
+                }, 
+                { 
+                  name: "Agriculture", 
+                  link: "agriculture",
+                  desc: "Fresh produce, farm tools, livestock, and fertilizers",
+                  icon: "🌱"
+                }
+              ].map((cat) => (
+                <Link 
+                  key={cat.name} 
+                  href={`/category/${cat.link}`} 
+                  className="group flex items-center justify-between p-4 sm:p-5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-2xl hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-200 w-full"
+                >
+                  <div className="flex items-center gap-4 sm:gap-5 overflow-hidden">
+                    {/* Icon Bubble */}
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform duration-300 border border-slate-100 dark:border-slate-800">
+                      {cat.icon}
+                    </div>
+
+                    {/* Text Details */}
+                    <div className="flex flex-col text-left overflow-hidden">
+                      <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors truncate">
+                        {cat.name}
+                      </span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate pr-2">
+                        {cat.desc}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right Arrow / Action */}
+                  <div className="flex items-center gap-2 text-slate-300 dark:text-slate-600 group-hover:text-[#D97706] transition-colors pl-2 shrink-0">
+                    <span className="text-xs font-bold uppercase tracking-widest hidden sm:block">View</span>
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
   );
 }
