@@ -75,12 +75,16 @@ export default async function Home() {
               Sell on Kabale
             </h2>
             <p className="text-base md:text-lg text-slate-800 dark:text-slate-300 mb-10 leading-relaxed font-medium max-w-2xl">
-              We help you sell your items directly to buyers across the Kabale and Kigezi regions. Perfect for clearing out extra items, running a shop, or casual student sales. Both retail and bulk supplies supported. It takes 60 seconds to post your items via our WhatsApp bot.
-            </p>
+  Sell directly to buyers across Kabale & Kigezi. Perfect for shops, students, or clearing extra items. Post in just 60 seconds via our WhatsApp bot.
+  <br />
+  <span className="text-green-600 dark:text-green-400 font-semibold">
+    Just send "Hi" to our WhatsApp bot to get started.
+  </span>
+</p>
 
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center">
               <a
-                href="https://wa.me/256740373021?text=Hi%2C%20I%20want%20to%20sell%20an%20item"
+                href="https://wa.me/256740373021?text=Hi"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-10 py-3 border-2 border-slate-900 dark:border-white text-slate-900 dark:text-white font-medium text-base hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors rounded-sm min-w-[180px]"
