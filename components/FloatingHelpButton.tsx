@@ -37,7 +37,7 @@ export default function AiChatWidget() {
   // Floating Button Scroll & Visibility States
   const [isVisible, setIsVisible] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
-  const [showHint, setShowHint] = useState(true); // 🌟 NEW: Controls the subtle hint
+  const [showHint, setShowHint] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
   // Dragging States
@@ -59,7 +59,7 @@ export default function AiChatWidget() {
     }
   }, []);
 
-  // 🌟 NEW: Auto-hide the hint after 6 seconds to prevent screen pollution
+  // Auto-hide the hint after 6 seconds
   useEffect(() => {
     const timer = setTimeout(() => setShowHint(false), 6000);
     return () => clearTimeout(timer);
@@ -77,7 +77,7 @@ export default function AiChatWidget() {
         const currentScrollY = window.scrollY;
         if (currentScrollY > lastScrollY && currentScrollY > 100) {
           setIsVisible(false);
-          setShowHint(false); // Hide hint immediately if user starts scrolling
+          setShowHint(false); 
         } else if (currentScrollY < lastScrollY) {
           setIsVisible(true);
         }
@@ -88,7 +88,7 @@ export default function AiChatWidget() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // 4. Listen for external clicks (from /ai page)
+  // 4. Listen for external clicks
   useEffect(() => {
     const handleOpen = () => { setIsOpen(true); setPosition({x:0, y:0}); setShowHint(false); };
     window.addEventListener('open-ai-widget', handleOpen);
@@ -151,7 +151,7 @@ export default function AiChatWidget() {
     const userText = textToSubmit.trim();
     const newMessages: Message[] = [...messages, { id: Date.now().toString(), role: "user", content: userText }];
     setMessages(newMessages);
-    setInput(""); // Clear input bar
+    setInput(""); 
     setIsLoading(true);
     syncChat(newMessages, sessionId);
 
@@ -208,7 +208,6 @@ export default function AiChatWidget() {
     }
   };
 
-  // Form submit wrapper
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sendMessage(input);
@@ -225,13 +224,11 @@ export default function AiChatWidget() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-24 opacity-0 pointer-events-none"
           }`}
         >
-          {/* 🌟 NEW: THE SUBTLE HINT (Auto-hides to prevent visual pollution) */}
+          {/* THE SUBTLE HINT */}
           {showHint && (
             <div className="relative bg-white border border-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-2xl shadow-lg mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
               Need help? Ask anything
-              {/* Pointer Tail */}
               <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-white border-b border-r border-slate-200 rotate-45"></div>
-              {/* Manual Close Button for the bubble */}
               <button 
                 onClick={(e) => { e.stopPropagation(); setShowHint(false); }}
                 className="absolute -top-2 -left-2 bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-sm border border-slate-200"
@@ -242,7 +239,6 @@ export default function AiChatWidget() {
           )}
 
           <div className="flex items-end gap-2">
-            {/* Main Dismiss Button */}
             <button 
               onClick={() => setIsDismissed(true)}
               className="bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-sm border border-slate-200 mb-2 transition-colors z-10"
@@ -251,22 +247,15 @@ export default function AiChatWidget() {
               ✕
             </button>
 
-            {/* Main Trigger Button */}
+            {/* 🌟 NEW: PERFECT CIRCLE MESSAGE ICON BUTTON */}
             <button 
               onClick={() => { setIsOpen(true); setPosition({x:0, y:0}); setShowHint(false); }}
-              className="group relative flex items-center justify-center bg-[#D97706] text-white py-3 px-5 rounded-full shadow-lg hover:bg-amber-600 hover:scale-105 hover:shadow-xl transition-all duration-300"
+              className="group relative flex items-center justify-center bg-[#D97706] text-white w-14 h-14 rounded-full shadow-lg hover:bg-amber-600 hover:scale-105 hover:shadow-xl transition-all duration-300"
+              aria-label="Open AI Chat"
             >
-              <div className="flex items-center gap-2">
-                {/* 🌟 NEW: ROBOT ICON */}
-                <svg className="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="10" rx="2" />
-                  <circle cx="12" cy="5" r="2" />
-                  <path d="M12 7v4" />
-                  <line x1="8" y1="16" x2="8.01" y2="16" />
-                  <line x1="16" y1="16" x2="16.01" y2="16" />
-                </svg>
-                
-              </div>
+              <svg className="w-6 h-6 fill-none stroke-current stroke-[2.5]" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
             </button>
           </div>
         </div>
@@ -277,10 +266,9 @@ export default function AiChatWidget() {
       {/* ========================================= */}
       {isOpen && (
         <>
-          {/* GLASS BACKGROUND BACKDROP */}
           <div 
             className="fixed inset-0 z-[90] bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300"
-            onClick={() => setIsOpen(false)} // Clicking the glass closes the widget
+            onClick={() => setIsOpen(false)} 
             aria-label="Close chat background"
           />
 
@@ -324,7 +312,6 @@ export default function AiChatWidget() {
             {/* Messages Area */}
             <div className="flex-1 overflow-y-auto p-4 space-y-5 bg-slate-50 relative">
 
-              {/* THE QUICK START MENU (Empty State) */}
               {messages.length === 0 && (
                 <div className="flex flex-col h-full items-center justify-center animate-in fade-in zoom-in-95 duration-300">
                   <h2 className="text-2xl font-extrabold text-slate-900 mb-1">Hi there 👋</h2>
@@ -366,7 +353,6 @@ export default function AiChatWidget() {
                 </div>
               )}
 
-              {/* Standard Message Rendering */}
               {messages.map((msg) => (
                 <div key={msg.id} className="flex flex-col animate-in fade-in slide-in-from-bottom-2">
                   <div className={`p-3.5 rounded-2xl max-w-[85%] text-sm shadow-sm whitespace-pre-wrap ${
@@ -377,14 +363,13 @@ export default function AiChatWidget() {
                     {msg.content}
                   </div>
 
-                  {/* 🛍️ ALGOLIA PRODUCT RENDERER */}
                   {msg.products && msg.products.length > 0 && (
                     <div className="mt-3 ml-2 flex gap-3 overflow-x-auto pb-2 scrollbar-hide items-stretch">
                       {msg.products.map((product) => (
                         <Link 
                           key={product.objectID} 
                           href={`/product/${product.objectID}`}
-                          onClick={() => setIsOpen(false)} // CLOSES WIDGET ON CLICK
+                          onClick={() => setIsOpen(false)} 
                           className="min-w-[140px] max-w-[140px] bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm hover:border-[#D97706] transition-colors flex-shrink-0 flex flex-col group"
                         >
                           <div className="h-24 w-full relative bg-slate-100">
@@ -401,7 +386,6 @@ export default function AiChatWidget() {
                         </Link>
                       ))}
 
-                      {/* "VIEW MORE" BUTTON */}
                       {msg.searchQuery && (
                         <Link 
                           href={`/search?q=${encodeURIComponent(msg.searchQuery)}`}
@@ -415,7 +399,6 @@ export default function AiChatWidget() {
                     </div>
                   )}
 
-                  {/* 👍 👎 FEEDBACK TRACKING */}
                   {msg.role === "agent" && !msg.content.includes("circuits got tangled") && (
                     <div className="flex items-center gap-2 mt-1.5 ml-2">
                       <button onClick={() => handleFeedback(msg.id, "up")} className={`text-xs p-1 rounded ${msg.feedback === 'up' ? 'bg-slate-200 text-slate-800' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100'}`}>👍</button>
@@ -425,7 +408,6 @@ export default function AiChatWidget() {
                 </div>
               ))}
 
-              {/* DOTS LOADING ANIMATION */}
               {isLoading && (
                 <div className="bg-white border border-slate-200 w-fit px-4 py-3.5 rounded-2xl rounded-bl-sm shadow-sm flex items-center gap-1.5">
                   <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
