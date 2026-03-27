@@ -19,45 +19,86 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const { user, loading, signIn, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Lock body scroll when mobile menu is open
+  // Lock body scroll AND broadcast state to hide other UI elements
   useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
+    if (typeof window !== "undefined") {
+      if (isMobileMenuOpen) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = 'unset';
+      }
+      
+      // Broadcast the menu state to BottomNav and AiChatWidget
+      window.dispatchEvent(new CustomEvent("mobileMenuState", { detail: isMobileMenuOpen }));
     }
-    // Cleanup on unmount
-    return () => { document.body.style.overflow = 'unset'; };
+    
+    return () => { 
+      if (typeof window !== "undefined") {
+        document.body.style.overflow = 'unset'; 
+        window.dispatchEvent(new CustomEvent("mobileMenuState", { detail: false }));
+      }
+    };
   }, [isMobileMenuOpen]);
 
-  // Hide this navbar entirely on admin pages
-  if (pathname?.startsWith("/admin")) {
-    return null; 
-  }
+  if (pathname?.startsWith("/admin")) return null; 
 
-  // Helper to check if a link is active
   const isActive = (path: string) => pathname === path;
-
-  // Helper to close menu
   const closeMenu = () => setIsMobileMenuOpen(false);
+
+  // 🌟 NEW: Structured Navigation Groups for the Mobile Menu
+  const mobileNavGroups = [
+    {
+      label: "Shop",
+      bgClass: "bg-blue-50",
+      textClass: "text-blue-700",
+      links: [
+        { name: "all items", href: "/products" },
+        { name: "electronics", href: "/category/electronics" },
+        { name: "agriculture", href: "/category/agriculture" },
+        { name: "student market", href: "/category/student_item" },
+      ]
+    },
+    {
+      label: "Buyer Needs",
+      bgClass: "bg-purple-50",
+      textClass: "text-purple-700",
+      links: [
+        { name: "buyer requests", href: "/requests" },
+      ]
+    },
+    {
+      label: "News",
+      bgClass: "bg-emerald-50",
+      textClass: "text-emerald-700",
+      links: [
+        { name: "journal & updates", href: "/blog" },
+      ]
+    },
+    {
+      label: "Help & Answers",
+      bgClass: "bg-amber-50",
+      textClass: "text-amber-700",
+      links: [
+        { name: "ai shopping guide ✨", href: "/ai", highlight: true },
+      ]
+    }
+  ];
 
   return (
     <>
       {/* ============================================== */}
-      {/* DESKTOP NAVBAR (Search Removed)                */}
+      {/* DESKTOP NAVBAR                                 */}
       {/* ============================================== */}
       <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white/95 backdrop-blur-md border-b border-slate-200 z-40 transition-all`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
 
-            {/* Logo */}
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="text-2xl font-black text-slate-900 tracking-tight">
                 Kabale<span className="text-[#D97706]">Online</span>
               </Link>
             </div>
 
-            {/* Desktop Menu */}
             <div className="hidden xl:flex items-center space-x-7">
               <Link href="/products" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/products') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>All Items</Link>
               <Link href="/category/electronics" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/electronics') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Electronics</Link>
@@ -65,7 +106,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
               <Link href="/category/student_item" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/student_item') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Student Market</Link>
               <Link href="/blog" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/blog') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Journal</Link>
 
-              {/* Desktop AI Guide Link */}
               <Link href="/ai" className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${isActive('/ai') ? 'text-[#D97706] bg-amber-50' : 'text-slate-700 hover:text-[#D97706] hover:bg-slate-50'}`}>
                 <span className="text-[#D97706] text-sm leading-none">✨</span> 
                 <span className="text-sm font-bold uppercase tracking-wide">AI Guide</span>
@@ -77,20 +117,14 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 Sell Now
               </Link>
 
-              {/* Desktop User Authentication Display */}
               {loading ? (
                 <div className="h-6 w-6 rounded-full border-2 border-[#D97706] border-t-transparent animate-spin ml-2"></div>
               ) : user ? (
                 <div className="flex items-center gap-3 relative group ml-2">
                   <div className="relative">
                     <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold shadow-sm cursor-pointer overflow-hidden">
-                       {user.photoURL ? (
-                         <img src={user.photoURL} alt="profile" className="w-full h-full object-cover" />
-                       ) : (
-                         (user.displayName || "U").charAt(0).toUpperCase()
-                       )}
+                       {user.photoURL ? <img src={user.photoURL} alt="profile" className="w-full h-full object-cover" /> : (user.displayName || "U").charAt(0).toUpperCase()}
                     </div>
-                    {/* Hover Dropdown */}
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
                       <div className="px-4 py-2 border-b border-slate-100 mb-1">
                         <p className="text-xs text-slate-500 font-medium">Logged in as</p>
@@ -109,16 +143,9 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
               )}
             </div>
 
-            {/* Mobile Hamburger Toggle */}
             <div className="flex items-center xl:hidden">
-              <button
-                onClick={() => setIsMobileMenuOpen(true)}
-                className="text-slate-900 p-2 focus:outline-none"
-                aria-label="Open menu"
-              >
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+              <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-900 p-2 focus:outline-none" aria-label="Open menu">
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" /></svg>
               </button>
             </div>
 
@@ -127,120 +154,86 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       </nav>
 
       {/* ============================================== */}
-      {/* APP-STYLE FULLSCREEN MOBILE MENU               */}
+      {/* MOBILE MENU DRAWER                           */}
       {/* ============================================== */}
-      
-      {/* Backdrop (Darkens the page behind the drawer) */}
       <div 
-        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 xl:hidden transition-opacity duration-300 ${isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[90] xl:hidden transition-opacity duration-300 ${isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={closeMenu}
       />
 
-      {/* Slide-in Drawer */}
       <div 
-        className={`fixed top-0 left-0 h-[100dvh] w-[85vw] max-w-sm bg-white z-50 xl:hidden flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed top-0 left-0 h-[100dvh] w-[85vw] max-w-sm bg-white z-[100] xl:hidden flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        {/* Mobile Header */}
         <div className="flex justify-between items-center px-6 py-5 border-b border-slate-100 bg-white">
-          <Link href="/" onClick={closeMenu} className="text-2xl font-black text-slate-900 tracking-tight">
-            Kabale<span className="text-[#D97706]">Online</span>
-          </Link>
-          <button 
-            onClick={closeMenu}
-            className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors"
-          >
+          <Link href="/" onClick={closeMenu} className="text-2xl font-black text-slate-900 tracking-tight">Kabale<span className="text-[#D97706]">Online</span></Link>
+          <button onClick={closeMenu} className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        {/* Scrollable Body */}
-        <div className="flex-1 overflow-y-auto bg-white flex flex-col">
-          
-          {/* Auth Section (Sleek side-by-side buttons) */}
+        <div className="flex-1 overflow-y-auto bg-white flex flex-col pb-6">
           <div className="flex gap-3 p-6 bg-slate-50/50 border-b border-slate-100">
             {loading ? (
               <div className="w-full flex justify-center py-2"><div className="h-6 w-6 rounded-full border-2 border-[#D97706] border-t-transparent animate-spin"></div></div>
             ) : user ? (
               <>
-                <Link href="/profile" onClick={closeMenu} className="flex-1 bg-white border border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-widest py-3.5 text-center shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors">
-                  Profile
-                </Link>
-                <button onClick={() => { signOut(); closeMenu(); }} className="flex-1 bg-white border border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-widest py-3.5 text-center shadow-sm hover:border-red-500 hover:text-red-600 transition-colors">
-                  Logout
-                </button>
+                <Link href="/profile" onClick={closeMenu} className="flex-1 bg-white border border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-widest py-3.5 text-center shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors">Profile</Link>
+                <button onClick={() => { signOut(); closeMenu(); }} className="flex-1 bg-white border border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-widest py-3.5 text-center shadow-sm hover:border-red-500 hover:text-red-600 transition-colors">Logout</button>
               </>
             ) : (
               <>
-                <button onClick={() => { signIn(); closeMenu(); }} className="flex-1 bg-white border border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-widest py-3.5 shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors">
-                  Login
-                </button>
-                <button onClick={() => { signIn(); closeMenu(); }} className="flex-1 bg-white border border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-widest py-3.5 shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors">
-                  Register
-                </button>
+                <button onClick={() => { signIn(); closeMenu(); }} className="flex-1 bg-white border border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-widest py-3.5 shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors">Login</button>
+                <button onClick={() => { signIn(); closeMenu(); }} className="flex-1 bg-white border border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-widest py-3.5 shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors">Register</button>
               </>
             )}
           </div>
 
-          {/* Navigation Links (Uppercase, separated by borders) */}
-          <div className="flex flex-col text-sm font-bold text-slate-600 uppercase tracking-widest">
-            {[
-              { label: "Home", href: "/" },
-              { label: "All Items", href: "/products" },
-              { label: "Electronics", href: "/category/electronics" },
-              { label: "Agriculture", href: "/category/agriculture" },
-              { label: "Student Market", href: "/category/student_item" },
-              { label: "Requests", href: "/requests" },
-              { label: "Blog", href: "/blog" },
-              { label: "AI Guide ✨", href: "/ai", color: "text-[#D97706]" },
-            ].map((link, idx) => (
-              <Link 
-                key={idx} 
-                href={link.href} 
-                onClick={closeMenu}
-                className={`px-6 py-4 border-b border-slate-100 hover:bg-slate-50 hover:pl-8 transition-all duration-200 ${link.color || ''} ${isActive(link.href) ? 'text-[#D97706] bg-amber-50/30 pl-8 border-l-4 border-l-[#D97706]' : 'border-l-4 border-l-transparent'}`}
-              >
-                {link.label}
-              </Link>
+          {/* 🌟 NEW: STRUCTURED GROUPED NAVIGATION */}
+          <div className="flex flex-col pt-2">
+            {mobileNavGroups.map((group, groupIdx) => (
+              <div key={groupIdx} className="mb-2">
+                {/* Colored Group Header */}
+                <div className={`px-6 py-2 text-[10px] font-black uppercase tracking-widest ${group.bgClass} ${group.textClass}`}>
+                  {group.label}
+                </div>
+                
+                {/* Lowercase Links */}
+                <div className="flex flex-col">
+                  {group.links.map((link, linkIdx) => (
+                    <Link 
+                      key={linkIdx} 
+                      href={link.href} 
+                      onClick={closeMenu}
+                      className={`px-6 py-3.5 border-b border-slate-50 hover:bg-slate-50 hover:pl-8 transition-all duration-200 text-[15px] font-bold lowercase tracking-wide
+                        ${link.highlight ? 'text-[#D97706]' : 'text-slate-600'} 
+                        ${isActive(link.href) ? 'text-[#D97706] bg-amber-50/30 pl-8 border-l-4 border-l-[#D97706]' : 'border-l-4 border-l-transparent'}
+                      `}
+                    >
+                      {link.name}
+                    </Link>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
 
-          {/* Bottom Call-to-Action & Socials */}
-          <div className="mt-auto p-6 bg-slate-50/50">
-            <Link 
-              href="/sell" 
-              onClick={closeMenu}
-              className="block w-full bg-[#3f4e24] hover:bg-[#2d3819] text-white text-center py-4 text-sm font-bold uppercase tracking-widest rounded-sm transition-colors shadow-sm mb-8"
-            >
-              Sell Now
-            </Link>
-
+          <div className="mt-auto p-6 bg-slate-50/50 border-t border-slate-100">
+            <Link href="/sell" onClick={closeMenu} className="block w-full bg-[#3f4e24] hover:bg-[#2d3819] text-white text-center py-4 text-sm font-bold uppercase tracking-widest rounded-sm transition-colors shadow-sm mb-8">Sell Now</Link>
             <div className="mb-2">
               <p className="text-slate-800 font-medium mb-4 text-base">Our social network pages</p>
               <div className="flex flex-wrap gap-2">
-                {/* Social Icons matching the screenshot layout */}
                 {[
-                  { icon: FaWhatsapp, href: "#" },
-                  { icon: FaFacebookF, href: "#" },
-                  { icon: FaTiktok, href: "#" },
-                  { icon: FaXTwitter, href: "#" },
-                  { icon: FaYoutube, href: "#" },
-                  { icon: FaLinkedinIn, href: "#" },
+                  { icon: FaWhatsapp, href: "#" }, { icon: FaFacebookF, href: "#" }, { icon: FaTiktok, href: "#" },
+                  { icon: FaXTwitter, href: "#" }, { icon: FaYoutube, href: "#" }, { icon: FaLinkedinIn, href: "#" },
                   { icon: FaInstagram, href: "#" },
                 ].map((social, idx) => (
-                  <a 
-                    key={idx} 
-                    href={social.href} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="w-10 h-10 bg-[#424242] hover:bg-[#D97706] text-white flex items-center justify-center rounded-sm transition-colors"
-                  >
+                  <a key={idx} href={social.href} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-[#424242] hover:bg-[#D97706] text-white flex items-center justify-center rounded-sm transition-colors">
                     <social.icon size={18} />
                   </a>
                 ))}
               </div>
             </div>
           </div>
-
         </div>
       </div>
     </>
