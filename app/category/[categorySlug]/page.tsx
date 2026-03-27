@@ -1,7 +1,8 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
-import ClientProductGrid from "@/components/ClientProductGrid";
+// 🔥 Swapped ClientProductGrid for ProductSection to match Home Page
+import ProductSection from "@/components/ProductSection";
 import SearchBar from "@/components/SearchBar";
 import { optimizeImage } from "@/lib/utils";
 
@@ -151,16 +152,14 @@ export default async function CategoryPage({
       {/* ========================================== */}
       <div className="max-w-[1600px] mx-auto mt-8 space-y-6">
 
-        {/* STATS HEADER */}
-        <div className="px-4 sm:px-6 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">
-            {info.title} ({allCategoryProducts.length} Items)
-          </h2>
-        </div>
-
-        {/* THE CLIENT GRID (Edge-to-edge px-2 padding on mobile) */}
+        {/* THE HOMEPAGE PRODUCT SECTION 
+            Passed the dynamic info.title and item count into the ProductSection title 
+        */}
         <div className="px-2 sm:px-4 pb-12">
-          <ClientProductGrid products={allCategoryProducts} />
+          <ProductSection 
+            title={`${info.title} (${allCategoryProducts.length} Items)`} 
+            products={allCategoryProducts} 
+          />
         </div>
 
         {/* ========================================== */}
