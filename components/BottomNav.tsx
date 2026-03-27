@@ -11,7 +11,7 @@ export default function BottomNav() {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   
-  // 🌟 NEW: Track if the mobile menu drawer is open
+  // Track if the mobile menu drawer is open
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const isAdmin = user?.role === "admin";
@@ -44,7 +44,7 @@ export default function BottomNav() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // 🌟 NEW: Listen for the mobile menu opening/closing broadcast from Navbar
+  // Listen for the mobile menu opening/closing broadcast from Navbar
   useEffect(() => {
     const handleMenuState = (e: any) => setIsMenuOpen(e.detail);
     window.addEventListener("mobileMenuState", handleMenuState);
@@ -64,7 +64,6 @@ export default function BottomNav() {
     : baseNavItems;
 
   return (
-    {/* 🌟 NEW: Updated logic -> isVisible && !isMenuOpen */}
     <div className={`fixed bottom-0 left-0 w-full bg-white dark:bg-[#0a0a0a] border-t border-slate-200 dark:border-slate-800 z-50 transition-transform duration-300 xl:hidden ${isVisible && !isMenuOpen ? "translate-y-0" : "translate-y-full"}`}>
       <div className="flex justify-around items-center h-16 px-2 pb-safe">
         {navItems.map((item) => {
