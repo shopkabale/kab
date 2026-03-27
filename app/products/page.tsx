@@ -1,90 +1,64 @@
-import { getProducts } from "@/lib/firebase/firestore";
-import ClientProductGrid from "@/components/ClientProductGrid";
-import SearchBar from "@/components/SearchBar"; 
-import { optimizeImage } from "@/lib/utils"; 
+"use client";
 
-// Force dynamic ensures we fetch fresh data
-export const dynamic = "force-dynamic";
+import { useState } from "react";
+// 🌟 IMPORT THE EXACT HOMEPAGE COMPONENT
+import ProductSection from "@/components/ProductSection";
 
-export const metadata = {
-  title: "All Products | Kabale Online",
-  description: "Browse all items available for sale in Kabale town.",
-};
+export default function ClientProductGrid({ products }: { products: any[] }) {
+  const [visibleCount, setVisibleCount] = useState(12);
+  const [loading, setLoading] = useState(false);
 
-// ==========================================
-// THE DAILY SHUFFLE ALGORITHM
-// ==========================================
-function getDailyRandomScore(id: string) {
-  const today = new Date().toISOString().split('T')[0];
-  const seedString = id + today; 
+  // Calculate visible items and if there are more to show
+  const visibleProducts = products.slice(0, visibleCount);
+  const hasMore = visibleCount < products.length;
 
-  let hash = 0;
-  for (let i = 0; i < seedString.length; i++) {
-    hash = (hash << 5) - hash + seedString.charCodeAt(i);
-    hash |= 0; 
+  const handleLoadMore = () => {
+    setLoading(true);
+    setTimeout(() => {
+      setVisibleCount((prev) => prev + 12);
+      setLoading(false);
+    }, 600);
+  };
+
+  if (products.length === 0) {
+    return (
+      <div className="text-center py-16 bg-slate-50 dark:bg-slate-900 rounded-3xl border border-dashed border-slate-300 dark:border-slate-700 shadow-sm">
+        <span className="text-5xl block mb-4">🛒</span>
+        <h3 className="text-xl font-bold text-slate-900 dark:text-white">No products found</h3>
+        <p className="mt-2 text-slate-500 dark:text-slate-400">
+          Check back soon! We are adding new items every day.
+        </p>
+      </div>
+    );
   }
-  return hash;
-}
-
-export default async function AllProductsPage() {
-  // 1. Fetch ALL products 
-  const rawProducts = await getProducts();
-
-  // 2. SHUFFLE THEM (Stable Daily Randomization)
-  rawProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
-
-  // 3. 🔥 OPTIMIZE ALL IMAGES 🔥
-  // We do this on the server so the ClientGrid just receives fast URLs automatically!
-  const allProducts = rawProducts.map((product) => {
-    if (!product.images || product.images.length === 0) return product;
-
-    return {
-      ...product,
-      // Map through every image in the product's gallery and optimize it
-      images: product.images.map((img: string) => optimizeImage(img))
-    };
-  });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] font-sans selection:bg-[#D97706] selection:text-white">
+    <>
+      {/* 🌟 USE THE HOMEPAGE COMPONENT (hideTitle makes it fit perfectly) */}
+      <ProductSection products={visibleProducts} hideTitle={true} />
 
-      {/* ========================================== */}
-      {/* PROFESSIONAL HERO & SEARCH SECTION         */}
-      {/* ========================================== */}
-      <section className="bg-white dark:bg-[#111] py-12 md:py-16 border-b border-slate-200 dark:border-slate-800 shadow-sm px-4">
-        <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-black mb-4 text-slate-900 dark:text-white tracking-tight uppercase">
-            All Marketplace Items
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base font-medium max-w-xl mx-auto mb-8">
-            Discover everything our local Kabale vendors have to offer. Fast delivery, pay strictly on arrival.
-          </p>
-          
-          {/* Integrated Search Bar */}
-          <div className="max-w-xl mx-auto">
-            <SearchBar />
-          </div>
+      {/* ANIMATED LOAD MORE BUTTON */}
+      {hasMore && (
+        <div className="mt-12 flex justify-center pb-8">
+          <button 
+            onClick={handleLoadMore}
+            disabled={loading}
+            className="flex items-center justify-center gap-3 w-full sm:w-auto px-10 py-4 bg-[#D97706] text-white rounded-xl text-sm font-black uppercase tracking-widest shadow-md hover:bg-amber-600 transition-all disabled:opacity-80 disabled:cursor-wait"
+          >
+            {loading ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Loading...
+              </>
+            ) : (
+              "Load More Items"
+            )}
+          </button>
         </div>
-      </section>
-
-      {/* ========================================== */}
-      {/* 🧩 MAIN CONTENT AREA                       */}
-      {/* ========================================== */}
-      <div className="max-w-[1600px] mx-auto mt-8 space-y-6">
-
-        {/* STATS HEADER */}
-        <div className="px-4 sm:px-6 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">
-            Explore Directory ({allProducts.length} Items)
-          </h2>
-        </div>
-
-        {/* THE CLIENT GRID (Edge-to-edge px-2 padding on mobile) */}
-        <div className="px-2 sm:px-4 pb-16">
-          <ClientProductGrid products={allProducts} />
-        </div>
-
-      </div>
-    </div>
+      )}
+    </>
   );
 }
