@@ -19,19 +19,20 @@ export default function Footer() {
         {/* Main Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
 
-          {/* Brand */}
-          <div className="col-span-2 md:col-span-1">
+                    {/* Brand */}
+          <div className="col-span-2 md:col-span-1 flex flex-col items-center text-center md:items-start md:text-left">
             <Link
               href="/"
               className="inline-block hover:opacity-80 transition-opacity duration-200"
             >
-              {/* 🔥 Using your existing icon, but turning it pure white with 'brightness-0 invert' */}
+              {/* 🔥 Zoomed up: Changed h-12 to h-24 sm:h-28 */}
+              {/* 🔥 Centered: Added mx-auto for mobile centering */}
               <Image
                 src="/icon-512x512.png"
                 alt="Kabale Online Logo"
-                width={120}  
-                height={120} 
-                className="h-10 sm:h-12 w-auto object-contain brightness-0 invert"
+                width={200}  
+                height={200} 
+                className="h-24 sm:h-28 w-auto object-contain brightness-0 invert mx-auto md:mx-0"
               />
             </Link>
             <p className="mt-4 text-neutral-500 leading-relaxed max-w-xs">
@@ -39,6 +40,7 @@ export default function Footer() {
               farmers, and trusted local vendors.
             </p>
           </div>
+
 
           {/* Marketplace */}
           <div>
