@@ -1,8 +1,9 @@
 import { Metadata } from "next";
+import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
 import ClientProductGrid from "@/components/ClientProductGrid";
 import SearchBar from "@/components/SearchBar";
-import { optimizeImage } from "@/lib/utils"; // 👈 1. Import the magic function
+import { optimizeImage } from "@/lib/utils";
 
 // Force dynamic ensures we fetch fresh data
 export const dynamic = "force-dynamic";
@@ -10,24 +11,18 @@ export const dynamic = "force-dynamic";
 // ==========================================
 // DYNAMIC CATEGORY UI MAPPING
 // ==========================================
-const categoryDetails: Record<string, { title: string; description: string; bg: string; icon: string }> = {
+const categoryDetails: Record<string, { title: string; description: string }> = {
   "electronics": {
-    title: "Quality Gadgets & Electronics",
+    title: "Electronics & Gadgets",
     description: "Laptops, phones, and accessories from trusted vendors in Kabale.",
-    bg: "bg-slate-900",
-    icon: "💻",
   },
   "agriculture": {
     title: "Agriculture Market",
     description: "Support local farmers. Buy fresh produce, tools, and supplies.",
-    bg: "bg-green-700", 
-    icon: "🌾",
   },
   "student_item": {
-    title: "Campus Essentials & Gear",
-    description: "Textbooks, furniture, and campus essentials for Kabale University.",
-    bg: "bg-[#D97706]", 
-    icon: "🎒",
+    title: "Campus Essentials",
+    description: "Textbooks, furniture, and gear for Kabale University students.",
   }
 };
 
@@ -38,15 +33,11 @@ export async function generateMetadata({ params }: { params: { categorySlug: str
   const slug = params.categorySlug;
   const info = categoryDetails[slug] || { 
     title: `${slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`, 
-    description: `Shop the best local deals for ${slug.replace(/_/g, ' ')} delivered fast to your hostel.` 
+    description: `Shop the best local deals for ${slug.replace(/_/g, ' ')} delivered fast to your location.` 
   };
 
-  // Replace this with your actual production domain once you link it (e.g., https://kabaleonline.com)
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.kabaleonline.com";
-
   const currentUrl = `${baseUrl}/category/${slug}`;
-
-  // The new dynamic image URL powered by Vercel OG
   const ogImageUrl = `${baseUrl}/api/og?title=${encodeURIComponent(info.title)}&desc=${encodeURIComponent("Fast Local Delivery in Kabale")}`;
 
   return {
@@ -118,7 +109,6 @@ export default async function CategoryPage({
   rawCategoryProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
 
   // 3. 🔥 OPTIMIZE ALL IMAGES 🔥
-  // Instantly apply the Cloudinary WebP cheat code before passing to the client component
   const allCategoryProducts = rawCategoryProducts.map((product) => {
     if (!product.images || product.images.length === 0) return product;
 
@@ -132,49 +122,118 @@ export default async function CategoryPage({
   const info = categoryDetails[params.categorySlug] || {
     title: params.categorySlug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
     description: `Browse all items in ${params.categorySlug.replace(/_/g, ' ')}.`,
-    bg: "bg-slate-800", // Fallback color
-    icon: "🛍️",         // Fallback icon
   };
 
   return (
-    <div className="flex flex-col bg-white dark:bg-[#0a0a0a] min-h-screen">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] font-sans selection:bg-[#D97706] selection:text-white">
 
-      {/* PROFESSIONAL DYNAMIC HERO SECTION */}
-      <section className="px-4 py-6">
-        <div className={`-mx-4 sm:-mx-6 lg:-mx-8 px-6 sm:px-12 sm:rounded-2xl ${info.bg} py-16 text-white relative overflow-hidden flex flex-col justify-center shadow-lg text-center transition-colors duration-500`}>
-          <h1 className="text-3xl md:text-5xl font-black mb-4 z-10 relative leading-tight tracking-tight">
+      {/* ========================================== */}
+      {/* PROFESSIONAL HERO & SEARCH SECTION         */}
+      {/* ========================================== */}
+      <section className="bg-white dark:bg-[#111] py-12 md:py-16 border-b border-slate-200 dark:border-slate-800 shadow-sm px-4">
+        <div className="max-w-3xl mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl font-black mb-4 text-slate-900 dark:text-white tracking-tight uppercase">
             {info.title}
           </h1>
-          <p className="text-white/90 text-sm md:text-lg max-w-2xl mx-auto z-10 relative font-medium">
+          <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base font-medium max-w-xl mx-auto mb-8">
             {info.description}
           </p>
 
-          {/* Background Decor */}
-          <span className="absolute left-[-5%] top-[-20%] text-9xl opacity-10">{info.icon}</span>
-          <span className="absolute right-[-5%] bottom-[-10%] text-9xl md:text-[150px] opacity-10">{info.icon}</span>
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent z-0"></div>
+          {/* Integrated Search Bar */}
+          <div className="max-w-xl mx-auto">
+            <SearchBar />
+          </div>
         </div>
       </section>
 
-      {/* SEARCH BAR */}
-      <div className="w-full max-w-2xl mx-auto px-4 pb-6 md:pb-8">
-        <SearchBar />
-      </div>
+      {/* ========================================== */}
+      {/* 🧩 MAIN CONTENT AREA                       */}
+      {/* ========================================== */}
+      <div className="max-w-[1600px] mx-auto mt-8 space-y-6">
 
-      {/* STATS HEADER */}
-      <div className="px-4 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-            Explore {allCategoryProducts.length}+ Items
+        {/* STATS HEADER */}
+        <div className="px-4 sm:px-6 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">
+            {info.title} ({allCategoryProducts.length} Items)
           </h2>
         </div>
-      </div>
 
-      {/* THE CLIENT GRID */}
-      <div className="px-4 pb-16">
-        <ClientProductGrid products={allCategoryProducts} />
-      </div>
+        {/* THE CLIENT GRID (Edge-to-edge px-2 padding on mobile) */}
+        <div className="px-2 sm:px-4 pb-12">
+          <ClientProductGrid products={allCategoryProducts} />
+        </div>
 
+        {/* ========================================== */}
+        {/* CATEGORIES LIST ROW                        */}
+        {/* ========================================== */}
+        <section className="py-12 border-t border-slate-200 dark:border-slate-800 px-4 mt-8">
+          <div className="max-w-3xl mx-auto">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
+              Explore Other Categories
+            </h3>
+
+            <div className="flex flex-col gap-3 sm:gap-4">
+              {[
+                { 
+                  name: "Student Market", 
+                  link: "student_item",
+                  desc: "Hostel items, textbooks, gadgets, and campus essentials",
+                  icon: "🎓"
+                }, 
+                { 
+                  name: "Electronics", 
+                  link: "electronics",
+                  desc: "Smartphones, laptops, TVs, audio, and accessories",
+                  icon: "💻"
+                }, 
+                { 
+                  name: "Agriculture", 
+                  link: "agriculture",
+                  desc: "Fresh produce, farm tools, livestock, and fertilizers",
+                  icon: "🌱"
+                }
+              ].map((cat) => {
+                // Hide the current category from the "Other Categories" list
+                if (cat.link === params.categorySlug) return null;
+
+                return (
+                  <Link 
+                    key={cat.name} 
+                    href={`/category/${cat.link}`} 
+                    className="group flex items-center justify-between p-4 sm:p-5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-2xl hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-200 w-full"
+                  >
+                    <div className="flex items-center gap-4 sm:gap-5 overflow-hidden">
+                      {/* Icon Bubble */}
+                      <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform duration-300 border border-slate-100 dark:border-slate-800">
+                        {cat.icon}
+                      </div>
+
+                      {/* Text Details */}
+                      <div className="flex flex-col text-left overflow-hidden">
+                        <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors truncate">
+                          {cat.name}
+                        </span>
+                        <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate pr-2">
+                          {cat.desc}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right Arrow / Action */}
+                    <div className="flex items-center gap-2 text-slate-300 dark:text-slate-600 group-hover:text-[#D97706] transition-colors pl-2 shrink-0">
+                      <span className="text-xs font-bold uppercase tracking-widest hidden sm:block">View</span>
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+      </div>
     </div>
   );
 }
