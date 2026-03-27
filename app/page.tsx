@@ -33,21 +33,9 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-24 font-sans selection:bg-[#D97706] selection:text-white">
       
-      {/* ========================================== */}
-      {/* 1. URGENT STORIES                          */}
-      {/* ========================================== */}
-      <div className="bg-white dark:bg-[#111] pt-4 pb-2 border-b border-slate-200 dark:border-slate-800">
-        <div className="px-4 mb-2 flex items-center gap-2 max-w-[1600px] mx-auto">
-          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-          
-        </div>
-        <div className="max-w-[1600px] mx-auto">
-          <UrgentStories />
-        </div>
-      </div>
 
       {/* ========================================== */}
-      {/* 2. SEARCH & INTENT CHIPS                   */}
+      {/* 1. SEARCH & INTENT CHIPS                   */}
       {/* ========================================== */}
       <section className="bg-white dark:bg-[#111] px-4 py-6 border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="max-w-3xl mx-auto">
@@ -61,6 +49,14 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* ========================================== */}
+      {/* 2. URGENT STORIES                          */}
+      {/* ========================================== */}
+      
+          <UrgentStories />
+        </div>
+      </div>
 
       {/* ========================================== */}
       {/* 🧩 MAIN CONTENT AREA                       */}
