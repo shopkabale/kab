@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image"; // 🔥 Imported next/image
 import { usePathname } from "next/navigation";
 import { FaWhatsapp, FaFacebookF, FaInstagram, FaXTwitter } from "react-icons/fa6";
 
@@ -22,9 +23,16 @@ export default function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link
               href="/"
-              className="text-xl md:text-2xl font-semibold text-white tracking-tight"
+              className="inline-block hover:opacity-80 transition-opacity duration-200"
             >
-              Kabale<span className="text-primary">Online</span>
+              {/* 🔥 Using your existing icon, but turning it pure white with 'brightness-0 invert' */}
+              <Image
+                src="/icon-512x512.png"
+                alt="Kabale Online Logo"
+                width={120}  
+                height={120} 
+                className="h-10 sm:h-12 w-auto object-contain brightness-0 invert"
+              />
             </Link>
             <p className="mt-4 text-neutral-500 leading-relaxed max-w-xs">
               The modern marketplace connecting Kabale University students,
