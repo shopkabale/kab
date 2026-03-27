@@ -18,6 +18,8 @@ export default function Footer() {
 
         {/* ========================================== */}
         {/* 🔥 MASSIVE, FLEXIBLE CENTERED LOGO 🔥    */}
+        {/* w-full and h-auto give it flexible expansion! */}
+        {/* max-w-4xl caps it on ultra-wide screens so it doesn't distort */}
         {/* ========================================== */}
         <Link
           href="/"
@@ -28,8 +30,6 @@ export default function Footer() {
             alt="Kabale Online Logo"
             width={1024}  
             height={1024} 
-            {/* w-full and h-auto give it that flexible expansion! */}
-            {/* max-w-3xl caps it on ultra-wide screens so it doesn't distort */}
             className="w-full max-w-sm md:max-w-2xl lg:max-w-4xl h-auto object-contain brightness-0 invert"
           />
         </Link>
