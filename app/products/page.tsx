@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
-import ClientProductGrid from "@/components/ClientProductGrid";
+// 🔥 Swapped ClientProductGrid for ProductSection to match Home Page
+import ProductSection from "@/components/ProductSection";
 import SearchBar from "@/components/SearchBar"; 
 import { optimizeImage } from "@/lib/utils"; 
 
@@ -58,7 +59,7 @@ export default async function AllProductsPage() {
           <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base font-medium max-w-xl mx-auto mb-8">
             Discover everything our local Kabale vendors have to offer. Fast delivery, pay strictly on arrival.
           </p>
-          
+
           {/* Integrated Search Bar */}
           <div className="max-w-xl mx-auto">
             <SearchBar />
@@ -71,16 +72,14 @@ export default async function AllProductsPage() {
       {/* ========================================== */}
       <div className="max-w-[1600px] mx-auto mt-8 space-y-6">
 
-        {/* STATS HEADER */}
-        <div className="px-4 sm:px-6 flex items-center justify-between">
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">
-            Explore Directory ({allProducts.length} Items)
-          </h2>
-        </div>
-
-        {/* THE CLIENT GRID (Edge-to-edge px-2 padding on mobile) */}
+        {/* THE HOMEPAGE PRODUCT SECTION 
+            We pass the count directly into the title to keep it clean!
+        */}
         <div className="px-2 sm:px-4 pb-12">
-          <ClientProductGrid products={allProducts} />
+          <ProductSection 
+            title={`Explore Directory (${allProducts.length} Items)`} 
+            products={allProducts} 
+          />
         </div>
 
         {/* ========================================== */}
