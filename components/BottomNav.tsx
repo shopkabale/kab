@@ -7,11 +7,10 @@ import { useAuth } from "@/components/AuthProvider";
 
 export default function BottomNav() {
   const pathname = usePathname();
-  const { user } = useAuth(); // Safely grab the synced user from your context
+  const { user } = useAuth(); 
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
-  // Since your backend now safely verifies the token, we can trust the role here
   const isAdmin = user?.role === "admin";
 
   // Hide entirely on admin routes
@@ -42,17 +41,16 @@ export default function BottomNav() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // 3. Base navigation items
+  // 3. Base navigation items (Reduced to 3 for optimal mobile UI)
   const baseNavItems = [
-    { label: "Home", href: "/", icon: "🏠" },
-    { label: "Shop", href: "/products", icon: "🛍️" },
-    { label: "Sell", href: "/sell", icon: "➕" },
-    { label: "Profile", href: "/profile", icon: "👤" },
+    { label: "Home", href: "/" },
+    { label: "Sell", href: "/sell" },
+    { label: "Profile", href: "/profile" },
   ];
 
   // 4. Dynamically add the Admin item if the user is an admin
   const navItems = isAdmin
-    ? [...baseNavItems, { label: "Admin", href: "/admin", icon: "🛡️" }]
+    ? [...baseNavItems, { label: "Admin", href: "/admin" }]
     : baseNavItems;
 
   return (
@@ -61,18 +59,35 @@ export default function BottomNav() {
         {navItems.map((item) => {
           // Check if the current route matches the tab
           const isActive = pathname === item.href || (item.href !== "/" && pathname?.startsWith(item.href));
-          
+
           // The shared styling and content for both Link and <a> tags
           const content = (
-            <>
-              <span className={`text-xl ${isActive ? "scale-110 transition-transform" : ""}`}>{item.icon}</span>
-              <span className={`text-[10px] tracking-wide ${isActive ? "font-black" : "font-semibold"}`}>{item.label}</span>
-            </>
+            <div className="flex flex-col items-center justify-center h-full relative w-full pt-1">
+              {/* Animated Dot Indicator */}
+              <span 
+                className={`text-[#D97706] text-3xl leading-[0.5] transition-all duration-300 absolute top-2 ${
+                  isActive ? "opacity-100 scale-100" : "opacity-0 scale-50"
+                }`}
+              >
+                •
+              </span>
+              
+              {/* Text Label */}
+              <span 
+                className={`text-[10px] uppercase tracking-widest transition-all duration-300 ${
+                  isActive 
+                    ? "font-black text-[#D97706] mt-4" 
+                    : "font-bold text-slate-500 dark:text-slate-400 mt-2"
+                }`}
+              >
+                {item.label}
+              </span>
+            </div>
           );
 
-          const className = `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${isActive ? "text-[#D97706]" : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"}`;
+          const className = "flex flex-col items-center justify-center w-full h-full";
 
-          // ✨ THE FIX: Force a hard reload ONLY for the highly secure Admin button
+          // Force a hard reload ONLY for the highly secure Admin button
           if (item.label === "Admin") {
             return (
               <a key={item.label} href={item.href} className={className}>
