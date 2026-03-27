@@ -23,7 +23,7 @@ export default async function Home() {
     const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt || 0).getTime();
     return dateB - dateA;
   });
-  
+
   const justPostedProducts = sortedByDate.slice(0, 12);
 
   // 3. Randomizer for Trending
@@ -32,15 +32,14 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-24 font-sans selection:bg-[#D97706] selection:text-white">
-      
 
       {/* ========================================== */}
       {/* 1. SEARCH & INTENT CHIPS                   */}
       {/* ========================================== */}
-      <section className="bg-white dark:bg-[#111] px-4 py-6 border-b border-slate-200 dark:border-slate-800 shadow-sm">
+      <section className="bg-white dark:bg-[#111] px-2 sm:px-4 py-6 border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="max-w-3xl mx-auto">
           <SearchBar />
-          <div className="flex gap-2 overflow-x-auto py-4 no-scrollbar items-center justify-start md:justify-center">
+          <div className="flex gap-2 overflow-x-auto py-4 no-scrollbar items-center justify-start md:justify-center px-1">
             {["🔥 Under 50k", "⚡ Urgent Sales", "📍 Near You", "🆕 Just Posted", "🎓 Campus Deals"].map(tag => (
               <button key={tag} className="px-5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full text-xs font-bold whitespace-nowrap text-slate-800 dark:text-slate-200 transition-colors shadow-sm">
                 {tag}
@@ -53,18 +52,16 @@ export default async function Home() {
       {/* ========================================== */}
       {/* 2. URGENT STORIES                          */}
       {/* ========================================== */}
-      
-          <UrgentStories />
-        </div>
-      </div>
+      <UrgentStories />
 
       {/* ========================================== */}
       {/* 🧩 MAIN CONTENT AREA                       */}
       {/* ========================================== */}
-      <div className="max-w-[1600px] mx-auto mt-8 space-y-12 md:space-y-16">
+      {/* Notice the tight px-2 padding on mobile for maximum screen width */}
+      <div className="max-w-[1600px] mx-auto mt-4 sm:mt-8 space-y-10 md:space-y-16">
 
         {/* 3. TRENDING (Random on refresh) */}
-        <section className="px-4">
+        <section className="px-2 sm:px-4">
           <ProductSection 
             title="🔥 Trending Now" 
             products={trendingNow} 
@@ -73,17 +70,14 @@ export default async function Home() {
 
         {/* 4. SELLER CTA (Image Reference Style) */}
         <section className="relative py-20 md:py-28 text-center bg-slate-100/50 dark:bg-[#111] border-y border-slate-200 dark:border-slate-800">
-          {/* Optional: If you want the exact blurry background from the image, uncomment the div below and add your image URL */}
-          {/* <div className="absolute inset-0 bg-[url('/your-background-image.jpg')] bg-cover bg-center opacity-20"></div> */}
-          
-          <div className="relative z-10 max-w-3xl mx-auto px-6 flex flex-col items-center">
+          <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 flex flex-col items-center">
             <h2 className="text-5xl md:text-7xl font-semibold mb-6 text-slate-900 dark:text-white tracking-tight">
               Sell on Kabale
             </h2>
             <p className="text-base md:text-lg text-slate-800 dark:text-slate-300 mb-10 leading-relaxed font-medium max-w-2xl">
               We help you sell your items directly to buyers across the Kabale and Kigezi regions. Perfect for clearing out extra items, running a shop, or casual student sales. Both retail and bulk supplies supported. It takes 60 seconds to post your items via our WhatsApp bot.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center">
               <a
                 href="https://wa.me/256740373021?text=Hi%2C%20I%20want%20to%20sell%20an%20item"
@@ -104,7 +98,7 @@ export default async function Home() {
         </section>
 
         {/* 5. JUST POSTED (Real Timestamp Based) */}
-        <section className="px-4">
+        <section className="px-2 sm:px-4">
           <ProductSection 
             title="🆕 Just Posted" 
             products={justPostedProducts} 
@@ -112,20 +106,20 @@ export default async function Home() {
         </section>
 
         {/* 6. PERSONALIZED (Client Side Logic) */}
-        <div className="px-4">
+        <div className="px-2 sm:px-4">
           <PersonalizedFeed allProducts={allProducts} />
         </div>
 
         {/* 7. CATEGORIES (Only 3) */}
         <section className="py-12 border-t border-slate-200 dark:border-slate-800 px-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-6">Explore Directory</h3>
-          <div className="flex flex-wrap justify-center gap-4">
+          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-6">Explore by Category</h3>
+          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
             {[
               { name: "Student Market", link: "student_item" }, 
               { name: "Electronics", link: "electronics" }, 
               { name: "Agriculture", link: "agriculture" }
             ].map((cat) => (
-              <Link key={cat.name} href={`/category/${cat.link}`} className="px-6 py-3 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-400 hover:border-[#D97706] hover:text-[#D97706] transition-colors shadow-sm">
+              <Link key={cat.name} href={`/category/${cat.link}`} className="px-5 sm:px-6 py-3 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-400 hover:border-[#D97706] hover:text-[#D97706] transition-colors shadow-sm">
                 {cat.name}
               </Link>
             ))}
