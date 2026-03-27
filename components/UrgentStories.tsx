@@ -228,30 +228,46 @@ export default function UrgentStories() {
             </h2>
           </div>
 
-          <div className="flex overflow-x-auto gap-4 pb-2 no-scrollbar snap-x">
+          <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar snap-x">
             {stories.map((story, index) => (
               <button 
                 key={story.id}
                 onClick={() => { setActiveIndex(index); setProgress(0); }}
                 className="flex flex-col items-center gap-1.5 shrink-0 snap-start outline-none group"
               >
-                <div className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full p-[3px] transition-transform group-hover:scale-105 shadow-sm ${
+                {/* 🌟 NEW: Vertical Rectangle Container */}
+                <div className={`w-20 h-28 sm:w-24 sm:h-32 rounded-xl p-[2.5px] transition-transform group-hover:-translate-y-1 shadow-sm ${
                   viewedStoriesMap[story.id] 
-                    ? "bg-slate-300" 
-                    : "bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600"
+                    ? "bg-slate-200" 
+                    : "bg-gradient-to-tr from-[#D97706] via-amber-500 to-yellow-400"
                 }`}>
-                  <div className="w-full h-full rounded-full border-[2.5px] border-transparent overflow-hidden relative bg-slate-100">
+                  <div className="w-full h-full rounded-[10px] border-2 border-white overflow-hidden relative bg-slate-100 dark:bg-slate-800 dark:border-slate-900">
                     {story.images?.[0] ? (
-                      <Image src={optimizeImage(story.images[0])} alt={story.name || "Story"} fill sizes="80px" className="object-cover" />
+                      <Image 
+                        src={optimizeImage(story.images[0])} 
+                        alt={story.name || "Story"} 
+                        fill 
+                        sizes="96px" 
+                        className="object-cover" 
+                      />
                     ) : (
                       <span className="text-[10px] absolute inset-0 flex items-center justify-center text-slate-400 font-bold">No Img</span>
                     )}
+                    
+                    {/* Optional: Dark overlay with price directly on the image for a more modern look */}
+                    <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent pt-6 pb-1.5 px-1.5">
+                      <span className="text-[10px] sm:text-xs font-black text-white truncate block text-center shadow-sm">
+                        UGX {(Number(story.price)/1000).toFixed(0)}k
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <span className={`text-[11px] sm:text-xs font-bold truncate w-16 sm:w-20 text-center ${
-                  viewedStoriesMap[story.id] ? "text-slate-500 font-medium" : "text-slate-900"
+                
+                {/* Kept the seller name/label underneath for clarity */}
+                <span className={`text-[10px] font-bold truncate w-20 sm:w-24 text-center mt-0.5 ${
+                  viewedStoriesMap[story.id] ? "text-slate-400 font-medium" : "text-slate-700 dark:text-slate-300"
                 }`}>
-                  UGX {(Number(story.price)/1000).toFixed(0)}k
+                  {story.sellerName?.split(' ')[0] || "Seller"}
                 </span>
               </button>
             ))}
@@ -261,8 +277,9 @@ export default function UrgentStories() {
 
       {/* 2. THE STORY VIEWER MODAL */}
       {activeStory && (
-        <div className="fixed inset-0 z-[100] bg-black/95 sm:bg-black/80 sm:backdrop-blur-md flex flex-col items-center justify-center animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md h-full sm:h-[90vh] flex flex-col overflow-hidden sm:rounded-[2rem] shadow-2xl bg-black">
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center animate-in fade-in duration-200 lg:bg-black/90">
+          {/* Main Container - Full screen on mobile, phone-sized on desktop */}
+          <div className="relative w-full h-full max-w-md lg:h-[90vh] lg:rounded-[2.5rem] flex flex-col overflow-hidden bg-black shadow-2xl lg:border-[8px] lg:border-zinc-900">
 
             {/* Top UI */}
             <div className="absolute top-0 w-full z-30 p-4 pt-6 bg-gradient-to-b from-black/90 to-transparent pb-10 transition-opacity duration-200" style={{ opacity: isPaused ? 0 : 1 }}>
@@ -296,16 +313,16 @@ export default function UrgentStories() {
 
             {/* Content & Tap/Swipe Zones */}
             <div 
-              className="flex-grow relative bg-black flex items-center" 
+              className="flex-grow relative bg-black flex items-center justify-center h-full" 
               onMouseDown={() => setIsPaused(true)} 
               onMouseUp={() => setIsPaused(false)}
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
               {activeStory.images?.[0] && (
-                <Image src={activeStory.images[0]} alt={activeStory.name} fill className="object-contain" priority sizes="(max-width: 768px) 100vw, 400px" />
+                <Image src={activeStory.images[0]} alt={activeStory.name} fill className="object-cover sm:object-contain" priority sizes="(max-width: 768px) 100vw, 400px" />
               )}
-              {/* Tap zones for navigation (only active if not swiping down significantly) */}
+              {/* Tap zones for navigation */}
               <div onClick={handlePrev} className="absolute left-0 w-1/3 h-full z-10 cursor-pointer" aria-label="Previous" />
               <div onClick={handleNext} className="absolute right-0 w-2/3 h-full z-10 cursor-pointer" aria-label="Next" />
             </div>
@@ -313,12 +330,12 @@ export default function UrgentStories() {
             {/* Bottom UI */}
             <div className="absolute bottom-0 w-full z-30 p-5 sm:p-6 bg-gradient-to-t from-black/95 via-black/80 to-transparent pt-16 transition-opacity duration-200" style={{ opacity: isPaused ? 0 : 1 }}>
               <div className="mb-5">
-                <h3 className="text-2xl font-black text-white leading-tight mb-1 drop-shadow-md line-clamp-2">{activeStory.name}</h3>
+                <h3 className="text-xl font-black text-white leading-tight mb-1 drop-shadow-md line-clamp-2">{activeStory.name}</h3>
                 <div className="flex items-end justify-between">
                   <p className="text-3xl font-black text-amber-500 drop-shadow-md">UGX {Number(activeStory.price).toLocaleString()}</p>
                 </div>
-                <p className="text-white/80 text-xs font-medium mt-2 flex items-center gap-1.5">
-                  <span className="text-base">👀</span> {activeStory.storyViews || 1} people viewed this
+                <p className="text-white/80 text-[11px] font-medium mt-2 flex items-center gap-1.5 uppercase tracking-wide">
+                  <span className="text-base">👀</span> {activeStory.storyViews || 1} people viewing
                 </p>
               </div>
 
@@ -331,13 +348,13 @@ export default function UrgentStories() {
                   <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
                   Ask Seller
                 </button>
-                
+
                 <div className="flex gap-2">
                   <button 
                     onClick={() => router.push(`/product/${activeStory.id}`)}
                     className="flex-1 bg-white/10 backdrop-blur-sm border border-white/20 text-white py-3.5 rounded-2xl font-bold active:scale-95 transition-transform"
                   >
-                    View Full Details
+                    Full Details
                   </button>
                   <button 
                     onClick={handleShare}
