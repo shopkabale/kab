@@ -1,4 +1,3 @@
-// components/AiChatWidget.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -35,9 +34,10 @@ export default function AiChatWidget() {
   const [sessionId, setSessionId] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Floating Button Scroll States
+  // Floating Button Scroll & Visibility States
   const [isVisible, setIsVisible] = useState(true);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [showHint, setShowHint] = useState(true); // 🌟 NEW: Controls the subtle hint
   const [lastScrollY, setLastScrollY] = useState(0);
 
   // Dragging States
@@ -59,6 +59,12 @@ export default function AiChatWidget() {
     }
   }, []);
 
+  // 🌟 NEW: Auto-hide the hint after 6 seconds to prevent screen pollution
+  useEffect(() => {
+    const timer = setTimeout(() => setShowHint(false), 6000);
+    return () => clearTimeout(timer);
+  }, []);
+
   // 2. Auto-scroll chat window
   useEffect(() => {
     if (isOpen) scrollRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -71,6 +77,7 @@ export default function AiChatWidget() {
         const currentScrollY = window.scrollY;
         if (currentScrollY > lastScrollY && currentScrollY > 100) {
           setIsVisible(false);
+          setShowHint(false); // Hide hint immediately if user starts scrolling
         } else if (currentScrollY < lastScrollY) {
           setIsVisible(true);
         }
@@ -83,7 +90,7 @@ export default function AiChatWidget() {
 
   // 4. Listen for external clicks (from /ai page)
   useEffect(() => {
-    const handleOpen = () => { setIsOpen(true); setPosition({x:0, y:0}); };
+    const handleOpen = () => { setIsOpen(true); setPosition({x:0, y:0}); setShowHint(false); };
     window.addEventListener('open-ai-widget', handleOpen);
     return () => window.removeEventListener('open-ai-widget', handleOpen);
   }, []);
@@ -218,23 +225,50 @@ export default function AiChatWidget() {
             isVisible ? "translate-y-0 opacity-100" : "translate-y-24 opacity-0 pointer-events-none"
           }`}
         >
-          <button 
-            onClick={() => setIsDismissed(true)}
-            className="bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-sm border border-slate-200 mb-2 transition-colors z-10"
-            aria-label="Dismiss AI Button"
-          >
-            ✕
-          </button>
-
-          <button 
-            onClick={() => { setIsOpen(true); setPosition({x:0, y:0}); }}
-            className="group relative flex items-center justify-center bg-[#D97706] text-white py-3 px-5 rounded-full shadow-lg hover:bg-amber-600 hover:scale-105 hover:shadow-xl transition-all duration-300"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-xl leading-none">✨</span>
-              <span className="font-bold tracking-wide">Ask AI</span>
+          {/* 🌟 NEW: THE SUBTLE HINT (Auto-hides to prevent visual pollution) */}
+          {showHint && (
+            <div className="relative bg-white border border-slate-200 text-slate-700 text-xs font-bold px-4 py-2.5 rounded-2xl shadow-lg mb-3 animate-in fade-in slide-in-from-bottom-2 duration-500">
+              Need help? Ask anything
+              {/* Pointer Tail */}
+              <div className="absolute -bottom-1.5 right-6 w-3 h-3 bg-white border-b border-r border-slate-200 rotate-45"></div>
+              {/* Manual Close Button for the bubble */}
+              <button 
+                onClick={(e) => { e.stopPropagation(); setShowHint(false); }}
+                className="absolute -top-2 -left-2 bg-slate-100 text-slate-400 hover:text-slate-600 rounded-full w-5 h-5 flex items-center justify-center text-[10px] shadow-sm border border-slate-200"
+              >
+                ✕
+              </button>
             </div>
-          </button>
+          )}
+
+          <div className="flex items-end gap-2">
+            {/* Main Dismiss Button */}
+            <button 
+              onClick={() => setIsDismissed(true)}
+              className="bg-white text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full w-7 h-7 flex items-center justify-center text-xs font-bold shadow-sm border border-slate-200 mb-2 transition-colors z-10"
+              aria-label="Dismiss AI Button"
+            >
+              ✕
+            </button>
+
+            {/* Main Trigger Button */}
+            <button 
+              onClick={() => { setIsOpen(true); setPosition({x:0, y:0}); setShowHint(false); }}
+              className="group relative flex items-center justify-center bg-[#D97706] text-white py-3 px-5 rounded-full shadow-lg hover:bg-amber-600 hover:scale-105 hover:shadow-xl transition-all duration-300"
+            >
+              <div className="flex items-center gap-2">
+                {/* 🌟 NEW: ROBOT ICON */}
+                <svg className="w-5 h-5 fill-none stroke-current stroke-2" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="11" width="18" height="10" rx="2" />
+                  <circle cx="12" cy="5" r="2" />
+                  <path d="M12 7v4" />
+                  <line x1="8" y1="16" x2="8.01" y2="16" />
+                  <line x1="16" y1="16" x2="16.01" y2="16" />
+                </svg>
+                
+              </div>
+            </button>
+          </div>
         </div>
       )}
 
@@ -243,7 +277,7 @@ export default function AiChatWidget() {
       {/* ========================================= */}
       {isOpen && (
         <>
-          {/* 🚀 NEW: GLASS BACKGROUND BACKDROP 🚀 */}
+          {/* GLASS BACKGROUND BACKDROP */}
           <div 
             className="fixed inset-0 z-[90] bg-slate-900/40 backdrop-blur-sm transition-opacity duration-300"
             onClick={() => setIsOpen(false)} // Clicking the glass closes the widget
