@@ -41,7 +41,7 @@ export default function BottomNav() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // 3. Base navigation items (Reduced to 3 for optimal mobile UI)
+  // 3. Base navigation items
   const baseNavItems = [
     { label: "Home", href: "/" },
     { label: "Sell", href: "/sell" },
@@ -62,30 +62,28 @@ export default function BottomNav() {
 
           // The shared styling and content for both Link and <a> tags
           const content = (
-            <div className="flex flex-col items-center justify-center h-full relative w-full pt-1">
-              {/* Animated Dot Indicator */}
+            <div className="flex flex-col items-center justify-center h-full relative w-full">
+              {/* Text Label (Increased size to text-xs) */}
               <span 
-                className={`text-[#D97706] text-3xl leading-[0.5] transition-all duration-300 absolute top-2 ${
-                  isActive ? "opacity-100 scale-100" : "opacity-0 scale-50"
-                }`}
-              >
-                •
-              </span>
-              
-              {/* Text Label */}
-              <span 
-                className={`text-[10px] uppercase tracking-widest transition-all duration-300 ${
+                className={`text-xs uppercase tracking-widest transition-all duration-300 ${
                   isActive 
-                    ? "font-black text-[#D97706] mt-4" 
-                    : "font-bold text-slate-500 dark:text-slate-400 mt-2"
+                    ? "font-black text-[#D97706]" 
+                    : "font-bold text-slate-500 dark:text-slate-400"
                 }`}
               >
                 {item.label}
               </span>
+
+              {/* Animated Underline Indicator */}
+              <div 
+                className={`absolute bottom-2.5 h-[3px] bg-[#D97706] rounded-full transition-all duration-300 ease-out ${
+                  isActive ? "w-8 opacity-100" : "w-0 opacity-0"
+                }`}
+              />
             </div>
           );
 
-          const className = "flex flex-col items-center justify-center w-full h-full";
+          const className = "flex flex-col items-center justify-center w-full h-full group";
 
           // Force a hard reload ONLY for the highly secure Admin button
           if (item.label === "Admin") {
