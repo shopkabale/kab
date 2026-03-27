@@ -110,19 +110,66 @@ export default async function Home() {
           <PersonalizedFeed allProducts={allProducts} />
         </div>
 
-        {/* 7. CATEGORIES (Only 3) */}
+                {/* 7. CATEGORIES (Only 3) */}
         <section className="py-12 border-t border-slate-200 dark:border-slate-800 px-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-6">Explore by Category</h3>
-          <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-            {[
-              { name: "Student Market", link: "student_item" }, 
-              { name: "Electronics", link: "electronics" }, 
-              { name: "Agriculture", link: "agriculture" }
-            ].map((cat) => (
-              <Link key={cat.name} href={`/category/${cat.link}`} className="px-5 sm:px-6 py-3 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-400 hover:border-[#D97706] hover:text-[#D97706] transition-colors shadow-sm">
-                {cat.name}
-              </Link>
-            ))}
+          <div className="max-w-3xl mx-auto">
+            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
+              Explore by Category
+            </h3>
+            
+            <div className="flex flex-col gap-3 sm:gap-4">
+              {[
+                { 
+                  name: "Student Market", 
+                  link: "student_item",
+                  desc: "Hostel items, textbooks, gadgets, and campus essentials",
+                  icon: "🎓"
+                }, 
+                { 
+                  name: "Electronics", 
+                  link: "electronics",
+                  desc: "Smartphones, laptops, TVs, audio, and accessories",
+                  icon: "💻"
+                }, 
+                { 
+                  name: "Agriculture", 
+                  link: "agriculture",
+                  desc: "Fresh produce, farm tools, livestock, and fertilizers",
+                  icon: "🌱"
+                }
+              ].map((cat) => (
+                <Link 
+                  key={cat.name} 
+                  href={`/category/${cat.link}`} 
+                  className="group flex items-center justify-between p-4 sm:p-5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-2xl hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-200 w-full"
+                >
+                  <div className="flex items-center gap-4 sm:gap-5 overflow-hidden">
+                    {/* Icon Bubble */}
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform duration-300 border border-slate-100 dark:border-slate-800">
+                      {cat.icon}
+                    </div>
+                    
+                    {/* Text Details */}
+                    <div className="flex flex-col text-left overflow-hidden">
+                      <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors truncate">
+                        {cat.name}
+                      </span>
+                      <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate pr-2">
+                        {cat.desc}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {/* Right Arrow / Action */}
+                  <div className="flex items-center gap-2 text-slate-300 dark:text-slate-600 group-hover:text-[#D97706] transition-colors pl-2 shrink-0">
+                    <span className="text-xs font-bold uppercase tracking-widest hidden sm:block">View</span>
+                    <svg className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
 
