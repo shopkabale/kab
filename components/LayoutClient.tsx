@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AuthProvider } from "@/components/AuthProvider";
 import WebsiteBanner from "@/components/WebsiteBanner";
 import Navbar from "@/components/Navbar";
@@ -9,38 +9,69 @@ import FloatingHelpButton from "@/components/FloatingHelpButton";
 import BottomNav from "@/components/BottomNav";
 
 export default function LayoutClient({
-children,
+  children,
 }: {
-children: React.ReactNode;
+  children: React.ReactNode;
 }) {
-const [showBanner, setShowBanner] = useState(true);
+  // 1. Track if the user explicitly clicked the "X" to close it forever
+  const [isClosedManually, setIsClosedManually] = useState(false);
+  
+  // 2. Track scroll visibility state
+  const [showBannerOnScroll, setShowBannerOnScroll] = useState(true);
 
-return (
-<AuthProvider>
+  useEffect(() => {
+    const handleScroll = () => {
+      if (typeof window === "undefined") return;
 
-  {/* FIXED WEBSITE BANNER */}
-  {showBanner && (
-    <WebsiteBanner onClose={() => setShowBanner(false)} />
-  )}
+      const scrollY = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const fullHeight = document.documentElement.scrollHeight;
 
-  {/* NAVBAR (moves depending on banner visibility) */}
-  <Navbar bannerVisible={showBanner} />
+      // Show if they are at the very top (so it's visible on first load)
+      const isAtTop = scrollY < 20;
 
-  {/* MAIN CONTENT */}
-  <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-24 w-full">
-    {children}
-  </main>
+      // Show if they reached the absolute bottom 
+      // (We use a 50px buffer because mobile browsers like iOS Safari have a scroll "bounce")
+      const isAtBottom = Math.ceil(scrollY + windowHeight) >= fullHeight - 50;
 
-  {/* FOOTER */}
-  <Footer />
+      // Update state: Show ONLY at the top or bottom
+      setShowBannerOnScroll(isAtTop || isAtBottom);
+    };
 
-  {/* MOBILE BOTTOM NAV */}
-  <BottomNav />
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    
+    // Run it once on mount just in case they load halfway down the page
+    handleScroll();
 
-  {/* FLOATING HELP BUTTON */}
-  <FloatingHelpButton />
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
-</AuthProvider>
+  // Final visibility depends on scroll position AND if they haven't manually dismissed it
+  const isBannerVisible = showBannerOnScroll && !isClosedManually;
 
-);
+  return (
+    <AuthProvider>
+      {/* FIXED WEBSITE BANNER */}
+      {isBannerVisible && (
+        <WebsiteBanner onClose={() => setIsClosedManually(true)} />
+      )}
+
+      {/* NAVBAR (moves up and down smoothly depending on banner visibility) */}
+      <Navbar bannerVisible={isBannerVisible} />
+
+      {/* MAIN CONTENT */}
+      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-24 w-full transition-all">
+        {children}
+      </main>
+
+      {/* FOOTER */}
+      <Footer />
+
+      {/* MOBILE BOTTOM NAV */}
+      <BottomNav />
+
+      {/* FLOATING HELP BUTTON */}
+      <FloatingHelpButton />
+    </AuthProvider>
+  );
 }
