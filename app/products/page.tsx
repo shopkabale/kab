@@ -1,7 +1,7 @@
 import { getProducts } from "@/lib/firebase/firestore";
 import ClientProductGrid from "@/components/ClientProductGrid";
 import SearchBar from "@/components/SearchBar"; 
-import { optimizeImage } from "@/lib/utils"; // 👈 1. Import our magic function
+import { optimizeImage } from "@/lib/utils"; 
 
 // Force dynamic ensures we fetch fresh data
 export const dynamic = "force-dynamic";
@@ -46,44 +46,45 @@ export default async function AllProductsPage() {
   });
 
   return (
-    <div className="flex flex-col bg-white dark:bg-[#0a0a0a] min-h-screen">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] font-sans selection:bg-[#D97706] selection:text-white">
 
-      {/* PROFESSIONAL HERO SECTION */}
-      <section className="px-4 py-6">
-        <div className="-mx-4 sm:-mx-6 lg:-mx-8 px-6 sm:px-12 sm:rounded-2xl bg-slate-900 py-16 text-white relative overflow-hidden flex flex-col justify-center shadow-lg text-center">
-          <h1 className="text-3xl md:text-5xl font-black mb-4 z-10 relative leading-tight tracking-tight">
+      {/* ========================================== */}
+      {/* PROFESSIONAL HERO & SEARCH SECTION         */}
+      {/* ========================================== */}
+      <section className="bg-white dark:bg-[#111] py-12 md:py-16 border-b border-slate-200 dark:border-slate-800 shadow-sm px-4">
+        <div className="max-w-3xl mx-auto text-center">
+          <h1 className="text-4xl md:text-5xl font-black mb-4 text-slate-900 dark:text-white tracking-tight uppercase">
             All Marketplace Items
           </h1>
-          <p className="text-slate-300 text-sm md:text-lg max-w-2xl mx-auto z-10 relative font-medium">
-            Discover everything our local Kabale vendors have to offer. Fast delivery, pay on arrival.
+          <p className="text-slate-600 dark:text-slate-400 text-sm md:text-base font-medium max-w-xl mx-auto mb-8">
+            Discover everything our local Kabale vendors have to offer. Fast delivery, pay strictly on arrival.
           </p>
-
-          {/* Background Decor */}
-          <span className="absolute left-[-5%] top-[-20%] text-9xl opacity-5">🛍️</span>
-          <span className="absolute right-[-2%] bottom-[-10%] text-9xl opacity-5">📦</span>
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent z-0"></div>
+          
+          {/* Integrated Search Bar */}
+          <div className="max-w-xl mx-auto">
+            <SearchBar />
+          </div>
         </div>
       </section>
 
-      {/* SEARCH BAR */}
-      <div className="w-full max-w-2xl mx-auto px-4 pb-6 md:pb-8">
-        <SearchBar />
-      </div>
+      {/* ========================================== */}
+      {/* 🧩 MAIN CONTENT AREA                       */}
+      {/* ========================================== */}
+      <div className="max-w-[1600px] mx-auto mt-8 space-y-6">
 
-      {/* STATS HEADER */}
-      <div className="px-4 mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
-            Explore {allProducts.length}+ Items
+        {/* STATS HEADER */}
+        <div className="px-4 sm:px-6 flex items-center justify-between">
+          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest">
+            Explore Directory ({allProducts.length} Items)
           </h2>
         </div>
-      </div>
 
-      {/* THE CLIENT GRID (Handles the animated Load More) */}
-      <div className="px-4 pb-16">
-        <ClientProductGrid products={allProducts} />
-      </div>
+        {/* THE CLIENT GRID (Edge-to-edge px-2 padding on mobile) */}
+        <div className="px-2 sm:px-4 pb-16">
+          <ClientProductGrid products={allProducts} />
+        </div>
 
+      </div>
     </div>
   );
 }
