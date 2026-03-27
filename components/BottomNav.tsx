@@ -10,6 +10,9 @@ export default function BottomNav() {
   const { user } = useAuth(); 
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  
+  // 🌟 NEW: Track if the mobile menu drawer is open
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const isAdmin = user?.role === "admin";
 
@@ -41,6 +44,13 @@ export default function BottomNav() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
+  // 🌟 NEW: Listen for the mobile menu opening/closing broadcast from Navbar
+  useEffect(() => {
+    const handleMenuState = (e: any) => setIsMenuOpen(e.detail);
+    window.addEventListener("mobileMenuState", handleMenuState);
+    return () => window.removeEventListener("mobileMenuState", handleMenuState);
+  }, []);
+
   // 3. Base navigation items
   const baseNavItems = [
     { label: "Home", href: "/" },
@@ -54,7 +64,8 @@ export default function BottomNav() {
     : baseNavItems;
 
   return (
-    <div className={`fixed bottom-0 left-0 w-full bg-white dark:bg-[#0a0a0a] border-t border-slate-200 dark:border-slate-800 z-50 transition-transform duration-300 xl:hidden ${isVisible ? "translate-y-0" : "translate-y-full"}`}>
+    {/* 🌟 NEW: Updated logic -> isVisible && !isMenuOpen */}
+    <div className={`fixed bottom-0 left-0 w-full bg-white dark:bg-[#0a0a0a] border-t border-slate-200 dark:border-slate-800 z-50 transition-transform duration-300 xl:hidden ${isVisible && !isMenuOpen ? "translate-y-0" : "translate-y-full"}`}>
       <div className="flex justify-around items-center h-16 px-2 pb-safe">
         {navItems.map((item) => {
           // Check if the current route matches the tab
