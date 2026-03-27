@@ -14,6 +14,19 @@ import {
   FaInstagram 
 } from "react-icons/fa6";
 
+// Tell TypeScript what our navigation objects look like
+type NavLink = {
+  name: string;
+  href: string;
+};
+
+type NavGroup = {
+  label: string;
+  bgClass: string;
+  textClass: string;
+  links: NavLink[];
+};
+
 export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const pathname = usePathname();
   const { user, loading, signIn, signOut } = useAuth();
@@ -45,8 +58,8 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const isActive = (path: string) => pathname === path;
   const closeMenu = () => setIsMobileMenuOpen(false);
 
-  // 🌟 NEW: Structured Navigation Groups for the Mobile Menu
-  const mobileNavGroups = [
+  // Strongly typed Navigation Groups
+  const mobileNavGroups: NavGroup[] = [
     {
       label: "Shop",
       bgClass: "bg-blue-50",
@@ -79,7 +92,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       bgClass: "bg-amber-50",
       textClass: "text-amber-700",
       links: [
-        { name: "ai shopping guide ✨", href: "/ai", highlight: true },
+        { name: "ai shopping guide ✨", href: "/ai" },
       ]
     }
   ];
@@ -188,16 +201,13 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             )}
           </div>
 
-          {/* 🌟 NEW: STRUCTURED GROUPED NAVIGATION */}
           <div className="flex flex-col pt-2">
             {mobileNavGroups.map((group, groupIdx) => (
               <div key={groupIdx} className="mb-2">
-                {/* Colored Group Header */}
                 <div className={`px-6 py-2 text-[10px] font-black uppercase tracking-widest ${group.bgClass} ${group.textClass}`}>
                   {group.label}
                 </div>
                 
-                {/* Lowercase Links */}
                 <div className="flex flex-col">
                   {group.links.map((link, linkIdx) => (
                     <Link 
@@ -205,8 +215,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                       href={link.href} 
                       onClick={closeMenu}
                       className={`px-6 py-3.5 border-b border-slate-50 hover:bg-slate-50 hover:pl-8 transition-all duration-200 text-[15px] font-bold lowercase tracking-wide
-                        ${link.highlight ? 'text-[#D97706]' : 'text-slate-600'} 
-                        ${isActive(link.href) ? 'text-[#D97706] bg-amber-50/30 pl-8 border-l-4 border-l-[#D97706]' : 'border-l-4 border-l-transparent'}
+                        ${isActive(link.href) ? 'text-[#D97706] bg-amber-50/30 pl-8 border-l-4 border-l-[#D97706]' : 'text-slate-600 border-l-4 border-l-transparent'}
                       `}
                     >
                       {link.name}
