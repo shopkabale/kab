@@ -36,7 +36,8 @@ export default async function Home() {
       {/* ========================================== */}
       {/* 1. SEARCH & INTENT CHIPS                   */}
       {/* ========================================== */}
-      <section className="bg-white dark:bg-[#111] px-2 sm:px-4 py-6 border-b border-slate-200 dark:border-slate-800 shadow-sm">
+      {/* Kept padding here so the search bar doesn't touch screen edges */}
+      <section className="bg-white dark:bg-[#111] px-3 sm:px-4 py-6 border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="max-w-3xl mx-auto">
           <SearchBar />
           <div className="flex gap-2 overflow-x-auto py-4 no-scrollbar items-center justify-start md:justify-center px-1">
@@ -57,11 +58,12 @@ export default async function Home() {
       {/* ========================================== */}
       {/* 🧩 MAIN CONTENT AREA                       */}
       {/* ========================================== */}
-      {/* Notice the tight px-2 padding on mobile for maximum screen width */}
-      <div className="max-w-[1600px] mx-auto mt-4 sm:mt-8 space-y-10 md:space-y-16">
+      {/* Changed max-w-[1600px] to w-full to allow sections to stretch fully edge-to-edge */}
+      <div className="w-full mt-4 sm:mt-8 space-y-10 md:space-y-16">
 
         {/* 3. TRENDING (Random on refresh) */}
-        <section className="px-2 sm:px-4">
+        {/* Changed px-2/px-4 to px-1 to minimize outer dead space on mobile */}
+        <section className="px-1 sm:px-4">
           <ProductSection 
             title="🔥 Trending Now" 
             products={trendingNow} 
@@ -69,18 +71,19 @@ export default async function Home() {
         </section>
 
         {/* 4. SELLER CTA (Image Reference Style) */}
+        {/* Kept padding here to constrain the text readability */}
         <section className="relative py-20 md:py-28 text-center bg-slate-100/50 dark:bg-[#111] border-y border-slate-200 dark:border-slate-800">
           <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 flex flex-col items-center">
             <h2 className="text-5xl md:text-7xl font-semibold mb-6 text-slate-900 dark:text-white tracking-tight">
               Sell on Kabale
             </h2>
             <p className="text-base md:text-lg text-slate-800 dark:text-slate-300 mb-10 leading-relaxed font-medium max-w-2xl">
-  Sell directly to buyers across Kabale & Kigezi. Perfect for shops, students, or clearing extra items. Post in just 60 seconds via our WhatsApp bot.
-  <br />
-  <span className="text-green-600 dark:text-green-400 font-semibold">
-    Just send "Hi" to our WhatsApp bot to get started.
-  </span>
-</p>
+              Sell directly to buyers across Kabale & Kigezi. Perfect for shops, students, or clearing extra items. Post in just 60 seconds via our WhatsApp bot.
+              <br />
+              <span className="text-green-600 dark:text-green-400 font-semibold">
+                Just send "Hi" to our WhatsApp bot to get started.
+              </span>
+            </p>
 
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center">
               <a
@@ -102,7 +105,8 @@ export default async function Home() {
         </section>
 
         {/* 5. JUST POSTED (Real Timestamp Based) */}
-        <section className="px-2 sm:px-4">
+        {/* Changed px-2/px-4 to px-1 */}
+        <section className="px-1 sm:px-4">
           <ProductSection 
             title="🆕 Just Posted" 
             products={justPostedProducts} 
@@ -110,17 +114,18 @@ export default async function Home() {
         </section>
 
         {/* 6. PERSONALIZED (Client Side Logic) */}
-        <div className="px-2 sm:px-4">
+        {/* Changed px-2/px-4 to px-1 */}
+        <div className="px-1 sm:px-4">
           <PersonalizedFeed allProducts={allProducts} />
         </div>
 
-                {/* 7. CATEGORIES (Only 3) */}
+        {/* 7. CATEGORIES (Only 3) */}
         <section className="py-12 border-t border-slate-200 dark:border-slate-800 px-4">
           <div className="max-w-3xl mx-auto">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
               Explore by Category
             </h3>
-            
+
             <div className="flex flex-col gap-3 sm:gap-4">
               {[
                 { 
@@ -145,6 +150,7 @@ export default async function Home() {
                 <Link 
                   key={cat.name} 
                   href={`/category/${cat.link}`} 
+                  // Kept rounded-2xl here as these span full width and look good bubbled
                   className="group flex items-center justify-between p-4 sm:p-5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-2xl hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-200 w-full"
                 >
                   <div className="flex items-center gap-4 sm:gap-5 overflow-hidden">
@@ -152,7 +158,7 @@ export default async function Home() {
                     <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform duration-300 border border-slate-100 dark:border-slate-800">
                       {cat.icon}
                     </div>
-                    
+
                     {/* Text Details */}
                     <div className="flex flex-col text-left overflow-hidden">
                       <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors truncate">
@@ -163,7 +169,7 @@ export default async function Home() {
                       </span>
                     </div>
                   </div>
-                  
+
                   {/* Right Arrow / Action */}
                   <div className="flex items-center gap-2 text-slate-300 dark:text-slate-600 group-hover:text-[#D97706] transition-colors pl-2 shrink-0">
                     <span className="text-xs font-bold uppercase tracking-widest hidden sm:block">View</span>
