@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { AuthProvider } from "@/components/AuthProvider";
 import WebsiteBanner from "@/components/WebsiteBanner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FloatingHelpButton from "@/components/FloatingHelpButton";
 import BottomNav from "@/components/BottomNav";
-import GlobalLoader from "@/components/GlobalLoader"; // 🔥 1. Imported the loader
+import GlobalLoader from "@/components/GlobalLoader";
 
 export default function LayoutClient({
   children,
@@ -52,8 +52,10 @@ export default function LayoutClient({
 
   return (
     <AuthProvider>
-      {/* 🔥 2. Added the global page transition loader here */}
-      <GlobalLoader />
+      {/* 🔥 The Suspense boundary fixes the useSearchParams build crash */}
+      <Suspense fallback={null}>
+        <GlobalLoader />
+      </Suspense>
 
       {/* FIXED WEBSITE BANNER */}
       {isBannerVisible && (
