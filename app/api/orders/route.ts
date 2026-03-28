@@ -1,7 +1,114 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { NotificationService } from "@/lib/notifications"; // 🔥 Triggers WhatsApp Templates
+import { sendAdminAlert } from "@/lib/brevo"; // 🔥 Triggers Admin Email
 
+// ==========================================
+// POST: Create a new order (Called by FastBuy)
+// ==========================================
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { userId, buyerName, productId, sellerId, total, contactPhone } = body;
+
+    // 1. Basic Validation
+    if (!productId || !contactPhone || !buyerName) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const productRef = adminDb.collection("products").doc(productId);
+    
+    let orderNumber = "";
+    let sellerPhone = "";
+    let productName = "";
+
+    // 2. Perform database transaction to prevent double-booking
+    await adminDb.runTransaction(async (transaction) => {
+      const productSnap = await transaction.get(productRef);
+      if (!productSnap.exists) throw new Error("Product not found");
+      
+      const product = productSnap.data()!;
+      
+      // Check if someone else just bought it
+      if (product.stock <= 0 || product.status === "sold_out") {
+        throw new Error("Sorry, this item is sold out!");
+      }
+      if (product.locked) {
+        throw new Error("Sorry, someone else just reserved this item!");
+      }
+
+      productName = product.title || product.name || "Unknown Item";
+      sellerPhone = product.sellerPhone;
+      
+      // Lock the product and reduce stock
+      transaction.update(productRef, {
+        stock: FieldValue.increment(-1),
+        locked: true,
+        updatedAt: Date.now()
+      });
+
+      // Create the official Order Document
+      orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
+      const orderRef = adminDb.collection("orders").doc(orderNumber);
+      
+      transaction.set(orderRef, {
+        id: orderNumber,
+        orderId: orderNumber,
+        orderNumber: orderNumber,
+        productId,
+        buyerId: userId || "GUEST",
+        buyerName,
+        buyerPhone: contactPhone,
+        sellerId: product.sellerId || sellerId || "SYSTEM",
+        sellerPhone: sellerPhone,
+        status: "pending",
+        total: Number(total),
+        items: [{
+          productId,
+          title: productName,
+          price: Number(total),
+          quantity: 1
+        }],
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      });
+    });
+
+    // ==========================================
+    // 3. BACKGROUND TRIGGERS (Fire & Forget)
+    // ==========================================
+    if (sellerPhone) {
+       // 🔥 Trigger Meta WhatsApp Templates (Buyer + Seller)
+       NotificationService.orderCreated(
+         sellerPhone, 
+         contactPhone, 
+         productName, 
+         buyerName, 
+         orderNumber
+       ).catch(err => console.error("WhatsApp Notification Error:", err));
+
+       // 🔥 Trigger Admin Ledger Email
+       sendAdminAlert(
+         orderNumber, 
+         productName, 
+         Number(total), 
+         contactPhone, 
+         sellerPhone
+       ).catch(err => console.error("Admin Email Error:", err));
+    }
+
+    return NextResponse.json({ success: true, orderId: orderNumber });
+
+  } catch (error: any) {
+    console.error("❌ Order creation error:", error.message);
+    return NextResponse.json({ error: error.message || "Failed to create order" }, { status: 500 });
+  }
+}
+
+// ==========================================
+// PATCH: Admin updates order status
+// ==========================================
 export async function PATCH(request: Request) {
   try {
     const { adminId, orderId, newStatus } = await request.json();
@@ -73,6 +180,9 @@ export async function PATCH(request: Request) {
   }
 }
 
+// ==========================================
+// GET: Admin fetches all orders
+// ==========================================
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
