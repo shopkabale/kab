@@ -6,18 +6,34 @@ import UrgentStories from "@/components/UrgentStories";
 import PersonalizedFeed from "@/components/PersonalizedFeed";
 import ProductSection from "@/components/ProductSection";
 
-// 🔥 FORCE DYNAMIC: Ensures random items shuffle on EVERY refresh
-export const dynamic = "force-dynamic";
+// 🔥 1. REMOVE force-dynamic.
+// 🔥 2. ADD revalidate to tell Next.js to cache this page for 1 hour.
+// This means 10,000 visitors in an hour = 1 Firebase read.
+export const revalidate = 3600; 
+
+// A stable daily shuffle based on the current date string and product ID.
+// This ensures the page stays cached properly, but tomorrow, the order will change.
+function getDailyRandomScore(id: string) {
+  const today = new Date().toISOString().split('T')[0];
+  const seedString = id + today; 
+  let hash = 0;
+  for (let i = 0; i < seedString.length; i++) {
+    hash = (hash << 5) - hash + seedString.charCodeAt(i);
+    hash |= 0; 
+  }
+  return hash;
+}
 
 export default async function Home() {
-  // 1. Fetch products (Only fetching your 3 main categories)
-  const electronics = await getProducts("electronics");
-  const agriculture = await getProducts("agriculture");
-  const students = await getProducts("student_item");
+  // 3. We use the limit you added to firestore.ts to ensure we don't fetch the whole DB.
+  // Fetch a maximum of 30 recent items per category to keep the homepage fresh but cheap.
+  const electronics = await getProducts("electronics", 30);
+  const agriculture = await getProducts("agriculture", 30);
+  const students = await getProducts("student_item", 30);
 
   const allProducts = [...electronics, ...agriculture, ...students];
 
-  // 2. Real "Just Posted" Sorting
+  // 4. "Just Posted" Sorting (Using the limited pool of recent items)
   const sortedByDate = [...allProducts].sort((a: any, b: any) => {
     const dateA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt || 0).getTime();
     const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt || 0).getTime();
@@ -26,17 +42,17 @@ export default async function Home() {
 
   const justPostedProducts = sortedByDate.slice(0, 12);
 
-  // 3. Randomizer for Trending
-  const getRandom12 = (arr: any[]) => [...arr].sort(() => 0.5 - Math.random()).slice(0, 12);
-  const trendingNow = getRandom12(allProducts);
+  // 5. Stable "Trending" Shuffle
+  // Instead of Math.random (which ruins caching), we use the daily score.
+  // This means the "Trending" items will shuffle once every day automatically.
+  const trendingNow = [...allProducts]
+    .sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id))
+    .slice(0, 12);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-24 font-sans selection:bg-[#D97706] selection:text-white">
 
-      {/* ========================================== */}
-      {/* 1. SEARCH & INTENT CHIPS                   */}
-      {/* ========================================== */}
-      {/* Kept padding here so the search bar doesn't touch screen edges */}
+      {/* 1. SEARCH & INTENT CHIPS */}
       <section className="bg-white dark:bg-[#111] px-3 sm:px-4 py-6 border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="max-w-3xl mx-auto">
           <SearchBar />
@@ -50,19 +66,13 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* ========================================== */}
-      {/* 2. URGENT STORIES                          */}
-      {/* ========================================== */}
+      {/* 2. URGENT STORIES */}
       <UrgentStories />
 
-      {/* ========================================== */}
-      {/* 🧩 MAIN CONTENT AREA                       */}
-      {/* ========================================== */}
-      {/* Changed max-w-[1600px] to w-full to allow sections to stretch fully edge-to-edge */}
+      {/* 🧩 MAIN CONTENT AREA */}
       <div className="w-full mt-4 sm:mt-8 space-y-10 md:space-y-16">
 
-        {/* 3. TRENDING (Random on refresh) */}
-        {/* Changed px-2/px-4 to px-1 to minimize outer dead space on mobile */}
+        {/* 3. TRENDING (Stable Daily Shuffle) */}
         <section className="px-1 sm:px-4">
           <ProductSection 
             title="🔥 Trending Now" 
@@ -70,8 +80,7 @@ export default async function Home() {
           />
         </section>
 
-        {/* 4. SELLER CTA (Image Reference Style) */}
-        {/* Kept padding here to constrain the text readability */}
+        {/* 4. SELLER CTA */}
         <section className="relative py-20 md:py-28 text-center bg-slate-100/50 dark:bg-[#111] border-y border-slate-200 dark:border-slate-800">
           <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 flex flex-col items-center">
             <h2 className="text-5xl md:text-7xl font-semibold mb-6 text-slate-900 dark:text-white tracking-tight">
@@ -104,8 +113,7 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 5. JUST POSTED (Real Timestamp Based) */}
-        {/* Changed px-2/px-4 to px-1 */}
+        {/* 5. JUST POSTED */}
         <section className="px-1 sm:px-4">
           <ProductSection 
             title="🆕 Just Posted" 
@@ -113,13 +121,12 @@ export default async function Home() {
           />
         </section>
 
-        {/* 6. PERSONALIZED (Client Side Logic) */}
-        {/* Changed px-2/px-4 to px-1 */}
+        {/* 6. PERSONALIZED */}
         <div className="px-1 sm:px-4">
           <PersonalizedFeed allProducts={allProducts} />
         </div>
 
-        {/* 7. CATEGORIES (Only 3) */}
+        {/* 7. CATEGORIES */}
         <section className="py-12 border-t border-slate-200 dark:border-slate-800 px-4">
           <div className="max-w-3xl mx-auto">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
@@ -128,38 +135,19 @@ export default async function Home() {
 
             <div className="flex flex-col gap-3 sm:gap-4">
               {[
-                { 
-                  name: "Student Market", 
-                  link: "student_item",
-                  desc: "Hostel items, textbooks, gadgets, and campus essentials",
-                  icon: "🎓"
-                }, 
-                { 
-                  name: "Electronics", 
-                  link: "electronics",
-                  desc: "Smartphones, laptops, TVs, audio, and accessories",
-                  icon: "💻"
-                }, 
-                { 
-                  name: "Agriculture", 
-                  link: "agriculture",
-                  desc: "Fresh produce, farm tools, livestock, and fertilizers",
-                  icon: "🌱"
-                }
+                { name: "Student Market", link: "student_item", desc: "Hostel items, textbooks, gadgets, and campus essentials", icon: "🎓" }, 
+                { name: "Electronics", link: "electronics", desc: "Smartphones, laptops, TVs, audio, and accessories", icon: "💻" }, 
+                { name: "Agriculture", link: "agriculture", desc: "Fresh produce, farm tools, livestock, and fertilizers", icon: "🌱" }
               ].map((cat) => (
                 <Link 
                   key={cat.name} 
                   href={`/category/${cat.link}`} 
-                  // Kept rounded-2xl here as these span full width and look good bubbled
                   className="group flex items-center justify-between p-4 sm:p-5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-2xl hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-200 w-full"
                 >
                   <div className="flex items-center gap-4 sm:gap-5 overflow-hidden">
-                    {/* Icon Bubble */}
                     <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform duration-300 border border-slate-100 dark:border-slate-800">
                       {cat.icon}
                     </div>
-
-                    {/* Text Details */}
                     <div className="flex flex-col text-left overflow-hidden">
                       <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors truncate">
                         {cat.name}
@@ -169,8 +157,6 @@ export default async function Home() {
                       </span>
                     </div>
                   </div>
-
-                  {/* Right Arrow / Action */}
                   <div className="flex items-center gap-2 text-slate-300 dark:text-slate-600 group-hover:text-[#D97706] transition-colors pl-2 shrink-0">
                     <span className="text-xs font-bold uppercase tracking-widest hidden sm:block">View</span>
                     <svg className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
