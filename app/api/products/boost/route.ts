@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
+import { revalidatePath } from "next/cache"; // 🔥 1. Added this import
 
 export async function POST(req: Request) {
   try {
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     }
 
     const now = Date.now();
-    
+
     // Security: Prevent double boosting
     if (data?.isBoosted && data.boostExpiresAt > now) {
       return NextResponse.json({ error: "Listing is already boosted" }, { status: 429 });
@@ -37,6 +38,11 @@ export async function POST(req: Request) {
       boostedAt: now,
       boostExpiresAt: expiresAt
     });
+
+    // 🔥 2. INSTANT CACHE BUSTER
+    // This tells Next.js to immediately delete the 1-hour frozen cache for the homepage
+    // so the newly boosted item shows up for the very next visitor (or when the seller checks).
+    revalidatePath("/");
 
     return NextResponse.json({ success: true, boostExpiresAt: expiresAt }, { status: 200 });
   } catch (error) {
