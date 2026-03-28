@@ -6,13 +6,12 @@ import UrgentStories from "@/components/UrgentStories";
 import PersonalizedFeed from "@/components/PersonalizedFeed";
 import ProductSection from "@/components/ProductSection";
 
-// 🔥 1. REMOVE force-dynamic.
-// 🔥 2. ADD revalidate to tell Next.js to cache this page for 1 hour.
-// This means 10,000 visitors in an hour = 1 Firebase read.
+// 🔥 1. ISR CACHING ENABLED
+// Next.js will cache this page for 1 hour. 
+// 10,000 visitors in an hour = 1 Firebase read.
 export const revalidate = 3600; 
 
 // A stable daily shuffle based on the current date string and product ID.
-// This ensures the page stays cached properly, but tomorrow, the order will change.
 function getDailyRandomScore(id: string) {
   const today = new Date().toISOString().split('T')[0];
   const seedString = id + today; 
@@ -25,7 +24,6 @@ function getDailyRandomScore(id: string) {
 }
 
 export default async function Home() {
-  // 3. We use the limit you added to firestore.ts to ensure we don't fetch the whole DB.
   // Fetch a maximum of 30 recent items per category to keep the homepage fresh but cheap.
   const electronics = await getProducts("electronics", 30);
   const agriculture = await getProducts("agriculture", 30);
@@ -33,7 +31,20 @@ export default async function Home() {
 
   const allProducts = [...electronics, ...agriculture, ...students];
 
-  // 4. "Just Posted" Sorting (Using the limited pool of recent items)
+  // Capture the time at the exact moment Next.js builds/revalidates this cached page
+  const now = Date.now();
+
+  // 🔥 PREMIUM TIER: Featured Items (Pinned for 7 Days)
+  const featuredProducts = allProducts
+    .filter((p: any) => p.isFeatured === true && p.featureExpiresAt && p.featureExpiresAt > now)
+    .sort((a: any, b: any) => b.featuredAt - a.featuredAt); // Newest features first
+
+  // 🚀 BOOST TIER: Boosted Items (Bumped for 24 Hours)
+  const boostedProducts = allProducts
+    .filter((p: any) => p.isBoosted === true && p.boostExpiresAt && p.boostExpiresAt > now)
+    .sort((a: any, b: any) => b.boostedAt - a.boostedAt); // Newest boosts first
+
+  // "Just Posted" Sorting
   const sortedByDate = [...allProducts].sort((a: any, b: any) => {
     const dateA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt || 0).getTime();
     const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt || 0).getTime();
@@ -42,10 +53,10 @@ export default async function Home() {
 
   const justPostedProducts = sortedByDate.slice(0, 12);
 
-  // 5. Stable "Trending" Shuffle
-  // Instead of Math.random (which ruins caching), we use the daily score.
-  // This means the "Trending" items will shuffle once every day automatically.
+  // Stable "Trending" Shuffle (Filters out items already showing in Featured/Boosted to avoid double-showing)
+  const premiumIds = new Set([...featuredProducts, ...boostedProducts].map(p => p.id));
   const trendingNow = [...allProducts]
+    .filter(p => !premiumIds.has(p.id)) // Don't repeat premium items in standard trending
     .sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id))
     .slice(0, 12);
 
@@ -72,13 +83,37 @@ export default async function Home() {
       {/* 🧩 MAIN CONTENT AREA */}
       <div className="w-full mt-4 sm:mt-8 space-y-10 md:space-y-16">
 
+        {/* ⭐ CONDITIONALLY RENDERED: FEATURED ITEMS */}
+        {featuredProducts.length > 0 && (
+          <section className="px-1 sm:px-4">
+            <div className="max-w-7xl mx-auto bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-4 rounded-2xl border border-amber-200 dark:border-amber-800 shadow-sm">
+              <ProductSection 
+                title="⭐ Featured Items" 
+                products={featuredProducts} 
+              />
+            </div>
+          </section>
+        )}
+
+        {/* 🚀 CONDITIONALLY RENDERED: BOOSTED LISTINGS */}
+        {boostedProducts.length > 0 && (
+          <section className="px-1 sm:px-4">
+            <ProductSection 
+              title="🚀 Boosted Deals" 
+              products={boostedProducts} 
+            />
+          </section>
+        )}
+
         {/* 3. TRENDING (Stable Daily Shuffle) */}
-        <section className="px-1 sm:px-4">
-          <ProductSection 
-            title="🔥 Trending Now" 
-            products={trendingNow} 
-          />
-        </section>
+        {trendingNow.length > 0 && (
+          <section className="px-1 sm:px-4">
+            <ProductSection 
+              title="🔥 Trending Now" 
+              products={trendingNow} 
+            />
+          </section>
+        )}
 
         {/* 4. SELLER CTA */}
         <section className="relative py-20 md:py-28 text-center bg-slate-100/50 dark:bg-[#111] border-y border-slate-200 dark:border-slate-800">
