@@ -6,11 +6,11 @@ import UrgentStories from "@/components/UrgentStories";
 import PersonalizedFeed from "@/components/PersonalizedFeed";
 import ProductSection from "@/components/ProductSection";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/lib/firebase/config"; // Ensure this path is correct for your client DB
+import { db } from "@/lib/firebase/config";
 
-// 🔥 LOWERED CACHE TO 60 SECONDS FOR TESTING. 
-// Change back to 3600 once you verify it works!
-export const revalidate = 60; 
+// 🔥 RESTORED PRODUCTION CACHE (1 Hour)
+// The entire page, including Boosts and Features, is now cached.
+export const revalidate = 3600; 
 
 function getDailyRandomScore(id: string) {
   const today = new Date().toISOString().split('T')[0];
@@ -26,10 +26,7 @@ function getDailyRandomScore(id: string) {
 export default async function Home() {
   const now = Date.now();
 
-  // 1. DIRECTLY FETCH PREMIUM ITEMS (Bypasses the 30-item limit)
-  // We grab anything marked true, then filter out expired ones in JS to avoid needing complex Firebase indexes
-  
-  // -- Fetch Featured --
+  // 1. FETCH PREMIUM ITEMS (Cached for 1 hour by Next.js)
   const featuredQ = query(collection(db, "products"), where("isFeatured", "==", true));
   const featuredSnap = await getDocs(featuredQ);
   const featuredProducts = featuredSnap.docs
@@ -37,7 +34,6 @@ export default async function Home() {
     .filter(p => p.featureExpiresAt && p.featureExpiresAt > now)
     .sort((a, b) => b.featuredAt - a.featuredAt);
 
-  // -- Fetch Boosted --
   const boostedQ = query(collection(db, "products"), where("isBoosted", "==", true));
   const boostedSnap = await getDocs(boostedQ);
   const boostedProducts = boostedSnap.docs
