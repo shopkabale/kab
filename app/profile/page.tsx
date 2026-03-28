@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { collection, query, orderBy, onSnapshot, doc, deleteDoc, updateDoc } from "firebase/firestore"; 
+import { collection, query, orderBy, onSnapshot, doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore"; 
 import { db } from "@/lib/firebase/config";
 import { Order } from "@/types";
 
@@ -15,17 +15,21 @@ export default function UnifiedDashboard() {
 
   const [activeTab, setActiveTab] = useState<"purchases" | "saved" | "listings" | "sales">("listings");
 
+  // Data States
   const [purchases, setPurchases] = useState<Order[]>([]);
   const [loadingPurchases, setLoadingPurchases] = useState(true);
-
   const [savedItems, setSavedItems] = useState<any[]>([]);
   const [loadingSaved, setLoadingSaved] = useState(true);
-
   const [listings, setListings] = useState<any[]>([]); 
   const [loadingListings, setLoadingListings] = useState(true);
-
   const [sales, setSales] = useState<Order[]>([]);
   const [loadingSales, setLoadingSales] = useState(true);
+
+  // Growth & Premium Feature States
+  const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified">("unverified");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [boostingId, setBoostingId] = useState<string | null>(null);
+  const [featuringId, setFeaturingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -38,7 +42,17 @@ export default function UnifiedDashboard() {
       return;
     }
 
-    // 1. Fetch Purchases
+    // Fetch User Verification Status
+    const fetchUserStatus = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, "users", user.id));
+        if (userDoc.exists() && userDoc.data().verificationStatus) {
+          setVerificationStatus(userDoc.data().verificationStatus);
+        }
+      } catch (error) { console.error("Error fetching user status", error); }
+    };
+
+    // Fetch Purchases
     const fetchPurchases = async () => {
       try {
         const res = await fetch(`/api/orders/user?userId=${user.id}&t=${Date.now()}`, { cache: 'no-store' });
@@ -50,7 +64,7 @@ export default function UnifiedDashboard() {
       finally { setLoadingPurchases(false); }
     };
 
-    // 2. Fetch Listings
+    // Fetch Listings
     const fetchListings = async () => {
       try {
         const res = await fetch(`/api/products/user?userId=${user.id}&t=${Date.now()}`, { cache: 'no-store' });
@@ -62,7 +76,7 @@ export default function UnifiedDashboard() {
       finally { setLoadingListings(false); }
     };
 
-    // 3. Fetch Sales
+    // Fetch Sales
     const fetchSales = async () => {
       try {
         const res = await fetch(`/api/orders/seller?sellerId=${user.id}&t=${Date.now()}`, { cache: 'no-store' });
@@ -74,23 +88,17 @@ export default function UnifiedDashboard() {
       finally { setLoadingSales(false); }
     };
 
-    // 4. Fetch Wishlist
+    // Fetch Wishlist (Real-time)
     const fetchWishlist = () => {
       const wishlistRef = collection(db, "users", user.id, "wishlist");
       const q = query(wishlistRef, orderBy("savedAt", "desc"));
-
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setSavedItems(items);
+      return onSnapshot(q, (snapshot) => {
+        setSavedItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
         setLoadingSaved(false);
-      }, (error) => {
-        console.error("Error fetching wishlist:", error);
-        setLoadingSaved(false);
-      });
-
-      return unsubscribe;
+      }, () => setLoadingSaved(false));
     };
 
+    fetchUserStatus();
     fetchPurchases(); 
     fetchListings();
     fetchSales();
@@ -99,10 +107,7 @@ export default function UnifiedDashboard() {
     return () => { if (unsubscribeWishlist) unsubscribeWishlist(); };
   }, [user, authLoading]);
 
-  const isSeller = listings.length > 0 || sales.length > 0;
-
-  // --- ACTIONS ---
-
+  // --- STANDARD ACTIONS ---
   const handleRemoveSaved = async (productId: string) => {
     if (!user) return;
     try { await deleteDoc(doc(db, "users", user.id, "wishlist", productId)); } 
@@ -148,12 +153,69 @@ export default function UnifiedDashboard() {
       });
       if (res.ok) {
         setSales(prev => prev.map(order => order.id === orderId ? { ...order, status: newStatus as any } : order));
-      } else {
-        alert("Failed to update status.");
-      }
+      } else { alert("Failed to update status."); }
     } catch (error) { alert("Something went wrong updating the order."); }
   };
 
+  // --- PREMIUM / GROWTH ACTIONS ---
+
+  const handleVerifyProfile = async () => {
+    if (!user) return;
+    setIsVerifying(true);
+    try {
+      const res = await fetch("/api/users/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: user.id }),
+      });
+      if (!res.ok) throw new Error("Verification failed");
+      setVerificationStatus("pending");
+      alert("🛡️ Success! Your profile is now under review by Admin.");
+    } catch (error) {
+      alert("Network error. Please try again.");
+    } finally { setIsVerifying(false); }
+  };
+
+  const handleBoostListing = async (productId: string) => {
+    if (!user) return;
+    setBoostingId(productId);
+    try {
+      const res = await fetch("/api/products/boost", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, userId: user.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      setListings(prev => prev.map(item => item.id === productId ? { ...item, isBoosted: true, boostExpiresAt: data.boostExpiresAt } : item));
+      alert("🚀 Success! Your listing is now boosted for 24 hours.");
+    } catch (error: any) {
+      alert(error.message || "Network error. Please try again.");
+    } finally { setBoostingId(null); }
+  };
+
+  const handleFeatureItem = async (productId: string) => {
+    if (!user) return;
+    setFeaturingId(productId);
+    try {
+      const res = await fetch("/api/products/feature", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, userId: user.id }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      
+      setListings(prev => prev.map(item => item.id === productId ? { ...item, isFeatured: true, featureExpiresAt: data.featureExpiresAt } : item));
+      alert("⭐ Success! Your item is now pinned to the homepage for 7 days.");
+    } catch (error: any) {
+      alert(error.message || "Network error. Please try again.");
+    } finally { setFeaturingId(null); }
+  };
+
+
+  // --- RENDER ---
   if (authLoading) return <div className="py-20 text-center text-slate-500 font-bold animate-pulse">Loading dashboard...</div>;
 
   if (!user) {
@@ -170,12 +232,12 @@ export default function UnifiedDashboard() {
   }
 
   const safeName = user.displayName || "Samuel";
-  const safePhone = (user as any).phoneNumber || user.email || "No contact info";
+  const safeEmail = user.email || "No email provided";
 
   return (
     <div className="pb-24 max-w-md mx-auto bg-slate-50 min-h-screen sm:border-x sm:border-slate-200 shadow-sm relative">
       
-      {/* 1. TOP SECTION (User Overview & Primary Actions) */}
+      {/* 1. TOP SECTION (User Overview) */}
       <div className="bg-white px-4 pt-6 pb-5 border-b border-slate-200">
         <div className="flex items-center gap-3 mb-5">
           {user.photoURL ? (
@@ -186,8 +248,15 @@ export default function UnifiedDashboard() {
             </div>
           )}
           <div className="flex-1">
-            <h1 className="text-lg font-extrabold text-slate-900">{safeName}</h1>
-            <p className="text-slate-500 text-xs font-medium">{safePhone}</p>
+            <h1 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
+              {safeName}
+              {verificationStatus === "verified" && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wide border bg-blue-50 text-blue-600 border-blue-200">
+                  ✓ Verified
+                </span>
+              )}
+            </h1>
+            <p className="text-slate-500 text-xs font-medium">{safeEmail}</p>
           </div>
           <button onClick={signOut} className="text-[10px] text-slate-400 font-bold hover:text-red-600 bg-slate-50 px-2 py-1.5 rounded-md">Log Out</button>
         </div>
@@ -235,14 +304,18 @@ export default function UnifiedDashboard() {
                listings.map((item) => {
                  const isSold = item.status === "sold";
                  const isPending = item.status === "pending";
+                 const now = Date.now();
+                 const isBoostedActive = item.isBoosted && item.boostExpiresAt > now;
+                 const isFeaturedActive = item.isFeatured && item.featureExpiresAt > now;
 
                  return (
                    <div key={item.id} className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm flex flex-col gap-3">
                      <div className="flex gap-3">
-                       <div className="w-20 h-20 bg-slate-100 rounded-lg flex-shrink-0 relative overflow-hidden">
+                       <div className="w-20 h-20 bg-slate-100 rounded-lg flex-shrink-0 relative overflow-hidden border border-slate-200">
                          {item.images?.[0] ? (
                            <Image src={item.images[0]} alt={item.name} fill className="object-cover" sizes="80px" />
                          ) : <span className="absolute inset-0 flex items-center justify-center text-[10px] text-slate-400">No Img</span>}
+                         {isFeaturedActive && <span className="absolute bottom-0 left-0 right-0 bg-amber-500 text-white text-[8px] font-black text-center py-0.5 uppercase tracking-widest">Featured</span>}
                        </div>
                        <div className="flex-1 flex flex-col justify-between py-0.5">
                          <div>
@@ -253,21 +326,40 @@ export default function UnifiedDashboard() {
                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide ${isSold ? "bg-slate-100 text-slate-600" : isPending ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"}`}>
                              {isSold ? "Sold" : isPending ? "Pending" : "Active"}
                            </span>
+                           {isBoostedActive && <span className="text-[10px] text-amber-600 font-bold">🚀 Boosted</span>}
                          </div>
                        </div>
                      </div>
 
-                     <div className="grid grid-cols-4 gap-2 border-t border-slate-50 pt-3">
-                       <Link href={`/edit/${item.publicId || item.id}`} className="text-[11px] font-bold text-center py-1.5 bg-slate-50 text-slate-600 rounded-md active:bg-slate-100">Edit</Link>
-                       <button onClick={() => handleDeleteAd(item.id)} className="text-[11px] font-bold text-center py-1.5 bg-red-50 text-red-600 rounded-md active:bg-red-100">Delete</button>
-                       <button onClick={() => handleMarkAsSold(item.id)} disabled={isSold} className="text-[11px] font-bold text-center py-1.5 bg-slate-50 text-slate-600 rounded-md active:bg-slate-100 disabled:opacity-50">Mark Sold</button>
-                       <button className="text-[11px] font-bold text-center py-1.5 bg-amber-50 text-amber-600 rounded-md active:bg-amber-100">Boost (Free)</button>
+                     {/* Action Controls */}
+                     <div className="grid grid-cols-2 gap-2 border-t border-slate-50 pt-3">
+                       <Link href={`/edit/${item.publicId || item.id}`} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md border border-slate-200 active:bg-slate-100">Edit</Link>
+                       <button onClick={() => handleDeleteAd(item.id)} className="text-[11px] font-bold text-center py-2 bg-red-50 text-red-600 rounded-md active:bg-red-100 border border-red-100">Delete</button>
+                       <button onClick={() => handleMarkAsSold(item.id)} disabled={isSold} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md active:bg-slate-100 disabled:opacity-50 border border-slate-200">Mark Sold</button>
+                       <button onClick={() => handleToggleUrgent(item)} className="text-[11px] font-bold py-2 rounded-md border border-slate-200 text-slate-600 bg-slate-50">
+                         {item.isUrgent && item.urgentExpiresAt > now ? "🔴 Cancel Urgent" : "⚡ Make Urgent"}
+                       </button>
                      </div>
-                     
-                     {/* Urgent Logic Toggle */}
-                     <button onClick={() => handleToggleUrgent(item)} className="text-[10px] font-bold py-1.5 rounded-md border border-slate-100 text-slate-500 w-full mt-1">
-                       {item.isUrgent && item.urgentExpiresAt > Date.now() ? "🔴 Remove Urgent Status" : "⚡ Mark as Urgent (24h)"}
-                     </button>
+
+                     {/* Premium Growth Controls */}
+                     {!isSold && (
+                       <div className="flex gap-2 mt-1">
+                         <button 
+                           onClick={() => handleBoostListing(item.id)} 
+                           disabled={isBoostedActive || boostingId === item.id}
+                           className={`flex-1 text-[11px] font-bold py-2 rounded-md transition-colors ${isBoostedActive ? "bg-green-50 text-green-700 opacity-80" : "bg-amber-100 text-amber-900 active:bg-amber-200"}`}
+                         >
+                           {boostingId === item.id ? "..." : isBoostedActive ? "🚀 Boost Active" : "🚀 Boost (24h)"}
+                         </button>
+                         <button 
+                           onClick={() => handleFeatureItem(item.id)} 
+                           disabled={isFeaturedActive || featuringId === item.id}
+                           className={`flex-1 text-[11px] font-bold py-2 rounded-md transition-colors ${isFeaturedActive ? "bg-green-50 text-green-700 opacity-80" : "bg-slate-900 text-white active:bg-slate-800"}`}
+                         >
+                           {featuringId === item.id ? "..." : isFeaturedActive ? "⭐ Feature Active" : "⭐ Feature (7d)"}
+                         </button>
+                       </div>
+                     )}
                    </div>
                  )
                })
@@ -311,7 +403,7 @@ export default function UnifiedDashboard() {
           </div>
         )}
 
-        {/* === TAB 3 & 4 (Purchases & Saved) Kept ultra simple for the buyer experience === */}
+        {/* === TAB 3 & 4 (Purchases & Saved) === */}
         {activeTab === "purchases" && (
            <div className="space-y-3">
              {purchases.length === 0 ? <p className="text-center text-sm text-slate-500 py-10">No purchases yet.</p> : purchases.map(order => (
@@ -327,11 +419,13 @@ export default function UnifiedDashboard() {
            <div className="grid grid-cols-2 gap-3">
              {savedItems.length === 0 ? <p className="col-span-2 text-center text-sm text-slate-500 py-10">Wishlist empty.</p> : savedItems.map(item => (
                <div key={item.id} className="bg-white p-2 rounded-xl border border-slate-200 shadow-sm">
-                  <div className="aspect-square bg-slate-100 rounded-lg mb-2 relative overflow-hidden">
-                    {item.image && <Image src={item.image} alt={item.name} fill className="object-cover" sizes="50vw" />}
-                  </div>
-                  <h3 className="text-xs font-bold line-clamp-1">{item.name}</h3>
-                  <button onClick={() => handleRemoveSaved(item.id)} className="text-[10px] text-red-500 font-bold mt-2">✕ Remove</button>
+                  <Link href={`/product/${item.publicId || item.id}`}>
+                    <div className="aspect-square bg-slate-100 rounded-lg mb-2 relative overflow-hidden border border-slate-100">
+                      {item.image && <Image src={item.image} alt={item.name} fill className="object-cover" sizes="50vw" />}
+                    </div>
+                    <h3 className="text-xs font-bold line-clamp-1 text-slate-900">{item.name}</h3>
+                  </Link>
+                  <button onClick={() => handleRemoveSaved(item.id)} className="text-[10px] text-red-500 font-bold mt-2 w-full text-left py-1">✕ Remove</button>
                </div>
              ))}
            </div>
@@ -344,22 +438,36 @@ export default function UnifiedDashboard() {
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Grow your business</p>
         <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x pb-2">
           
-          <div className="snap-start flex-shrink-0 w-[200px] bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
-            <h4 className="text-sm font-bold text-slate-900 mb-1">🚀 Boost Listing</h4>
-            <p className="text-[10px] text-slate-500 mb-2 leading-tight">Get 10x more views today. Free for a limited time!</p>
-            <button className="text-[10px] font-bold bg-amber-100 text-amber-900 px-3 py-1.5 rounded-md w-full">Boost Now</button>
+          <div className="snap-start flex-shrink-0 w-[200px] bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">🚀 Boost Listing</h4>
+              <p className="text-[10px] text-slate-500 mb-2 leading-tight">Get 10x more views today. Click "Boost" on your active ads!</p>
+            </div>
+            <button onClick={() => setActiveTab('listings')} className="text-[10px] font-bold bg-amber-100 text-amber-900 px-3 py-1.5 rounded-md w-full">Go to Listings</button>
           </div>
 
-          <div className="snap-start flex-shrink-0 w-[200px] bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
-            <h4 className="text-sm font-bold text-slate-900 mb-1">🛡️ Get Verified</h4>
-            <p className="text-[10px] text-slate-500 mb-2 leading-tight">Build trust with buyers by verifying your local business.</p>
-            <button className="text-[10px] font-bold bg-blue-100 text-blue-900 px-3 py-1.5 rounded-md w-full">Verify Profile</button>
-          </div>
+          {verificationStatus !== "verified" && (
+            <div className="snap-start flex-shrink-0 w-[200px] bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-between">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 mb-1">🛡️ Get Verified</h4>
+                <p className="text-[10px] text-slate-500 mb-2 leading-tight">Build trust with buyers by verifying your local business.</p>
+              </div>
+              <button 
+                onClick={handleVerifyProfile}
+                disabled={verificationStatus === "pending" || isVerifying}
+                className={`text-[10px] font-bold px-3 py-1.5 rounded-md w-full transition-colors ${verificationStatus === "pending" ? "bg-slate-100 text-slate-500" : "bg-blue-100 text-blue-900 active:bg-blue-200"}`}
+              >
+                {isVerifying ? "Submitting..." : verificationStatus === "pending" ? "Review Pending ⏳" : "Verify Profile"}
+              </button>
+            </div>
+          )}
 
-          <div className="snap-start flex-shrink-0 w-[200px] bg-white border border-slate-200 rounded-xl p-3 shadow-sm">
-            <h4 className="text-sm font-bold text-slate-900 mb-1">⭐ Feature Item</h4>
-            <p className="text-[10px] text-slate-500 mb-2 leading-tight">Pin your item to the top of the homepage for 7 days.</p>
-            <button className="text-[10px] font-bold bg-slate-100 text-slate-900 px-3 py-1.5 rounded-md w-full">Feature Now</button>
+          <div className="snap-start flex-shrink-0 w-[200px] bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-between">
+            <div>
+              <h4 className="text-sm font-bold text-slate-900 mb-1">⭐ Feature Item</h4>
+              <p className="text-[10px] text-slate-500 mb-2 leading-tight">Pin your item to the top of the homepage for 7 days.</p>
+            </div>
+            <button onClick={() => setActiveTab('listings')} className="text-[10px] font-bold bg-slate-900 text-white px-3 py-1.5 rounded-md w-full">Go to Listings</button>
           </div>
 
         </div>
