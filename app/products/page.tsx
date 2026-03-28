@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
-// 🔥 Swapped ClientProductGrid for ProductSection to match Home Page
 import ProductSection from "@/components/ProductSection";
 import SearchBar from "@/components/SearchBar"; 
 import { optimizeImage } from "@/lib/utils"; 
 
-// Force dynamic ensures we fetch fresh data
-export const dynamic = "force-dynamic";
+// 🔥 1. REMOVE force-dynamic
+// 🔥 2. ADD revalidate to cache this page for 1 hour (3600 seconds)
+export const revalidate = 3600;
 
 export const metadata = {
   title: "All Products | Kabale Online",
@@ -29,13 +29,15 @@ function getDailyRandomScore(id: string) {
 }
 
 export default async function AllProductsPage() {
-  // 1. Fetch ALL products 
-  const rawProducts = await getProducts();
+  // 🔥 3. PASS A LIMIT TO YOUR DATABASE QUERY
+  // undefined means "no specific category", 100 is the limit.
+  // This fetches the 100 newest items and costs a maximum of 100 reads per hour.
+  const rawProducts = await getProducts(undefined, 100);
 
-  // 2. SHUFFLE THEM (Stable Daily Randomization)
+  // 4. SHUFFLE THEM (Stable Daily Randomization on the 100 items)
   rawProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
 
-  // 3. 🔥 OPTIMIZE ALL IMAGES 🔥
+  // 5. OPTIMIZE ALL IMAGES
   const allProducts = rawProducts.map((product) => {
     if (!product.images || product.images.length === 0) return product;
 
@@ -70,14 +72,14 @@ export default async function AllProductsPage() {
       {/* ========================================== */}
       {/* 🧩 MAIN CONTENT AREA                       */}
       {/* ========================================== */}
-      <div className="max-w-[1600px] mx-auto mt-8 space-y-6">
+      {/* Updated to w-full to match the edge-to-edge design we made earlier */}
+      <div className="w-full mx-auto mt-4 sm:mt-8 space-y-6">
 
-        {/* THE HOMEPAGE PRODUCT SECTION 
-            We pass the count directly into the title to keep it clean!
-        */}
-        <div className="px-2 sm:px-4 pb-12">
+        {/* THE HOMEPAGE PRODUCT SECTION */}
+        {/* Updated px-2 to px-1 for the flush mobile design */}
+        <div className="px-1 sm:px-4 pb-12">
           <ProductSection 
-            title={`Explore Directory (${allProducts.length} Items)`} 
+            title={`Explore Directory (${allProducts.length} Latest Finds)`} 
             products={allProducts} 
           />
         </div>
