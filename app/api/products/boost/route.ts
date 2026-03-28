@@ -1,56 +1,45 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase/config";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase/admin";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { productId, userId } = body;
+    const { productId, userId } = await req.json();
 
     if (!productId || !userId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const productRef = doc(db, "products", productId);
-    const productSnap = await getDoc(productRef);
+    const productRef = adminDb.collection("products").doc(productId);
+    const docSnap = await productRef.get();
 
-    if (!productSnap.exists()) {
+    if (!docSnap.exists) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const productData = productSnap.data();
+    const data = docSnap.data();
 
-    // SECURITY CHECK 1: Make sure the user actually owns this product
-    if (productData.sellerId !== userId) {
-      return NextResponse.json({ error: "Unauthorized. You do not own this listing." }, { status: 403 });
+    // Security: Check Ownership
+    if (data?.sellerId !== userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const now = Date.now();
-
-    // SECURITY CHECK 2: Prevent spamming. Is it already actively boosted?
-    if (productData.isBoosted && productData.boostExpiresAt && productData.boostExpiresAt > now) {
-      return NextResponse.json({ error: "This listing is already boosted!" }, { status: 429 });
+    
+    // Security: Prevent double boosting
+    if (data?.isBoosted && data.boostExpiresAt > now) {
+      return NextResponse.json({ error: "Listing is already boosted" }, { status: 429 });
     }
 
-    // Set boost expiration for 24 hours from now
-    const BOOST_DURATION_MS = 24 * 60 * 60 * 1000; 
-    const expiresAt = now + BOOST_DURATION_MS;
+    const expiresAt = now + (24 * 60 * 60 * 1000);
 
-    // Update Firestore
-    await updateDoc(productRef, {
+    await productRef.update({
       isBoosted: true,
-      boostedAt: now,          // We will use this to sort the homepage feed
+      boostedAt: now,
       boostExpiresAt: expiresAt
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Listing boosted successfully!",
-      boostExpiresAt: expiresAt
-    }, { status: 200 });
-
+    return NextResponse.json({ success: true, boostExpiresAt: expiresAt }, { status: 200 });
   } catch (error) {
-    console.error("Boost Error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
