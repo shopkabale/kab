@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
+import { revalidatePath } from "next/cache"; // 🔥 1. Added this import
 
 export async function POST(req: Request) {
   try {
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
     }
 
     const now = Date.now();
-    
+
     if (data?.isFeatured && data.featureExpiresAt > now) {
       return NextResponse.json({ error: "Listing is already featured" }, { status: 429 });
     }
@@ -35,6 +36,10 @@ export async function POST(req: Request) {
       featuredAt: now,
       featureExpiresAt: expiresAt
     });
+
+    // 🔥 2. INSTANT CACHE BUSTER
+    // Clears the homepage cache so the new featured item shows up immediately
+    revalidatePath("/");
 
     return NextResponse.json({ success: true, featureExpiresAt: expiresAt }, { status: 200 });
   } catch (error) {
