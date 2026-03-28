@@ -269,7 +269,7 @@ export default function SellPage() {
           + Post Another Item
         </button>
 
-        </div>
+        
       </div>
     );
   }
