@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { getProductByPublicId, getProducts } from "@/lib/firebase/firestore";
 import ImageGallery from "@/components/ImageGallery";
 import ProductActions from "@/components/ProductActions";
+import FastBuy from "@/components/FastBuy"; // 🔥 Imported FastBuy
 import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
 import SaveProductButton from "@/components/SaveProductButton";
@@ -92,10 +93,10 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // ==========================================
   const renderDescription = (desc?: string) => {
     if (!desc) return <p className="text-slate-700 text-sm">No description provided by the seller.</p>;
-    
+
     // Split by newlines and remove empty lines
     const lines = desc.split('\n').filter(line => line.trim() !== '');
-    
+
     return (
       <ul className="space-y-2">
         {lines.map((line, idx) => {
@@ -165,6 +166,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
             {/* HIGH PRIORITY ACTIONS (Chat & Buy Now) */}
             <div className="mb-8 border-b border-slate-100 pb-8">
+              {/* 🔥 Placed FastBuy component right above the chat with seller */}
+              <FastBuy product={{...product, images: optimizedImages}} />
+              
               <ProductActions product={{...product, images: optimizedImages}}>
                  {/* Inject Make Offer and Save into the "More actions" drawer */}
                  <div className="flex flex-col gap-3 mt-2 w-full">
