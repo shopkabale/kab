@@ -50,8 +50,9 @@ function parseProduct(doc: FirebaseFirestore.DocumentSnapshot): Product {
 
 // --- FETCH FUNCTIONS ---
 
-// FIXED: Added limitCount so we aren't hardcoded to 20 anymore!
-export async function getProducts(category?: string, limitCount?: number): Promise<Product[]> {
+// 🔥 UPGRADE: limitCount now has a DEFAULT of 50. 
+// This is your ultimate safety net against Firebase quota exhaustion.
+export async function getProducts(category?: string, limitCount: number = 50): Promise<Product[]> {
   try {
     let query: FirebaseFirestore.Query = adminDb.collection("products");
 
@@ -59,10 +60,12 @@ export async function getProducts(category?: string, limitCount?: number): Promi
       query = query.where("category", "==", category);
     }
 
+    // Sort by newest first
     query = query.orderBy("createdAt", "desc");
 
-    // Only apply a limit if the frontend specifically asks for one
-    if (limitCount) {
+    // This will now ALWAYS apply. If you ask for 100, it gives 100. 
+    // If you forget to ask, it defaults to 50 instead of infinity.
+    if (limitCount > 0) {
       query = query.limit(limitCount);
     }
 
@@ -79,6 +82,7 @@ export async function getProducts(category?: string, limitCount?: number): Promi
   }
 }
 
+// 🔥 Already perfectly optimized (limits to 1 automatically)
 export async function getProductByPublicId(publicIdOrId: string): Promise<Product | null> {
   try {
     const snapshot = await adminDb
@@ -91,6 +95,7 @@ export async function getProductByPublicId(publicIdOrId: string): Promise<Produc
       return parseProduct(snapshot.docs[0]);
     }
 
+    // Fallback to fetching directly by document ID
     const docRef = await adminDb.collection("products").doc(publicIdOrId).get();
 
     if (docRef.exists) {
