@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { collection, query, orderBy, onSnapshot, doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore"; 
+import { collection, query, orderBy, onSnapshot, doc, deleteDoc, updateDoc, getDoc, getDocs, limit, where, startAfter } from "firebase/firestore"; 
 import { db } from "@/lib/firebase/config";
 import { Order } from "@/types";
 
@@ -13,101 +13,213 @@ export default function UnifiedDashboard() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
   const router = useRouter(); 
 
-  const [activeTab, setActiveTab] = useState<"purchases" | "saved" | "listings" | "sales">("listings");
+  const [activeTab, setActiveTab] = useState<"listings" | "sales" | "purchases" | "saved">("listings");
 
-  // Data States
+  // --- STRONG CACHE & PAGINATION STATES ---
+  const ITEMS_PER_PAGE = 5;
+
+  // 1. Listings (Seller)
+  const [listings, setListings] = useState<any[]>([]); 
+  const [loadingListings, setLoadingListings] = useState(false);
+  const [hasMoreListings, setHasMoreListings] = useState(true);
+
+  // 2. Sales (Seller Orders)
+  const [sales, setSales] = useState<Order[]>([]);
+  const [loadingSales, setLoadingSales] = useState(false);
+  const [hasMoreSales, setHasMoreSales] = useState(true);
+
+  // 3. Purchases (Buyer)
   const [purchases, setPurchases] = useState<Order[]>([]);
-  const [loadingPurchases, setLoadingPurchases] = useState(true);
+  const [loadingPurchases, setLoadingPurchases] = useState(false);
+  const [hasMorePurchases, setHasMorePurchases] = useState(true);
+
+  // 4. Saved Items (Real-time Wishlist)
   const [savedItems, setSavedItems] = useState<any[]>([]);
   const [loadingSaved, setLoadingSaved] = useState(true);
-  const [listings, setListings] = useState<any[]>([]); 
-  const [loadingListings, setLoadingListings] = useState(true);
-  const [sales, setSales] = useState<Order[]>([]);
-  const [loadingSales, setLoadingSales] = useState(true);
 
-  // Growth & Premium Feature States
+  // 5. User Profile & Premium Actions
   const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified">("unverified");
   const [isVerifying, setIsVerifying] = useState(false);
   const [boostingId, setBoostingId] = useState<string | null>(null);
   const [featuringId, setFeaturingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!user) {
-      if (!authLoading) {
-        setLoadingPurchases(false); 
-        setLoadingListings(false);
-        setLoadingSaved(false);
-        setLoadingSales(false);
+  // --- 24-HOUR CACHING SYSTEM ---
+  const saveToCache = useCallback((type: 'listings' | 'sales' | 'purchases', data: any[]) => {
+    if (!user) return;
+    const cacheKey = `kabale_${type}_${user.id}`;
+    localStorage.setItem(cacheKey, JSON.stringify({
+      timestamp: Date.now(),
+      data: data
+    }));
+  }, [user]);
+
+  const loadFromCache = useCallback((type: 'listings' | 'sales' | 'purchases') => {
+    if (!user) return null;
+    const cacheKey = `kabale_${type}_${user.id}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      // Valid if less than 24 hours old (24 * 60 * 60 * 1000)
+      if (Date.now() - parsed.timestamp < 86400000) {
+        return parsed.data;
       }
-      return;
+    }
+    return null;
+  }, [user]);
+
+
+  // --- FETCHING LOGIC ---
+  const fetchListings = useCallback(async (isLoadMore = false, forceRefresh = false) => {
+    if (!user || (isLoadMore && !hasMoreListings)) return;
+    
+    if (!isLoadMore && !forceRefresh) {
+      const cachedData = loadFromCache('listings');
+      if (cachedData && cachedData.length > 0) {
+        setListings(cachedData);
+        setHasMoreListings(cachedData.length >= ITEMS_PER_PAGE);
+        return;
+      }
     }
 
+    setLoadingListings(true);
+    try {
+      let q = query(
+        collection(db, "products"),
+        where("sellerId", "==", user.id),
+        orderBy("createdAt", "desc"),
+        limit(ITEMS_PER_PAGE)
+      );
+
+      if (isLoadMore && listings.length > 0) {
+        const lastItem = listings[listings.length - 1];
+        q = query(q, startAfter(lastItem.createdAt));
+      }
+
+      const snapshot = await getDocs(q);
+      const newDocs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      setHasMoreListings(snapshot.docs.length === ITEMS_PER_PAGE);
+      
+      const updatedData = isLoadMore ? [...listings, ...newDocs] : newDocs;
+      setListings(updatedData);
+      saveToCache('listings', updatedData);
+    } catch (error) { console.error("Error fetching listings", error); }
+    setLoadingListings(false);
+  }, [user, hasMoreListings, listings, loadFromCache, saveToCache]);
+
+  const fetchSales = useCallback(async (isLoadMore = false, forceRefresh = false) => {
+    if (!user || (isLoadMore && !hasMoreSales)) return;
+
+    if (!isLoadMore && !forceRefresh) {
+      const cachedData = loadFromCache('sales');
+      if (cachedData && cachedData.length > 0) {
+        setSales(cachedData);
+        setHasMoreSales(cachedData.length >= ITEMS_PER_PAGE);
+        return;
+      }
+    }
+
+    setLoadingSales(true);
+    try {
+      let q = query(
+        collection(db, "orders"),
+        where("sellerId", "==", user.id),
+        orderBy("createdAt", "desc"),
+        limit(ITEMS_PER_PAGE)
+      );
+
+      if (isLoadMore && sales.length > 0) {
+        const lastItem = sales[sales.length - 1];
+        q = query(q, startAfter(lastItem.createdAt));
+      }
+
+      const snapshot = await getDocs(q);
+      const newDocs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Order[];
+
+      setHasMoreSales(snapshot.docs.length === ITEMS_PER_PAGE);
+      
+      const updatedData = isLoadMore ? [...sales, ...newDocs] : newDocs;
+      setSales(updatedData);
+      saveToCache('sales', updatedData);
+    } catch (error) { console.error("Error fetching sales", error); }
+    setLoadingSales(false);
+  }, [user, hasMoreSales, sales, loadFromCache, saveToCache]);
+
+  const fetchPurchases = useCallback(async (isLoadMore = false, forceRefresh = false) => {
+    if (!user || (isLoadMore && !hasMorePurchases)) return;
+
+    if (!isLoadMore && !forceRefresh) {
+      const cachedData = loadFromCache('purchases');
+      if (cachedData && cachedData.length > 0) {
+        setPurchases(cachedData);
+        setHasMorePurchases(cachedData.length >= ITEMS_PER_PAGE);
+        return;
+      }
+    }
+
+    setLoadingPurchases(true);
+    try {
+      let q = query(
+        collection(db, "orders"),
+        where("userId", "==", user.id),
+        orderBy("createdAt", "desc"),
+        limit(ITEMS_PER_PAGE)
+      );
+
+      if (isLoadMore && purchases.length > 0) {
+        const lastItem = purchases[purchases.length - 1];
+        q = query(q, startAfter(lastItem.createdAt));
+      }
+
+      const snapshot = await getDocs(q);
+      const newDocs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Order[];
+
+      setHasMorePurchases(snapshot.docs.length === ITEMS_PER_PAGE);
+      
+      const updatedData = isLoadMore ? [...purchases, ...newDocs] : newDocs;
+      setPurchases(updatedData);
+      saveToCache('purchases', updatedData);
+    } catch (error) { console.error("Error fetching purchases", error); }
+    setLoadingPurchases(false);
+  }, [user, hasMorePurchases, purchases, loadFromCache, saveToCache]);
+
+  // INITIAL MOUNT CACHE CHECK & FETCH
+  useEffect(() => {
+    if (!user || authLoading) return;
+
+    // Check URL for ?refresh=true (cache buster for when redirecting back from /sell)
+    const urlParams = new URLSearchParams(window.location.search);
+    const shouldForceRefresh = urlParams.get('refresh') === 'true';
+
     // Fetch User Verification Status
-    const fetchUserStatus = async () => {
-      try {
-        const userDoc = await getDoc(doc(db, "users", user.id));
-        if (userDoc.exists() && userDoc.data().verificationStatus) {
-          setVerificationStatus(userDoc.data().verificationStatus);
-        }
-      } catch (error) { console.error("Error fetching user status", error); }
-    };
+    getDoc(doc(db, "users", user.id)).then(userDoc => {
+      if (userDoc.exists() && userDoc.data().verificationStatus) {
+        setVerificationStatus(userDoc.data().verificationStatus);
+      }
+    });
 
-    // Fetch Purchases
-    const fetchPurchases = async () => {
-      try {
-        const res = await fetch(`/api/orders/user?userId=${user.id}&t=${Date.now()}`, { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          setPurchases(data.orders || []);
-        }
-      } catch (error) { console.error(error); } 
-      finally { setLoadingPurchases(false); }
-    };
+    fetchListings(false, shouldForceRefresh);
+    fetchSales(false, shouldForceRefresh);
+    fetchPurchases(false, shouldForceRefresh);
 
-    // Fetch Listings
-    const fetchListings = async () => {
-      try {
-        const res = await fetch(`/api/products/user?userId=${user.id}&t=${Date.now()}`, { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          setListings(data.products || []);
-        }
-      } catch (error) { console.error(error); } 
-      finally { setLoadingListings(false); }
-    };
+    // Wishlist (Real-time but strictly limited to 10 to save reads)
+    const wishlistRef = collection(db, "users", user.id, "wishlist");
+    const q = query(wishlistRef, orderBy("savedAt", "desc"), limit(10));
+    const unsubscribeWishlist = onSnapshot(q, (snapshot) => {
+      setSavedItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      setLoadingSaved(false);
+    });
 
-    // Fetch Sales
-    const fetchSales = async () => {
-      try {
-        const res = await fetch(`/api/orders/seller?sellerId=${user.id}&t=${Date.now()}`, { cache: 'no-store' });
-        if (res.ok) {
-          const data = await res.json();
-          setSales(data.orders || []);
-        }
-      } catch (error) { console.error(error); } 
-      finally { setLoadingSales(false); }
-    };
+    // Clean up URL to remove ?refresh=true without reloading page
+    if (shouldForceRefresh) {
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
 
-    // Fetch Wishlist (Real-time)
-    const fetchWishlist = () => {
-      const wishlistRef = collection(db, "users", user.id, "wishlist");
-      const q = query(wishlistRef, orderBy("savedAt", "desc"));
-      return onSnapshot(q, (snapshot) => {
-        setSavedItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-        setLoadingSaved(false);
-      }, () => setLoadingSaved(false));
-    };
+    return () => unsubscribeWishlist();
+  }, [user, authLoading, fetchListings, fetchSales, fetchPurchases]);
 
-    fetchUserStatus();
-    fetchPurchases(); 
-    fetchListings();
-    fetchSales();
-    const unsubscribeWishlist = fetchWishlist();
 
-    return () => { if (unsubscribeWishlist) unsubscribeWishlist(); };
-  }, [user, authLoading]);
-
-  // --- STANDARD ACTIONS ---
+  // --- STANDARD ACTIONS (Invalidates Cache to keep data fresh) ---
   const handleRemoveSaved = async (productId: string) => {
     if (!user) return;
     try { await deleteDoc(doc(db, "users", user.id, "wishlist", productId)); } 
@@ -118,12 +230,13 @@ export default function UnifiedDashboard() {
     if (!user) return;
     const now = Date.now();
     const isCurrentlyUrgent = product.isUrgent === true && product.urgentExpiresAt && product.urgentExpiresAt > now;
-    const newIsUrgent = !isCurrentlyUrgent;
-    const newExpiresAt = newIsUrgent ? now + (24 * 60 * 60 * 1000) : null; 
+    const newExpiresAt = !isCurrentlyUrgent ? now + (24 * 60 * 60 * 1000) : null; 
 
     try {
-      await updateDoc(doc(db, "products", product.id), { isUrgent: newIsUrgent, urgentExpiresAt: newExpiresAt });
-      setListings(prev => prev.map(item => item.id === product.id ? { ...item, isUrgent: newIsUrgent, urgentExpiresAt: newExpiresAt } : item));
+      await updateDoc(doc(db, "products", product.id), { isUrgent: !isCurrentlyUrgent, urgentExpiresAt: newExpiresAt });
+      const updatedListings = listings.map(item => item.id === product.id ? { ...item, isUrgent: !isCurrentlyUrgent, urgentExpiresAt: newExpiresAt } : item);
+      setListings(updatedListings);
+      saveToCache('listings', updatedListings); // Update Cache
     } catch (error) { alert("Failed to update urgency status."); }
   };
 
@@ -132,7 +245,9 @@ export default function UnifiedDashboard() {
     if (!window.confirm("Are you sure you want to delete this ad? This action cannot be undone.")) return;
     try {
       await deleteDoc(doc(db, "products", productId));
-      setListings(prev => prev.filter(item => item.id !== productId));
+      const updatedListings = listings.filter(item => item.id !== productId);
+      setListings(updatedListings);
+      saveToCache('listings', updatedListings); // Update Cache
     } catch (error) { alert("Failed to delete ad."); }
   };
 
@@ -140,25 +255,29 @@ export default function UnifiedDashboard() {
     if (!user) return;
     try {
       await updateDoc(doc(db, "products", productId), { status: "sold" });
-      setListings(prev => prev.map(item => item.id === productId ? { ...item, status: "sold" } : item));
+      const updatedListings = listings.map(item => item.id === productId ? { ...item, status: "sold" } : item);
+      setListings(updatedListings);
+      saveToCache('listings', updatedListings); // Update Cache
     } catch (error) { alert("Failed to mark as sold."); }
   };
 
   const handleSaleStatusChange = async (orderId: string, newStatus: string) => {
+    if (!user) return;
     try {
       const res = await fetch("/api/orders/seller", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sellerId: user?.id, orderId, newStatus })
+        body: JSON.stringify({ sellerId: user.id, orderId, newStatus })
       });
       if (res.ok) {
-        setSales(prev => prev.map(order => order.id === orderId ? { ...order, status: newStatus as any } : order));
+        const updatedSales = sales.map(order => order.id === orderId ? { ...order, status: newStatus as any } : order);
+        setSales(updatedSales);
+        saveToCache('sales', updatedSales); // Update Cache
       } else { alert("Failed to update status."); }
     } catch (error) { alert("Something went wrong updating the order."); }
   };
 
-  // --- PREMIUM / GROWTH ACTIONS ---
-
+  // --- PREMIUM / GROWTH ACTIONS (Invalidates Cache to keep data fresh) ---
   const handleVerifyProfile = async () => {
     if (!user) return;
     setIsVerifying(true);
@@ -188,7 +307,9 @@ export default function UnifiedDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      setListings(prev => prev.map(item => item.id === productId ? { ...item, isBoosted: true, boostExpiresAt: data.boostExpiresAt } : item));
+      const updatedListings = listings.map(item => item.id === productId ? { ...item, isBoosted: true, boostExpiresAt: data.boostExpiresAt } : item);
+      setListings(updatedListings);
+      saveToCache('listings', updatedListings); // Update Cache
       alert("🚀 Success! Your listing is now boosted for 24 hours.");
     } catch (error: any) {
       alert(error.message || "Network error. Please try again.");
@@ -207,13 +328,14 @@ export default function UnifiedDashboard() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       
-      setListings(prev => prev.map(item => item.id === productId ? { ...item, isFeatured: true, featureExpiresAt: data.featureExpiresAt } : item));
+      const updatedListings = listings.map(item => item.id === productId ? { ...item, isFeatured: true, featureExpiresAt: data.featureExpiresAt } : item);
+      setListings(updatedListings);
+      saveToCache('listings', updatedListings); // Update Cache
       alert("⭐ Success! Your item is now pinned to the homepage for 7 days.");
     } catch (error: any) {
       alert(error.message || "Network error. Please try again.");
     } finally { setFeaturingId(null); }
   };
-
 
   // --- RENDER ---
   if (authLoading) return <div className="py-20 text-center text-slate-500 font-bold animate-pulse">Loading dashboard...</div>;
@@ -274,7 +396,7 @@ export default function UnifiedDashboard() {
       {/* 2. MAIN CONTENT AREA (Tabbed Interface) */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-10 flex overflow-x-auto no-scrollbar">
         <button onClick={() => setActiveTab("listings")} className={`flex-1 min-w-[100px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "listings" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>
-          My Listings
+          My Ads
         </button>
         <button onClick={() => setActiveTab("sales")} className={`flex-1 min-w-[100px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "sales" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>
           Orders
@@ -289,80 +411,96 @@ export default function UnifiedDashboard() {
 
       <div className="p-4">
         
-        {/* === TAB 1: MY LISTINGS (Seller Focus) === */}
+        {/* === TAB 1: MY LISTINGS === */}
         {activeTab === "listings" && (
           <div className="space-y-4">
-             {loadingListings ? (
+             {loadingListings && listings.length === 0 ? (
                <div className="text-center py-10 text-slate-400 text-sm">Loading listings...</div>
              ) : listings.length === 0 ? (
                <div className="bg-white rounded-xl border border-slate-200 p-8 text-center shadow-sm">
                  <span className="text-4xl block mb-3">🛍️</span>
                  <p className="text-slate-800 font-bold mb-1">Start selling in under 60 seconds</p>
-                 <Link href="/sell" className="inline-block mt-3 bg-[#D97706] text-white px-6 py-2 rounded-lg font-bold text-sm active:scale-95 shadow-sm">+ Sell Item</Link>
                </div>
              ) : (
-               listings.map((item) => {
-                 const isSold = item.status === "sold";
-                 const isPending = item.status === "pending";
-                 const now = Date.now();
-                 const isBoostedActive = item.isBoosted && item.boostExpiresAt > now;
-                 const isFeaturedActive = item.isFeatured && item.featureExpiresAt > now;
+               <>
+                 <div className="flex justify-between items-center px-1 mb-2">
+                   <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Active Inventory</h2>
+                   <button onClick={() => fetchListings(false, true)} className="text-[10px] font-bold text-[#D97706]">↻ Refresh</button>
+                 </div>
+                 {listings.map((item) => {
+                   const isSold = item.status === "sold";
+                   const isPending = item.status === "pending";
+                   const now = Date.now();
+                   const isBoostedActive = item.isBoosted && item.boostExpiresAt > now;
+                   const isFeaturedActive = item.isFeatured && item.featureExpiresAt > now;
 
-                 return (
-                   <div key={item.id} className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm flex flex-col gap-3">
-                     <div className="flex gap-3">
-                       <div className="w-20 h-20 bg-slate-100 rounded-lg flex-shrink-0 relative overflow-hidden border border-slate-200">
-                         {item.images?.[0] ? (
-                           <Image src={item.images[0]} alt={item.name} fill className="object-cover" sizes="80px" />
-                         ) : <span className="absolute inset-0 flex items-center justify-center text-[10px] text-slate-400">No Img</span>}
-                         {isFeaturedActive && <span className="absolute bottom-0 left-0 right-0 bg-amber-500 text-white text-[8px] font-black text-center py-0.5 uppercase tracking-widest">Featured</span>}
-                       </div>
-                       <div className="flex-1 flex flex-col justify-between py-0.5">
-                         <div>
-                           <h3 className="text-sm font-bold text-slate-900 leading-tight line-clamp-1">{item.name}</h3>
-                           <p className="text-sm font-extrabold text-slate-800 mt-1">UGX {(Number(item.price) || 0).toLocaleString()}</p>
+                   return (
+                     <div key={item.id} className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm flex flex-col gap-3">
+                       <div className="flex gap-3">
+                         <div className="w-20 h-20 bg-slate-100 rounded-lg flex-shrink-0 relative overflow-hidden border border-slate-200">
+                           {item.images?.[0] ? (
+                             <Image src={item.images[0]} alt={item.name} fill className="object-cover" sizes="80px" />
+                           ) : <span className="absolute inset-0 flex items-center justify-center text-[10px] text-slate-400">No Img</span>}
+                           {isFeaturedActive && <span className="absolute bottom-0 left-0 right-0 bg-amber-500 text-white text-[8px] font-black text-center py-0.5 uppercase tracking-widest">Featured</span>}
                          </div>
-                         <div className="flex items-center gap-2 mt-2">
-                           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide ${isSold ? "bg-slate-100 text-slate-600" : isPending ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"}`}>
-                             {isSold ? "Sold" : isPending ? "Pending" : "Active"}
-                           </span>
-                           {isBoostedActive && <span className="text-[10px] text-amber-600 font-bold">🚀 Boosted</span>}
+                         <div className="flex-1 flex flex-col justify-between py-0.5">
+                           <div>
+                             <h3 className="text-sm font-bold text-slate-900 leading-tight line-clamp-1">{item.name}</h3>
+                             <p className="text-sm font-extrabold text-slate-800 mt-1">UGX {(Number(item.price) || 0).toLocaleString()}</p>
+                           </div>
+                           <div className="flex items-center gap-2 mt-2">
+                             <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wide ${isSold ? "bg-slate-100 text-slate-600" : isPending ? "bg-yellow-100 text-yellow-700" : "bg-green-100 text-green-700"}`}>
+                               {isSold ? "Sold" : isPending ? "Pending" : "Active"}
+                             </span>
+                             {isBoostedActive && <span className="text-[10px] text-amber-600 font-bold">🚀 Boosted</span>}
+                           </div>
                          </div>
                        </div>
-                     </div>
 
-                     {/* Action Controls */}
-                     <div className="grid grid-cols-2 gap-2 border-t border-slate-50 pt-3">
-                       <Link href={`/edit/${item.publicId || item.id}`} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md border border-slate-200 active:bg-slate-100">Edit</Link>
-                       <button onClick={() => handleDeleteAd(item.id)} className="text-[11px] font-bold text-center py-2 bg-red-50 text-red-600 rounded-md active:bg-red-100 border border-red-100">Delete</button>
-                       <button onClick={() => handleMarkAsSold(item.id)} disabled={isSold} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md active:bg-slate-100 disabled:opacity-50 border border-slate-200">Mark Sold</button>
-                       <button onClick={() => handleToggleUrgent(item)} className="text-[11px] font-bold py-2 rounded-md border border-slate-200 text-slate-600 bg-slate-50">
-                         {item.isUrgent && item.urgentExpiresAt > now ? "🔴 Cancel Urgent" : "⚡ Make Urgent"}
-                       </button>
-                     </div>
-
-                     {/* Premium Growth Controls */}
-                     {!isSold && (
-                       <div className="flex gap-2 mt-1">
-                         <button 
-                           onClick={() => handleBoostListing(item.id)} 
-                           disabled={isBoostedActive || boostingId === item.id}
-                           className={`flex-1 text-[11px] font-bold py-2 rounded-md transition-colors ${isBoostedActive ? "bg-green-50 text-green-700 opacity-80" : "bg-amber-100 text-amber-900 active:bg-amber-200"}`}
-                         >
-                           {boostingId === item.id ? "..." : isBoostedActive ? "🚀 Boost Active" : "🚀 Boost (24h)"}
-                         </button>
-                         <button 
-                           onClick={() => handleFeatureItem(item.id)} 
-                           disabled={isFeaturedActive || featuringId === item.id}
-                           className={`flex-1 text-[11px] font-bold py-2 rounded-md transition-colors ${isFeaturedActive ? "bg-green-50 text-green-700 opacity-80" : "bg-slate-900 text-white active:bg-slate-800"}`}
-                         >
-                           {featuringId === item.id ? "..." : isFeaturedActive ? "⭐ Feature Active" : "⭐ Feature (7d)"}
+                       {/* Action Controls */}
+                       <div className="grid grid-cols-2 gap-2 border-t border-slate-50 pt-3">
+                         <Link href={`/edit/${item.publicId || item.id}`} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md border border-slate-200 active:bg-slate-100">Edit</Link>
+                         <button onClick={() => handleDeleteAd(item.id)} className="text-[11px] font-bold text-center py-2 bg-red-50 text-red-600 rounded-md active:bg-red-100 border border-red-100">Delete</button>
+                         <button onClick={() => handleMarkAsSold(item.id)} disabled={isSold} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md active:bg-slate-100 disabled:opacity-50 border border-slate-200">Mark Sold</button>
+                         <button onClick={() => handleToggleUrgent(item)} className="text-[11px] font-bold py-2 rounded-md border border-slate-200 text-slate-600 bg-slate-50">
+                           {item.isUrgent && item.urgentExpiresAt > now ? "🔴 Cancel Urgent" : "⚡ Make Urgent"}
                          </button>
                        </div>
-                     )}
-                   </div>
-                 )
-               })
+
+                       {/* Premium Growth Controls */}
+                       {!isSold && (
+                         <div className="flex gap-2 mt-1">
+                           <button 
+                             onClick={() => handleBoostListing(item.id)} 
+                             disabled={isBoostedActive || boostingId === item.id}
+                             className={`flex-1 text-[11px] font-bold py-2 rounded-md transition-colors ${isBoostedActive ? "bg-green-50 text-green-700 opacity-80" : "bg-amber-100 text-amber-900 active:bg-amber-200"}`}
+                           >
+                             {boostingId === item.id ? "..." : isBoostedActive ? "🚀 Boost Active" : "🚀 Boost (24h)"}
+                           </button>
+                           <button 
+                             onClick={() => handleFeatureItem(item.id)} 
+                             disabled={isFeaturedActive || featuringId === item.id}
+                             className={`flex-1 text-[11px] font-bold py-2 rounded-md transition-colors ${isFeaturedActive ? "bg-green-50 text-green-700 opacity-80" : "bg-slate-900 text-white active:bg-slate-800"}`}
+                           >
+                             {featuringId === item.id ? "..." : isFeaturedActive ? "⭐ Feature Active" : "⭐ Feature (7d)"}
+                           </button>
+                         </div>
+                       )}
+                     </div>
+                   )
+                 })}
+                 
+                 {/* Pagination Button */}
+                 {hasMoreListings && (
+                   <button 
+                     onClick={() => fetchListings(true)} 
+                     disabled={loadingListings}
+                     className="w-full py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors shadow-sm"
+                   >
+                     {loadingListings ? "Loading..." : "Load More Ads"}
+                   </button>
+                 )}
+               </>
              )}
           </div>
         )}
@@ -370,7 +508,7 @@ export default function UnifiedDashboard() {
         {/* === TAB 2: ORDERS (Sales) === */}
         {activeTab === "sales" && (
           <div className="space-y-3">
-            {loadingSales ? (
+            {loadingSales && sales.length === 0 ? (
               <div className="text-center py-10 text-slate-400 text-sm">Loading orders...</div>
             ) : sales.length === 0 ? (
               <div className="bg-white rounded-xl border border-slate-200 p-8 text-center shadow-sm">
@@ -378,27 +516,44 @@ export default function UnifiedDashboard() {
                 <p className="text-slate-800 font-bold mb-1">Your orders will appear here</p>
               </div>
             ) : (
-              sales.map((order) => {
-                const status = order.status || "pending";
-                return (
-                  <div key={order.id} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <p className="text-xs text-slate-500 font-medium mb-0.5">Buyer: <span className="font-bold text-slate-800">{order.buyerName || order.contactPhone || "Guest"}</span></p>
-                        <p className="text-sm font-bold text-slate-900">{order.items?.[0]?.productId || "Product Name"}</p>
+              <>
+                <div className="flex justify-between items-center px-1 mb-2">
+                   <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Active Orders</h2>
+                   <button onClick={() => fetchSales(false, true)} className="text-[10px] font-bold text-[#D97706]">↻ Refresh</button>
+                </div>
+                {sales.map((order) => {
+                  const status = order.status || "pending";
+                  return (
+                    <div key={order.id} className="bg-white rounded-xl border border-slate-200 p-4 shadow-sm">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <p className="text-xs text-slate-500 font-medium mb-0.5">Buyer: <span className="font-bold text-slate-800">{order.buyerName || order.contactPhone || "Guest"}</span></p>
+                          <p className="text-sm font-bold text-slate-900">{order.items?.[0]?.productId || "Product Name"}</p>
+                        </div>
+                        <span className={`text-[9px] font-bold px-2 py-1 rounded-sm uppercase tracking-wide ${status === 'delivered' ? 'bg-green-100 text-green-700' : status === 'confirmed' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                          {status === 'pending' ? 'Awaiting Payment' : status === 'confirmed' ? 'Paid' : status === 'delivered' ? 'Completed' : status}
+                        </span>
                       </div>
-                      <span className={`text-[9px] font-bold px-2 py-1 rounded-sm uppercase tracking-wide ${status === 'delivered' ? 'bg-green-100 text-green-700' : status === 'confirmed' ? 'bg-blue-100 text-blue-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                        {status === 'pending' ? 'Awaiting Payment' : status === 'confirmed' ? 'Paid' : status === 'delivered' ? 'Completed' : status}
-                      </span>
+                      
+                      <div className="flex gap-2 mt-4">
+                        <button onClick={() => handleSaleStatusChange(order.id, 'confirmed')} disabled={status !== 'pending'} className="flex-1 text-[11px] font-bold py-2 border border-slate-200 text-slate-700 rounded-lg active:bg-slate-50 disabled:opacity-50">Mark as Paid</button>
+                        <button onClick={() => handleSaleStatusChange(order.id, 'delivered')} disabled={status === 'delivered'} className="flex-1 text-[11px] font-bold py-2 bg-slate-900 text-white rounded-lg active:bg-slate-800 disabled:opacity-50">Complete</button>
+                      </div>
                     </div>
-                    
-                    <div className="flex gap-2 mt-4">
-                      <button onClick={() => handleSaleStatusChange(order.id, 'confirmed')} disabled={status !== 'pending'} className="flex-1 text-[11px] font-bold py-2 border border-slate-200 text-slate-700 rounded-lg active:bg-slate-50 disabled:opacity-50">Mark as Paid</button>
-                      <button onClick={() => handleSaleStatusChange(order.id, 'delivered')} disabled={status === 'delivered'} className="flex-1 text-[11px] font-bold py-2 bg-slate-900 text-white rounded-lg active:bg-slate-800 disabled:opacity-50">Complete</button>
-                    </div>
-                  </div>
-                )
-              })
+                  )
+                })}
+
+                {/* Pagination Button */}
+                {hasMoreSales && (
+                   <button 
+                     onClick={() => fetchSales(true)} 
+                     disabled={loadingSales}
+                     className="w-full py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors shadow-sm"
+                   >
+                     {loadingSales ? "Loading..." : "Load Older Orders"}
+                   </button>
+                 )}
+              </>
             )}
           </div>
         )}
@@ -406,12 +561,25 @@ export default function UnifiedDashboard() {
         {/* === TAB 3 & 4 (Purchases & Saved) === */}
         {activeTab === "purchases" && (
            <div className="space-y-3">
-             {purchases.length === 0 ? <p className="text-center text-sm text-slate-500 py-10">No purchases yet.</p> : purchases.map(order => (
-               <div key={order.id} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
-                 <div><p className="font-bold text-sm text-slate-900">Order {order.orderNumber}</p><p className="text-xs text-slate-500">UGX {(Number(order.total) || 0).toLocaleString()}</p></div>
-                 <span className="text-[9px] font-bold bg-slate-100 px-2 py-1 rounded-sm uppercase">{order.status || 'pending'}</span>
-               </div>
-             ))}
+             {purchases.length === 0 ? <p className="text-center text-sm text-slate-500 py-10">No purchases yet.</p> : (
+               <>
+                 <div className="flex justify-between items-center px-1 mb-2">
+                   <h2 className="text-xs font-bold text-slate-500 uppercase tracking-widest">My Purchases</h2>
+                   <button onClick={() => fetchPurchases(false, true)} className="text-[10px] font-bold text-[#D97706]">↻ Refresh</button>
+                 </div>
+                 {purchases.map(order => (
+                   <div key={order.id} className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center">
+                     <div><p className="font-bold text-sm text-slate-900">Order {order.orderNumber}</p><p className="text-xs text-slate-500">UGX {(Number(order.total) || 0).toLocaleString()}</p></div>
+                     <span className="text-[9px] font-bold bg-slate-100 px-2 py-1 rounded-sm uppercase">{order.status || 'pending'}</span>
+                   </div>
+                 ))}
+                 {hasMorePurchases && (
+                   <button onClick={() => fetchPurchases(true)} disabled={loadingPurchases} className="w-full py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 shadow-sm">
+                     {loadingPurchases ? "Loading..." : "Load Older Purchases"}
+                   </button>
+                 )}
+               </>
+             )}
            </div>
         )}
 
