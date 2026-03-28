@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FloatingHelpButton from "@/components/FloatingHelpButton";
 import BottomNav from "@/components/BottomNav";
+import GlobalLoader from "@/components/GlobalLoader"; // 🔥 1. Imported the loader
 
 export default function LayoutClient({
   children,
@@ -15,7 +16,7 @@ export default function LayoutClient({
 }) {
   // 1. Track if the user explicitly clicked the "X" to close it forever
   const [isClosedManually, setIsClosedManually] = useState(false);
-  
+
   // 2. Track scroll visibility state
   const [showBannerOnScroll, setShowBannerOnScroll] = useState(true);
 
@@ -39,7 +40,7 @@ export default function LayoutClient({
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
-    
+
     // Run it once on mount just in case they load halfway down the page
     handleScroll();
 
@@ -51,6 +52,9 @@ export default function LayoutClient({
 
   return (
     <AuthProvider>
+      {/* 🔥 2. Added the global page transition loader here */}
+      <GlobalLoader />
+
       {/* FIXED WEBSITE BANNER */}
       {isBannerVisible && (
         <WebsiteBanner onClose={() => setIsClosedManually(true)} />
