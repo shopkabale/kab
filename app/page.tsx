@@ -5,13 +5,13 @@ import SearchBar from "@/components/SearchBar";
 import UrgentStories from "@/components/UrgentStories";
 import PersonalizedFeed from "@/components/PersonalizedFeed";
 import ProductSection from "@/components/ProductSection";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase/config"; // Ensure this path is correct for your client DB
 
-// 🔥 1. ISR CACHING ENABLED
-// Next.js will cache this page for 1 hour. 
-// 10,000 visitors in an hour = 1 Firebase read.
-export const revalidate = 3600; 
+// 🔥 LOWERED CACHE TO 60 SECONDS FOR TESTING. 
+// Change back to 3600 once you verify it works!
+export const revalidate = 60; 
 
-// A stable daily shuffle based on the current date string and product ID.
 function getDailyRandomScore(id: string) {
   const today = new Date().toISOString().split('T')[0];
   const seedString = id + today; 
@@ -24,27 +24,35 @@ function getDailyRandomScore(id: string) {
 }
 
 export default async function Home() {
-  // Fetch a maximum of 30 recent items per category to keep the homepage fresh but cheap.
+  const now = Date.now();
+
+  // 1. DIRECTLY FETCH PREMIUM ITEMS (Bypasses the 30-item limit)
+  // We grab anything marked true, then filter out expired ones in JS to avoid needing complex Firebase indexes
+  
+  // -- Fetch Featured --
+  const featuredQ = query(collection(db, "products"), where("isFeatured", "==", true));
+  const featuredSnap = await getDocs(featuredQ);
+  const featuredProducts = featuredSnap.docs
+    .map(d => ({ id: d.id, ...d.data() } as any))
+    .filter(p => p.featureExpiresAt && p.featureExpiresAt > now)
+    .sort((a, b) => b.featuredAt - a.featuredAt);
+
+  // -- Fetch Boosted --
+  const boostedQ = query(collection(db, "products"), where("isBoosted", "==", true));
+  const boostedSnap = await getDocs(boostedQ);
+  const boostedProducts = boostedSnap.docs
+    .map(d => ({ id: d.id, ...d.data() } as any))
+    .filter(p => p.boostExpiresAt && p.boostExpiresAt > now)
+    .sort((a, b) => b.boostedAt - a.boostedAt);
+
+
+  // 2. FETCH REGULAR FEED ITEMS
   const electronics = await getProducts("electronics", 30);
   const agriculture = await getProducts("agriculture", 30);
   const students = await getProducts("student_item", 30);
-
   const allProducts = [...electronics, ...agriculture, ...students];
 
-  // Capture the time at the exact moment Next.js builds/revalidates this cached page
-  const now = Date.now();
-
-  // 🔥 PREMIUM TIER: Featured Items (Pinned for 7 Days)
-  const featuredProducts = allProducts
-    .filter((p: any) => p.isFeatured === true && p.featureExpiresAt && p.featureExpiresAt > now)
-    .sort((a: any, b: any) => b.featuredAt - a.featuredAt); // Newest features first
-
-  // 🚀 BOOST TIER: Boosted Items (Bumped for 24 Hours)
-  const boostedProducts = allProducts
-    .filter((p: any) => p.isBoosted === true && p.boostExpiresAt && p.boostExpiresAt > now)
-    .sort((a: any, b: any) => b.boostedAt - a.boostedAt); // Newest boosts first
-
-  // "Just Posted" Sorting
+  // 3. SORTING LOGIC
   const sortedByDate = [...allProducts].sort((a: any, b: any) => {
     const dateA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt || 0).getTime();
     const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt || 0).getTime();
@@ -53,10 +61,10 @@ export default async function Home() {
 
   const justPostedProducts = sortedByDate.slice(0, 12);
 
-  // Stable "Trending" Shuffle (Filters out items already showing in Featured/Boosted to avoid double-showing)
+  // Stable "Trending" Shuffle (Filters out premium items to avoid duplicates)
   const premiumIds = new Set([...featuredProducts, ...boostedProducts].map(p => p.id));
   const trendingNow = [...allProducts]
-    .filter(p => !premiumIds.has(p.id)) // Don't repeat premium items in standard trending
+    .filter(p => !premiumIds.has(p.id)) 
     .sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id))
     .slice(0, 12);
 
@@ -105,7 +113,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 3. TRENDING (Stable Daily Shuffle) */}
+        {/* 3. TRENDING */}
         {trendingNow.length > 0 && (
           <section className="px-1 sm:px-4">
             <ProductSection 
