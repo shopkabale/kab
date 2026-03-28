@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase/config";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase/admin";
 
 export async function PATCH(req: Request) {
   try {
@@ -10,26 +9,28 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Missing required fields." }, { status: 400 });
     }
 
-    // 1. Verify the requester is actually an admin
-    const adminRef = doc(db, "users", adminId);
-    const adminSnap = await getDoc(adminRef);
+    // 1. SECURITY: Verify the requester is actually an admin
+    const adminRef = adminDb.collection("users").doc(adminId);
+    const adminSnap = await adminRef.get();
 
-    if (!adminSnap.exists() || adminSnap.data().role !== "admin") {
+    if (!adminSnap.exists || adminSnap.data()?.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized. Admin access required." }, { status: 403 });
     }
 
-    // 2. Update the target user's verification status
-    const targetUserRef = doc(db, "users", targetUserId);
-    await updateDoc(targetUserRef, {
+    // 2. EXECUTE: Update the target user's status with Admin privileges
+    const targetUserRef = adminDb.collection("users").doc(targetUserId);
+    await targetUserRef.update({
       verificationStatus: newStatus,
-      // Optional: keep track of when they were approved/rejected
       verificationReviewedAt: Date.now() 
     });
 
-    return NextResponse.json({ success: true, newStatus }, { status: 200 });
+    return NextResponse.json({ 
+      success: true, 
+      message: `User status updated to ${newStatus}` 
+    }, { status: 200 });
 
   } catch (error: any) {
-    console.error("Admin Verification Update Error:", error);
+    console.error("Admin Verification Decision Error:", error);
     return NextResponse.json({ error: "Internal server error." }, { status: 500 });
   }
 }
