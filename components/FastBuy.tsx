@@ -24,15 +24,12 @@ export default function FastBuy({ product }: { product: Product }) {
   const [isLocked, setIsLocked] = useState((product as any).locked === true);
   const [productStatus, setProductStatus] = useState(product.status);
 
-  // Your Official Bot Number for the Secondary Button
-  const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
-
   useEffect(() => {
     const fetchLiveStock = async () => {
       try {
         const docRef = doc(db, "products", product.id);
         const snap = await getDoc(docRef);
-        
+
         if (snap.exists()) {
           const liveData = snap.data();
           setCurrentStock(Number(liveData.stock) || 0);
@@ -51,16 +48,7 @@ export default function FastBuy({ product }: { product: Product }) {
   const isUnavailable = isSoldOut || isReserved;
 
   // ==========================================
-  // ACTION 1: SECONDARY BUTTON (Low Intent)
-  // ==========================================
-  const handleBotInquiry = () => {
-    const rawMessage = `Hi! I am interested in this item on Kabale Online: *${product.name}*\n\nProduct ID: [${product.id}]`;
-    const encodedMessage = encodeURIComponent(rawMessage);
-    window.open(`https://wa.me/${botPhoneNumber}?text=${encodedMessage}`, "_blank");
-  };
-
-  // ==========================================
-  // ACTION 2: PRIMARY BUTTON (High Intent)
+  // FAST CHECKOUT LOGIC
   // ==========================================
   const handleBuyNowClick = () => {
     if (user && user.displayName) setBuyerName(user.displayName);
@@ -69,7 +57,7 @@ export default function FastBuy({ product }: { product: Product }) {
 
   const executeFastCheckout = async () => {
     if (!buyerName.trim()) return alert("Please provide your name.");
-    
+
     const cleanPhone = contactPhone.replace(/\D/g, ""); 
     if (cleanPhone.length < 10) {
       return alert("Please enter a valid phone/WhatsApp number.");
@@ -113,42 +101,25 @@ export default function FastBuy({ product }: { product: Product }) {
 
   return (
     <>
-      <div className="mt-8 flex flex-col gap-4">
-        
+      <div className="flex flex-col gap-1.5 mt-8 mb-4">
         {/* 🟢 PRIMARY BUTTON (High Intent) */}
-        <div className="flex flex-col gap-1.5">
-          <button   
-            onClick={handleBuyNowClick}  
-            disabled={isUnavailable || loading}  
-            className={`w-full py-4 px-8 rounded-2xl font-black text-xl transition-all shadow-lg flex items-center justify-center gap-2 ${
-              isUnavailable 
-                ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none" 
-                : "bg-[#D97706] text-white hover:bg-[#b46305] active:scale-[0.98]"
-            }`}  
-          >  
-            {isUnavailable ? (isSoldOut ? "❌ Sold Out" : "⚡ Reserved") : "Buy Now (Fast Order)"}
-          </button>
-          {!isUnavailable && (
-            <p className="text-center text-xs font-bold text-slate-500 tracking-wide">
-              ⚡ No account needed. Confirm instantly via WhatsApp.
-            </p>
-          )}
-        </div>
-
-        {/* 🟡 SECONDARY BUTTON (Low Intent / Questions) */}
         <button   
-          onClick={handleBotInquiry}  
+          onClick={handleBuyNowClick}  
           disabled={isUnavailable || loading}  
-          className={`w-full py-3.5 px-8 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-2 border-2 ${
+          className={`w-full py-4 px-8 rounded-2xl font-black text-xl transition-all shadow-lg flex items-center justify-center gap-2 ${
             isUnavailable 
-              ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed" 
-              : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 active:scale-[0.98]"
+              ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none" 
+              : "bg-[#D97706] text-white hover:bg-[#b46305] active:scale-[0.98]"
           }`}  
         >  
-          💬 Ask Seller on WhatsApp
+          {isUnavailable ? (isSoldOut ? "❌ Sold Out" : "⚡ Reserved") : "Buy Now (Fast Order)"}
         </button>
-
-      </div>  
+        {!isUnavailable && (
+          <p className="text-center text-xs font-bold text-slate-500 tracking-wide mt-1">
+            ⚡ No account needed. Confirm instantly via WhatsApp.
+          </p>
+        )}
+      </div>
 
       {/* ========================================== */}
       {/* FAST CHECKOUT MODAL */}
@@ -156,7 +127,7 @@ export default function FastBuy({ product }: { product: Product }) {
       {showModal && (  
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">  
           <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl relative overflow-hidden">  
-            
+
             {showSuccess ? (
               // 🔥 SUCCESS STATE UI
               <div className="text-center py-8">
