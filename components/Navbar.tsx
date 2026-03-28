@@ -7,11 +7,9 @@ import { useAuth } from "@/components/AuthProvider";
 import { 
   FaWhatsapp, 
   FaFacebookF, 
-  FaTiktok, 
   FaXTwitter, 
-  FaYoutube, 
-  FaLinkedinIn, 
-  FaInstagram 
+  FaInstagram,
+  FaTiktok // Added TikTok back here
 } from "react-icons/fa6";
 
 // Tell TypeScript what our navigation objects look like
@@ -40,11 +38,11 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       } else {
         document.body.style.overflow = 'unset';
       }
-      
+
       // Broadcast the menu state to BottomNav and AiChatWidget
       window.dispatchEvent(new CustomEvent("mobileMenuState", { detail: isMobileMenuOpen }));
     }
-    
+
     return () => { 
       if (typeof window !== "undefined") {
         document.body.style.overflow = 'unset'; 
@@ -58,12 +56,12 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const isActive = (path: string) => pathname === path;
   const closeMenu = () => setIsMobileMenuOpen(false);
 
-  // Strongly typed Navigation Groups
+  // Strongly typed Navigation Groups - Black and neutral tones
   const mobileNavGroups: NavGroup[] = [
     {
       label: "Shop",
-      bgClass: "bg-blue-50",
-      textClass: "text-blue-700",
+      bgClass: "bg-slate-100",
+      textClass: "text-black text-xs",
       links: [
         { name: "all items", href: "/products" },
         { name: "electronics", href: "/category/electronics" },
@@ -73,24 +71,24 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
     },
     {
       label: "Buyer Needs",
-      bgClass: "bg-purple-50",
-      textClass: "text-purple-700",
+      bgClass: "bg-slate-100",
+      textClass: "text-black text-xs",
       links: [
         { name: "buyer requests", href: "/requests" },
       ]
     },
     {
       label: "News",
-      bgClass: "bg-emerald-50",
-      textClass: "text-emerald-700",
+      bgClass: "bg-slate-100",
+      textClass: "text-black text-xs",
       links: [
         { name: "journal & updates", href: "/blog" },
       ]
     },
     {
       label: "Help & Answers",
-      bgClass: "bg-amber-50",
-      textClass: "text-amber-700",
+      bgClass: "bg-slate-100",
+      textClass: "text-black text-xs",
       links: [
         { name: "ai shopping guide ✨", href: "/ai" },
       ]
@@ -204,10 +202,10 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
           <div className="flex flex-col pt-2">
             {mobileNavGroups.map((group, groupIdx) => (
               <div key={groupIdx} className="mb-2">
-                <div className={`px-6 py-2 text-[10px] font-black uppercase tracking-widest ${group.bgClass} ${group.textClass}`}>
+                <div className={`px-6 py-2.5 font-black uppercase tracking-widest ${group.bgClass} ${group.textClass}`}>
                   {group.label}
                 </div>
-                
+
                 <div className="flex flex-col">
                   {group.links.map((link, linkIdx) => (
                     <Link 
@@ -215,7 +213,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                       href={link.href} 
                       onClick={closeMenu}
                       className={`px-6 py-3.5 border-b border-slate-50 hover:bg-slate-50 hover:pl-8 transition-all duration-200 text-[15px] font-bold lowercase tracking-wide
-                        ${isActive(link.href) ? 'text-[#D97706] bg-amber-50/30 pl-8 border-l-4 border-l-[#D97706]' : 'text-slate-600 border-l-4 border-l-transparent'}
+                        ${isActive(link.href) ? 'text-[#D97706] bg-amber-50/30 pl-8 border-l-4 border-l-[#D97706]' : 'text-slate-500 border-l-4 border-l-transparent'}
                       `}
                     >
                       {link.name}
@@ -231,12 +229,15 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             <div className="mb-2">
               <p className="text-slate-800 font-medium mb-4 text-base">Our social network pages</p>
               <div className="flex flex-wrap gap-2">
+                {/* Added TikTok right here */}
                 {[
-                  { icon: FaWhatsapp, href: "#" }, { icon: FaFacebookF, href: "#" }, { icon: FaTiktok, href: "#" },
-                  { icon: FaXTwitter, href: "#" }, { icon: FaYoutube, href: "#" }, { icon: FaLinkedinIn, href: "#" },
-                  { icon: FaInstagram, href: "#" },
+                  { icon: FaWhatsapp, href: "https://wa.me/256759997376", label: "WhatsApp" }, 
+                  { icon: FaFacebookF, href: "https://www.fb.com/l/6lp1kJRRR", label: "Facebook" }, 
+                  { icon: FaInstagram, href: "https://instagram.com/kabale.online", label: "Instagram" },
+                  { icon: FaXTwitter, href: "https://x.com/Kabale_Online", label: "X" },
+                  { icon: FaTiktok, href: "https://tiktok.com/@okaynotice", label: "TikTok" },
                 ].map((social, idx) => (
-                  <a key={idx} href={social.href} target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-[#424242] hover:bg-[#D97706] text-white flex items-center justify-center rounded-sm transition-colors">
+                  <a key={idx} href={social.href} target="_blank" rel="noopener noreferrer" aria-label={social.label} className="w-10 h-10 bg-[#424242] hover:bg-[#D97706] text-white flex items-center justify-center rounded-sm transition-colors hover:scale-105">
                     <social.icon size={18} />
                   </a>
                 ))}
