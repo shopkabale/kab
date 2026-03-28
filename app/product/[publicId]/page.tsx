@@ -1,4 +1,6 @@
-export const dynamic = 'force-dynamic';
+// 🔥 1. REMOVE force-dynamic
+// 🔥 2. ADD revalidate to cache this product page for 1 hour
+export const revalidate = 3600;
 
 import { Metadata } from "next";
 import Link from "next/link";
@@ -7,7 +9,7 @@ import { notFound } from "next/navigation";
 import { getProductByPublicId, getProducts } from "@/lib/firebase/firestore";
 import ImageGallery from "@/components/ImageGallery";
 import ProductActions from "@/components/ProductActions";
-import FastBuy from "@/components/FastBuy"; // 🔥 Imported FastBuy
+import FastBuy from "@/components/FastBuy"; 
 import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
 import SaveProductButton from "@/components/SaveProductButton";
@@ -40,6 +42,21 @@ export async function generateMetadata({ params }: { params: { publicId: string 
     },
     twitter: { card: "summary_large_image", title, description, images: [imageUrl] },
   };
+}
+
+// ==========================================
+// THE DAILY SHUFFLE ALGORITHM
+// ==========================================
+// We add this here so we can shuffle the related products stably without breaking the cache!
+function getDailyRandomScore(id: string) {
+  const today = new Date().toISOString().split('T')[0];
+  const seedString = id + today; 
+  let hash = 0;
+  for (let i = 0; i < seedString.length; i++) {
+    hash = (hash << 5) - hash + seedString.charCodeAt(i);
+    hash |= 0; 
+  }
+  return hash;
 }
 
 export default async function ProductDetailsPage({ params }: { params: { publicId: string } }) {
@@ -78,11 +95,14 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // ==========================================
   // 4. FETCH RELATED PRODUCTS
   // ==========================================
-  const rawCategoryProducts = await getProducts(safeCategory);
+  // 🔥 Limit to 12. This drops the cost from 50 reads down to 12 reads per cache build!
+  const rawCategoryProducts = await getProducts(safeCategory, 12);
+  
   const relatedProducts = rawCategoryProducts
     .filter((p) => p.id !== product.id && p.publicId !== product.publicId)
-    .sort(() => 0.5 - Math.random())
-    .slice(0, 8) // Grab up to 8 for the scrollable list
+    // 🔥 Replaced Math.random() with the stable daily shuffle
+    .sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id))
+    .slice(0, 8) 
     .map((p) => ({
       ...p,
       images: p.images?.map((img: string) => optimizeImage(img)) || []
@@ -94,13 +114,11 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const renderDescription = (desc?: string) => {
     if (!desc) return <p className="text-slate-700 text-sm">No description provided by the seller.</p>;
 
-    // Split by newlines and remove empty lines
     const lines = desc.split('\n').filter(line => line.trim() !== '');
 
     return (
       <ul className="space-y-2">
         {lines.map((line, idx) => {
-          // Strip existing dashes or bullets so we don't double up
           const cleanLine = line.replace(/^[-*•]\s*/, '').trim();
           return (
             <li key={idx} className="text-slate-700 text-sm leading-relaxed flex items-start gap-2">
@@ -166,11 +184,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
             {/* HIGH PRIORITY ACTIONS (Chat & Buy Now) */}
             <div className="mb-8 border-b border-slate-100 pb-8">
-              {/* 🔥 Placed FastBuy component right above the chat with seller */}
               <FastBuy product={{...product, images: optimizedImages}} />
-              
+
               <ProductActions product={{...product, images: optimizedImages}}>
-                 {/* Inject Make Offer and Save into the "More actions" drawer */}
                  <div className="flex flex-col gap-3 mt-2 w-full">
                     <MakeOfferButton product={product} />
                     <SaveProductButton product={product} />
@@ -270,7 +286,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </Link>  
             ))}  
 
-                        {/* View More Card at the end of the scroll */}
+            {/* View More Card at the end of the scroll */}
             <Link 
               href={`/category/${safeCategory}`} 
               className="flex-none w-[160px] sm:w-[220px] snap-start bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-500 p-4"
