@@ -15,42 +15,33 @@ export default function UnifiedDashboard() {
 
   const [activeTab, setActiveTab] = useState<"listings" | "sales" | "purchases" | "saved">("listings");
 
-  // --- STRONG CACHE & PAGINATION STATES ---
   const ITEMS_PER_PAGE = 5;
 
-  // 1. Listings (Seller)
   const [listings, setListings] = useState<any[]>([]); 
   const [loadingListings, setLoadingListings] = useState(false);
   const [hasMoreListings, setHasMoreListings] = useState(true);
 
-  // 2. Sales (Seller Orders)
   const [sales, setSales] = useState<Order[]>([]);
   const [loadingSales, setLoadingSales] = useState(false);
   const [hasMoreSales, setHasMoreSales] = useState(true);
 
-  // 3. Purchases (Buyer)
   const [purchases, setPurchases] = useState<Order[]>([]);
   const [loadingPurchases, setLoadingPurchases] = useState(false);
   const [hasMorePurchases, setHasMorePurchases] = useState(true);
 
-  // 4. Saved Items (Real-time Wishlist)
   const [savedItems, setSavedItems] = useState<any[]>([]);
   const [loadingSaved, setLoadingSaved] = useState(true);
 
-  // 5. User Profile & Premium Actions
   const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified">("unverified");
   const [isVerifying, setIsVerifying] = useState(false);
   const [boostingId, setBoostingId] = useState<string | null>(null);
   const [featuringId, setFeaturingId] = useState<string | null>(null);
 
-  // --- 24-HOUR CACHING SYSTEM ---
+  // --- CACHE LOGIC ---
   const saveToCache = useCallback((type: 'listings' | 'sales' | 'purchases', data: any[]) => {
     if (!user) return;
     const cacheKey = `kabale_${type}_${user.id}`;
-    localStorage.setItem(cacheKey, JSON.stringify({
-      timestamp: Date.now(),
-      data: data
-    }));
+    localStorage.setItem(cacheKey, JSON.stringify({ timestamp: Date.now(), data: data }));
   }, [user]);
 
   const loadFromCache = useCallback((type: 'listings' | 'sales' | 'purchases') => {
@@ -59,14 +50,10 @@ export default function UnifiedDashboard() {
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       const parsed = JSON.parse(cached);
-      // Valid if less than 24 hours old (24 * 60 * 60 * 1000)
-      if (Date.now() - parsed.timestamp < 86400000) {
-        return parsed.data;
-      }
+      if (Date.now() - parsed.timestamp < 86400000) return parsed.data; // 24 hours
     }
     return null;
   }, [user]);
-
 
   // --- FETCHING LOGIC ---
   const fetchListings = useCallback(async (isLoadMore = false, forceRefresh = false) => {
@@ -83,23 +70,14 @@ export default function UnifiedDashboard() {
 
     setLoadingListings(true);
     try {
-      let q = query(
-        collection(db, "products"),
-        where("sellerId", "==", user.id),
-        orderBy("createdAt", "desc"),
-        limit(ITEMS_PER_PAGE)
-      );
-
+      let q = query(collection(db, "products"), where("sellerId", "==", user.id), orderBy("createdAt", "desc"), limit(ITEMS_PER_PAGE));
       if (isLoadMore && listings.length > 0) {
-        const lastItem = listings[listings.length - 1];
-        q = query(q, startAfter(lastItem.createdAt));
+        q = query(q, startAfter(listings[listings.length - 1].createdAt));
       }
-
       const snapshot = await getDocs(q);
       const newDocs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
       setHasMoreListings(snapshot.docs.length === ITEMS_PER_PAGE);
-      
       const updatedData = isLoadMore ? [...listings, ...newDocs] : newDocs;
       setListings(updatedData);
       saveToCache('listings', updatedData);
@@ -121,23 +99,14 @@ export default function UnifiedDashboard() {
 
     setLoadingSales(true);
     try {
-      let q = query(
-        collection(db, "orders"),
-        where("sellerId", "==", user.id),
-        orderBy("createdAt", "desc"),
-        limit(ITEMS_PER_PAGE)
-      );
-
+      let q = query(collection(db, "orders"), where("sellerId", "==", user.id), orderBy("createdAt", "desc"), limit(ITEMS_PER_PAGE));
       if (isLoadMore && sales.length > 0) {
-        const lastItem = sales[sales.length - 1];
-        q = query(q, startAfter(lastItem.createdAt));
+        q = query(q, startAfter(sales[sales.length - 1].createdAt));
       }
-
       const snapshot = await getDocs(q);
       const newDocs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Order[];
 
       setHasMoreSales(snapshot.docs.length === ITEMS_PER_PAGE);
-      
       const updatedData = isLoadMore ? [...sales, ...newDocs] : newDocs;
       setSales(updatedData);
       saveToCache('sales', updatedData);
@@ -159,23 +128,14 @@ export default function UnifiedDashboard() {
 
     setLoadingPurchases(true);
     try {
-      let q = query(
-        collection(db, "orders"),
-        where("userId", "==", user.id),
-        orderBy("createdAt", "desc"),
-        limit(ITEMS_PER_PAGE)
-      );
-
+      let q = query(collection(db, "orders"), where("userId", "==", user.id), orderBy("createdAt", "desc"), limit(ITEMS_PER_PAGE));
       if (isLoadMore && purchases.length > 0) {
-        const lastItem = purchases[purchases.length - 1];
-        q = query(q, startAfter(lastItem.createdAt));
+        q = query(q, startAfter(purchases[purchases.length - 1].createdAt));
       }
-
       const snapshot = await getDocs(q);
       const newDocs = snapshot.docs.map(d => ({ id: d.id, ...d.data() })) as Order[];
 
       setHasMorePurchases(snapshot.docs.length === ITEMS_PER_PAGE);
-      
       const updatedData = isLoadMore ? [...purchases, ...newDocs] : newDocs;
       setPurchases(updatedData);
       saveToCache('purchases', updatedData);
@@ -183,43 +143,44 @@ export default function UnifiedDashboard() {
     setLoadingPurchases(false);
   }, [user, hasMorePurchases, purchases, loadFromCache, saveToCache]);
 
-  // INITIAL MOUNT CACHE CHECK & FETCH
+  // --- 🔥 THE FIX: LOCKED MOUNT EFFECT 🔥 ---
   useEffect(() => {
     if (!user || authLoading) return;
 
-    // Check URL for ?refresh=true (cache buster for when redirecting back from /sell)
     const urlParams = new URLSearchParams(window.location.search);
     const shouldForceRefresh = urlParams.get('refresh') === 'true';
 
-    // Fetch User Verification Status
     getDoc(doc(db, "users", user.id)).then(userDoc => {
       if (userDoc.exists() && userDoc.data().verificationStatus) {
         setVerificationStatus(userDoc.data().verificationStatus);
       }
     });
 
-    fetchListings(false, shouldForceRefresh);
-    fetchSales(false, shouldForceRefresh);
-    fetchPurchases(false, shouldForceRefresh);
+    if (listings.length === 0 || shouldForceRefresh) fetchListings(false, shouldForceRefresh);
+    if (sales.length === 0 || shouldForceRefresh) fetchSales(false, shouldForceRefresh);
+    if (purchases.length === 0 || shouldForceRefresh) fetchPurchases(false, shouldForceRefresh);
 
-    // Wishlist (Real-time but strictly limited to 10 to save reads)
     const wishlistRef = collection(db, "users", user.id, "wishlist");
     const q = query(wishlistRef, orderBy("savedAt", "desc"), limit(10));
+    
     const unsubscribeWishlist = onSnapshot(q, (snapshot) => {
       setSavedItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoadingSaved(false);
     });
 
-    // Clean up URL to remove ?refresh=true without reloading page
     if (shouldForceRefresh) {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    return () => unsubscribeWishlist();
-  }, [user, authLoading, fetchListings, fetchSales, fetchPurchases]);
+    // THIS KILLS THE LOOP WHEN YOU LEAVE THE PAGE
+    return () => {
+      unsubscribeWishlist();
+    };
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, authLoading]); // <--- STRIPPED DEPENDENCIES TO PREVENT LOOPING
 
-
-  // --- STANDARD ACTIONS (Invalidates Cache to keep data fresh) ---
+  // --- STANDARD ACTIONS ---
   const handleRemoveSaved = async (productId: string) => {
     if (!user) return;
     try { await deleteDoc(doc(db, "users", user.id, "wishlist", productId)); } 
@@ -236,7 +197,7 @@ export default function UnifiedDashboard() {
       await updateDoc(doc(db, "products", product.id), { isUrgent: !isCurrentlyUrgent, urgentExpiresAt: newExpiresAt });
       const updatedListings = listings.map(item => item.id === product.id ? { ...item, isUrgent: !isCurrentlyUrgent, urgentExpiresAt: newExpiresAt } : item);
       setListings(updatedListings);
-      saveToCache('listings', updatedListings); // Update Cache
+      saveToCache('listings', updatedListings); 
     } catch (error) { alert("Failed to update urgency status."); }
   };
 
@@ -247,7 +208,7 @@ export default function UnifiedDashboard() {
       await deleteDoc(doc(db, "products", productId));
       const updatedListings = listings.filter(item => item.id !== productId);
       setListings(updatedListings);
-      saveToCache('listings', updatedListings); // Update Cache
+      saveToCache('listings', updatedListings); 
     } catch (error) { alert("Failed to delete ad."); }
   };
 
@@ -257,7 +218,7 @@ export default function UnifiedDashboard() {
       await updateDoc(doc(db, "products", productId), { status: "sold" });
       const updatedListings = listings.map(item => item.id === productId ? { ...item, status: "sold" } : item);
       setListings(updatedListings);
-      saveToCache('listings', updatedListings); // Update Cache
+      saveToCache('listings', updatedListings); 
     } catch (error) { alert("Failed to mark as sold."); }
   };
 
@@ -272,25 +233,24 @@ export default function UnifiedDashboard() {
       if (res.ok) {
         const updatedSales = sales.map(order => order.id === orderId ? { ...order, status: newStatus as any } : order);
         setSales(updatedSales);
-        saveToCache('sales', updatedSales); // Update Cache
+        saveToCache('sales', updatedSales);
       } else { alert("Failed to update status."); }
     } catch (error) { alert("Something went wrong updating the order."); }
   };
 
-  // --- PREMIUM / GROWTH ACTIONS (Invalidates Cache to keep data fresh) ---
+  // --- PREMIUM ACTIONS (Client-Side for ease of launch) ---
   const handleVerifyProfile = async () => {
     if (!user) return;
     setIsVerifying(true);
     try {
-      const res = await fetch("/api/users/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id }),
+      await updateDoc(doc(db, "users", user.id), {
+        verificationStatus: "pending",
+        verificationRequestedAt: Date.now()
       });
-      if (!res.ok) throw new Error("Verification failed");
       setVerificationStatus("pending");
       alert("🛡️ Success! Your profile is now under review by Admin.");
     } catch (error) {
+      console.error(error);
       alert("Network error. Please try again.");
     } finally { setIsVerifying(false); }
   };
@@ -299,20 +259,20 @@ export default function UnifiedDashboard() {
     if (!user) return;
     setBoostingId(productId);
     try {
-      const res = await fetch("/api/products/boost", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, userId: user.id }),
+      const now = Date.now();
+      const expiresAt = now + (24 * 60 * 60 * 1000); 
+      await updateDoc(doc(db, "products", productId), {
+        isBoosted: true,
+        boostedAt: now,
+        boostExpiresAt: expiresAt
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
-      const updatedListings = listings.map(item => item.id === productId ? { ...item, isBoosted: true, boostExpiresAt: data.boostExpiresAt } : item);
+      const updatedListings = listings.map(item => item.id === productId ? { ...item, isBoosted: true, boostExpiresAt: expiresAt } : item);
       setListings(updatedListings);
-      saveToCache('listings', updatedListings); // Update Cache
+      saveToCache('listings', updatedListings); 
       alert("🚀 Success! Your listing is now boosted for 24 hours.");
     } catch (error: any) {
-      alert(error.message || "Network error. Please try again.");
+      console.error(error);
+      alert("Failed to boost listing. Please try again.");
     } finally { setBoostingId(null); }
   };
 
@@ -320,20 +280,20 @@ export default function UnifiedDashboard() {
     if (!user) return;
     setFeaturingId(productId);
     try {
-      const res = await fetch("/api/products/feature", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId, userId: user.id }),
+      const now = Date.now();
+      const expiresAt = now + (7 * 24 * 60 * 60 * 1000); 
+      await updateDoc(doc(db, "products", productId), {
+        isFeatured: true,
+        featuredAt: now,
+        featureExpiresAt: expiresAt
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      
-      const updatedListings = listings.map(item => item.id === productId ? { ...item, isFeatured: true, featureExpiresAt: data.featureExpiresAt } : item);
+      const updatedListings = listings.map(item => item.id === productId ? { ...item, isFeatured: true, featureExpiresAt: expiresAt } : item);
       setListings(updatedListings);
-      saveToCache('listings', updatedListings); // Update Cache
+      saveToCache('listings', updatedListings); 
       alert("⭐ Success! Your item is now pinned to the homepage for 7 days.");
     } catch (error: any) {
-      alert(error.message || "Network error. Please try again.");
+      console.error(error);
+      alert("Failed to feature listing. Please try again.");
     } finally { setFeaturingId(null); }
   };
 
@@ -490,13 +450,8 @@ export default function UnifiedDashboard() {
                    )
                  })}
                  
-                 {/* Pagination Button */}
                  {hasMoreListings && (
-                   <button 
-                     onClick={() => fetchListings(true)} 
-                     disabled={loadingListings}
-                     className="w-full py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors shadow-sm"
-                   >
+                   <button onClick={() => fetchListings(true)} disabled={loadingListings} className="w-full py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors shadow-sm">
                      {loadingListings ? "Loading..." : "Load More Ads"}
                    </button>
                  )}
@@ -543,13 +498,8 @@ export default function UnifiedDashboard() {
                   )
                 })}
 
-                {/* Pagination Button */}
                 {hasMoreSales && (
-                   <button 
-                     onClick={() => fetchSales(true)} 
-                     disabled={loadingSales}
-                     className="w-full py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors shadow-sm"
-                   >
+                   <button onClick={() => fetchSales(true)} disabled={loadingSales} className="w-full py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
                      {loadingSales ? "Loading..." : "Load Older Orders"}
                    </button>
                  )}
@@ -611,7 +561,7 @@ export default function UnifiedDashboard() {
               <h4 className="text-sm font-bold text-slate-900 mb-1">🚀 Boost Listing</h4>
               <p className="text-[10px] text-slate-500 mb-2 leading-tight">Get 10x more views today. Click "Boost" on your active ads!</p>
             </div>
-            <button onClick={() => setActiveTab('listings')} className="text-[10px] font-bold bg-amber-100 text-amber-900 px-3 py-1.5 rounded-md w-full">Go to Listings</button>
+            <button onClick={() => setActiveTab('listings')} className="text-[10px] font-bold bg-amber-100 text-amber-900 px-3 py-1.5 rounded-md w-full mt-2">Go to Listings</button>
           </div>
 
           {verificationStatus !== "verified" && (
@@ -623,7 +573,7 @@ export default function UnifiedDashboard() {
               <button 
                 onClick={handleVerifyProfile}
                 disabled={verificationStatus === "pending" || isVerifying}
-                className={`text-[10px] font-bold px-3 py-1.5 rounded-md w-full transition-colors ${verificationStatus === "pending" ? "bg-slate-100 text-slate-500" : "bg-blue-100 text-blue-900 active:bg-blue-200"}`}
+                className={`text-[10px] font-bold px-3 py-1.5 rounded-md w-full transition-colors mt-2 ${verificationStatus === "pending" ? "bg-slate-100 text-slate-500" : "bg-blue-100 text-blue-900 active:bg-blue-200"}`}
               >
                 {isVerifying ? "Submitting..." : verificationStatus === "pending" ? "Review Pending ⏳" : "Verify Profile"}
               </button>
@@ -635,13 +585,12 @@ export default function UnifiedDashboard() {
               <h4 className="text-sm font-bold text-slate-900 mb-1">⭐ Feature Item</h4>
               <p className="text-[10px] text-slate-500 mb-2 leading-tight">Pin your item to the top of the homepage for 7 days.</p>
             </div>
-            <button onClick={() => setActiveTab('listings')} className="text-[10px] font-bold bg-slate-900 text-white px-3 py-1.5 rounded-md w-full">Go to Listings</button>
+            <button onClick={() => setActiveTab('listings')} className="text-[10px] font-bold bg-slate-900 text-white px-3 py-1.5 rounded-md w-full mt-2">Go to Listings</button>
           </div>
 
         </div>
       </div>
 
-      {/* 3. FLOATING ACTION BUTTON */}
       <Link 
         href="/sell" 
         className="fixed bottom-6 right-6 absolute sm:bottom-10 sm:-right-6 bg-[#D97706] text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-3xl pb-1 hover:bg-amber-600 active:scale-95 transition-transform z-50 border-2 border-white"
