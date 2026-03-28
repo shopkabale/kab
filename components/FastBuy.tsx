@@ -15,11 +15,9 @@ export default function FastBuy({ product }: { product: Product }) {
   const [showModal, setShowModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Form States
+  // Form States - Stripped down to absolute essentials
   const [buyerName, setBuyerName] = useState(""); 
   const [contactPhone, setContactPhone] = useState("");
-  const [location, setLocation] = useState("");
-  const [quantity, setQuantity] = useState(1);
 
   // Live Stock States
   const [currentStock, setCurrentStock] = useState(Number(product.stock) || 0);
@@ -71,7 +69,6 @@ export default function FastBuy({ product }: { product: Product }) {
 
   const executeFastCheckout = async () => {
     if (!buyerName.trim()) return alert("Please provide your name.");
-    if (!location.trim()) return alert("Please provide your delivery location (e.g., Kabale Town).");
     
     const cleanPhone = contactPhone.replace(/\D/g, ""); 
     if (cleanPhone.length < 10) {
@@ -89,10 +86,8 @@ export default function FastBuy({ product }: { product: Product }) {
           buyerName: buyerName.trim(), 
           productId: product.id,  
           sellerId: product.sellerId || "SYSTEM",  
-          total: product.price * quantity,  // Calculate total based on quantity
-          contactPhone: cleanPhone,
-          location: location.trim(),
-          quantity: quantity
+          total: product.price, // Locked to single item price
+          contactPhone: cleanPhone
         }),  
       });  
 
@@ -103,7 +98,7 @@ export default function FastBuy({ product }: { product: Product }) {
         setShowSuccess(true);
         setTimeout(() => {
           router.push(`/success/${data.orderId}`);
-        }, 3000); // Redirect after showing the WhatsApp confirmation message
+        }, 3000); 
       } else {  
         alert(data.error || "Failed to place order. The item might have just been taken.");  
         setShowModal(false);
@@ -175,7 +170,7 @@ export default function FastBuy({ product }: { product: Product }) {
                 <p className="text-sm text-slate-400 mt-4 animate-pulse">Redirecting...</p>
               </div>
             ) : (
-              // 📝 FORM UI
+              // 📝 FORM UI (Ultra-Lean)
               <>
                 <div className="absolute top-0 left-0 w-full h-2 bg-[#D97706]"></div>  
                 <h2 className="text-2xl font-black text-slate-900 mb-2">Fast Order</h2>  
@@ -184,7 +179,7 @@ export default function FastBuy({ product }: { product: Product }) {
                   <p className="font-bold text-lg text-slate-900 leading-tight line-clamp-2">{product.name}</p>  
                   <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">  
                     <span className="text-sm font-medium text-slate-500">Total (COD):</span>  
-                    <span className="font-black text-[#D97706] text-lg">UGX {(Number(product.price) * quantity).toLocaleString()}</span>  
+                    <span className="font-black text-[#D97706] text-lg">UGX {Number(product.price).toLocaleString()}</span>  
                   </div>  
                 </div>  
 
@@ -200,28 +195,12 @@ export default function FastBuy({ product }: { product: Product }) {
                     <label className="block text-sm font-bold text-slate-700 mb-1.5">WhatsApp Number</label>  
                     <input required type="tel" placeholder="e.g. 077... or 075..." className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-[#D97706]" value={contactPhone} onChange={e => setContactPhone(e.target.value)} />  
                   </div>
-
-                  {/* Location */}
-                  <div>  
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Delivery Location</label>  
-                    <input required type="text" placeholder="e.g. Kabale University Gate" className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-[#D97706]" value={location} onChange={e => setLocation(e.target.value)} />  
-                  </div>
-
-                  {/* Quantity */}
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">Quantity</label>
-                    <div className="flex items-center gap-4">
-                      <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-600 hover:bg-slate-200">-</button>
-                      <span className="font-bold text-lg w-8 text-center">{quantity}</span>
-                      <button onClick={() => setQuantity(quantity + 1)} className="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center font-bold text-slate-600 hover:bg-slate-200">+</button>
-                    </div>
-                  </div>
                 </div>  
 
                 {/* Actions */}
                 <div className="flex gap-3">  
                   <button onClick={() => setShowModal(false)} disabled={loading} className="flex-1 bg-white border-2 border-slate-200 text-slate-700 py-3.5 rounded-xl font-bold hover:bg-slate-50 transition-colors">Cancel</button>  
-                  <button onClick={executeFastCheckout} disabled={loading || !contactPhone.trim() || !buyerName.trim() || !location.trim()} className="flex-[2] bg-[#D97706] text-white py-3.5 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md disabled:opacity-50">  
+                  <button onClick={executeFastCheckout} disabled={loading || !contactPhone.trim() || !buyerName.trim()} className="flex-[2] bg-[#D97706] text-white py-3.5 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md disabled:opacity-50">  
                     {loading ? "Processing..." : "Submit Order"}  
                   </button>  
                 </div>  
