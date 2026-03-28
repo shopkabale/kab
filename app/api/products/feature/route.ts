@@ -1,56 +1,43 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase/config";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { adminDb } from "@/lib/firebase/admin";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { productId, userId } = body;
+    const { productId, userId } = await req.json();
 
     if (!productId || !userId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const productRef = doc(db, "products", productId);
-    const productSnap = await getDoc(productRef);
+    const productRef = adminDb.collection("products").doc(productId);
+    const docSnap = await productRef.get();
 
-    if (!productSnap.exists()) {
+    if (!docSnap.exists) {
       return NextResponse.json({ error: "Product not found" }, { status: 404 });
     }
 
-    const productData = productSnap.data();
+    const data = docSnap.data();
 
-    // SECURITY CHECK 1: Ownership
-    if (productData.sellerId !== userId) {
-      return NextResponse.json({ error: "Unauthorized. You do not own this listing." }, { status: 403 });
+    if (data?.sellerId !== userId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
     const now = Date.now();
-
-    // SECURITY CHECK 2: Prevent overlapping features
-    if (productData.isFeatured && productData.featureExpiresAt && productData.featureExpiresAt > now) {
-      return NextResponse.json({ error: "This listing is already featured!" }, { status: 429 });
+    
+    if (data?.isFeatured && data.featureExpiresAt > now) {
+      return NextResponse.json({ error: "Listing is already featured" }, { status: 429 });
     }
 
-    // Set feature expiration for 7 days from now
-    const FEATURE_DURATION_MS = 7 * 24 * 60 * 60 * 1000; 
-    const expiresAt = now + FEATURE_DURATION_MS;
+    const expiresAt = now + (7 * 24 * 60 * 60 * 1000);
 
-    // Update Firestore
-    await updateDoc(productRef, {
+    await productRef.update({
       isFeatured: true,
       featuredAt: now,
       featureExpiresAt: expiresAt
     });
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Listing featured successfully for 7 days!",
-      featureExpiresAt: expiresAt
-    }, { status: 200 });
-
+    return NextResponse.json({ success: true, featureExpiresAt: expiresAt }, { status: 200 });
   } catch (error) {
-    console.error("Feature Error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
