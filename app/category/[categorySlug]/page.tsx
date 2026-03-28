@@ -6,8 +6,10 @@ import ProductSection from "@/components/ProductSection";
 import SearchBar from "@/components/SearchBar";
 import { optimizeImage } from "@/lib/utils";
 
-// Force dynamic ensures we fetch fresh data
-export const dynamic = "force-dynamic";
+// 🔥 1. REMOVED force-dynamic. 
+// 🔥 2. ADDED revalidate. Caches this category page for 1 hour.
+// This saves you massive amounts of Firebase quota on high-traffic days.
+export const revalidate = 3600;
 
 // ==========================================
 // DYNAMIC CATEGORY UI MAPPING
@@ -103,13 +105,15 @@ export default async function CategoryPage({
 }: { 
   params: { categorySlug: string };
 }) {
-  // 1. Fetch products strictly for this category
-  const rawCategoryProducts = await getProducts(params.categorySlug);
+  // 🔥 3. PASS A LIMIT TO THE FIREBASE QUERY
+  // We pass 100 here. It fetches the 100 newest items for this category.
+  // This guarantees this page costs exactly 100 reads per hour max.
+  const rawCategoryProducts = await getProducts(params.categorySlug, 100);
 
-  // 2. SHUFFLE THEM (Stable Daily Randomization)
+  // 4. SHUFFLE THEM (Stable Daily Randomization on the 100 recent items)
   rawCategoryProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
 
-  // 3. 🔥 OPTIMIZE ALL IMAGES 🔥
+  // 5. OPTIMIZE ALL IMAGES
   const allCategoryProducts = rawCategoryProducts.map((product) => {
     if (!product.images || product.images.length === 0) return product;
 
@@ -119,7 +123,7 @@ export default async function CategoryPage({
     };
   });
 
-  // 4. Get the dynamic UI details for the hero banner
+  // 6. Get the dynamic UI details for the hero banner
   const info = categoryDetails[params.categorySlug] || {
     title: params.categorySlug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
     description: `Browse all items in ${params.categorySlug.replace(/_/g, ' ')}.`,
@@ -155,9 +159,9 @@ export default async function CategoryPage({
         {/* THE HOMEPAGE PRODUCT SECTION 
             Passed the dynamic info.title and item count into the ProductSection title 
         */}
-        <div className="px-2 sm:px-4 pb-12">
+        <div className="px-1 sm:px-4 pb-12">
           <ProductSection 
-            title={`${info.title} (${allCategoryProducts.length} Items)`} 
+            title={`Latest ${info.title} Deals`} 
             products={allCategoryProducts} 
           />
         </div>
