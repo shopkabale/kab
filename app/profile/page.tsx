@@ -216,7 +216,8 @@ export default function UnifiedDashboard() {
             )}
             <div>
               <h1 className="text-lg font-extrabold text-slate-900">{safeName}</h1>
-              <p className="text-slate-500 text-xs font-medium">{user.phoneNumber || user.email || "No contact info"}</p>
+              <p className="text-slate-500 text-xs font-medium">{user.email || "No email provided"}</p>
+
             </div>
           </div>
           <button onClick={handleLogout} className="text-xs text-slate-400 font-bold hover:text-red-600 transition-colors bg-slate-50 px-3 py-1.5 rounded-md">Log Out</button>
