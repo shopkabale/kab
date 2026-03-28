@@ -238,25 +238,37 @@ export default function SellPage() {
           </button>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link 
             href={`/product/${successData.publicId}`}
-            className="px-8 py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:border-[#D97706] hover:text-[#D97706] transition-colors"
+            className="px-8 py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:border-[#D97706] hover:text-[#D97706] transition-colors flex-1 text-center"
           >
             View Live Item
           </Link>
-          <button 
-            onClick={() => {
-              setSuccessData(null);
-              setFormData({ ...formData, title: "", price: "", description: "", sellerPhone: "" });
-              setImageFiles([]);
-              setImagePreviews([]);
-              setShowOptional(false);
-            }}
-            className="px-8 py-3 bg-slate-50 text-slate-600 font-bold rounded-xl hover:bg-slate-100 transition-colors"
+          
+          {/* 🔥 The Cache-Busting Dashboard Link */}
+          <Link 
+            href="/profile?refresh=true"
+            className="px-8 py-3 bg-[#D97706] text-white font-bold rounded-xl hover:bg-amber-600 transition-colors flex-1 text-center shadow-md"
           >
-            Post Another Item
-          </button>
+            Manage in Dashboard
+          </Link>
+        </div>
+
+        {/* Made this a subtle text button to keep focus on the main actions */}
+        <button 
+          onClick={() => {
+            setSuccessData(null);
+            setFormData({ ...formData, title: "", category: "electronics", price: "", quantity: "1", condition: "used", description: "", sellerPhone: "" });
+            setImageFiles([]);
+            setImagePreviews([]);
+            setShowOptional(false);
+          }}
+          className="mt-6 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors inline-block"
+        >
+          + Post Another Item
+        </button>
+
         </div>
       </div>
     );
