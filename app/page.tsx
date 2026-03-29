@@ -60,7 +60,7 @@ export default async function Home() {
     .slice(0, 12);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-24 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-12 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
 
       {/* SEARCH SECTION - Applied layout standard */}
       <section className="py-6 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-slate-800 shadow-sm">
