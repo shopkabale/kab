@@ -41,7 +41,7 @@ export default function OfficialProductsManager() {
   };
 
   const fetchOfficialProducts = async (isLoadMore = false) => {
-    if (!user || user.role !== "admin") return;
+    if (!user || (user as any).role !== "admin") return;
 
     try {
       if (isLoadMore) setLoadingMore(true);
@@ -88,12 +88,15 @@ export default function OfficialProductsManager() {
     }
   };
 
+  // --- LOCKED MOUNT EFFECT ---
   useEffect(() => {
-    if (user?.role === "admin") {
-      fetchSponsoredState();
-      fetchOfficialProducts();
-    }
-  }, [user]);
+    if (!user || authLoading || (user as any).role !== "admin") return;
+    
+    fetchSponsoredState();
+    fetchOfficialProducts();
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [(user as any)?.id, authLoading]);
 
   // Handle Quick Toggle for Sponsored Slots
   const handleToggleSponsored = async (productId: string) => {
@@ -120,7 +123,6 @@ export default function OfficialProductsManager() {
       } else {
         // TURN ON: Find available slot and fill it
         const snap = await getDocs(collection(db, "sponsoredSlots"));
-        // Fixed TypeScript implicit any error here:
         let availableSlotId: string | null = null;
         
         snap.forEach(d => {
@@ -139,7 +141,8 @@ export default function OfficialProductsManager() {
         await updateDoc(doc(db, "sponsoredSlots", availableSlotId), {
           status: "active",
           productId: productId,
-          sellerUid: user?.uid || "admin",
+          // Fixed Vercel TS strict mode error
+          sellerUid: (user as any)?.uid || (user as any)?.id || "admin",
           startTime: Timestamp.now(),
           endTime: Timestamp.fromMillis(now + 3 * 24 * 60 * 60 * 1000) // 3 days
         });
@@ -154,18 +157,36 @@ export default function OfficialProductsManager() {
     }
   };
 
-  if (authLoading) return <div className="py-20 text-center font-bold text-slate-500 animate-pulse">Checking credentials...</div>;
-  if (!user || user.role !== "admin") return null;
+  // ============================================================================
+  // SECURITY CHECK
+  // ============================================================================
+  if (authLoading) {
+    return <div className="py-20 text-center font-bold text-slate-500 animate-pulse">Loading Admin Portal...</div>;
+  }
 
+  // Wrapped in (user as any) to prevent the Vercel TypeScript strict-mode error
+  if (!user || (user as any).role !== "admin") {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center">
+        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-4xl mb-6">⛔</div>
+        <h1 className="text-3xl font-black text-slate-900 mb-2">Access Denied</h1>
+        <Link href="/" className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors mt-4">Return to Homepage</Link>
+      </div>
+    );
+  }
+
+  // ============================================================================
+  // MAIN RENDER
+  // ============================================================================
   return (
-    <div className="max-w-6xl mx-auto pb-20 md:pb-0">
+    <div className="max-w-6xl mx-auto pb-20 md:pb-0 px-4 pt-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900">Official Store Manager</h1>
-          <p className="text-slate-500 font-medium mt-1">Manage Kabale Online's internal inventory</p>
+          <h1 className="text-3xl font-black text-slate-900 uppercase tracking-tight">Official Store Manager</h1>
+          <p className="text-slate-500 font-medium mt-1">Manage Kabale Online's internal inventory & active ads</p>
         </div>
-        <Link href="/admin/upload" className="bg-[#D97706] text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md flex items-center gap-2">
-          <span>+</span> Add New Item
+        <Link href="/admin/upload" className="bg-[#D97706] text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md flex items-center gap-2 uppercase text-sm tracking-wider">
+          <span className="text-lg">+</span> Add New Item
         </Link>
       </div>
 
@@ -185,7 +206,7 @@ export default function OfficialProductsManager() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                  <tr>
-                   <td colSpan={6} className="px-6 py-12 text-center text-slate-500">Loading official inventory...</td>
+                   <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-medium animate-pulse">Loading official inventory...</td>
                  </tr>
               ) : products.length === 0 ? (
                 <tr>
@@ -204,7 +225,7 @@ export default function OfficialProductsManager() {
                             {product.images?.[0] ? (
                               <Image src={product.images[0]} alt={product.name || product.title} fill className="object-cover" />
                             ) : (
-                              <span className="text-[8px] text-slate-400 absolute inset-0 flex items-center justify-center">No Img</span>
+                              <span className="text-[8px] text-slate-400 absolute inset-0 flex items-center justify-center font-bold uppercase">No Img</span>
                             )}
                           </div>
                           <div>
@@ -217,23 +238,23 @@ export default function OfficialProductsManager() {
                         UGX {Number(product.price).toLocaleString()}
                       </td>
                       <td className="p-4 px-6">
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${Number(product.stock) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                        <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${Number(product.stock) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                           {product.stock || 0} in stock
                         </span>
                       </td>
 
-                      {/* NEW SPONSORED TOGGLE COLUMN */}
+                      {/* SPONSORED TOGGLE COLUMN */}
                       <td className="p-4 px-6">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleToggleSponsored(product.id)}
                             disabled={togglingId === product.id}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${isSponsored ? 'bg-[#D97706]' : 'bg-slate-300'}`}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 shadow-inner ${isSponsored ? 'bg-[#D97706]' : 'bg-slate-300'}`}
                           >
-                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isSponsored ? 'translate-x-6' : 'translate-x-1'}`} />
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform shadow-sm ${isSponsored ? 'translate-x-6' : 'translate-x-1'}`} />
                           </button>
                           {isSponsored && (
-                            <span className="text-[10px] font-bold text-[#D97706] bg-yellow-50 px-1.5 py-0.5 rounded uppercase border border-yellow-200">
+                            <span className="text-[10px] font-black text-[#D97706] bg-[#D97706]/10 px-2 py-1 rounded uppercase tracking-wider">
                               {slotName?.replace('_', ' ')}
                             </span>
                           )}
@@ -241,7 +262,7 @@ export default function OfficialProductsManager() {
                       </td>
 
                       <td className="p-4 px-6">
-                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">Active</span>
+                        <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 uppercase tracking-wider">Active</span>
                       </td>
                       <td className="p-4 px-6 text-right">
                         <Link 
@@ -263,11 +284,11 @@ export default function OfficialProductsManager() {
 
       {/* Pagination Load More Button */}
       {!loading && hasMore && (
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-12">
           <button 
             onClick={() => fetchOfficialProducts(true)}
             disabled={loadingMore}
-            className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-all disabled:opacity-70 flex items-center gap-2 shadow-sm"
+            className="bg-slate-900 text-white px-8 py-3.5 rounded-xl font-bold hover:bg-slate-800 transition-all disabled:opacity-70 flex items-center gap-2 shadow-md uppercase tracking-wider text-sm"
           >
             {loadingMore ? (
               <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Loading...</>
