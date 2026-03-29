@@ -66,7 +66,8 @@ export default function LayoutClient({
       <Navbar bannerVisible={isBannerVisible} />
 
       {/* MAIN CONTENT */}
-      <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-8 w-full transition-all">
+      {/* 🔥 REMOVED: pb-8 from this tag to eliminate the extra bottom space */}
+      <main className="flex-grow pt-28 w-full transition-all">
         {children}
       </main>
 
