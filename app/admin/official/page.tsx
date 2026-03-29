@@ -4,18 +4,41 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import Image from "next/image";
+import { db } from "@/lib/firebase/config";
+import { collection, doc, getDocs, updateDoc, Timestamp } from "firebase/firestore";
 
 export default function OfficialProductsManager() {
   const { user, loading: authLoading } = useAuth();
-  
+
   // States
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   
+  // Sponsored State mapping: { productId: slotId }
+  const [sponsoredMap, setSponsoredMap] = useState<Record<string, string>>({});
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
   // Pagination States
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastDocId, setLastDocId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
+
+  // Fetch which products are currently in sponsored slots
+  const fetchSponsoredState = async () => {
+    try {
+      const snap = await getDocs(collection(db, "sponsoredSlots"));
+      const map: Record<string, string> = {};
+      snap.forEach(doc => {
+        const data = doc.data();
+        if (data.status === "active" && data.productId) {
+          map[data.productId] = doc.id;
+        }
+      });
+      setSponsoredMap(map);
+    } catch (error) {
+      console.error("Failed to fetch sponsored slots", error);
+    }
+  };
 
   const fetchOfficialProducts = async (isLoadMore = false) => {
     if (!user || user.role !== "admin") return;
@@ -25,27 +48,23 @@ export default function OfficialProductsManager() {
       else setLoading(true);
 
       const url = new URL("/api/products", window.location.origin);
-      
+
       if (isLoadMore && lastDocId) {
         url.searchParams.append("cursor", lastDocId);
       }
-      
-      // We pull 50 at a time because we are filtering out user products locally. 
-      // This ensures you usually get a good chunk of official items per click.
+
       url.searchParams.append("limit", "50"); 
 
       const res = await fetch(url.toString());
-      
+
       if (res.ok) {
         const data = await res.json();
         const fetchedProducts = data.products || [];
 
-        // If we get fewer than 50 back, we've hit the end of the database
         if (fetchedProducts.length < 50) {
           setHasMore(false);
         }
 
-        // Filter ONLY products uploaded by the Admin/Official Store
         const officialItems = fetchedProducts.filter((p: any) => 
           p.isAdminUpload === true || 
           (p.sellerName && (p.sellerName.toLowerCase().includes("admin") || p.sellerName.toLowerCase().includes("official")))
@@ -57,7 +76,6 @@ export default function OfficialProductsManager() {
           setProducts(officialItems);
         }
 
-        // Save the ID of the VERY LAST product fetched to use as the cursor for the next batch
         if (fetchedProducts.length > 0) {
           setLastDocId(fetchedProducts[fetchedProducts.length - 1].id);
         }
@@ -72,9 +90,68 @@ export default function OfficialProductsManager() {
 
   useEffect(() => {
     if (user?.role === "admin") {
+      fetchSponsoredState();
       fetchOfficialProducts();
     }
   }, [user]);
+
+  // Handle Quick Toggle for Sponsored Slots
+  const handleToggleSponsored = async (productId: string) => {
+    setTogglingId(productId);
+    const currentSlotId = sponsoredMap[productId];
+
+    try {
+      if (currentSlotId) {
+        // TURN OFF: Clear the slot
+        await updateDoc(doc(db, "sponsoredSlots", currentSlotId), {
+          status: "available",
+          productId: null,
+          sellerUid: null,
+          startTime: null,
+          endTime: null,
+          bookedNext: false
+        });
+        
+        setSponsoredMap(prev => {
+          const newMap = { ...prev };
+          delete newMap[productId];
+          return newMap;
+        });
+      } else {
+        // TURN ON: Find available slot and fill it
+        const snap = await getDocs(collection(db, "sponsoredSlots"));
+        let availableSlotId = null;
+        
+        snap.forEach(d => {
+          if (d.data().status === "available" && !availableSlotId) {
+            availableSlotId = d.id;
+          }
+        });
+
+        if (!availableSlotId) {
+          alert("All 4 sponsored slots are currently full! Turn one off first.");
+          setTogglingId(null);
+          return;
+        }
+
+        const now = Timestamp.now().toMillis();
+        await updateDoc(doc(db, "sponsoredSlots", availableSlotId), {
+          status: "active",
+          productId: productId,
+          sellerUid: user?.uid || "admin",
+          startTime: Timestamp.now(),
+          endTime: Timestamp.fromMillis(now + 3 * 24 * 60 * 60 * 1000) // 3 days
+        });
+
+        setSponsoredMap(prev => ({ ...prev, [productId]: availableSlotId as string }));
+      }
+    } catch (error) {
+      console.error("Error toggling sponsored status:", error);
+      alert("Failed to update sponsored status.");
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   if (authLoading) return <div className="py-20 text-center font-bold text-slate-500 animate-pulse">Checking credentials...</div>;
   if (!user || user.role !== "admin") return null;
@@ -99,7 +176,7 @@ export default function OfficialProductsManager() {
                 <th className="p-4 px-6">Product</th>
                 <th className="p-4 px-6">Price</th>
                 <th className="p-4 px-6">Stock</th>
-                <th className="p-4 px-6">WhatsApp Number</th>
+                <th className="p-4 px-6">Sponsored</th>
                 <th className="p-4 px-6">Status</th>
                 <th className="p-4 px-6 text-right">Action</th>
               </tr>
@@ -114,59 +191,69 @@ export default function OfficialProductsManager() {
                   <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-medium">No official products found.</td>
                 </tr>
               ) : (
-                products.map((product) => (
-                  <tr key={product.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="p-4 px-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden relative flex-shrink-0 border border-slate-200">
-                          {product.images?.[0] ? (
-                            <Image src={product.images[0]} alt={product.name || product.title} fill className="object-cover" />
-                          ) : (
-                            <span className="text-[8px] text-slate-400 absolute inset-0 flex items-center justify-center">No Img</span>
+                products.map((product) => {
+                  const isSponsored = !!sponsoredMap[product.id];
+                  const slotName = sponsoredMap[product.id];
+
+                  return (
+                    <tr key={product.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-4 px-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden relative flex-shrink-0 border border-slate-200">
+                            {product.images?.[0] ? (
+                              <Image src={product.images[0]} alt={product.name || product.title} fill className="object-cover" />
+                            ) : (
+                              <span className="text-[8px] text-slate-400 absolute inset-0 flex items-center justify-center">No Img</span>
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900 line-clamp-1">{product.name || product.title}</p>
+                            <p className="text-xs text-slate-500 font-mono mt-0.5">{product.publicId || product.id.slice(0,8)}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-4 px-6 font-bold text-slate-900 whitespace-nowrap">
+                        UGX {Number(product.price).toLocaleString()}
+                      </td>
+                      <td className="p-4 px-6">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold ${Number(product.stock) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          {product.stock || 0} in stock
+                        </span>
+                      </td>
+
+                      {/* NEW SPONSORED TOGGLE COLUMN */}
+                      <td className="p-4 px-6">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleToggleSponsored(product.id)}
+                            disabled={togglingId === product.id}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 ${isSponsored ? 'bg-[#D97706]' : 'bg-slate-300'}`}
+                          >
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isSponsored ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </button>
+                          {isSponsored && (
+                            <span className="text-[10px] font-bold text-[#D97706] bg-yellow-50 px-1.5 py-0.5 rounded uppercase border border-yellow-200">
+                              {slotName?.replace('_', ' ')}
+                            </span>
                           )}
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-900 line-clamp-1">{product.name || product.title}</p>
-                          <p className="text-xs text-slate-500 font-mono mt-0.5">{product.publicId || product.id.slice(0,8)}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="p-4 px-6 font-bold text-slate-900 whitespace-nowrap">
-                      UGX {Number(product.price).toLocaleString()}
-                    </td>
-                    <td className="p-4 px-6">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold ${Number(product.stock) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {product.stock || 0} in stock
-                      </span>
-                    </td>
-                    <td className="p-4 px-6">
-                      {product.sellerPhone ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-green-500 text-lg">📱</span>
-                          <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-                            {product.sellerPhone}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded border border-red-100">
-                          Missing Number
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4 px-6">
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">Active</span>
-                    </td>
-                    <td className="p-4 px-6 text-right">
-                      <Link 
-                        href={`/admin/upload?edit=${product.id}`}
-                        className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100 text-slate-600 hover:bg-[#D97706] hover:text-white transition-colors shadow-sm"
-                        title="Edit Official Item"
-                      >
-                        ✏️
-                      </Link>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+
+                      <td className="p-4 px-6">
+                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">Active</span>
+                      </td>
+                      <td className="p-4 px-6 text-right">
+                        <Link 
+                          href={`/admin/upload?edit=${product.id}`}
+                          className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100 text-slate-600 hover:bg-[#D97706] hover:text-white transition-colors shadow-sm"
+                          title="Edit Official Item"
+                        >
+                          ✏️
+                        </Link>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
