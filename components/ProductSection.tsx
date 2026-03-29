@@ -12,19 +12,20 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    // 🔥 THE BREAKOUT TRICK 🔥
+    // w-[100vw] relative left-1/2 -translate-x-1/2 forces the section to touch the exact screen edges.
+    // px-1.5 gives it 6px of padding on the left and right.
+    // gap-1.5 on the grid gives it 6px of spacing in the middle.
+    // This makes all spaces perfectly uniform on mobile!
+    <div className="w-[100vw] relative left-1/2 -translate-x-1/2 px-1.5 sm:w-full sm:max-w-7xl sm:left-auto sm:translate-x-0 sm:px-0 sm:mx-auto">
+      
       {!hideTitle && title && (
         <div className="flex items-center justify-between mb-4 px-1 md:px-0">
           <h2 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight">{title}</h2>
         </div>
       )}
 
-      {/* 🔥 THE SLIM EDGE ALIGNMENT 🔥
-        gap-1.5 creates a 6px space between cards. 
-        -mx-1.5 pulls the grid 6px wider on mobile to offset the parent's px-3 (12px) padding. 
-        Result: Exactly 6px of space between the cards AND exactly 6px to the screen edges! 
-      */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 md:gap-3 -mx-1.5 sm:mx-0">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 md:gap-3">
         {products.map((p) => {
           const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
           const isJustPosted = checkIsNew(p);
