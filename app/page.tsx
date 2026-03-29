@@ -3,7 +3,6 @@ import Link from "next/link";
 import { getProducts } from "@/lib/firebase/firestore";
 import SearchBar from "@/components/SearchBar"; 
 import UrgentStories from "@/components/UrgentStories";
-import SponsoredSection from "@/components/SponsoredSection"; // ADDED IMPORT
 import PersonalizedFeed from "@/components/PersonalizedFeed";
 import ProductSection from "@/components/ProductSection";
 import HorizontalScroller from "@/components/HorizontalScroller";
@@ -80,11 +79,6 @@ export default async function Home() {
       <UrgentStories />
 
       <div className="w-full mt-4 sm:mt-8 space-y-10 md:space-y-16">
-
-        {/* SPONSORED SECTION PLACED HERE */}
-        <section className="w-full">
-          <SponsoredSection />
-        </section>
 
         {featuredProducts.length > 0 && (
           <section className="w-full">
