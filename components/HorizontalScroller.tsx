@@ -82,7 +82,10 @@ export default function HorizontalScroller({ title, products }: { title: string,
 
                 {/* Details Area */}
                 <div className="p-2.5 flex flex-col flex-grow">
-                  <h3 className="text-[13px] md:text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-tight mb-1.5 group-hover:text-[#D97706] transition-colors">{p.title || p.name}</h3>
+                  {/* 🔥 ADDED: h-[36px] forces this to ALWAYS be exactly 2 lines tall */}
+                  <h3 className="text-[13px] md:text-sm font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-tight mb-1.5 group-hover:text-[#D97706] transition-colors h-[36px]">
+                    {p.title || p.name}
+                  </h3>
                   <div className="mt-auto">
                     <span className="text-[15px] md:text-base font-black text-[#D97706] dark:text-yellow-500">
                       UGX {Number(p.price).toLocaleString()}
@@ -91,7 +94,7 @@ export default function HorizontalScroller({ title, products }: { title: string,
                 </div>
               </Link>
 
-              {/* Bottom Quick Actions (Copied exactly from ProductSection) */}
+              {/* Bottom Quick Actions */}
               <div className="grid grid-cols-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#111] mt-auto">
                  <a 
                    href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I am interested in this item on Kabale Online: *${p.title || p.name}*\n\nProduct ID: [${p.id}]`)}`}
