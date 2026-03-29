@@ -12,9 +12,8 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
   };
 
   return (
-    // Reverted to a standard, well-behaved container. 
-    // Just make sure the parent section in Home.tsx has px-2 or px-3!
-    <div className="w-full max-w-7xl mx-auto">
+    // ✅ Let parent control spacing (this is key)
+    <div className="w-full">
       
       {!hideTitle && title && (
         <div className="flex items-center justify-between mb-3">
@@ -22,19 +21,19 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
         </div>
       )}
 
-      {/* JUMIA STYLE SPACING: gap-2 (8px) provides perfectly balanced breathing room without stretching */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-4">
+      {/* ✅ Perfect consistent Jumia gap */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
         {products.map((p) => {
           const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
           const isJustPosted = checkIsNew(p);
 
           return (
-            // JUMIA STYLE CARD: Soft shadow, slightly rounded corners, clean white background
-            <div key={p.id} className="group flex flex-col bg-white dark:bg-[#151515] rounded-md overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-none dark:border dark:border-slate-800 transition-shadow hover:shadow-lg h-full relative">
+            // ✅ Bonus polish: rounded-sm, hover:shadow-md transition-all duration-200
+            <div key={p.id} className="group flex flex-col bg-white dark:bg-[#151515] rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 dark:border dark:border-slate-800 h-full relative">
 
               <Link href={`/product/${p.publicId || p.id}`} className="flex flex-col flex-grow">
-                {/* Image Area: aspect-square stops the images from getting too tall and "blown up" on mobile */}
-                <div className="relative aspect-square sm:aspect-[4/5] w-full bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
+                {/* Image Area: Strict square for uniform alignment */}
+                <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
                   {optimizedImage ? (
                     <Image 
                       src={optimizedImage} 
@@ -49,7 +48,7 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
 
                   {/* Conditional "Just Posted" Overlay */}
                   {isJustPosted && (
-                    <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1">
+                    <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center gap-1">
                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
                        New
                     </div>
@@ -58,7 +57,6 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
 
                 {/* Details Area */}
                 <div className="p-2 sm:p-3 flex flex-col flex-grow bg-white dark:bg-[#151515]">
-                  {/* Standardized font sizes to keep text proportional */}
                   <h3 className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug mb-1 group-hover:text-[#D97706] transition-colors">{p.name}</h3>
                   <div className="mt-auto pt-1">
                     <span className="text-sm sm:text-base font-black text-[#D97706] dark:text-yellow-500">
