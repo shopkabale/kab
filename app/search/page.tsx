@@ -90,8 +90,29 @@ function SearchResults() {
 
   if (loading) {
     return (
-      <div className="py-20 text-center bg-slate-50 dark:bg-[#0a0a0a] min-h-screen">
-        <div className="w-10 h-10 border-4 border-[#D97706] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <div className="flex flex-col items-center justify-start pt-32 bg-slate-50 dark:bg-[#0a0a0a] min-h-screen">
+        {/* THE KINETIC SPINNER INJECTED HERE */}
+        <style>{`
+          @keyframes kineticSpin {
+            0% { transform: scale(0.6) rotate(0deg); opacity: 0.7; }
+            50% { transform: scale(1.2) rotate(90deg); opacity: 1; }
+            100% { transform: scale(0.6) rotate(360deg); opacity: 0.7; }
+          }
+          .animate-kinetic-spin {
+            animation: kineticSpin 1.4s infinite ease-in-out;
+          }
+        `}</style>
+
+        <svg 
+          className="animate-kinetic-spin w-16 h-16 text-[#D97706] drop-shadow-md mb-6" 
+          viewBox="0 0 100 100" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="7" className="opacity-90" />
+          <path d="M38 28v44m0-22l20-22m-20 22l20 22" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+
         <p className="font-bold text-slate-500 animate-pulse">Searching Kabale Online for "{query}"...</p>
       </div>
     );
@@ -181,7 +202,27 @@ function SearchResults() {
 // Main Page Component wrapped in Suspense for Next.js build requirements
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="py-20 text-center font-bold text-slate-500 bg-slate-50 dark:bg-[#0a0a0a] min-h-screen">Preparing search...</div>}>
+    <Suspense 
+      fallback={
+        <div className="flex flex-col items-center justify-start pt-32 bg-slate-50 dark:bg-[#0a0a0a] min-h-screen">
+          <style>{`
+            @keyframes kineticSpin {
+              0% { transform: scale(0.6) rotate(0deg); opacity: 0.7; }
+              50% { transform: scale(1.2) rotate(90deg); opacity: 1; }
+              100% { transform: scale(0.6) rotate(360deg); opacity: 0.7; }
+            }
+            .animate-kinetic-spin {
+              animation: kineticSpin 1.4s infinite ease-in-out;
+            }
+          `}</style>
+          <svg className="animate-kinetic-spin w-16 h-16 text-[#D97706] drop-shadow-md mb-6" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="7" className="opacity-90" />
+            <path d="M38 28v44m0-22l20-22m-20 22l20 22" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <p className="font-bold text-slate-500 animate-pulse">Preparing search...</p>
+        </div>
+      }
+    >
       <SearchResults />
     </Suspense>
   );
