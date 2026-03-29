@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import algoliasearch from "algoliasearch/lite";
 import Link from "next/link";
@@ -14,7 +14,6 @@ const searchClient = algoliasearch(
   process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "",
   process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY || ""
 );
-// Make sure this matches your exact index name!
 const index = searchClient.initIndex(process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "products");
 
 interface SearchResult {
@@ -26,26 +25,24 @@ interface SearchResult {
 }
 
 interface SearchBarProps {
-  onSearch?: () => void; // Allows the Navbar to pass a "close menu" function
+  onSearch?: () => void;
 }
 
-export default function SearchBar({ onSearch }: SearchBarProps) {
+// 🔥 STEP 1: Rename the main component to SearchBarContent
+function SearchBarContent({ onSearch }: SearchBarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   
-  // 🔥 ADDED: Loader State & Routing Hooks
   const [isNavigating, setIsNavigating] = useState(false);
   const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams(); // THIS is what broke the build!
   
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
-
-  // Get the current user for analytics tracking
   const { user } = useAuth();
 
-  // 🔥 ADDED: Turn off the loader as soon as the URL changes (page load finishes)
+  // Turn off the loader as soon as the URL changes
   useEffect(() => {
     setIsNavigating(false);
   }, [pathname, searchParams]);
@@ -59,7 +56,6 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Handle the Live Dropdown Search via Algolia
   const handleLiveSearch = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
@@ -79,23 +75,18 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
     }
   };
 
-  // Handle the "Enter" Key press OR the Search Button click
   const handleFullSearchSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const finalQuery = query.trim();
 
     if (finalQuery !== "") {
       setIsOpen(false);
-      setIsNavigating(true); // 🔥 SHOW LOADER IMMEDIATELY
+      setIsNavigating(true); // SHOW LOADER IMMEDIATELY
       
-      if (onSearch) onSearch(); // CLOSES THE MOBILE MENU!
+      if (onSearch) onSearch();
 
-      // 🔥 SAVE SEARCH TO FIRESTORE 🔥
       try {
-        // Safe type casting to bypass the strict Vercel build error
-        // We noticed your ProfilePage uses user.id, so we prioritize that!
         const currentUser = user as any; 
-
         await addDoc(collection(db, "search_queries"), {
           query: finalQuery.toLowerCase(),
           userId: currentUser?.id || currentUser?.uid || "anonymous",
@@ -106,7 +97,6 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
         console.error("Failed to save search query to Firestore:", error);
       }
 
-      // Navigate to results page
       router.push(`/search?q=${encodeURIComponent(finalQuery)}`);
     }
   };
@@ -134,7 +124,6 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
         </button>
       </form>
 
-      {/* The Algolia Live Dropdown */}
       {isOpen && results.length > 0 && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-[100]">
           {results.map((hit) => (
@@ -144,8 +133,8 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
               onClick={() => { 
                 setIsOpen(false); 
                 setQuery(""); 
-                setIsNavigating(true); // 🔥 SHOW LOADER IMMEDIATELY ON CLICK
-                if (onSearch) onSearch(); // Close mobile menu when an item is clicked
+                setIsNavigating(true); 
+                if (onSearch) onSearch(); 
               }}
               className="flex items-center p-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
             >
@@ -175,7 +164,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
         </div>
       )}
 
-      {/* 🔥 THE INJECTED LOADER OVERLAY 🔥 */}
+      {/* THE INJECTED LOADER OVERLAY */}
       {isNavigating && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-transparent pointer-events-none transition-opacity duration-300">
           <style>{`
@@ -201,5 +190,22 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
         </div>
       )}
     </div>
+  );
+}
+
+// 🔥 STEP 2: Export a wrapper that isolates the Suspense boundary!
+// This stops the build from crashing on Home, Products, etc.
+export default function SearchBar(props: SearchBarProps) {
+  return (
+    <Suspense 
+      fallback={
+        <div className="relative w-full mx-auto">
+          {/* Skeleton loader that looks like the real search bar to prevent layout shift */}
+          <div className="w-full py-3 md:py-3.5 border border-slate-300 rounded-full bg-slate-100 dark:bg-slate-800 h-[46px] md:h-[50px] animate-pulse"></div>
+        </div>
+      }
+    >
+      <SearchBarContent {...props} />
+    </Suspense>
   );
 }
