@@ -97,7 +97,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // ==========================================
   // 🔥 Limit to 12. This drops the cost from 50 reads down to 12 reads per cache build!
   const rawCategoryProducts = await getProducts(safeCategory, 12);
-  
+
   const relatedProducts = rawCategoryProducts
     .filter((p) => p.id !== product.id && p.publicId !== product.publicId)
     // 🔥 Replaced Math.random() with the stable daily shuffle
@@ -182,10 +182,19 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </span>  
             </div>  
 
-            {/* HIGH PRIORITY ACTIONS (Chat & Buy Now) */}
-            <div className="mb-8 border-b border-slate-100 pb-8">
+            {/* FAST BUY ACTION (Stays up below price) */}
+            <div className="mb-8">
               <FastBuy product={{...product, images: optimizedImages}} />
+            </div>
 
+            {/* DESCRIPTION */}  
+            <div className="mb-8">  
+              <h3 className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Description</h3>  
+              {renderDescription(product.description)}
+            </div>  
+
+            {/* SECONDARY ACTIONS (Chat, Make Offer, Save) */}
+            <div className="mb-8 border-b border-slate-100 pb-8">
               <ProductActions product={{...product, images: optimizedImages}}>
                  <div className="flex flex-col gap-3 mt-2 w-full">
                     <MakeOfferButton product={product} />
@@ -193,12 +202,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                  </div>
               </ProductActions>
             </div> 
-
-            {/* DESCRIPTION */}  
-            <div className="mb-8">  
-              <h3 className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Description</h3>  
-              {renderDescription(product.description)}
-            </div>  
 
             {/* 2-COLUMN SPECS TABLE */}
             <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-4">
