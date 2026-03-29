@@ -5,7 +5,7 @@ import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import Image from "next/image";
 import { db } from "@/lib/firebase/config";
-import { collection, doc, getDocs, updateDoc, Timestamp } from "firebase/firestore";
+import { collection, doc, getDocs, updateDoc, setDoc, Timestamp } from "firebase/firestore";
 
 export default function OfficialProductsManager() {
   const { user, loading: authLoading } = useAuth();
@@ -122,7 +122,27 @@ export default function OfficialProductsManager() {
         });
       } else {
         // TURN ON: Find available slot and fill it
-        const snap = await getDocs(collection(db, "sponsoredSlots"));
+        let snap = await getDocs(collection(db, "sponsoredSlots"));
+        
+        // 🔥 AUTO-SEED THE DATABASE IF EMPTY 🔥
+        // This instantly creates slot_1 through slot_4 if they don't exist yet!
+        if (snap.empty) {
+          console.log("No slots found! Auto-creating the 4 default slots now...");
+          for (let i = 1; i <= 4; i++) {
+            await setDoc(doc(db, "sponsoredSlots", `slot_${i}`), {
+              id: `slot_${i}`,
+              status: "available",
+              productId: null,
+              sellerUid: null,
+              startTime: null,
+              endTime: null,
+              bookedNext: false
+            });
+          }
+          // Re-fetch now that they are created
+          snap = await getDocs(collection(db, "sponsoredSlots"));
+        }
+
         let availableSlotId: string | null = null;
         
         snap.forEach(d => {
@@ -141,7 +161,7 @@ export default function OfficialProductsManager() {
         await updateDoc(doc(db, "sponsoredSlots", availableSlotId), {
           status: "active",
           productId: productId,
-          // Fixed Vercel TS strict mode error
+          // Bypassing TS strict mode for ID mapping
           sellerUid: (user as any)?.uid || (user as any)?.id || "admin",
           startTime: Timestamp.now(),
           endTime: Timestamp.fromMillis(now + 3 * 24 * 60 * 60 * 1000) // 3 days
@@ -168,9 +188,12 @@ export default function OfficialProductsManager() {
   if (!user || (user as any).role !== "admin") {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center">
-        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-4xl mb-6">⛔</div>
-        <h1 className="text-3xl font-black text-slate-900 mb-2">Access Denied</h1>
-        <Link href="/" className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors mt-4">Return to Homepage</Link>
+        <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner border border-red-200">⛔</div>
+        <h1 className="text-3xl font-black text-slate-900 mb-2 uppercase tracking-tight">Access Denied</h1>
+        <p className="text-slate-500 mb-8 font-medium">You do not have permission to view the official store manager.</p>
+        <Link href="/" className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors shadow-md uppercase tracking-wider text-sm">
+          Return to Homepage
+        </Link>
       </div>
     );
   }
