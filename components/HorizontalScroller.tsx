@@ -37,7 +37,7 @@ export default function HorizontalScroller({ title, products }: { title: string,
 
   return (
     <div className="w-full overflow-hidden mb-4">
-      
+
       {/* TITLE ALIGNED WITH GLOBAL LAYOUT */}
       <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 mb-3">
         <h2 className="text-lg md:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
@@ -104,7 +104,8 @@ export default function HorizontalScroller({ title, products }: { title: string,
                      href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I am interested in this item on Kabale Online: *${p.title || p.name}*\n\nProduct ID: [${p.id}]`)}`}
                      target="_blank"
                      rel="noopener noreferrer"
-                     className="col-span-3 py-2 border-r border-slate-100 dark:border-slate-800 hover:bg-[#25D366] text-slate-900 dark:text-white hover:text-white text-[11px] font-bold uppercase flex justify-center items-center gap-1.5 transition-colors group/wa"
+                     // Updated: Added px-2 sm:px-3 and changed justify-center to justify-start
+                     className="col-span-3 py-2 px-2 sm:px-3 border-r border-slate-100 dark:border-slate-800 hover:bg-[#25D366] text-slate-900 dark:text-white hover:text-white text-[11px] font-bold uppercase flex justify-start items-center gap-1.5 transition-colors group/wa"
                    >
                      <span>WhatsApp</span>
                    </a>
