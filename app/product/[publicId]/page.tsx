@@ -137,7 +137,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
       <RecentlyViewedTracker product={product} />   
 
       {/* BREADCRUMBS */}  
-      <div className="mb-6 flex items-center text-sm text-slate-500 font-medium overflow-x-auto whitespace-nowrap scrollbar-hide">  
+      <div className="mb-8 flex items-center text-sm text-slate-500 font-medium overflow-x-auto whitespace-nowrap scrollbar-hide">  
         <Link href="/" className="hover:text-[#D97706] transition-colors">Home</Link>  
         <span className="mx-2">/</span>  
         <Link href={`/category/${safeCategory}`} className="hover:text-[#D97706] transition-colors capitalize">  
@@ -147,98 +147,97 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         <span className="text-slate-900 truncate max-w-[200px]">{safeName}</span>  
       </div>  
 
-      <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-12">  
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-8 p-6 lg:p-8">  
+      {/* MODERN E-COMMERCE LAYOUT (No outer card, just a clean grid) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-16">  
 
-          {/* LEFT COLUMN: Image Gallery & Color Notice */}  
-          <div className="w-full mb-8 lg:mb-0 flex flex-col">  
-            <ImageGallery images={optimizedImages} title={safeName} />  
-            <p className="text-[11px] text-slate-400 mt-4 text-center italic">  
-              * Note: Actual color variations may occur due to lighting or screen settings.  
-            </p>  
+        {/* LEFT COLUMN: Image Gallery (Sticky on Desktop) */}  
+        <div className="w-full flex flex-col lg:sticky lg:top-24 h-fit">  
+          <ImageGallery images={optimizedImages} title={safeName} />  
+          <p className="text-[11px] text-slate-400 mt-4 text-center italic">  
+            * Note: Actual color variations may occur due to lighting or screen settings.  
+          </p>  
+        </div>  
+
+        {/* RIGHT COLUMN: Product Details */}  
+        <div className="flex flex-col">  
+
+          {/* Badges */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">  
+            <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${  
+              safeCondition === 'new' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'  
+            }`}>  
+              {safeCondition === 'new' ? 'Brand New' : 'Used'}  
+            </span>  
           </div>  
 
-          {/* RIGHT COLUMN: Product Details */}  
-          <div className="flex flex-col h-full">  
+          {/* Title */}
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight mb-3">  
+            {safeName}
+          </h1>  
 
-            {/* Badges */}
-            <div className="flex flex-wrap items-center gap-2 mb-3">  
-              <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${  
-                safeCondition === 'new' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-700'  
-              }`}>  
-                {safeCondition === 'new' ? 'Brand New' : 'Used'}  
-              </span>  
-            </div>  
-
-            {/* Title */}
-            <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight mb-2">  
-              {safeName}
-            </h1>  
-
-            {/* Price */}
-            <div className="mb-6 flex items-center gap-4">  
-              <span className="text-4xl font-black text-[#D97706]">  
-                UGX {safePrice.toLocaleString()}  
-              </span>  
-            </div>  
-
-            {/* FAST BUY ACTION (Stays up below price) */}
-            <div className="mb-8">
-              <FastBuy product={{...product, images: optimizedImages}} />
-            </div>
-
-            {/* DESCRIPTION */}  
-            <div className="mb-8">  
-              <h3 className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Description</h3>  
-              {renderDescription(product.description)}
-            </div>  
-
-            {/* SECONDARY ACTIONS (Chat, Make Offer, Save) */}
-            <div className="mb-8 border-b border-slate-100 pb-8">
-              <ProductActions product={{...product, images: optimizedImages}}>
-                 <div className="flex flex-col gap-3 mt-2 w-full">
-                    <MakeOfferButton product={product} />
-                    <SaveProductButton product={product} />
-                 </div>
-              </ProductActions>
-            </div> 
-
-            {/* 2-COLUMN SPECS TABLE */}
-            <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-4">
-              <table className="w-full text-sm text-left">
-                <tbody className="divide-y divide-slate-200">
-                  <tr className="divide-x divide-slate-200 bg-white">
-                    <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700 whitespace-nowrap">Stock Status</th>
-                    <td className="px-4 py-3 text-slate-900 font-medium flex items-center">
-                      <span className={safeStock > 0 ? "text-green-700" : "text-red-600"}>
-                        {safeStock > 0 ? 'In Stock' : 'Out of Stock'}
-                      </span>
-                      {safeStock > 0 && safeStock <= 3 && <span className="text-slate-500 font-normal ml-1">(Few left!)</span>}
-                    </td>
-                  </tr>
-                  <tr className="divide-x divide-slate-200 bg-white">
-                    <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Location</th>
-                    <td className="px-4 py-3 text-slate-900">Available in Kabale</td>
-                  </tr>
-                  <tr className="divide-x divide-slate-200 bg-white">
-                    <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Delivery</th>
-                    <td className="px-4 py-3 text-slate-900">Same day (if ordered 7 AM - 3 PM)</td>
-                  </tr>
-                  <tr className="divide-x divide-slate-200 bg-white">
-                    <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Sold By</th>
-                    <td className="px-4 py-3 text-slate-900 font-bold uppercase">
-                      {product.sellerName || "Verified Seller"} {isAdmin && "✓"}
-                    </td>
-                  </tr>
-                  <tr className="divide-x divide-slate-200 bg-white">
-                    <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Activity</th>
-                    <td className="px-4 py-3 text-slate-900">🔥 {fakeViews} viewing today</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
+          {/* Price */}
+          <div className="mb-6 flex items-center gap-4">  
+            <span className="text-4xl font-black text-[#D97706]">  
+              UGX {safePrice.toLocaleString()}  
+            </span>  
           </div>  
+
+          {/* FAST BUY ACTION (Stays up below price) */}
+          <div className="mb-10">
+            <FastBuy product={{...product, images: optimizedImages}} />
+          </div>
+
+          {/* DESCRIPTION */}  
+          <div className="mb-8">  
+            <h3 className="text-sm font-bold text-slate-900 mb-4 uppercase tracking-wider">Description</h3>  
+            {renderDescription(product.description)}
+          </div>  
+
+          {/* SECONDARY ACTIONS (Chat, Make Offer, Save) */}
+          <div className="mb-10 border-b border-slate-200 pb-10">
+            <ProductActions product={{...product, images: optimizedImages}}>
+                <div className="flex flex-col gap-3 mt-2 w-full">
+                  <MakeOfferButton product={product} />
+                  <SaveProductButton product={product} />
+                </div>
+            </ProductActions>
+          </div> 
+
+          {/* 2-COLUMN SPECS TABLE */}
+          <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-4 bg-white">
+            <table className="w-full text-sm text-left">
+              <tbody className="divide-y divide-slate-200">
+                <tr className="divide-x divide-slate-200">
+                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700 whitespace-nowrap">Stock Status</th>
+                  <td className="px-4 py-3 text-slate-900 font-medium flex items-center bg-white">
+                    <span className={safeStock > 0 ? "text-green-700" : "text-red-600"}>
+                      {safeStock > 0 ? 'In Stock' : 'Out of Stock'}
+                    </span>
+                    {safeStock > 0 && safeStock <= 3 && <span className="text-slate-500 font-normal ml-1">(Few left!)</span>}
+                  </td>
+                </tr>
+                <tr className="divide-x divide-slate-200">
+                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Location</th>
+                  <td className="px-4 py-3 text-slate-900 bg-white">Available in Kabale</td>
+                </tr>
+                <tr className="divide-x divide-slate-200">
+                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Delivery</th>
+                  <td className="px-4 py-3 text-slate-900 bg-white">Same day (if ordered 7 AM - 3 PM)</td>
+                </tr>
+                <tr className="divide-x divide-slate-200">
+                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Sold By</th>
+                  <td className="px-4 py-3 text-slate-900 font-bold uppercase bg-white">
+                    {product.sellerName || "Verified Seller"} {isAdmin && "✓"}
+                  </td>
+                </tr>
+                <tr className="divide-x divide-slate-200">
+                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Activity</th>
+                  <td className="px-4 py-3 text-slate-900 bg-white">🔥 {fakeViews} viewing today</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
         </div>  
       </div>  
 
@@ -246,8 +245,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
       {/* HORIZONTALLY SCROLLABLE RELATED PRODUCTS   */}  
       {/* ========================================== */}  
       {relatedProducts.length > 0 && (  
-        <div className="mt-16 mb-8">  
-          <div className="flex items-center justify-between mb-6">  
+        <div className="mt-16 mb-8 pt-10 border-t border-slate-200">  
+          <div className="flex items-center justify-between mb-8">  
             <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">You Might Also Like</h2>  
           </div>  
 
@@ -257,7 +256,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               <Link   
                 key={relProduct.id}   
                 href={`/product/${relProduct.publicId || relProduct.id}`}   
-                className="flex-none w-[160px] sm:w-[220px] snap-start bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col"  
+                className="flex-none w-[160px] sm:w-[220px] snap-start bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col hover:border-slate-300 transition-colors"  
               >  
                 {/* Image */}  
                 <div className="aspect-square relative bg-slate-100 overflow-hidden">  
@@ -292,7 +291,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             {/* View More Card at the end of the scroll */}
             <Link 
               href={`/category/${safeCategory}`} 
-              className="flex-none w-[160px] sm:w-[220px] snap-start bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-500 p-4"
+              className="flex-none w-[160px] sm:w-[220px] snap-start bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-500 p-4 hover:bg-slate-100 transition-colors"
             >
               <div className="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center mb-3 shadow-sm">
                 <span className="text-xl font-bold">→</span>
