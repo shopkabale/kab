@@ -99,8 +99,9 @@ function SearchResults() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a]">
-      <div className="max-w-[1600px] mx-auto py-8 px-4 sm:px-6">
-        
+      {/* 🔥 THE FIX: Applied the global 1200px max-width and px-3/px-4 standard */}
+      <div className="w-full max-w-[1200px] mx-auto py-8 px-3 sm:px-4">
+
         {/* HEADER SECTION */}
         <div className="mb-8 max-w-3xl mx-auto text-center">
           <h1 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white mb-2 uppercase tracking-tight">
@@ -167,7 +168,8 @@ function SearchResults() {
           </div>
         ) : (
           // 🔥 REPLACED HARDCODED GRID WITH PRODUCTSECTION 🔥
-          <div className="px-2 sm:px-0 pb-12">
+          // Stripped out the extra px-2 wrapper since the parent div handles padding now
+          <div className="pb-12 w-full">
             <ProductSection products={products} />
           </div>
         )}
