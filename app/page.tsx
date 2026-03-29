@@ -110,7 +110,7 @@ export default async function Home() {
 
         {/* 3. TRENDING */}
         {trendingNow.length > 0 && (
-          <section className="px-4">
+          <section className="px-3 sm:px-4">
             <ProductSection 
               title="Trending now" 
               products={trendingNow} 
@@ -152,7 +152,7 @@ export default async function Home() {
         </section>
 
         {/* 5. JUST POSTED */}
-        <section className="px-4">
+        <section className="px-3 sm:px-4">
           <ProductSection 
             title="Just posted" 
             products={justPostedProducts} 
@@ -165,7 +165,8 @@ export default async function Home() {
         </section>
 
         {/* 7. CATEGORIES (RESTORED BORDERS & CARD STYLE) */}
-        <section className="py-12 border-t border-slate-200 dark:border-slate-800 px-4">
+        {/* Changed px-4 to px-3 sm:px-4 to match the gap-3 on mobile */}
+        <section className="py-12 border-t border-slate-200 dark:border-slate-800 px-3 sm:px-4">
           <div className="max-w-3xl mx-auto">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
               Explore by category
