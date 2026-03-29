@@ -69,7 +69,7 @@ export default async function Home() {
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-24 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
 
       {/* 1. SEARCH & INTENT CHIPS */}
-      <section className="px-3 sm:px-4 py-6 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-slate-800 shadow-sm">
+      <section className="px-2 sm:px-4 py-6 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="max-w-3xl mx-auto">
           <SearchBar />
           <div className="flex gap-3 overflow-x-auto py-4 no-scrollbar items-center justify-start md:justify-center px-1 snap-x">
@@ -108,9 +108,9 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 3. TRENDING */}
+        {/* 3. TRENDING (Updated to px-2 for Jumia spacing) */}
         {trendingNow.length > 0 && (
-          <section className="px-3 sm:px-4">
+          <section className="px-2 sm:px-4">
             <ProductSection 
               title="Trending now" 
               products={trendingNow} 
@@ -151,8 +151,8 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 5. JUST POSTED */}
-        <section className="px-3 sm:px-4">
+        {/* 5. JUST POSTED (Updated to px-2 for Jumia spacing) */}
+        <section className="px-2 sm:px-4">
           <ProductSection 
             title="Just posted" 
             products={justPostedProducts} 
@@ -164,9 +164,8 @@ export default async function Home() {
           <PersonalizedFeed allProducts={allProducts} />
         </section>
 
-        {/* 7. CATEGORIES (RESTORED BORDERS & CARD STYLE) */}
-        {/* Changed px-4 to px-3 sm:px-4 to match the gap-3 on mobile */}
-        <section className="py-12 border-t border-slate-200 dark:border-slate-800 px-3 sm:px-4">
+        {/* 7. CATEGORIES (Updated to px-2 for layout consistency) */}
+        <section className="py-12 border-t border-slate-200 dark:border-slate-800 px-2 sm:px-4">
           <div className="max-w-3xl mx-auto">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
               Explore by category
