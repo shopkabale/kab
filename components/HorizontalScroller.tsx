@@ -34,45 +34,48 @@ export default function HorizontalScroller({ title, products }: { title: string,
         {title}
       </h2>
       
-      {/* The px-4 here allows the items to bleed perfectly to the edge 
-        of the screen while maintaining alignment with the title.
-      */}
+      {/* Scrollable Container */}
       <div 
         ref={scrollRef}
         onScroll={handleScroll}
-        className="flex gap-4 overflow-x-auto snap-x no-scrollbar px-4 pb-2 w-full"
+        className="flex gap-4 overflow-x-auto snap-x no-scrollbar px-4 pb-4 w-full items-stretch"
       >
         {products.map((item) => (
           <Link 
             key={item.id}
             href={`/product/${item.publicId || item.id}`}
-            className="snap-start shrink-0 w-[140px] sm:w-[180px] flex flex-col group"
+            className="snap-start shrink-0 w-[160px] sm:w-[200px] flex flex-col group bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-2xl hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-300 shadow-sm overflow-hidden"
           >
-            <div className="w-full aspect-square bg-slate-100 dark:bg-slate-800/50 rounded-2xl relative overflow-hidden mb-2">
+            {/* Image Container */}
+            <div className="w-full aspect-square bg-slate-100 dark:bg-slate-800/50 relative overflow-hidden shrink-0 border-b border-slate-100 dark:border-slate-800">
               {item.images?.[0] ? (
                 <Image 
                   src={item.images[0]} 
                   alt={item.title || item.name || 'Product'} 
                   fill 
-                  className="object-cover group-hover:scale-105 transition-transform duration-300" 
+                  className="object-cover group-hover:scale-105 transition-transform duration-500" 
                   sizes="(max-width: 768px) 50vw, 33vw" 
                 />
               ) : (
                 <span className="absolute inset-0 flex items-center justify-center text-[10px] text-slate-400 font-bold uppercase">No Image</span>
               )}
             </div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-1 group-hover:text-[#D97706] transition-colors">
-              {item.title || item.name}
-            </h3>
-            <p className="text-xs font-extrabold text-slate-800 dark:text-slate-200 mt-0.5">
-              UGX {(Number(item.price) || 0).toLocaleString()}
-            </p>
+            
+            {/* Text & Price Details */}
+            <div className="p-3 sm:p-4 flex flex-col flex-1 justify-between">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-2 group-hover:text-[#D97706] transition-colors mb-2 leading-snug">
+                {item.title || item.name}
+              </h3>
+              <p className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white mt-auto">
+                UGX {(Number(item.price) || 0).toLocaleString()}
+              </p>
+            </div>
           </Link>
         ))}
       </div>
 
       {/* Progress Bar */}
-      <div className="px-4 mt-2">
+      <div className="px-4 mt-1">
         <div className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
           <div 
             className="h-full bg-[#D97706] rounded-full transition-all duration-75 ease-out" 
