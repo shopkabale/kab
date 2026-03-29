@@ -120,7 +120,8 @@ export default function OfficialProductsManager() {
       } else {
         // TURN ON: Find available slot and fill it
         const snap = await getDocs(collection(db, "sponsoredSlots"));
-        let availableSlotId = null;
+        // Fixed TypeScript implicit any error here:
+        let availableSlotId: string | null = null;
         
         snap.forEach(d => {
           if (d.data().status === "available" && !availableSlotId) {
