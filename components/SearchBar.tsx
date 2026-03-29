@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import algoliasearch from "algoliasearch/lite";
 import Link from "next/link";
 import Image from "next/image";
@@ -33,11 +33,22 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  
+  // 🔥 ADDED: Loader State & Routing Hooks
+  const [isNavigating, setIsNavigating] = useState(false);
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  
   const searchRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   // Get the current user for analytics tracking
   const { user } = useAuth();
+
+  // 🔥 ADDED: Turn off the loader as soon as the URL changes (page load finishes)
+  useEffect(() => {
+    setIsNavigating(false);
+  }, [pathname, searchParams]);
 
   // Close dropdown if clicked outside
   useEffect(() => {
@@ -75,6 +86,8 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
 
     if (finalQuery !== "") {
       setIsOpen(false);
+      setIsNavigating(true); // 🔥 SHOW LOADER IMMEDIATELY
+      
       if (onSearch) onSearch(); // CLOSES THE MOBILE MENU!
 
       // 🔥 SAVE SEARCH TO FIRESTORE 🔥
@@ -131,6 +144,7 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
               onClick={() => { 
                 setIsOpen(false); 
                 setQuery(""); 
+                setIsNavigating(true); // 🔥 SHOW LOADER IMMEDIATELY ON CLICK
                 if (onSearch) onSearch(); // Close mobile menu when an item is clicked
               }}
               className="flex items-center p-3 hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0"
@@ -158,6 +172,32 @@ export default function SearchBar({ onSearch }: SearchBarProps) {
           >
             <span className="text-xs font-bold text-[#D97706] uppercase tracking-wider">Tap to see all results ➔</span>
           </div>
+        </div>
+      )}
+
+      {/* 🔥 THE INJECTED LOADER OVERLAY 🔥 */}
+      {isNavigating && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-transparent pointer-events-none transition-opacity duration-300">
+          <style>{`
+            @keyframes kineticSpin {
+              0% { transform: scale(0.6) rotate(0deg); opacity: 0.7; }
+              50% { transform: scale(1.2) rotate(90deg); opacity: 1; }
+              100% { transform: scale(0.6) rotate(360deg); opacity: 0.7; }
+            }
+            .animate-kinetic-spin {
+              animation: kineticSpin 1.4s infinite ease-in-out;
+            }
+          `}</style>
+
+          <svg 
+            className="animate-kinetic-spin w-16 h-16 text-[#D97706] drop-shadow-md" 
+            viewBox="0 0 100 100" 
+            fill="none" 
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="7" className="opacity-90" />
+            <path d="M38 28v44m0-22l20-22m-20 22l20 22" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
       )}
     </div>
