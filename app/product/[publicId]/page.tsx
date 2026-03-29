@@ -47,6 +47,7 @@ export async function generateMetadata({ params }: { params: { publicId: string 
 // ==========================================
 // THE DAILY SHUFFLE ALGORITHM
 // ==========================================
+// We add this here so we can shuffle the related products stably without breaking the cache!
 function getDailyRandomScore(id: string) {
   const today = new Date().toISOString().split('T')[0];
   const seedString = id + today; 
@@ -68,6 +69,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const safeCondition = product.condition || "used";
   const safeCategory = product.category || "general";
 
+  // ==========================================
+  // 1. BULLETPROOF STOCK PARSING
+  // ==========================================
   let safeStock = 1;
   if (product.stock !== undefined && product.stock !== null) {
     const parsed = Number(product.stock);
@@ -76,15 +80,27 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
     }
   }
 
+  // ==========================================
+  // 2. BULLETPROOF ADMIN CHECK & FOMO MATH
+  // ==========================================
   const sellerNameStr = String(product.sellerName || "").toLowerCase();
   const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
   const fakeViews = (safeName.length * 3) + 12;
 
+  // ==========================================
+  // 3. OPTIMIZE IMAGES
+  // ==========================================
   const optimizedImages = product.images?.map((img: string) => optimizeImage(img)) || [];
 
+  // ==========================================
+  // 4. FETCH RELATED PRODUCTS
+  // ==========================================
+  // 🔥 Limit to 12. This drops the cost from 50 reads down to 12 reads per cache build!
   const rawCategoryProducts = await getProducts(safeCategory, 12);
+  
   const relatedProducts = rawCategoryProducts
     .filter((p) => p.id !== product.id && p.publicId !== product.publicId)
+    // 🔥 Replaced Math.random() with the stable daily shuffle
     .sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id))
     .slice(0, 8) 
     .map((p) => ({
@@ -92,6 +108,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
       images: p.images?.map((img: string) => optimizeImage(img)) || []
     }));
 
+  // ==========================================
+  // 5. HELPER: RENDER DESCRIPTION AS BULLETS
+  // ==========================================
   const renderDescription = (desc?: string) => {
     if (!desc) return <p className="text-slate-700 text-sm">No description provided by the seller.</p>;
 
@@ -113,7 +132,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   };
 
   return (
-    <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6 pb-24 sm:pb-8">
+    <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6">
       <ProductTracker productId={product.id} />
       <RecentlyViewedTracker product={product} />   
 
@@ -163,7 +182,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </span>  
             </div>  
 
-            {/* HIGH PRIORITY ACTIONS (Buy Now / Offers) */}
+            {/* HIGH PRIORITY ACTIONS (Chat & Buy Now) */}
             <div className="mb-8 border-b border-slate-100 pb-8">
               <FastBuy product={{...product, images: optimizedImages}} />
 
@@ -176,37 +195,10 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </div> 
 
             {/* DESCRIPTION */}  
-            <div className="mb-6">  
+            <div className="mb-8">  
               <h3 className="text-xs font-bold text-slate-500 mb-3 uppercase tracking-wider">Description</h3>  
               {renderDescription(product.description)}
             </div>  
-
-            {/* 🔥 CHAT WITH SELLER (Moved directly below the description) */}
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-8">
-               <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">About the Seller</h3>
-               <div className="flex items-center gap-3 mb-5">
-                  <div className="w-12 h-12 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-black text-xl border border-amber-200">
-                    {product.sellerName ? product.sellerName.charAt(0).toUpperCase() : "S"}
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-slate-900 flex items-center gap-1">
-                      {product.sellerName || "Verified Seller"} 
-                      {isAdmin && <span className="bg-blue-100 text-blue-600 rounded-full w-4 h-4 flex items-center justify-center text-[10px]">✓</span>}
-                    </p>
-                    <p className="text-xs font-medium text-slate-500">Typically replies within minutes</p>
-                  </div>
-               </div>
-               
-               <a 
-                 href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I have a question about this item on Kabale Online: *${safeName}*\n\nProduct ID: [${product.id}]`)}`}
-                 target="_blank" 
-                 rel="noopener noreferrer"
-                 className="w-full flex items-center justify-center gap-2 py-3.5 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-colors text-sm shadow-sm"
-               >
-                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-                  Have questions? Chat with seller
-               </a>
-            </div>
 
             {/* 2-COLUMN SPECS TABLE */}
             <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-4">
@@ -247,21 +239,25 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         </div>  
       </div>  
 
-      {/* HORIZONTALLY SCROLLABLE RELATED PRODUCTS */}  
+      {/* ========================================== */}  
+      {/* HORIZONTALLY SCROLLABLE RELATED PRODUCTS   */}  
+      {/* ========================================== */}  
       {relatedProducts.length > 0 && (  
         <div className="mt-16 mb-8">  
           <div className="flex items-center justify-between mb-6">  
             <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">You Might Also Like</h2>  
           </div>  
 
+          {/* Scrollable Container */}
           <div className="flex overflow-x-auto gap-4 pb-6 snap-x snap-mandatory scrollbar-hide">  
             {relatedProducts.map((relProduct) => (  
               <Link   
                 key={relProduct.id}   
                 href={`/product/${relProduct.publicId || relProduct.id}`}   
-                className="flex-none w-[160px] sm:w-[220px] snap-start bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col hover:border-[#D97706] hover:shadow-md transition-all"  
+                className="flex-none w-[160px] sm:w-[220px] snap-start bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col"  
               >  
-                <div className="aspect-square relative bg-slate-100 overflow-hidden border-b border-slate-100">  
+                {/* Image */}  
+                <div className="aspect-square relative bg-slate-100 overflow-hidden">  
                   {relProduct.images?.[0] ? (  
                     <Image   
                       src={relProduct.images[0]}   
@@ -275,11 +271,12 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                   )}  
                 </div>  
 
+                {/* Details */}  
                 <div className="p-4 flex flex-col flex-grow">  
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">  
                     {safeCategory.replace(/_/g, ' ')}  
                   </span>  
-                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 mb-2 h-[40px]">  
+                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 mb-2">  
                     {relProduct.name}  
                   </h3>  
                   <div className="mt-auto pt-2">  
@@ -289,9 +286,10 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </Link>  
             ))}  
 
+            {/* View More Card at the end of the scroll */}
             <Link 
               href={`/category/${safeCategory}`} 
-              className="flex-none w-[160px] sm:w-[220px] snap-start bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-500 p-4 hover:border-slate-300 transition-colors"
+              className="flex-none w-[160px] sm:w-[220px] snap-start bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-500 p-4"
             >
               <div className="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center mb-3 shadow-sm">
                 <span className="text-xl font-bold">→</span>
@@ -305,7 +303,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         </div>  
       )}  
 
-      {/* SELLER ACQUISITION PROMPT */}
+      {/* ========================================== */}  
+      {/* SELLER ACQUISITION PROMPT                  */}  
+      {/* ========================================== */}
       <div className="mt-8 mb-12 border-t border-slate-200 pt-8 text-center px-4">
         <p className="text-slate-600 text-sm font-medium">
           Got something to sell?{' '}
@@ -316,16 +316,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             Start selling on Kabale Online
           </Link>
         </p>
-      </div>
-
-      {/* 🔥 SLIM MOBILE STICKY BOTTOM BAR */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 p-2.5 flex sm:hidden items-center justify-between z-50 shadow-[0_-4px_10px_-2px_rgba(0,0,0,0.1)]">
-         <span className="text-[17px] font-black text-[#D97706] pl-2 whitespace-nowrap">
-           UGX {safePrice.toLocaleString()}
-         </span>
-         <div className="w-[140px] shrink-0">
-           <FastBuy product={{...product, images: optimizedImages}} />
-         </div>
       </div>
 
     </div>
