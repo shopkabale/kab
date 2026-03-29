@@ -19,8 +19,12 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
         </div>
       )}
 
-      {/* Tighter gap (gap-1.5) on mobile to maximize image size, wider gap on desktop */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 md:gap-3">
+      {/* 🔥 THE SLIM EDGE ALIGNMENT 🔥
+        gap-1.5 creates a 6px space between cards. 
+        -mx-1.5 pulls the grid 6px wider on mobile to offset the parent's px-3 (12px) padding. 
+        Result: Exactly 6px of space between the cards AND exactly 6px to the screen edges! 
+      */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-1.5 md:gap-3 -mx-1.5 sm:mx-0">
         {products.map((p) => {
           const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
           const isJustPosted = checkIsNew(p);
