@@ -28,16 +28,22 @@ function getDailyRandomScore(id: string) {
   return hash;
 }
 
-export default async function AllProductsPage() {
-  // 🔥 3. PASS A LIMIT TO YOUR DATABASE QUERY
-  // undefined means "no specific category", 100 is the limit.
-  // This fetches the 100 newest items and costs a maximum of 100 reads per hour.
+export default async function AllProductsPage({
+  searchParams,
+}: {
+  searchParams: { page?: string };
+}) {
+  const currentPage = Number(searchParams?.page) || 1;
+
+  // 🔥 FETCH 100 ITEMS (This keeps reads low but provides a long, scrollable feed)
+  // Note: If you want page 2 to show DIFFERENT items later, you will need to add 
+  // an 'offset' or 'startAfter' logic to your getProducts function!
   const rawProducts = await getProducts(undefined, 100);
 
-  // 4. SHUFFLE THEM (Stable Daily Randomization on the 100 items)
+  // SHUFFLE THEM (Stable Daily Randomization on the 100 items)
   rawProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
 
-  // 5. OPTIMIZE ALL IMAGES
+  // OPTIMIZE ALL IMAGES
   const allProducts = rawProducts.map((product) => {
     if (!product.images || product.images.length === 0) return product;
 
@@ -72,28 +78,76 @@ export default async function AllProductsPage() {
       {/* ========================================== */}
       {/* 🧩 MAIN CONTENT AREA                       */}
       {/* ========================================== */}
-      {/* Updated to w-full to match the edge-to-edge design we made earlier */}
       <div className="w-full mx-auto mt-4 sm:mt-8 space-y-6">
 
-        {/* THE HOMEPAGE PRODUCT SECTION */}
-        {/* Updated px-2 to px-1 for the flush mobile design */}
-        <div className="px-1 sm:px-4 pb-12">
+        {/* THE PRODUCT SECTION */}
+        <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 pb-8">
+          
+          {/* 🔥 Shows ALL 100 items at once, with the requested title */}
           <ProductSection 
-            title={`Explore Directory (${allProducts.length} Latest Finds)`} 
+            title={`Explore All Products (${allProducts.length} Latest Finds)`} 
             products={allProducts} 
           />
+
+          {/* ========================================== */}
+          {/* PAGINATION CONTROLS AT THE BOTTOM          */}
+          {/* ========================================== */}
+          <div className="flex items-center justify-center gap-2 mt-12 mb-4">
+            {/* Previous Button */}
+            {currentPage > 1 ? (
+              <Link 
+                href={`?page=${currentPage - 1}`}
+                className="px-4 py-2 rounded-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#151515] text-slate-700 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
+              >
+                ← Prev
+              </Link>
+            ) : (
+              <span className="px-4 py-2 rounded-sm border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-400 dark:text-slate-600 text-sm font-bold cursor-not-allowed">
+                ← Prev
+              </span>
+            )}
+
+            {/* Page Numbers (Showing Current, Next, and Next+1 to keep it clean) */}
+            <div className="flex items-center gap-1 mx-1 sm:mx-2">
+              <span className="w-10 h-10 flex items-center justify-center rounded-sm bg-[#D97706] text-white border border-[#D97706] text-sm font-bold shadow-sm">
+                {currentPage}
+              </span>
+              <Link
+                href={`?page=${currentPage + 1}`}
+                className="w-10 h-10 flex items-center justify-center rounded-sm bg-white dark:bg-[#151515] border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-bold shadow-sm transition-colors"
+              >
+                {currentPage + 1}
+              </Link>
+              <Link
+                href={`?page=${currentPage + 2}`}
+                className="hidden sm:flex w-10 h-10 items-center justify-center rounded-sm bg-white dark:bg-[#151515] border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-bold shadow-sm transition-colors"
+              >
+                {currentPage + 2}
+              </Link>
+              <span className="w-10 h-10 flex items-center justify-center text-slate-400 font-bold">...</span>
+            </div>
+
+            {/* Next Button */}
+            <Link 
+              href={`?page=${currentPage + 1}`}
+              className="px-4 py-2 rounded-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#151515] text-slate-700 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
+            >
+              Next →
+            </Link>
+          </div>
+
         </div>
 
         {/* ========================================== */}
         {/* CATEGORIES LIST ROW                        */}
         {/* ========================================== */}
         <section className="py-12 border-t border-slate-200 dark:border-slate-800 px-4">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-[1200px] mx-auto">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
               Explore by Category
             </h3>
 
-            <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="flex flex-col gap-3 sm:gap-4 max-w-3xl mx-auto">
               {[
                 { 
                   name: "Student Market", 
@@ -117,15 +171,12 @@ export default async function AllProductsPage() {
                 <Link 
                   key={cat.name} 
                   href={`/category/${cat.link}`} 
-                  className="group flex items-center justify-between p-4 sm:p-5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-2xl hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-200 w-full"
+                  className="group flex items-center justify-between p-4 sm:p-5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-sm hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-200 w-full"
                 >
                   <div className="flex items-center gap-4 sm:gap-5 overflow-hidden">
-                    {/* Icon Bubble */}
                     <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform duration-300 border border-slate-100 dark:border-slate-800">
                       {cat.icon}
                     </div>
-
-                    {/* Text Details */}
                     <div className="flex flex-col text-left overflow-hidden">
                       <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors truncate">
                         {cat.name}
@@ -135,8 +186,6 @@ export default async function AllProductsPage() {
                       </span>
                     </div>
                   </div>
-
-                  {/* Right Arrow / Action */}
                   <div className="flex items-center gap-2 text-slate-300 dark:text-slate-600 group-hover:text-[#D97706] transition-colors pl-2 shrink-0">
                     <span className="text-xs font-bold uppercase tracking-widest hidden sm:block">View</span>
                     <svg className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
