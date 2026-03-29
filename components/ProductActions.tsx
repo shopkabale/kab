@@ -19,8 +19,7 @@ export default function ProductActions({ product, children }: { product: Product
   const [isLocked, setIsLocked] = useState((product as any).locked === true);
   const [productStatus, setProductStatus] = useState(product.status);
 
-  // Securely pull the WhatsApp Bot Number from Vercel Environment Variables
-  // Fallback is set to your exact number just in case!
+  // Securely pull the WhatsApp Bot Number
   const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
 
   useEffect(() => {
@@ -45,12 +44,15 @@ export default function ProductActions({ product, children }: { product: Product
   const isReserved = isLocked;
   const isUnavailable = isSoldOut || isReserved;
 
-  // 🔥 THE NEW CORE ACTION: Route inquiries through the bot
+  // --- SELLER LOGIC ---
+  const sellerNameStr = String(product.sellerName || "").toLowerCase();
+  const isOfficial = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
+  const displayName = product.sellerName || "Verified Seller";
+  const replyText = isOfficial ? "Replies within minutes" : "Response times vary";
+
+  // Route inquiries through the bot
   const handleBotInquiry = () => {
-    // 1. Format the exact Regex string our bot is listening for (Fixed to use product.name to satisfy TypeScript)
-    const rawMessage = `Hi! I am interested in this item on Kabale Online: *${product.name}*\n\nProduct ID: [${product.id}]`;
-    
-    // 2. Encode and open WhatsApp
+    const rawMessage = `Hi! I have a question about this item on Kabale Online: *${product.name}*\n\nProduct ID: [${product.id}]`;
     const encodedMessage = encodeURIComponent(rawMessage);
     window.open(`https://wa.me/${botPhoneNumber}?text=${encodedMessage}`, "_blank");
   };
@@ -82,13 +84,13 @@ export default function ProductActions({ product, children }: { product: Product
     }
   };
 
-  // Dynamic Button Styling based on Stock Status
-  let btnLabel = "Chat With Seller";
-  let btnClass = "bg-[#25D366] text-white hover:bg-[#1EBE57] active:scale-[0.98]";
+  // Dynamic Button Styling
+  let btnLabel = "Have questions? Chat with seller";
+  let btnClass = "bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300";
 
   if (loading) {
     btnLabel = "Processing...";
-    btnClass = "bg-slate-200 text-slate-500 cursor-wait";
+    btnClass = "bg-slate-100 text-slate-400 border border-slate-200 cursor-wait";
   } else if (isSoldOut) {
     btnLabel = "Sold Out";
     btnClass = "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed";
@@ -99,18 +101,36 @@ export default function ProductActions({ product, children }: { product: Product
 
   return (
     <div className="mt-6 flex flex-col gap-3">
-      
-      {/* 1. PRIMARY ACTION: THE WHATSAPP BOT INQUIRY */}
-      <button 
-        onClick={handleBotInquiry}
-        disabled={isUnavailable || loading}
-        className={`w-full py-4 rounded-xl font-black text-lg flex items-center justify-center gap-3 transition-all shadow-sm ${btnClass}`}
-      >
-        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
-        </svg>
-        {btnLabel}
-      </button>
+
+      {/* 1. SELLER INFO & CHAT BUTTON */}
+      <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col gap-4">
+        
+        {/* Seller Details */}
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-black text-lg border border-amber-200">
+            {displayName.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <p className="text-sm font-bold text-slate-900 flex items-center gap-1">
+              {displayName}
+              {isOfficial && <span className="bg-blue-100 text-blue-600 rounded-full w-3.5 h-3.5 flex items-center justify-center text-[9px]">✓</span>}
+            </p>
+            <p className="text-xs text-slate-500">{replyText}</p>
+          </div>
+        </div>
+
+        {/* Chat Action */}
+        <button 
+          onClick={handleBotInquiry}
+          disabled={isUnavailable || loading}
+          className={`w-full py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm ${btnClass}`}
+        >
+          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+          </svg>
+          {btnLabel}
+        </button>
+      </div>
 
       {/* 2. COLLAPSIBLE MORE ACTIONS */}
       <div className="mt-2">
@@ -123,11 +143,11 @@ export default function ProductActions({ product, children }: { product: Product
 
         {showMore && (
           <div className="mt-3 bg-slate-50 rounded-xl p-4 flex flex-col gap-3 border border-slate-100">
-            <button onClick={handleCopyLink} disabled={loading} className="w-full bg-white text-slate-700 border border-slate-200 py-3 rounded-xl font-bold text-sm flex justify-center gap-2">
+            <button onClick={handleCopyLink} disabled={loading} className="w-full bg-white text-slate-700 border border-slate-200 py-3 rounded-xl font-bold text-sm flex justify-center gap-2 shadow-sm">
               {copied ? "✅ Link Copied!" : "🔗 Copy Link"}
             </button>
 
-            {/* Slot for SaveProductButton (Wishlist) */}
+            {/* Slot for MakeOfferButton / SaveProductButton */}
             {children}
 
             {user?.role === "admin" && (
@@ -141,4 +161,3 @@ export default function ProductActions({ product, children }: { product: Product
     </div>
   );
 }
-
