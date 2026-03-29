@@ -5,10 +5,11 @@ import SearchBar from "@/components/SearchBar";
 import UrgentStories from "@/components/UrgentStories";
 import PersonalizedFeed from "@/components/PersonalizedFeed";
 import ProductSection from "@/components/ProductSection";
+import HorizontalScroller from "@/components/HorizontalScroller";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
-// 🔥 RESTORED PRODUCTION CACHE (1 Hour)
+// RESTORED PRODUCTION CACHE (1 Hour)
 // The entire page, including Boosts and Features, is now cached.
 export const revalidate = 3600; 
 
@@ -65,15 +66,15 @@ export default async function Home() {
     .slice(0, 12);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-24 font-sans selection:bg-[#D97706] selection:text-white">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-24 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
 
       {/* 1. SEARCH & INTENT CHIPS */}
-      <section className="bg-white dark:bg-[#111] px-3 sm:px-4 py-6 border-b border-slate-200 dark:border-slate-800 shadow-sm">
+      <section className="px-3 sm:px-4 py-6">
         <div className="max-w-3xl mx-auto">
           <SearchBar />
-          <div className="flex gap-2 overflow-x-auto py-4 no-scrollbar items-center justify-start md:justify-center px-1">
-            {["🔥 Under 50k", "⚡ Urgent Sales", "📍 Near You", "🆕 Just Posted", "🎓 Campus Deals"].map(tag => (
-              <button key={tag} className="px-5 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full text-xs font-bold whitespace-nowrap text-slate-800 dark:text-slate-200 transition-colors shadow-sm">
+          <div className="flex gap-3 overflow-x-auto py-4 no-scrollbar items-center justify-start md:justify-center px-1 snap-x">
+            {["Under 50k", "Urgent sales", "Near you", "Just posted", "Campus deals"].map(tag => (
+              <button key={tag} className="px-5 py-2 snap-start bg-slate-200/50 dark:bg-slate-800/50 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full text-xs font-bold whitespace-nowrap text-slate-700 dark:text-slate-300 transition-colors">
                 {tag}
               </button>
             ))}
@@ -87,23 +88,21 @@ export default async function Home() {
       {/* 🧩 MAIN CONTENT AREA */}
       <div className="w-full mt-4 sm:mt-8 space-y-10 md:space-y-16">
 
-        {/* ⭐ CONDITIONALLY RENDERED: FEATURED ITEMS */}
+        {/* ⭐ CONDITIONALLY RENDERED: FEATURED ITEMS (Now HorizontalScroller) */}
         {featuredProducts.length > 0 && (
-          <section className="px-1 sm:px-4">
-            <div className="max-w-7xl mx-auto bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 p-4 rounded-2xl border border-amber-200 dark:border-amber-800 shadow-sm">
-              <ProductSection 
-                title="⭐ Featured Items" 
-                products={featuredProducts} 
-              />
-            </div>
+          <section className="w-full">
+            <HorizontalScroller 
+              title="Featured items" 
+              products={featuredProducts} 
+            />
           </section>
         )}
 
-        {/* 🚀 CONDITIONALLY RENDERED: BOOSTED LISTINGS */}
+        {/* 🚀 CONDITIONALLY RENDERED: BOOSTED LISTINGS (Now HorizontalScroller) */}
         {boostedProducts.length > 0 && (
-          <section className="px-1 sm:px-4">
-            <ProductSection 
-              title="🚀 Boosted Deals" 
+          <section className="w-full">
+            <HorizontalScroller 
+              title="Boosted deals" 
               products={boostedProducts} 
             />
           </section>
@@ -111,25 +110,25 @@ export default async function Home() {
 
         {/* 3. TRENDING */}
         {trendingNow.length > 0 && (
-          <section className="px-1 sm:px-4">
+          <section className="px-4">
             <ProductSection 
-              title="🔥 Trending Now" 
+              title="Trending now" 
               products={trendingNow} 
             />
           </section>
         )}
 
         {/* 4. SELLER CTA */}
-        <section className="relative py-20 md:py-28 text-center bg-slate-100/50 dark:bg-[#111] border-y border-slate-200 dark:border-slate-800">
+        <section className="relative py-16 md:py-24 text-center">
           <div className="relative z-10 max-w-3xl mx-auto px-4 sm:px-6 flex flex-col items-center">
-            <h2 className="text-5xl md:text-7xl font-semibold mb-6 text-slate-900 dark:text-white tracking-tight">
+            <h2 className="text-4xl md:text-6xl font-bold mb-4 text-slate-900 dark:text-white tracking-tight">
               Sell on Kabale
             </h2>
-            <p className="text-base md:text-lg text-slate-800 dark:text-slate-300 mb-10 leading-relaxed font-medium max-w-2xl">
-              Sell directly to buyers across Kabale & Kigezi. Perfect for shops, students, or clearing extra items. Post in just 60 seconds via our WhatsApp bot.
+            <p className="text-base md:text-lg text-slate-600 dark:text-slate-400 mb-8 leading-relaxed font-medium max-w-2xl">
+              Sell directly to buyers across Kabale & Kigezi. Perfect for shops, students, or clearing extra items.
               <br />
-              <span className="text-green-600 dark:text-green-400 font-semibold">
-                Just send "Hi" to our WhatsApp bot to get started.
+              <span className="text-slate-900 dark:text-white font-bold mt-2 block">
+                Post in just 60 seconds.
               </span>
             </p>
 
@@ -138,67 +137,60 @@ export default async function Home() {
                 href="https://wa.me/256740373021?text=Hi"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-10 py-3 border-2 border-slate-900 dark:border-white text-slate-900 dark:text-white font-medium text-base hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors rounded-sm min-w-[180px]"
+                className="px-10 py-3 bg-[#D97706] text-white font-bold text-base hover:bg-amber-600 transition-colors rounded-xl shadow-sm min-w-[180px]"
               >
                 Start selling
-              </a>
-              <a
-                href="mailto:shopkabale@gmail.com"
-                className="px-10 py-3 border-2 border-slate-900 dark:border-white text-slate-900 dark:text-white font-medium text-base hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors rounded-sm min-w-[180px]"
-              >
-                Get support
               </a>
             </div>
           </div>
         </section>
 
         {/* 5. JUST POSTED */}
-        <section className="px-1 sm:px-4">
+        <section className="px-4">
           <ProductSection 
-            title="🆕 Just Posted" 
+            title="Just posted" 
             products={justPostedProducts} 
           />
         </section>
 
-        {/* 6. PERSONALIZED */}
-        <div className="px-1 sm:px-4">
+        {/* 6. PERSONALIZED (Already using HorizontalScroller from previous step) */}
+        <section className="w-full">
           <PersonalizedFeed allProducts={allProducts} />
-        </div>
+        </section>
 
         {/* 7. CATEGORIES */}
-        <section className="py-12 border-t border-slate-200 dark:border-slate-800 px-4">
+        <section className="py-12 px-4">
           <div className="max-w-3xl mx-auto">
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
-              Explore by Category
+            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest text-center mb-6">
+              Explore by category
             </h3>
 
-            <div className="flex flex-col gap-3 sm:gap-4">
+            <div className="flex flex-col gap-2">
               {[
-                { name: "Student Market", link: "student_item", desc: "Hostel items, textbooks, gadgets, and campus essentials", icon: "🎓" }, 
-                { name: "Electronics", link: "electronics", desc: "Smartphones, laptops, TVs, audio, and accessories", icon: "💻" }, 
-                { name: "Agriculture", link: "agriculture", desc: "Fresh produce, farm tools, livestock, and fertilizers", icon: "🌱" }
+                { name: "Student market", link: "student_item", desc: "Hostel items, textbooks, gadgets", icon: "🎓" }, 
+                { name: "Electronics", link: "electronics", desc: "Smartphones, laptops, TVs", icon: "💻" }, 
+                { name: "Agriculture", link: "agriculture", desc: "Fresh produce, farm tools, livestock", icon: "🌱" }
               ].map((cat) => (
                 <Link 
                   key={cat.name} 
                   href={`/category/${cat.link}`} 
-                  className="group flex items-center justify-between p-4 sm:p-5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-2xl hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-200 w-full"
+                  className="group flex items-center justify-between py-4 w-full hover:px-2 transition-all duration-300"
                 >
-                  <div className="flex items-center gap-4 sm:gap-5 overflow-hidden">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform duration-300 border border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-5 overflow-hidden">
+                    <div className="w-12 h-12 bg-slate-200/50 dark:bg-slate-800/50 rounded-full flex items-center justify-center text-xl shrink-0 group-hover:bg-amber-100 group-hover:text-amber-700 transition-colors">
                       {cat.icon}
                     </div>
                     <div className="flex flex-col text-left overflow-hidden">
-                      <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors truncate">
+                      <span className="text-lg font-bold text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors truncate">
                         {cat.name}
                       </span>
-                      <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate pr-2">
+                      <span className="text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate pr-2">
                         {cat.desc}
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-slate-300 dark:text-slate-600 group-hover:text-[#D97706] transition-colors pl-2 shrink-0">
-                    <span className="text-xs font-bold uppercase tracking-widest hidden sm:block">View</span>
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="flex items-center text-slate-300 dark:text-slate-600 group-hover:text-[#D97706] transition-colors pl-2 shrink-0">
+                    <svg className="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
