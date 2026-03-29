@@ -235,7 +235,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                   { icon: FaFacebookF, href: "https://www.fb.com/l/6lp1kJRRR", label: "Facebook" }, 
                   { icon: FaInstagram, href: "https://instagram.com/kabale.online", label: "Instagram" },
                   { icon: FaXTwitter, href: "https://x.com/Kabale_Online", label: "X" },
-                  { icon: FaTiktok, href: "https://tiktok.com/@okaynotice", label: "TikTok" },
+                  { icon: FaTiktok, href: "https://tiktok.com/@kabale.online", label: "TikTok" },
                 ].map((social, idx) => (
                   <a key={idx} href={social.href} target="_blank" rel="noopener noreferrer" aria-label={social.label} className="w-10 h-10 bg-[#424242] hover:bg-[#D97706] text-white flex items-center justify-center rounded-sm transition-colors hover:scale-105">
                     <social.icon size={18} />
