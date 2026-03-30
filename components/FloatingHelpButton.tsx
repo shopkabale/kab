@@ -25,7 +25,7 @@ type Message = {
   feedback?: "up" | "down" | null; 
 };
 
-export default function AiChatWidget() {
+export default function FloatingHelpButton() {
   // Chat States
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -88,7 +88,7 @@ export default function AiChatWidget() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, [lastScrollY]);
 
-  // 4. Listen for external clicks
+  // 4. Listen for external clicks (from your MiddleNav "Need help?" button)
   useEffect(() => {
     const handleOpen = () => { setIsOpen(true); setPosition({x:0, y:0}); setShowHint(false); };
     window.addEventListener('open-ai-widget', handleOpen);
