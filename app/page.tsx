@@ -7,8 +7,8 @@ import UrgentStories from "@/components/UrgentStories";
 import PersonalizedFeed from "@/components/PersonalizedFeed";
 import ProductSection from "@/components/ProductSection";
 import HorizontalScroller from "@/components/HorizontalScroller";
-// Added limit and FieldPath to the imports
-import { collection, query, where, getDocs, limit, FieldPath } from "firebase/firestore";
+// Updated import: Removed FieldPath, added documentId
+import { collection, query, where, getDocs, limit, documentId } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
 // Forces the page to re-run on refresh so the random shuffle always happens
@@ -44,14 +44,14 @@ export default async function Home() {
   const premiumIds = new Set([...featuredProducts, ...boostedProducts].map(p => p.id));
 
   // 2. Fetch TRENDING NOW (Random 12 from Firestore)
-  // We pick a random starting character to simulate a random Firestore pull
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   const randomChar = chars.charAt(Math.floor(Math.random() * chars.length));
 
+  // Updated query: using documentId() directly
   const trendingQ = query(
     collection(db, "products"),
-    where(FieldPath.documentId(), ">=", randomChar),
-    limit(15) // Fetch slightly more than 12 in case some are premium items
+    where(documentId(), ">=", randomChar),
+    limit(15) 
   );
   const trendingSnap = await getDocs(trendingQ);
   let trendingNow = trendingSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
@@ -66,7 +66,7 @@ export default async function Home() {
   // Filter out premiums, remove duplicates (if fallback fired), shuffle, and keep exactly 12
   trendingNow = Array.from(new Map(trendingNow.map(item => [item.id, item])).values())
     .filter(p => !premiumIds.has(p.id))
-    .sort(() => Math.random() - 0.5) // Truly random shuffle on refresh
+    .sort(() => Math.random() - 0.5) 
     .slice(0, 12);
 
   // 3. Fetch Standard Categories
