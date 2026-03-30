@@ -26,6 +26,10 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
         {products.map((p) => {
           const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
           const isJustPosted = checkIsNew(p);
+          
+          // Badge Logic
+          const isApproved = p.isApprovedQuality;
+          const isOfficial = p.isOfficialStore || p.isAdminUpload;
 
           return (
             // ✅ Bonus polish: rounded-sm, hover:shadow-md transition-all duration-200
@@ -48,11 +52,22 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
 
                   {/* Conditional "Just Posted" Overlay */}
                   {isJustPosted && (
-                    <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center gap-1">
+                    <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center gap-1 z-10">
                        <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
                        New
                     </div>
                   )}
+
+                  {/* Trust Badges Overlay (Just above the title) */}
+                  {isApproved ? (
+                    <div className="absolute bottom-2 left-2 bg-emerald-600/95 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center shadow-sm z-10">
+                       Approved Quality
+                    </div>
+                  ) : isOfficial ? (
+                    <div className="absolute bottom-2 left-2 bg-[#D97706]/95 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center shadow-sm z-10">
+                       Official Product
+                    </div>
+                  ) : null}
                 </div>
 
                 {/* Details Area */}
