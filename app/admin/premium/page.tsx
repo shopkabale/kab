@@ -34,14 +34,14 @@ export default function PremiumRequestsManager() {
       setActiveFeatures(featureSnap.docs.filter(d => d.data().featureExpiresAt && d.data().featureExpiresAt > now).length);
 
       // 2. Fetch Pending Requests
-      // We look for any product where pendingVerification is "boost" or "feature"
       const requestsQ = query(collection(db, "products"), where("pendingVerification", "in", ["boost", "feature"]));
       const reqSnap = await getDocs(requestsQ);
       
-      const pendingItems = reqSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // FIX: Added 'as any' to satisfy TypeScript strict mode
+      const pendingItems = reqSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
       
       // Sort so oldest requests are at the top (First come, first served)
-      setRequests(pendingItems.sort((a, b) => a.createdAt - b.createdAt));
+      setRequests(pendingItems.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)));
 
     } catch (error) {
       console.error("Failed to fetch premium data:", error);
