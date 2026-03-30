@@ -48,9 +48,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* URGENT DEALS / STORIES */}
-      <UrgentStories />
-
+      
       {/* TRUST SECTION */}
       <section className="py-8 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-slate-800">
         <div className="w-full max-w-[1200px] mx-auto px-4 text-center">
@@ -72,9 +70,43 @@ export default async function Home() {
       {/* MIDDLE NAV */}
       <MiddleNav />
 
+
+{/* URGENT DEALS / STORIES */}
+      <UrgentStories />
+
+
       <div className="w-full mt-6 space-y-12">
 
-        {/* 1. OFFICIAL STORES BLOCK */}
+{/* 1. APPROVED QUALITY BLOCK */}
+        {approvedProducts.length > 0 && (
+          <section className="flex flex-col items-center w-full">
+            <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
+              <ProductSection title="Tested & Trusted Products" products={approvedProducts} />
+            </div>
+            <div className="mt-8 flex flex-col items-center text-center px-4">
+              <p className="text-slate-700 dark:text-slate-300 font-bold mb-3 text-sm sm:text-base max-w-md">
+                See more quality verified products in official stores section
+              </p>
+              <Link href="/officialStore" className="px-8 py-3 bg-[#D97706] hover:bg-amber-600 text-white font-black text-sm uppercase tracking-wider shadow-md rounded-sm transition-colors">
+                Official products &gt;&gt;
+              </Link>
+            </div>
+          </section>
+        )}
+
+
+        {/* 2. QUICK SHIP MESSAGE */}
+        <section className="w-full max-w-[800px] mx-auto px-4 py-8 bg-white dark:bg-[#1a1a1a] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-center">
+          <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mb-3">
+            Need it today? Chat with us on WhatsApp for fast delivery in Kabale
+          </h3>
+          <p className="text-lg text-slate-600 dark:text-slate-400">
+            Message us on <a href="https://wa.me/256759997376" className="text-[#D97706] font-bold hover:underline">256759997376</a>
+          </p>
+        </section>
+
+
+        {/* 3. OFFICIAL STORES BLOCK */}
         {officialProducts.length > 0 && (
           <section className="flex flex-col items-center w-full">
             <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
@@ -91,32 +123,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 2. QUICK SHIP MESSAGE */}
-        <section className="w-full max-w-[800px] mx-auto px-4 py-8 bg-white dark:bg-[#1a1a1a] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-center">
-          <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mb-3">
-            Need it today? Chat with us on WhatsApp for fast delivery in Kabale
-          </h3>
-          <p className="text-lg text-slate-600 dark:text-slate-400">
-            Message us on <a href="https://wa.me/256759997376" className="text-[#D97706] font-bold hover:underline">256759997376</a>
-          </p>
-        </section>
-
-        {/* 3. APPROVED QUALITY BLOCK */}
-        {approvedProducts.length > 0 && (
-          <section className="flex flex-col items-center w-full">
-            <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
-              <ProductSection title="Tested & Trusted Products" products={approvedProducts} />
-            </div>
-            <div className="mt-8 flex flex-col items-center text-center px-4">
-              <p className="text-slate-700 dark:text-slate-300 font-bold mb-3 text-sm sm:text-base max-w-md">
-                See more quality verified products in official stores section
-              </p>
-              <Link href="/officialStore" className="px-8 py-3 bg-[#D97706] hover:bg-amber-600 text-white font-black text-sm uppercase tracking-wider shadow-md rounded-sm transition-colors">
-                Official products &gt;&gt;
-              </Link>
-            </div>
-          </section>
-        )}
+        
 
         {/* 4. MERCHANT CODES SECTION */}
         <section className="w-full max-w-[800px] mx-auto px-4 py-8 bg-white dark:bg-[#1a1a1a] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-center">
