@@ -4,14 +4,16 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import Image from "next/image";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase/config"; // Ensure this path matches your setup
 
 export default function OfficialProductsManager() {
   const { user, loading: authLoading } = useAuth();
-  
+
   // States
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Pagination States
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastDocId, setLastDocId] = useState<string | null>(null);
@@ -25,22 +27,20 @@ export default function OfficialProductsManager() {
       else setLoading(true);
 
       const url = new URL("/api/products", window.location.origin);
-      
+
       if (isLoadMore && lastDocId) {
         url.searchParams.append("cursor", lastDocId);
       }
-      
+
       // We pull 50 at a time because we are filtering out user products locally. 
-      // This ensures you usually get a good chunk of official items per click.
       url.searchParams.append("limit", "50"); 
 
       const res = await fetch(url.toString());
-      
+
       if (res.ok) {
         const data = await res.json();
         const fetchedProducts = data.products || [];
 
-        // If we get fewer than 50 back, we've hit the end of the database
         if (fetchedProducts.length < 50) {
           setHasMore(false);
         }
@@ -57,7 +57,6 @@ export default function OfficialProductsManager() {
           setProducts(officialItems);
         }
 
-        // Save the ID of the VERY LAST product fetched to use as the cursor for the next batch
         if (fetchedProducts.length > 0) {
           setLastDocId(fetchedProducts[fetchedProducts.length - 1].id);
         }
@@ -76,15 +75,42 @@ export default function OfficialProductsManager() {
     }
   }, [user]);
 
+  // ------------------------------------------------------------------
+  // NEW: Toggle Function to update Firestore
+  // ------------------------------------------------------------------
+  const toggleBadge = async (productId: string, field: "isOfficialStore" | "isApprovedQuality", currentValue: boolean) => {
+    const newValue = !currentValue;
+    
+    // 1. Optimistic UI update (feels instant to the user)
+    setProducts(prev => 
+      prev.map(p => p.id === productId ? { ...p, [field]: newValue } : p)
+    );
+
+    try {
+      // 2. Update Firestore document
+      const productRef = doc(db, "products", productId);
+      await updateDoc(productRef, {
+        [field]: newValue
+      });
+    } catch (error) {
+      console.error(`Failed to update ${field}:`, error);
+      // 3. Revert UI if the database update fails
+      setProducts(prev => 
+        prev.map(p => p.id === productId ? { ...p, [field]: currentValue } : p)
+      );
+      alert("Failed to update product status. Please check your connection.");
+    }
+  };
+
   if (authLoading) return <div className="py-20 text-center font-bold text-slate-500 animate-pulse">Checking credentials...</div>;
   if (!user || user.role !== "admin") return null;
 
   return (
-    <div className="max-w-6xl mx-auto pb-20 md:pb-0">
+    <div className="max-w-7xl mx-auto pb-20 md:pb-0 px-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900">Official Store Manager</h1>
-          <p className="text-slate-500 font-medium mt-1">Manage Kabale Online's internal inventory</p>
+          <p className="text-slate-500 font-medium mt-1">Manage Kabale Online's internal inventory & Badges</p>
         </div>
         <Link href="/admin/upload" className="bg-[#D97706] text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md flex items-center gap-2">
           <span>+</span> Add New Item
@@ -93,14 +119,14 @@ export default function OfficialProductsManager() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
                 <th className="p-4 px-6">Product</th>
                 <th className="p-4 px-6">Price</th>
                 <th className="p-4 px-6">Stock</th>
-                <th className="p-4 px-6">WhatsApp Number</th>
-                <th className="p-4 px-6">Status</th>
+                <th className="p-4 px-6 text-center">Official Store</th>
+                <th className="p-4 px-6 text-center">Approved Quality</th>
                 <th className="p-4 px-6 text-right">Action</th>
               </tr>
             </thead>
@@ -136,26 +162,32 @@ export default function OfficialProductsManager() {
                     </td>
                     <td className="p-4 px-6">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold ${Number(product.stock) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                        {product.stock || 0} in stock
+                        {product.stock || 0} left
                       </span>
                     </td>
-                    <td className="p-4 px-6">
-                      {product.sellerPhone ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-green-500 text-lg">📱</span>
-                          <span className="font-mono text-xs font-bold text-slate-700 bg-slate-100 px-2 py-1 rounded border border-slate-200">
-                            {product.sellerPhone}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-xs font-bold text-red-500 bg-red-50 px-2 py-1 rounded border border-red-100">
-                          Missing Number
-                        </span>
-                      )}
+
+                    {/* OFFICIAL STORE TOGGLE */}
+                    <td className="p-4 px-6 text-center">
+                      <button
+                        onClick={() => toggleBadge(product.id, "isOfficialStore", !!product.isOfficialStore)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.isOfficialStore ? 'bg-[#D97706]' : 'bg-slate-300'}`}
+                        title="Toggle Official Store Status"
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.isOfficialStore ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
                     </td>
-                    <td className="p-4 px-6">
-                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">Active</span>
+
+                    {/* APPROVED QUALITY TOGGLE */}
+                    <td className="p-4 px-6 text-center">
+                      <button
+                        onClick={() => toggleBadge(product.id, "isApprovedQuality", !!product.isApprovedQuality)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.isApprovedQuality ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                        title="Toggle Approved Quality Status"
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.isApprovedQuality ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
                     </td>
+
                     <td className="p-4 px-6 text-right">
                       <Link 
                         href={`/admin/upload?edit=${product.id}`}
