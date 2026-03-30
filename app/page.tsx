@@ -1,30 +1,19 @@
 import Image from "next/image";
 import Link from "next/link";
-import { cookies } from "next/headers"; // Added to read user history
+import { cookies } from "next/headers";
 import { getProducts } from "@/lib/firebase/firestore";
 import SearchBar from "@/components/SearchBar"; 
 import UrgentStories from "@/components/UrgentStories";
 import PersonalizedFeed from "@/components/PersonalizedFeed";
 import ProductSection from "@/components/ProductSection";
 import HorizontalScroller from "@/components/HorizontalScroller";
-import { collection, query, where, getDocs } from "firebase/firestore";
+// Added limit and FieldPath to the imports
+import { collection, query, where, getDocs, limit, FieldPath } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
-// Force the page to render dynamically so trending and cookies are always fresh
+// Forces the page to re-run on refresh so the random shuffle always happens
 export const dynamic = "force-dynamic";
 
-function getDailyRandomScore(id: string) {
-  const today = new Date().toISOString().split('T')[0];
-  const seedString = id + today; 
-  let hash = 0;
-  for (let i = 0; i < seedString.length; i++) {
-    hash = (hash << 5) - hash + seedString.charCodeAt(i);
-    hash |= 0; 
-  }
-  return hash;
-}
-
-// Map database category values to readable display names
 const categoryDisplayNames: Record<string, string> = {
   student_item: "Student Market",
   electronics: "Electronics",
@@ -34,10 +23,10 @@ const categoryDisplayNames: Record<string, string> = {
 export default async function Home() {
   const now = Date.now();
   
-  // 1. Read the recently viewed category from cookies
   const cookieStore = cookies();
   const recentCategory = cookieStore.get("recentCategory")?.value;
 
+  // 1. Fetch Premium Items
   const featuredQ = query(collection(db, "products"), where("isFeatured", "==", true));
   const featuredSnap = await getDocs(featuredQ);
   const featuredProducts = featuredSnap.docs
@@ -52,21 +41,47 @@ export default async function Home() {
     .filter(p => p.boostExpiresAt && p.boostExpiresAt > now)
     .sort((a, b) => b.boostedAt - a.boostedAt);
 
+  const premiumIds = new Set([...featuredProducts, ...boostedProducts].map(p => p.id));
+
+  // 2. Fetch TRENDING NOW (Random 12 from Firestore)
+  // We pick a random starting character to simulate a random Firestore pull
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const randomChar = chars.charAt(Math.floor(Math.random() * chars.length));
+
+  const trendingQ = query(
+    collection(db, "products"),
+    where(FieldPath.documentId(), ">=", randomChar),
+    limit(15) // Fetch slightly more than 12 in case some are premium items
+  );
+  const trendingSnap = await getDocs(trendingQ);
+  let trendingNow = trendingSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+
+  // Fallback: If our random character was near the end of the DB and returned < 12 items, wrap around
+  if (trendingNow.length < 12) {
+    const fallbackQ = query(collection(db, "products"), limit(15 - trendingNow.length));
+    const fallbackSnap = await getDocs(fallbackQ);
+    trendingNow = [...trendingNow, ...fallbackSnap.docs.map(d => ({ id: d.id, ...d.data() } as any))];
+  }
+
+  // Filter out premiums, remove duplicates (if fallback fired), shuffle, and keep exactly 12
+  trendingNow = Array.from(new Map(trendingNow.map(item => [item.id, item])).values())
+    .filter(p => !premiumIds.has(p.id))
+    .sort(() => Math.random() - 0.5) // Truly random shuffle on refresh
+    .slice(0, 12);
+
+  // 3. Fetch Standard Categories
   const electronics = await getProducts("electronics", 30);
   const agriculture = await getProducts("agriculture", 30);
   const students = await getProducts("student_item", 30);
   
-  // 2. Fetch products based on recent category if it exists
   let recentCategoryProducts: any[] = [];
   let displayCategoryName = "";
   if (recentCategory) {
-    // If the recent category is one of the main ones, we already have the data. If not, fetch it.
     if (recentCategory === "electronics") recentCategoryProducts = electronics.slice(0, 12);
     else if (recentCategory === "agriculture") recentCategoryProducts = agriculture.slice(0, 12);
     else if (recentCategory === "student_item") recentCategoryProducts = students.slice(0, 12);
     else recentCategoryProducts = await getProducts(recentCategory, 12);
 
-    // Format the name nicely for the UI
     displayCategoryName = categoryDisplayNames[recentCategory] || recentCategory;
   }
 
@@ -79,12 +94,6 @@ export default async function Home() {
   });
 
   const justPostedProducts = sortedByDate.slice(0, 12);
-
-  const premiumIds = new Set([...featuredProducts, ...boostedProducts].map(p => p.id));
-  const trendingNow = [...allProducts]
-    .filter(p => !premiumIds.has(p.id)) 
-    .sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id))
-    .slice(0, 12);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-12 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
@@ -125,7 +134,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* RECENTLY VIEWED CATEGORY (Dynamic based on cache/cookie) */}
+        {/* RECENTLY VIEWED */}
         {recentCategoryProducts.length > 0 && (
           <section>
             <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
