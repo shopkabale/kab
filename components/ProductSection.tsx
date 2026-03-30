@@ -58,13 +58,17 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
                     </div>
                   )}
 
-                  {/* Trust Badges Overlay (Just above the title) */}
+                  {/* Trust Badges Overlay (Sitting EXACTLY at the bottom left edge of the image container) */}
                   {isApproved ? (
-                    <div className="absolute bottom-2 left-2 bg-emerald-600/95 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center shadow-sm z-10">
+                    // Changed absolute positioning from bottom-2 left-2 to bottom-0 left-0
+                    // Added rounded-tr-sm so only the inside top-right corner is rounded.
+                    <div className="absolute bottom-0 left-0 bg-emerald-600/95 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1.5 rounded-tr-sm flex items-center shadow-sm z-10">
                        Approved Quality
                     </div>
                   ) : isOfficial ? (
-                    <div className="absolute bottom-2 left-2 bg-[#D97706]/95 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center shadow-sm z-10">
+                    // Changed absolute positioning from bottom-2 left-2 to bottom-0 left-0
+                    // Added rounded-tr-sm so only the inside top-right corner is rounded.
+                    <div className="absolute bottom-0 left-0 bg-[#D97706]/95 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1.5 rounded-tr-sm flex items-center shadow-sm z-10">
                        Official Product
                     </div>
                   ) : null}
