@@ -55,6 +55,10 @@ export default function HorizontalScroller({ title, products }: { title: string,
           {products.map((p) => {
             const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
             const isJustPosted = checkIsNew(p);
+            
+            // Badge Logic
+            const isApproved = p.isApprovedQuality;
+            const isOfficial = p.isOfficialStore || p.isAdminUpload;
 
             return (
               // MATCHED TO PRODUCT SECTION: rounded-sm, soft shadow, gap-2 width
@@ -77,11 +81,22 @@ export default function HorizontalScroller({ title, products }: { title: string,
 
                     {/* Conditional "Just Posted" Overlay */}
                     {isJustPosted && (
-                      <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center gap-1 shadow-sm">
+                      <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center gap-1 shadow-sm z-10">
                          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
                          New
                       </div>
                     )}
+
+                    {/* Trust Badges Overlay (Sitting EXACTLY at the bottom left edge of the image container) */}
+                    {isApproved ? (
+                      <div className="absolute bottom-0 left-0 bg-emerald-600/95 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1.5 rounded-tr-sm flex items-center shadow-sm z-10">
+                         Approved Quality
+                      </div>
+                    ) : isOfficial ? (
+                      <div className="absolute bottom-0 left-0 bg-[#D97706]/95 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1.5 rounded-tr-sm flex items-center shadow-sm z-10">
+                         Official Product
+                      </div>
+                    ) : null}
                   </div>
 
                   {/* Details Area */}
