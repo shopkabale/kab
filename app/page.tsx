@@ -133,45 +133,46 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 5. BOOSTED CAROUSEL */}
+        {/* 5. BOOSTED CAROUSEL & 6. SELL CTA (Linked Visibility) */}
         {boostedProducts.length > 0 && (
-          <section className="w-full pt-6">
-            <HorizontalScroller title="Today’s Sponsored Deals" products={boostedProducts} />
-          </section>
+          <>
+            <section className="w-full pt-6">
+              <HorizontalScroller title="Today’s Sponsored Deals" products={boostedProducts} />
+            </section>
+
+            <section className="relative py-20 md:py-28 text-center bg-slate-100/50 dark:bg-[#111] border-y border-slate-200 dark:border-slate-800 my-12 w-full">
+              <div className="relative z-10 w-full max-w-[1200px] mx-auto px-3 sm:px-4 flex flex-col items-center">
+                <h2 className="text-5xl md:text-7xl font-semibold mb-6 text-slate-900 dark:text-white tracking-tight">
+                  Sell on Kabale
+                </h2>
+                <p className="text-base md:text-lg text-slate-800 dark:text-slate-300 mb-10 leading-relaxed font-medium max-w-2xl">
+                  Sell directly to buyers across Kabale & Kigezi. Perfect for shops, students, or clearing extra items. Post in just 60 seconds via our WhatsApp bot.
+                  <br />
+                  <span className="text-green-600 dark:text-green-400 font-semibold">
+                    Just send "Hi" to our WhatsApp bot to get started.
+                  </span>
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center">
+                  <a
+                    href="https://wa.me/256740373021?text=Hi"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-10 py-3 border-2 border-slate-900 dark:border-white text-slate-900 dark:text-white font-medium text-base hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors rounded-sm min-w-[180px]"
+                  >
+                    Start selling
+                  </a>
+                  <a
+                    href="mailto:shopkabale@gmail.com"
+                    className="px-10 py-3 border-2 border-slate-900 dark:border-white text-slate-900 dark:text-white font-medium text-base hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors rounded-sm min-w-[180px]"
+                  >
+                    Get support
+                  </a>
+                </div>
+              </div>
+            </section>
+          </>
         )}
-
-        {/* 6. ORIGINAL SELL ON KABALE CTA (Between Boosted and Featured) */}
-        <section className="relative py-20 md:py-28 text-center bg-slate-100/50 dark:bg-[#111] border-y border-slate-200 dark:border-slate-800 my-12 w-full">
-          <div className="relative z-10 w-full max-w-[1200px] mx-auto px-3 sm:px-4 flex flex-col items-center">
-            <h2 className="text-5xl md:text-7xl font-semibold mb-6 text-slate-900 dark:text-white tracking-tight">
-              Sell on Kabale
-            </h2>
-            <p className="text-base md:text-lg text-slate-800 dark:text-slate-300 mb-10 leading-relaxed font-medium max-w-2xl">
-              Sell directly to buyers across Kabale & Kigezi. Perfect for shops, students, or clearing extra items. Post in just 60 seconds via our WhatsApp bot.
-              <br />
-              <span className="text-green-600 dark:text-green-400 font-semibold">
-                Just send "Hi" to our WhatsApp bot to get started.
-              </span>
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center">
-              <a
-                href="https://wa.me/256740373021?text=Hi"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-10 py-3 border-2 border-slate-900 dark:border-white text-slate-900 dark:text-white font-medium text-base hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors rounded-sm min-w-[180px]"
-              >
-                Start selling
-              </a>
-              <a
-                href="mailto:shopkabale@gmail.com"
-                className="px-10 py-3 border-2 border-slate-900 dark:border-white text-slate-900 dark:text-white font-medium text-base hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors rounded-sm min-w-[180px]"
-              >
-                Get support
-              </a>
-            </div>
-          </div>
-        </section>
 
         {/* 7. FEATURED CAROUSEL */}
         {featuredProducts.length > 0 && (
@@ -180,7 +181,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 8. ORIGINAL CATEGORIES BLOCK (At the very end) */}
+                {/* 8. ORIGINAL CATEGORIES BLOCK (At the very end) */}
         <section className="py-12 border-t border-slate-200 dark:border-slate-800 mt-12">
           <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
@@ -189,13 +190,14 @@ export default async function Home() {
 
             <div className="flex flex-col gap-3 sm:gap-4 max-w-3xl mx-auto">
               {[
-                { name: "Student market", link: "student_item", desc: "Hostel items, textbooks, gadgets, and campus essentials", icon: "🎓" }, 
-                { name: "Electronics", link: "electronics", desc: "Smartphones, laptops, TVs, audio, and accessories", icon: "💻" }, 
-                { name: "Agriculture", link: "agriculture", desc: "Fresh produce, farm tools, livestock, and fertilizers", icon: "🌱" }
+                { name: "Official Store", href: "/officialStore", desc: "Premium, verified products sold directly by Kabale Online", icon: "⭐" },
+                { name: "Student market", href: "/category/student_item", desc: "Hostel items, textbooks, gadgets, and campus essentials", icon: "🎓" }, 
+                { name: "Electronics", href: "/category/electronics", desc: "Smartphones, laptops, TVs, audio, and accessories", icon: "💻" }, 
+                { name: "Agriculture", href: "/category/agriculture", desc: "Fresh produce, farm tools, livestock, and fertilizers", icon: "🌱" }
               ].map((cat) => (
                 <Link 
                   key={cat.name} 
-                  href={`/category/${cat.link}`} 
+                  href={cat.href} 
                   className="group flex items-center justify-between p-4 sm:p-5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-sm hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-200 w-full"
                 >
                   <div className="flex items-center gap-4 sm:gap-5 overflow-hidden">
@@ -222,6 +224,7 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
 
       </div>
     </div>
