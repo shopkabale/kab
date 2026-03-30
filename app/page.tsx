@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { cookies } from "next/headers"; // Added to read user history
 import { getProducts } from "@/lib/firebase/firestore";
 import SearchBar from "@/components/SearchBar"; 
 import UrgentStories from "@/components/UrgentStories";
@@ -9,8 +10,8 @@ import HorizontalScroller from "@/components/HorizontalScroller";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
-// RESTORED PRODUCTION CACHE (1 Hour)
-export const revalidate = 3600; 
+// Force the page to render dynamically so trending and cookies are always fresh
+export const dynamic = "force-dynamic";
 
 function getDailyRandomScore(id: string) {
   const today = new Date().toISOString().split('T')[0];
@@ -23,8 +24,19 @@ function getDailyRandomScore(id: string) {
   return hash;
 }
 
+// Map database category values to readable display names
+const categoryDisplayNames: Record<string, string> = {
+  student_item: "Student Market",
+  electronics: "Electronics",
+  agriculture: "Agriculture"
+};
+
 export default async function Home() {
   const now = Date.now();
+  
+  // 1. Read the recently viewed category from cookies
+  const cookieStore = cookies();
+  const recentCategory = cookieStore.get("recentCategory")?.value;
 
   const featuredQ = query(collection(db, "products"), where("isFeatured", "==", true));
   const featuredSnap = await getDocs(featuredQ);
@@ -43,6 +55,21 @@ export default async function Home() {
   const electronics = await getProducts("electronics", 30);
   const agriculture = await getProducts("agriculture", 30);
   const students = await getProducts("student_item", 30);
+  
+  // 2. Fetch products based on recent category if it exists
+  let recentCategoryProducts: any[] = [];
+  let displayCategoryName = "";
+  if (recentCategory) {
+    // If the recent category is one of the main ones, we already have the data. If not, fetch it.
+    if (recentCategory === "electronics") recentCategoryProducts = electronics.slice(0, 12);
+    else if (recentCategory === "agriculture") recentCategoryProducts = agriculture.slice(0, 12);
+    else if (recentCategory === "student_item") recentCategoryProducts = students.slice(0, 12);
+    else recentCategoryProducts = await getProducts(recentCategory, 12);
+
+    // Format the name nicely for the UI
+    displayCategoryName = categoryDisplayNames[recentCategory] || recentCategory;
+  }
+
   const allProducts = [...electronics, ...agriculture, ...students];
 
   const sortedByDate = [...allProducts].sort((a: any, b: any) => {
@@ -62,7 +89,7 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-12 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
 
-      {/* SEARCH SECTION - Applied layout standard */}
+      {/* SEARCH SECTION */}
       <section className="py-6 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
           <SearchBar />
@@ -98,7 +125,19 @@ export default async function Home() {
           </section>
         )}
 
-        {/* TRENDING NOW - Applied layout standard */}
+        {/* RECENTLY VIEWED CATEGORY (Dynamic based on cache/cookie) */}
+        {recentCategoryProducts.length > 0 && (
+          <section>
+            <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
+              <ProductSection 
+                title={`Because you looked at ${displayCategoryName}`} 
+                products={recentCategoryProducts} 
+              />
+            </div>
+          </section>
+        )}
+
+        {/* TRENDING NOW */}
         {trendingNow.length > 0 && (
           <section>
             <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
@@ -110,7 +149,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* CTA SECTION - Retains custom text styling but fits the flow */}
+        {/* CTA SECTION */}
         <section className="relative py-20 md:py-28 text-center bg-slate-100/50 dark:bg-[#111] border-y border-slate-200 dark:border-slate-800">
           <div className="relative z-10 w-full max-w-[1200px] mx-auto px-3 sm:px-4 flex flex-col items-center">
             <h2 className="text-5xl md:text-7xl font-semibold mb-6 text-slate-900 dark:text-white tracking-tight">
@@ -143,7 +182,7 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* JUST POSTED - Applied layout standard */}
+        {/* JUST POSTED */}
         <section>
           <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
             <ProductSection 
@@ -157,7 +196,7 @@ export default async function Home() {
           <PersonalizedFeed allProducts={allProducts} />
         </section>
 
-        {/* CATEGORIES - Applied layout standard */}
+        {/* CATEGORIES */}
         <section className="py-12 border-t border-slate-200 dark:border-slate-800">
           <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
