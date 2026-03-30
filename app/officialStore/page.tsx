@@ -7,10 +7,10 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function OfficialStorePage() {
-  // Fetch ALL products flagged as official store
+  // Fetch ALL products where the admin uploaded them directly
   const officialQ = query(
     collection(db, "products"), 
-    where("isOfficialStore", "==", true)
+    where("isAdminUpload", "==", true)
   );
   
   const officialSnap = await getDocs(officialQ);
