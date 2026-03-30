@@ -58,7 +58,7 @@ export default function UnifiedDashboard() {
   // --- FETCHING LOGIC ---
   const fetchListings = useCallback(async (isLoadMore = false, forceRefresh = false) => {
     if (!user || (isLoadMore && !hasMoreListings)) return;
-    
+
     if (!isLoadMore && !forceRefresh) {
       const cachedData = loadFromCache('listings');
       if (cachedData && cachedData.length > 0) {
@@ -143,7 +143,7 @@ export default function UnifiedDashboard() {
     setLoadingPurchases(false);
   }, [user, hasMorePurchases, purchases, loadFromCache, saveToCache]);
 
-  // --- 🔥 THE FIX: LOCKED MOUNT EFFECT 🔥 ---
+  // --- LOCKED MOUNT EFFECT ---
   useEffect(() => {
     if (!user || authLoading) return;
 
@@ -162,7 +162,7 @@ export default function UnifiedDashboard() {
 
     const wishlistRef = collection(db, "users", user.id, "wishlist");
     const q = query(wishlistRef, orderBy("savedAt", "desc"), limit(10));
-    
+
     const unsubscribeWishlist = onSnapshot(q, (snapshot) => {
       setSavedItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoadingSaved(false);
@@ -172,33 +172,18 @@ export default function UnifiedDashboard() {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
 
-    // THIS KILLS THE LOOP WHEN YOU LEAVE THE PAGE
     return () => {
       unsubscribeWishlist();
     };
-    
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, authLoading]); // <--- STRIPPED DEPENDENCIES TO PREVENT LOOPING
+  }, [user?.id, authLoading]);
 
   // --- STANDARD ACTIONS ---
   const handleRemoveSaved = async (productId: string) => {
     if (!user) return;
     try { await deleteDoc(doc(db, "users", user.id, "wishlist", productId)); } 
     catch (error) { alert("Failed to remove item."); }
-  };
-
-  const handleToggleUrgent = async (product: any) => {
-    if (!user) return;
-    const now = Date.now();
-    const isCurrentlyUrgent = product.isUrgent === true && product.urgentExpiresAt && product.urgentExpiresAt > now;
-    const newExpiresAt = !isCurrentlyUrgent ? now + (24 * 60 * 60 * 1000) : null; 
-
-    try {
-      await updateDoc(doc(db, "products", product.id), { isUrgent: !isCurrentlyUrgent, urgentExpiresAt: newExpiresAt });
-      const updatedListings = listings.map(item => item.id === product.id ? { ...item, isUrgent: !isCurrentlyUrgent, urgentExpiresAt: newExpiresAt } : item);
-      setListings(updatedListings);
-      saveToCache('listings', updatedListings); 
-    } catch (error) { alert("Failed to update urgency status."); }
   };
 
   const handleDeleteAd = async (productId: string) => {
@@ -212,14 +197,16 @@ export default function UnifiedDashboard() {
     } catch (error) { alert("Failed to delete ad."); }
   };
 
-  const handleMarkAsSold = async (productId: string) => {
+  // ✅ FREE TOGGLE: SOLD ↔ ACTIVE
+  const handleToggleSold = async (product: any) => {
     if (!user) return;
+    const newStatus = product.status === "sold" ? "active" : "sold";
     try {
-      await updateDoc(doc(db, "products", productId), { status: "sold" });
-      const updatedListings = listings.map(item => item.id === productId ? { ...item, status: "sold" } : item);
+      await updateDoc(doc(db, "products", product.id), { status: newStatus });
+      const updatedListings = listings.map(item => item.id === product.id ? { ...item, status: newStatus } : item);
       setListings(updatedListings);
       saveToCache('listings', updatedListings); 
-    } catch (error) { alert("Failed to mark as sold."); }
+    } catch (error) { alert("Failed to update status."); }
   };
 
   const handleSaleStatusChange = async (orderId: string, newStatus: string) => {
@@ -238,23 +225,33 @@ export default function UnifiedDashboard() {
     } catch (error) { alert("Something went wrong updating the order."); }
   };
 
-  // --- PREMIUM ACTIONS (Client-Side for ease of launch) ---
-  const handleVerifyProfile = async () => {
+  // --- PREMIUM ACTIONS (One-Way Commitments) ---
+
+  // ❌ ONE WAY: URGENT
+  const handleMakeUrgent = async (product: any) => {
     if (!user) return;
-    setIsVerifying(true);
+    const now = Date.now();
+    
+    if (product.isUrgent && product.urgentExpiresAt > now) {
+      return; // Prevent re-trigger if already active
+    }
+
     try {
-      await updateDoc(doc(db, "users", user.id), {
-        verificationStatus: "pending",
-        verificationRequestedAt: Date.now()
+      const expiresAt = now + (24 * 60 * 60 * 1000);
+      await updateDoc(doc(db, "products", product.id), { 
+        isUrgent: true, 
+        urgentActivatedAt: now,
+        urgentExpiresAt: expiresAt 
       });
-      setVerificationStatus("pending");
-      alert("🛡️ Success! Your profile is now under review by Admin.");
-    } catch (error) {
-      console.error(error);
-      alert("Network error. Please try again.");
-    } finally { setIsVerifying(false); }
+      const updatedListings = listings.map(item => 
+        item.id === product.id ? { ...item, isUrgent: true, urgentExpiresAt: expiresAt } : item
+      );
+      setListings(updatedListings);
+      saveToCache('listings', updatedListings); 
+    } catch (error) { alert("Failed to activate urgent status."); }
   };
 
+  // ❌ ONE WAY: BOOST
   const handleBoostListing = async (productId: string) => {
     if (!user) return;
     setBoostingId(productId);
@@ -276,6 +273,7 @@ export default function UnifiedDashboard() {
     } finally { setBoostingId(null); }
   };
 
+  // ❌ ONE WAY: FEATURE
   const handleFeatureItem = async (productId: string) => {
     if (!user) return;
     setFeaturingId(productId);
@@ -295,6 +293,22 @@ export default function UnifiedDashboard() {
       console.error(error);
       alert("Failed to feature listing. Please try again.");
     } finally { setFeaturingId(null); }
+  };
+
+  const handleVerifyProfile = async () => {
+    if (!user) return;
+    setIsVerifying(true);
+    try {
+      await updateDoc(doc(db, "users", user.id), {
+        verificationStatus: "pending",
+        verificationRequestedAt: Date.now()
+      });
+      setVerificationStatus("pending");
+      alert("🛡️ Success! Your profile is now under review by Admin.");
+    } catch (error) {
+      console.error(error);
+      alert("Network error. Please try again.");
+    } finally { setIsVerifying(false); }
   };
 
   // --- RENDER ---
@@ -318,7 +332,7 @@ export default function UnifiedDashboard() {
 
   return (
     <div className="pb-24 max-w-md mx-auto bg-slate-50 min-h-screen sm:border-x sm:border-slate-200 shadow-sm relative">
-      
+
       {/* 1. TOP SECTION (User Overview) */}
       <div className="bg-white px-4 pt-6 pb-5 border-b border-slate-200">
         <div className="flex items-center gap-3 mb-5">
@@ -370,7 +384,7 @@ export default function UnifiedDashboard() {
       </div>
 
       <div className="p-4">
-        
+
         {/* === TAB 1: MY LISTINGS === */}
         {activeTab === "listings" && (
           <div className="space-y-4">
@@ -391,6 +405,9 @@ export default function UnifiedDashboard() {
                    const isSold = item.status === "sold";
                    const isPending = item.status === "pending";
                    const now = Date.now();
+                   
+                   // ACTIVE STATES
+                   const isUrgentActive = item.isUrgent && item.urgentExpiresAt > now;
                    const isBoostedActive = item.isBoosted && item.boostExpiresAt > now;
                    const isFeaturedActive = item.isFeatured && item.featureExpiresAt > now;
 
@@ -421,26 +438,39 @@ export default function UnifiedDashboard() {
                        <div className="grid grid-cols-2 gap-2 border-t border-slate-50 pt-3">
                          <Link href={`/edit/${item.publicId || item.id}`} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md border border-slate-200 active:bg-slate-100">Edit</Link>
                          <button onClick={() => handleDeleteAd(item.id)} className="text-[11px] font-bold text-center py-2 bg-red-50 text-red-600 rounded-md active:bg-red-100 border border-red-100">Delete</button>
-                         <button onClick={() => handleMarkAsSold(item.id)} disabled={isSold} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md active:bg-slate-100 disabled:opacity-50 border border-slate-200">Mark Sold</button>
-                         <button onClick={() => handleToggleUrgent(item)} className="text-[11px] font-bold py-2 rounded-md border border-slate-200 text-slate-600 bg-slate-50">
-                           {item.isUrgent && item.urgentExpiresAt > now ? "🔴 Cancel Urgent" : "⚡ Make Urgent"}
+                         
+                         {/* ✅ TOGGLE: Mark Sold ↔ Mark Active */}
+                         <button onClick={() => handleToggleSold(item)} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md active:bg-slate-100 border border-slate-200">
+                           {isSold ? "✅ Mark Active" : "Mark Sold"}
+                         </button>
+                         
+                         {/* ❌ ONE-WAY: Urgent */}
+                         <button 
+                           onClick={() => handleMakeUrgent(item)} 
+                           disabled={isUrgentActive}
+                           className={`text-[11px] font-bold py-2 rounded-md border ${isUrgentActive ? "bg-amber-50 text-amber-700 border-amber-200 opacity-80" : "border-slate-200 text-slate-600 bg-slate-50 active:bg-slate-100"}`}
+                         >
+                           {isUrgentActive ? "⚡ Urgent Active" : "⚡ Make Urgent"}
                          </button>
                        </div>
 
                        {/* Premium Growth Controls */}
                        {!isSold && (
                          <div className="flex gap-2 mt-1">
+                           {/* ❌ ONE-WAY: Boost */}
                            <button 
                              onClick={() => handleBoostListing(item.id)} 
                              disabled={isBoostedActive || boostingId === item.id}
-                             className={`flex-1 text-[11px] font-bold py-2 rounded-md transition-colors ${isBoostedActive ? "bg-green-50 text-green-700 opacity-80" : "bg-amber-100 text-amber-900 active:bg-amber-200"}`}
+                             className={`flex-1 text-[11px] font-bold py-2 rounded-md transition-colors ${isBoostedActive ? "bg-green-50 text-green-700 border border-green-200 opacity-90" : "bg-amber-100 text-amber-900 active:bg-amber-200"}`}
                            >
                              {boostingId === item.id ? "..." : isBoostedActive ? "🚀 Boost Active" : "🚀 Boost (24h)"}
                            </button>
+
+                           {/* ❌ ONE-WAY: Feature */}
                            <button 
                              onClick={() => handleFeatureItem(item.id)} 
                              disabled={isFeaturedActive || featuringId === item.id}
-                             className={`flex-1 text-[11px] font-bold py-2 rounded-md transition-colors ${isFeaturedActive ? "bg-green-50 text-green-700 opacity-80" : "bg-slate-900 text-white active:bg-slate-800"}`}
+                             className={`flex-1 text-[11px] font-bold py-2 rounded-md transition-colors ${isFeaturedActive ? "bg-green-50 text-green-700 border border-green-200 opacity-90" : "bg-slate-900 text-white active:bg-slate-800"}`}
                            >
                              {featuringId === item.id ? "..." : isFeaturedActive ? "⭐ Feature Active" : "⭐ Feature (7d)"}
                            </button>
@@ -449,7 +479,7 @@ export default function UnifiedDashboard() {
                      </div>
                    )
                  })}
-                 
+
                  {hasMoreListings && (
                    <button onClick={() => fetchListings(true)} disabled={loadingListings} className="w-full py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors shadow-sm">
                      {loadingListings ? "Loading..." : "Load More Ads"}
@@ -489,7 +519,7 @@ export default function UnifiedDashboard() {
                           {status === 'pending' ? 'Awaiting Payment' : status === 'confirmed' ? 'Paid' : status === 'delivered' ? 'Completed' : status}
                         </span>
                       </div>
-                      
+
                       <div className="flex gap-2 mt-4">
                         <button onClick={() => handleSaleStatusChange(order.id, 'confirmed')} disabled={status !== 'pending'} className="flex-1 text-[11px] font-bold py-2 border border-slate-200 text-slate-700 rounded-lg active:bg-slate-50 disabled:opacity-50">Mark as Paid</button>
                         <button onClick={() => handleSaleStatusChange(order.id, 'delivered')} disabled={status === 'delivered'} className="flex-1 text-[11px] font-bold py-2 bg-slate-900 text-white rounded-lg active:bg-slate-800 disabled:opacity-50">Complete</button>
@@ -555,7 +585,7 @@ export default function UnifiedDashboard() {
       <div className="px-4 mt-2 pb-8 pt-4">
         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Grow your business</p>
         <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x pb-2">
-          
+
           <div className="snap-start flex-shrink-0 w-[200px] bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-between">
             <div>
               <h4 className="text-sm font-bold text-slate-900 mb-1">🚀 Boost Listing</h4>
