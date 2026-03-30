@@ -1,99 +1,42 @@
-import Image from "next/image";
-import Link from "next/link";
-import { cookies } from "next/headers";
-import { getProducts } from "@/lib/firebase/firestore";
 import SearchBar from "@/components/SearchBar"; 
 import UrgentStories from "@/components/UrgentStories";
-import PersonalizedFeed from "@/components/PersonalizedFeed";
 import ProductSection from "@/components/ProductSection";
 import HorizontalScroller from "@/components/HorizontalScroller";
-// Updated import: Removed FieldPath, added documentId
-import { collection, query, where, getDocs, limit, documentId } from "firebase/firestore";
+import MiddleNav from "@/components/MiddleNav"; 
+import Link from "next/link";
+import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
-// Forces the page to re-run on refresh so the random shuffle always happens
 export const dynamic = "force-dynamic";
-
-const categoryDisplayNames: Record<string, string> = {
-  student_item: "Student Market",
-  electronics: "Electronics",
-  agriculture: "Agriculture"
-};
 
 export default async function Home() {
   const now = Date.now();
-  
-  const cookieStore = cookies();
-  const recentCategory = cookieStore.get("recentCategory")?.value;
 
-  // 1. Fetch Premium Items
-  const featuredQ = query(collection(db, "products"), where("isFeatured", "==", true));
-  const featuredSnap = await getDocs(featuredQ);
-  const featuredProducts = featuredSnap.docs
-    .map(d => ({ id: d.id, ...d.data() } as any))
-    .filter(p => p.featureExpiresAt && p.featureExpiresAt > now)
-    .sort((a, b) => b.featuredAt - a.featuredAt);
+  // 1. Fetch Official Stores
+  const officialQ = query(collection(db, "products"), where("isAdminUpload", "==", true), limit(12));
+  const officialSnap = await getDocs(officialQ);
+  const officialProducts = officialSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
-  const boostedQ = query(collection(db, "products"), where("isBoosted", "==", true));
+  // 2. Fetch Approved Quality
+  const approvedQ = query(collection(db, "products"), where("isApprovedQuality", "==", true), limit(12));
+  const approvedSnap = await getDocs(approvedQ);
+  const approvedProducts = approvedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+
+  // 3. Fetch Boosted
+  const boostedQ = query(collection(db, "products"), where("isBoosted", "==", true), limit(6));
   const boostedSnap = await getDocs(boostedQ);
   const boostedProducts = boostedSnap.docs
     .map(d => ({ id: d.id, ...d.data() } as any))
     .filter(p => p.boostExpiresAt && p.boostExpiresAt > now)
     .sort((a, b) => b.boostedAt - a.boostedAt);
 
-  const premiumIds = new Set([...featuredProducts, ...boostedProducts].map(p => p.id));
-
-  // 2. Fetch TRENDING NOW (Random 12 from Firestore)
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  const randomChar = chars.charAt(Math.floor(Math.random() * chars.length));
-
-  // Updated query: using documentId() directly
-  const trendingQ = query(
-    collection(db, "products"),
-    where(documentId(), ">=", randomChar),
-    limit(15) 
-  );
-  const trendingSnap = await getDocs(trendingQ);
-  let trendingNow = trendingSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-
-  // Fallback: If our random character was near the end of the DB and returned < 12 items, wrap around
-  if (trendingNow.length < 12) {
-    const fallbackQ = query(collection(db, "products"), limit(15 - trendingNow.length));
-    const fallbackSnap = await getDocs(fallbackQ);
-    trendingNow = [...trendingNow, ...fallbackSnap.docs.map(d => ({ id: d.id, ...d.data() } as any))];
-  }
-
-  // Filter out premiums, remove duplicates (if fallback fired), shuffle, and keep exactly 12
-  trendingNow = Array.from(new Map(trendingNow.map(item => [item.id, item])).values())
-    .filter(p => !premiumIds.has(p.id))
-    .sort(() => Math.random() - 0.5) 
-    .slice(0, 12);
-
-  // 3. Fetch Standard Categories
-  const electronics = await getProducts("electronics", 30);
-  const agriculture = await getProducts("agriculture", 30);
-  const students = await getProducts("student_item", 30);
-  
-  let recentCategoryProducts: any[] = [];
-  let displayCategoryName = "";
-  if (recentCategory) {
-    if (recentCategory === "electronics") recentCategoryProducts = electronics.slice(0, 12);
-    else if (recentCategory === "agriculture") recentCategoryProducts = agriculture.slice(0, 12);
-    else if (recentCategory === "student_item") recentCategoryProducts = students.slice(0, 12);
-    else recentCategoryProducts = await getProducts(recentCategory, 12);
-
-    displayCategoryName = categoryDisplayNames[recentCategory] || recentCategory;
-  }
-
-  const allProducts = [...electronics, ...agriculture, ...students];
-
-  const sortedByDate = [...allProducts].sort((a: any, b: any) => {
-    const dateA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt || 0).getTime();
-    const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt || 0).getTime();
-    return dateB - dateA;
-  });
-
-  const justPostedProducts = sortedByDate.slice(0, 12);
+  // 4. Fetch Featured
+  const featuredQ = query(collection(db, "products"), where("isFeatured", "==", true), limit(6));
+  const featuredSnap = await getDocs(featuredQ);
+  const featuredProducts = featuredSnap.docs
+    .map(d => ({ id: d.id, ...d.data() } as any))
+    .filter(p => p.featureExpiresAt && p.featureExpiresAt > now)
+    .sort((a, b) => b.featuredAt - a.featuredAt);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-12 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
@@ -102,151 +45,106 @@ export default async function Home() {
       <section className="py-6 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
           <SearchBar />
-          <div className="flex gap-3 overflow-x-auto py-4 no-scrollbar items-center justify-start md:justify-center px-1 snap-x">
-            {["Under 50k", "Urgent sales", "Near you", "Just posted", "Campus deals"].map(tag => (
-              <button key={tag} className="px-5 py-2 snap-start bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full text-xs font-bold whitespace-nowrap text-slate-800 dark:text-slate-200 transition-colors shadow-sm">
-                {tag}
-              </button>
-            ))}
+        </div>
+      </section>
+
+      {/* URGENT DEALS / STORIES */}
+      <UrgentStories />
+
+      {/* TRUST SECTION */}
+      <section className="py-8 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-slate-800">
+        <div className="w-full max-w-[1200px] mx-auto px-4 text-center">
+          <h2 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-white mb-6">
+            Buy trusted products in Kabale
+          </h2>
+          <div className="flex flex-col md:flex-row items-center justify-center text-sm md:text-base font-bold text-slate-700 dark:text-slate-300 gap-3 md:gap-6">
+            <span>Pay on mobile</span>
+            <span className="md:hidden text-slate-400">|</span>
+            <span className="hidden md:inline text-slate-400">__</span>
+            <span>Verified Quality</span>
+            <span className="md:hidden text-slate-400">|</span>
+            <span className="hidden md:inline text-slate-400">__</span>
+            <span>Fast delivery</span>
           </div>
         </div>
       </section>
 
-      <UrgentStories />
+      {/* MIDDLE NAV */}
+      <MiddleNav />
 
-      <div className="w-full mt-4 sm:mt-8 space-y-10 md:space-y-16">
+      <div className="w-full mt-6 space-y-12">
+
+        {/* 1. OFFICIAL STORES BLOCK */}
+        {officialProducts.length > 0 && (
+          <section className="flex flex-col items-center w-full">
+            <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
+              <ProductSection title="From Official Stores" products={officialProducts} />
+            </div>
+            <div className="mt-8 flex flex-col items-center text-center px-4">
+              <p className="text-slate-700 dark:text-slate-300 font-bold mb-3 text-sm sm:text-base">
+                Checkout official products here
+              </p>
+              <Link href="/officialStore" className="px-8 py-3 bg-[#D97706] hover:bg-amber-600 text-white font-black text-sm uppercase tracking-wider shadow-md rounded-sm transition-colors">
+                Official products &gt;&gt;
+              </Link>
+            </div>
+          </section>
+        )}
+
+        {/* 2. QUICK SHIP MESSAGE */}
+        <section className="w-full max-w-[800px] mx-auto px-4 py-8 bg-white dark:bg-[#1a1a1a] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-center">
+          <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mb-3">
+            Need to shop quick and fast delivery times?
+          </h3>
+          <p className="text-lg text-slate-600 dark:text-slate-400">
+            Message us on <a href="https://wa.me/256759997376" className="text-[#D97706] font-bold hover:underline">256759997376</a>
+          </p>
+        </section>
+
+        {/* 3. APPROVED QUALITY BLOCK */}
+        {approvedProducts.length > 0 && (
+          <section className="flex flex-col items-center w-full">
+            <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
+              <ProductSection title="Approved Quality" products={approvedProducts} />
+            </div>
+            <div className="mt-8 flex flex-col items-center text-center px-4">
+              <p className="text-slate-700 dark:text-slate-300 font-bold mb-3 text-sm sm:text-base max-w-md">
+                See more quality verified products in official stores section
+              </p>
+              <Link href="/officialStore" className="px-8 py-3 bg-[#D97706] hover:bg-amber-600 text-white font-black text-sm uppercase tracking-wider shadow-md rounded-sm transition-colors">
+                Official products &gt;&gt;
+              </Link>
+            </div>
+          </section>
+        )}
+
+        {/* 4. MERCHANT CODES SECTION */}
+        <section className="w-full max-w-[800px] mx-auto px-4 py-8 bg-white dark:bg-[#1a1a1a] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-center">
+          <h4 className="text-sm uppercase tracking-widest font-black text-slate-500 mb-6">Secure Payment Merchant Codes</h4>
+          <div className="flex flex-col sm:flex-row justify-center gap-6">
+            <div className="bg-red-50 dark:bg-red-950/30 p-4 rounded-lg border border-red-100 dark:border-red-900 w-full sm:w-48">
+              <span className="block text-red-600 dark:text-red-400 font-bold mb-1">Airtel Money</span>
+              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-widest">7050183</span>
+            </div>
+            <div className="bg-yellow-50 dark:bg-yellow-950/30 p-4 rounded-lg border border-yellow-100 dark:border-yellow-900 w-full sm:w-48">
+              <span className="block text-yellow-600 dark:text-yellow-500 font-bold mb-1">MTN MoMo</span>
+              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-widest">14843537</span>
+            </div>
+          </div>
+        </section>
+
+        {/* 5. BOOSTED & FEATURED CAROUSELS */}
+        {boostedProducts.length > 0 && (
+          <section className="w-full pt-6">
+            <HorizontalScroller title="Boosted deals" products={boostedProducts} />
+          </section>
+        )}
 
         {featuredProducts.length > 0 && (
           <section className="w-full">
-            <HorizontalScroller 
-              title="Featured items" 
-              products={featuredProducts} 
-            />
+            <HorizontalScroller title="Featured items" products={featuredProducts} />
           </section>
         )}
-
-        {boostedProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Boosted deals" 
-              products={boostedProducts} 
-            />
-          </section>
-        )}
-
-        {/* RECENTLY VIEWED */}
-        {recentCategoryProducts.length > 0 && (
-          <section>
-            <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
-              <ProductSection 
-                title={`Because you looked at ${displayCategoryName}`} 
-                products={recentCategoryProducts} 
-              />
-            </div>
-          </section>
-        )}
-
-        {/* TRENDING NOW */}
-        {trendingNow.length > 0 && (
-          <section>
-            <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
-              <ProductSection 
-                title="Trending now" 
-                products={trendingNow} 
-              />
-            </div>
-          </section>
-        )}
-
-        {/* CTA SECTION */}
-        <section className="relative py-20 md:py-28 text-center bg-slate-100/50 dark:bg-[#111] border-y border-slate-200 dark:border-slate-800">
-          <div className="relative z-10 w-full max-w-[1200px] mx-auto px-3 sm:px-4 flex flex-col items-center">
-            <h2 className="text-5xl md:text-7xl font-semibold mb-6 text-slate-900 dark:text-white tracking-tight">
-              Sell on Kabale
-            </h2>
-            <p className="text-base md:text-lg text-slate-800 dark:text-slate-300 mb-10 leading-relaxed font-medium max-w-2xl">
-              Sell directly to buyers across Kabale & Kigezi. Perfect for shops, students, or clearing extra items. Post in just 60 seconds via our WhatsApp bot.
-              <br />
-              <span className="text-green-600 dark:text-green-400 font-semibold">
-                Just send "Hi" to our WhatsApp bot to get started.
-              </span>
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto justify-center">
-              <a
-                href="https://wa.me/256740373021?text=Hi"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-10 py-3 border-2 border-slate-900 dark:border-white text-slate-900 dark:text-white font-medium text-base hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors rounded-sm min-w-[180px]"
-              >
-                Start selling
-              </a>
-              <a
-                href="mailto:shopkabale@gmail.com"
-                className="px-10 py-3 border-2 border-slate-900 dark:border-white text-slate-900 dark:text-white font-medium text-base hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-black transition-colors rounded-sm min-w-[180px]"
-              >
-                Get support
-              </a>
-            </div>
-          </div>
-        </section>
-
-        {/* JUST POSTED */}
-        <section>
-          <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
-            <ProductSection 
-              title="Just posted" 
-              products={justPostedProducts} 
-            />
-          </div>
-        </section>
-
-        <section className="w-full">
-          <PersonalizedFeed allProducts={allProducts} />
-        </section>
-
-        {/* CATEGORIES */}
-        <section className="py-12 border-t border-slate-200 dark:border-slate-800">
-          <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
-              Explore by category
-            </h3>
-
-            <div className="flex flex-col gap-3 sm:gap-4 max-w-3xl mx-auto">
-              {[
-                { name: "Student market", link: "student_item", desc: "Hostel items, textbooks, gadgets, and campus essentials", icon: "🎓" }, 
-                { name: "Electronics", link: "electronics", desc: "Smartphones, laptops, TVs, audio, and accessories", icon: "💻" }, 
-                { name: "Agriculture", link: "agriculture", desc: "Fresh produce, farm tools, livestock, and fertilizers", icon: "🌱" }
-              ].map((cat) => (
-                <Link 
-                  key={cat.name} 
-                  href={`/category/${cat.link}`} 
-                  className="group flex items-center justify-between p-4 sm:p-5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-sm hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-200 w-full"
-                >
-                  <div className="flex items-center gap-4 sm:gap-5 overflow-hidden">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform duration-300 border border-slate-100 dark:border-slate-800">
-                      {cat.icon}
-                    </div>
-                    <div className="flex flex-col text-left overflow-hidden">
-                      <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors truncate">
-                        {cat.name}
-                      </span>
-                      <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate pr-2">
-                        {cat.desc}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 text-slate-300 dark:text-slate-600 group-hover:text-[#D97706] transition-colors pl-2 shrink-0">
-                    <span className="text-xs font-bold uppercase tracking-widest hidden sm:block">View</span>
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
 
       </div>
     </div>
