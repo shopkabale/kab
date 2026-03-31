@@ -79,13 +79,16 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
       safeStock = parsed;
     }
   }
+  
+  // Logic for Authentic Scarcity
+  const isLowStock = safeStock > 0 && safeStock <= 5;
+  const isAvailable = safeStock > 0;
 
   // ==========================================
-  // 2. BULLETPROOF ADMIN CHECK & FOMO MATH
+  // 2. BULLETPROOF ADMIN CHECK
   // ==========================================
   const sellerNameStr = String(product.sellerName || "").toLowerCase();
   const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
-  const fakeViews = (safeName.length * 3) + 12;
 
   // ==========================================
   // 3. OPTIMIZE IMAGES
@@ -95,12 +98,10 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // ==========================================
   // 4. FETCH RELATED PRODUCTS
   // ==========================================
-  // 🔥 Limit to 12. This drops the cost from 50 reads down to 12 reads per cache build!
   const rawCategoryProducts = await getProducts(safeCategory, 12);
 
   const relatedProducts = rawCategoryProducts
     .filter((p) => p.id !== product.id && p.publicId !== product.publicId)
-    // 🔥 Replaced Math.random() with the stable daily shuffle
     .sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id))
     .slice(0, 8) 
     .map((p) => ({
@@ -147,7 +148,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         <span className="text-slate-900 truncate max-w-[200px]">{safeName}</span>  
       </div>  
 
-      {/* MODERN E-COMMERCE LAYOUT (No outer card, just a clean grid) */}
+      {/* MODERN E-COMMERCE LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-16">  
 
         {/* LEFT COLUMN: Image Gallery (Sticky on Desktop) */}  
@@ -176,15 +177,77 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
           </h1>  
 
           {/* Price */}
-          <div className="mb-6 flex items-center gap-4">  
+          <div className="mb-4 flex items-center gap-4">  
             <span className="text-4xl font-black text-[#D97706]">  
               UGX {safePrice.toLocaleString()}  
             </span>  
           </div>  
 
-          {/* FAST BUY ACTION (Stays up below price) */}
-          <div className="mb-10">
+          {/* AUTHENTIC SCARCITY INDICATOR */}
+          {isAvailable && (
+            <div className={`mb-6 flex items-center gap-2 text-sm font-bold p-3 rounded-xl border w-fit ${
+              isLowStock 
+                ? "bg-red-50 text-red-600 border-red-100" 
+                : "bg-green-50 text-green-700 border-green-100"
+            }`}>
+              {isLowStock ? (
+                <>
+                  <svg className="w-5 h-5 animate-pulse shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <span>High Demand: Only {safeStock} left in stock!</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span>In Stock & Ready to Deliver</span>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* FAST BUY ACTION */}
+          <div className="mb-6">
             <FastBuy product={{...product, images: optimizedImages}} />
+          </div>
+
+          {/* INLINE TRUST BOX (Conversion Machine Core) */}
+          <div className="mb-10 bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4 shadow-sm">
+            {/* Trust Signal 1: Risk Reversal */}
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-slate-900 mb-0.5 tracking-tight">
+                  Payment is after you receive the product
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                  Inspect the item first. If it is not exactly as described, simply hand it back. You only pay when you are 100% satisfied. Zero risk.
+                </p>
+              </div>
+            </div>
+
+            {/* Trust Signal 2: Local Delivery */}
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-[#D97706]/10 text-[#D97706] flex items-center justify-center shrink-0 mt-0.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-slate-900 mb-0.5 tracking-tight">
+                  Fast Delivery in Kabale & Kigezi
+                </h4>
+                <p className="text-xs text-slate-600 leading-relaxed font-medium">
+                  Direct delivery to your doorstep, shop, or hostel. No waiting days for packages from Kampala.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* DESCRIPTION */}  
@@ -193,9 +256,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             {renderDescription(product.description)}
           </div>  
 
-          
-
-          {/* 2-COLUMN SPECS TABLE */}
+          {/* 2-COLUMN SPECS TABLE (Cleaned Up) */}
           <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-4 bg-white">
             <table className="w-full text-sm text-left">
               <tbody className="divide-y divide-slate-200">
@@ -205,7 +266,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                     <span className={safeStock > 0 ? "text-green-700" : "text-red-600"}>
                       {safeStock > 0 ? 'In Stock' : 'Out of Stock'}
                     </span>
-                    {safeStock > 0 && safeStock <= 3 && <span className="text-slate-500 font-normal ml-1">(Few left!)</span>}
                   </td>
                 </tr>
                 <tr className="divide-x divide-slate-200">
@@ -218,18 +278,22 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                 </tr>
                 <tr className="divide-x divide-slate-200">
                   <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Sold By</th>
-                  <td className="px-4 py-3 text-slate-900 font-bold uppercase bg-white">
-                    {product.sellerName || "Verified Seller"} {isAdmin && "✓"}
+                  <td className="px-4 py-3 text-slate-900 font-bold uppercase bg-white flex items-center gap-2">
+                    {product.sellerName || "Verified Seller"} 
+                    {isAdmin && (
+                      <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">Verified ✓</span>
+                    )}
                   </td>
                 </tr>
                 <tr className="divide-x divide-slate-200">
-                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Activity</th>
-                  <td className="px-4 py-3 text-slate-900 bg-white">🔥 {fakeViews} viewing today</td>
+                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Returns</th>
+                  <td className="px-4 py-3 text-slate-900 bg-white">Reject on delivery if unsatisfied</td>
                 </tr>
               </tbody>
             </table>
           </div>
-{/* SECONDARY ACTIONS (Chat, Make Offer, Save) */}
+
+          {/* SECONDARY ACTIONS (Chat, Make Offer, Save) */}
           <div className="mb-10 border-b border-slate-200 pb-10">
             <ProductActions product={{...product, images: optimizedImages}}>
                 <div className="flex flex-col gap-3 mt-2 w-full">
