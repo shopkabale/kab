@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { collection, query, orderBy, limit, offset, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, limit, startAfter, getDocs, Timestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import ProductSection from "@/components/ProductSection";
 import { optimizeImage } from "@/lib/utils";
@@ -14,26 +14,45 @@ export default function ProductFeed({ initialProducts }: { initialProducts: any[
   const [hasMore, setHasMore] = useState(initialProducts.length === PAGE_SIZE);
 
   const loadMore = async () => {
-    if (loading || !hasMore) return;
+    if (loading || !hasMore || products.length === 0) return;
     setLoading(true);
 
     try {
-      // Fetch the next batch, skipping the ones we already have on screen
+      // 1. Get the last product currently on screen
+      const lastProduct = products[products.length - 1];
+      
+      // 2. Format the cursor. 
+      // Because we converted Firestore Timestamps to numbers in page.tsx (to pass to the client securely), 
+      // we need to convert it back to a Firestore Timestamp for the query.
+      let cursorValue = lastProduct.createdAt;
+      if (typeof cursorValue === "number") {
+        cursorValue = Timestamp.fromMillis(cursorValue);
+      }
+
+      // 3. Fetch the next batch using startAfter
       const productsRef = collection(db, "products");
       const q = query(
         productsRef,
         orderBy("createdAt", "desc"),
-        offset(products.length),
+        startAfter(cursorValue),
         limit(PAGE_SIZE)
       );
 
       const snapshot = await getDocs(q);
-      const newProducts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const newProducts = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Keep the createdAt format consistent as a number for the next time we click Load More
+          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : data.createdAt
+        };
+      });
 
-      // Append new products to the existing list
+      // 4. Append new products to the existing list
       setProducts(prev => [...prev, ...newProducts]);
 
-      // If we got fewer products than the PAGE_SIZE, we've hit the end of the database
+      // 5. If we got fewer products than the PAGE_SIZE, we've hit the end of the database
       if (newProducts.length < PAGE_SIZE) {
         setHasMore(false);
       }
