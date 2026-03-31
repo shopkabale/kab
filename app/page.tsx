@@ -87,9 +87,6 @@ export default async function Home() {
       <MiddleNav />
 
 
-{/* URGENT DEALS / STORIES */}
-      <UrgentStories />
-
 
       <div className="w-full mt-6 space-y-12">
 
@@ -140,6 +137,9 @@ export default async function Home() {
         )}
 
         
+{/* URGENT DEALS / STORIES */}
+      <UrgentStories />
+
 
         {/* 4. MERCHANT CODES SECTION */}
         <section className="w-full max-w-[800px] mx-auto px-4 py-8 bg-white dark:bg-[#1a1a1a] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-center">
