@@ -193,15 +193,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             {renderDescription(product.description)}
           </div>  
 
-          {/* SECONDARY ACTIONS (Chat, Make Offer, Save) */}
-          <div className="mb-10 border-b border-slate-200 pb-10">
-            <ProductActions product={{...product, images: optimizedImages}}>
-                <div className="flex flex-col gap-3 mt-2 w-full">
-                  <MakeOfferButton product={product} />
-                  <SaveProductButton product={product} />
-                </div>
-            </ProductActions>
-          </div> 
+          
 
           {/* 2-COLUMN SPECS TABLE */}
           <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-4 bg-white">
@@ -237,6 +229,15 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </tbody>
             </table>
           </div>
+{/* SECONDARY ACTIONS (Chat, Make Offer, Save) */}
+          <div className="mb-10 border-b border-slate-200 pb-10">
+            <ProductActions product={{...product, images: optimizedImages}}>
+                <div className="flex flex-col gap-3 mt-2 w-full">
+                  <MakeOfferButton product={product} />
+                  <SaveProductButton product={product} />
+                </div>
+            </ProductActions>
+          </div> 
 
         </div>  
       </div>  
