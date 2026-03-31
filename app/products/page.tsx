@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { getProducts } from "@/lib/firebase/firestore";
-import ProductSection from "@/components/ProductSection";
+import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { db } from "@/lib/firebase/config"; 
 import SearchBar from "@/components/SearchBar"; 
-import { optimizeImage } from "@/lib/utils"; 
+import ProductFeed from "@/components/ProductFeed"; // Import the new client component
 
-// 🔥 1. REMOVE force-dynamic
-// 🔥 2. ADD revalidate to cache this page for 1 hour (3600 seconds)
 export const revalidate = 3600;
 
 export const metadata = {
@@ -13,43 +11,25 @@ export const metadata = {
   description: "Browse all items available for sale in Kabale town.",
 };
 
-// ==========================================
-// THE DAILY SHUFFLE ALGORITHM
-// ==========================================
-function getDailyRandomScore(id: string) {
-  const today = new Date().toISOString().split('T')[0];
-  const seedString = id + today; 
+const PAGE_SIZE = 40;
 
-  let hash = 0;
-  for (let i = 0; i < seedString.length; i++) {
-    hash = (hash << 5) - hash + seedString.charCodeAt(i);
-    hash |= 0; 
-  }
-  return hash;
-}
-
-export default async function AllProductsPage({
-  searchParams,
-}: {
-  searchParams: { page?: string };
-}) {
-  const currentPage = Number(searchParams?.page) || 1;
-
-  // 🔥 FETCH 100 ITEMS (This keeps reads low but provides a long, scrollable feed)
-  // Note: If you want page 2 to show DIFFERENT items later, you will need to add 
-  // an 'offset' or 'startAfter' logic to your getProducts function!
-  const rawProducts = await getProducts(undefined, 100);
-
-  // SHUFFLE THEM (Stable Daily Randomization on the 100 items)
-  rawProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
-
-  // OPTIMIZE ALL IMAGES
-  const allProducts = rawProducts.map((product) => {
-    if (!product.images || product.images.length === 0) return product;
-
+export default async function AllProductsPage() {
+  // ==========================================
+  // INITIAL SERVER FETCH: Fastest load, best SEO
+  // ==========================================
+  const productsRef = collection(db, "products");
+  const q = query(productsRef, orderBy("createdAt", "desc"), limit(PAGE_SIZE));
+  
+  const snapshot = await getDocs(q);
+  
+  // Clean the data so it can be passed safely to the Client Component
+  const initialProducts = snapshot.docs.map(doc => {
+    const data = doc.data();
     return {
-      ...product,
-      images: product.images.map((img: string) => optimizeImage(img))
+      id: doc.id,
+      ...data,
+      // If you use Firestore Timestamps, convert them to numbers/strings so React doesn't crash
+      createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : data.createdAt
     };
   });
 
@@ -68,75 +48,18 @@ export default async function AllProductsPage({
             Discover everything our local Kabale vendors have to offer. Fast delivery, pay strictly on arrival.
           </p>
 
-          {/* Integrated Search Bar */}
           <div className="max-w-xl mx-auto">
             <SearchBar />
           </div>
         </div>
       </section>
 
-      {/* ========================================== */}
-      {/* 🧩 MAIN CONTENT AREA                       */}
-      {/* ========================================== */}
       <div className="w-full mx-auto mt-4 sm:mt-8 space-y-6">
 
-        {/* THE PRODUCT SECTION */}
-        <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 pb-8">
-          
-          {/* 🔥 Shows ALL 100 items at once, with the requested title */}
-          <ProductSection 
-            title={`Explore All Products (${allProducts.length} Latest Finds)`} 
-            products={allProducts} 
-          />
-
-          {/* ========================================== */}
-          {/* PAGINATION CONTROLS AT THE BOTTOM          */}
-          {/* ========================================== */}
-          <div className="flex items-center justify-center gap-2 mt-12 mb-4">
-            {/* Previous Button */}
-            {currentPage > 1 ? (
-              <Link 
-                href={`?page=${currentPage - 1}`}
-                className="px-4 py-2 rounded-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#151515] text-slate-700 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
-              >
-                ← Prev
-              </Link>
-            ) : (
-              <span className="px-4 py-2 rounded-sm border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 text-slate-400 dark:text-slate-600 text-sm font-bold cursor-not-allowed">
-                ← Prev
-              </span>
-            )}
-
-            {/* Page Numbers (Showing Current, Next, and Next+1 to keep it clean) */}
-            <div className="flex items-center gap-1 mx-1 sm:mx-2">
-              <span className="w-10 h-10 flex items-center justify-center rounded-sm bg-[#D97706] text-white border border-[#D97706] text-sm font-bold shadow-sm">
-                {currentPage}
-              </span>
-              <Link
-                href={`?page=${currentPage + 1}`}
-                className="w-10 h-10 flex items-center justify-center rounded-sm bg-white dark:bg-[#151515] border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-bold shadow-sm transition-colors"
-              >
-                {currentPage + 1}
-              </Link>
-              <Link
-                href={`?page=${currentPage + 2}`}
-                className="hidden sm:flex w-10 h-10 items-center justify-center rounded-sm bg-white dark:bg-[#151515] border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 text-sm font-bold shadow-sm transition-colors"
-              >
-                {currentPage + 2}
-              </Link>
-              <span className="w-10 h-10 flex items-center justify-center text-slate-400 font-bold">...</span>
-            </div>
-
-            {/* Next Button */}
-            <Link 
-              href={`?page=${currentPage + 1}`}
-              className="px-4 py-2 rounded-sm border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#151515] text-slate-700 dark:text-slate-300 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors shadow-sm"
-            >
-              Next →
-            </Link>
-          </div>
-
-        </div>
+        {/* ========================================== */}
+        {/* INTERACTIVE PRODUCT FEED (Client Component)*/}
+        {/* ========================================== */}
+        <ProductFeed initialProducts={initialProducts} />
 
         {/* ========================================== */}
         {/* CATEGORIES LIST ROW                        */}
