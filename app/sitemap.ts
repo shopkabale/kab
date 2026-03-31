@@ -1,15 +1,26 @@
 import { MetadataRoute } from 'next';
 import { adminDb } from "@/lib/firebase/admin";
 
-// 🔥 1. CACHE THE SITEMAP FOR 24 HOURS (86400 seconds)
-// This ensures Next.js only asks Firebase for this data ONCE per day in production.
+// 🔥 CACHE THE SITEMAP FOR 24 HOURS (86400 seconds)
 export const revalidate = 86400;
+
+// Helper to safely parse your mix of integer and Firestore timestamps
+const parseDate = (val: any): Date => {
+  if (!val) return new Date();
+  if (typeof val.toDate === 'function') return val.toDate(); // Firestore Timestamp
+  if (typeof val === 'number') return new Date(val); // Milliseconds (int64)
+  if (val.seconds) return new Date(val.seconds * 1000); // Alternative Firestore format
+  try {
+    return new Date(val);
+  } catch (e) {
+    return new Date();
+  }
+};
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://www.kabaleonline.com";
 
-  // 2. Fetch Dynamic Products
-  // Increased limit to 1000 as requested.
+  // 1. Fetch Dynamic Products
   const productsSnap = await adminDb
     .collection("products")
     .orderBy("createdAt", "desc")
@@ -18,19 +29,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const productEntries = productsSnap.docs.map((doc) => {
     const data = doc.data();
-    // SEO Fix: Use actual DB timestamps so Google knows exactly when content updated
-    const lastMod = data.updatedAt?.toDate() || data.createdAt?.toDate() || new Date();
-    
     return {
       url: `${baseUrl}/product/${data.publicId || doc.id}`,
-      lastModified: lastMod,
+      lastModified: parseDate(data.updatedAt || data.createdAt),
       changeFrequency: 'daily' as const,
       priority: 0.8,
     };
   });
 
-  // 3. Fetch Dynamic Blog Posts
-  // Increased limit to 1000 as requested.
+  // 2. Fetch Dynamic Blog Posts
   const blogSnap = await adminDb
     .collection("blog_posts")
     .orderBy("publishedAt", "desc")
@@ -39,17 +46,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const blogEntries = blogSnap.docs.map((doc) => {
     const data = doc.data();
-    const lastMod = data.updatedAt?.toDate() || data.publishedAt?.toDate() || new Date();
-    
     return {
       url: `${baseUrl}/blog/${doc.id}`,
-      lastModified: lastMod,
+      lastModified: parseDate(data.updatedAt || data.publishedAt),
       changeFrequency: 'weekly' as const,
       priority: 0.7,
     };
   });
 
-  // 4. Category Hubs (Crucial for SEO)
+  // 3. Category Hubs 
   const categories = ["electronics", "agriculture", "student_item"];
 
   const categoryEntries = categories.map(cat => ({
@@ -59,7 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.9,
   }));
 
-  // 5. All Static & High-Value Pages
+  // 4. All Static & High-Value Pages
   const staticPages = [
     { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 1.0 },
     { url: `${baseUrl}/officialStore`, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 0.9 },
