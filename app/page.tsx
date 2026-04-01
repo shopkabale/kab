@@ -4,7 +4,7 @@ import ProductSection from "@/components/ProductSection";
 import HorizontalScroller from "@/components/HorizontalScroller";
 import MiddleNav from "@/components/MiddleNav"; 
 import Link from "next/link";
-import { collection, query, where, getDocs, limit } from "firebase/firestore";
+import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
 export const dynamic = "force-dynamic";
@@ -27,7 +27,7 @@ export default async function Home() {
   const officialQ = query(collection(db, "products"), where("isAdminUpload", "==", true), limit(12));
   const officialSnap = await getDocs(officialQ);
   let officialProducts = officialSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-  
+
   // Randomize the order
   officialProducts = shuffleArray(officialProducts);
 
@@ -35,7 +35,7 @@ export default async function Home() {
   const approvedQ = query(collection(db, "products"), where("isApprovedQuality", "==", true), limit(12));
   const approvedSnap = await getDocs(approvedQ);
   let approvedProducts = approvedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-  
+
   // Randomize the order
   approvedProducts = shuffleArray(approvedProducts);
 
@@ -54,6 +54,11 @@ export default async function Home() {
     .map(d => ({ id: d.id, ...d.data() } as any))
     .filter(p => p.featureExpiresAt && p.featureExpiresAt > now)
     .sort((a, b) => b.featuredAt - a.featuredAt);
+
+  // 5. Fetch Last Added (Newest 12 items overall)
+  const latestQ = query(collection(db, "products"), orderBy("createdAt", "desc"), limit(12));
+  const latestSnap = await getDocs(latestQ);
+  const latestProducts = latestSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-12 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
@@ -125,11 +130,11 @@ export default async function Home() {
         )}
 
 
-                {/* 2. QUICK SHIP MESSAGE */}
+        {/* 2. QUICK SHIP MESSAGE */}
         <section className="w-full max-w-[800px] mx-auto px-4">
           <div className="bg-white dark:bg-[#111] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-shadow hover:shadow-md">
             <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
-              
+
               {/* Text & Icon Group */}
               <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4">
                 <div className="w-12 h-12 bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-500 rounded-full flex items-center justify-center shrink-0">
@@ -161,7 +166,7 @@ export default async function Home() {
                 </svg>
                 Chat on WhatsApp
               </a>
-              
+
             </div>
           </div>
         </section>
@@ -205,6 +210,17 @@ export default async function Home() {
           </div>
         </section>
 
+
+        {/* NEWLY ADDED: JUST ADDED SECTION (LATEST 12 OVERALL) */}
+        {latestProducts.length > 0 && (
+          <section className="flex flex-col items-center w-full">
+            <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
+              <ProductSection title="Just Added" products={latestProducts} />
+            </div>
+          </section>
+        )}
+
+
         {/* 5. BOOSTED CAROUSEL & 6. SELL CTA (Linked Visibility) */}
         {boostedProducts.length > 0 && (
           <>
@@ -212,14 +228,14 @@ export default async function Home() {
               <HorizontalScroller title="Today’s Sponsored Deals" products={boostedProducts} />
             </section>
 
-            
+
                 <section className="relative py-10 md:py-12 overflow-hidden w-full bg-white dark:bg-[#111] my-4">
-  
+
   {/* Subtle Ambient Background Glow */}
   <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#D97706]/10 blur-[100px] rounded-full pointer-events-none" />
 
   <div className="relative z-10 w-full max-w-[900px] mx-auto px-4 flex flex-col items-center text-center">
-    
+
     {/* Live Status Badge */}
     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#D97706]/10 text-[#D97706] text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-4">
       <span className="relative flex h-2 w-2">
@@ -241,7 +257,7 @@ export default async function Home() {
 
     {/* CTA Buttons */}
     <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-center">
-      
+
       {/* Primary Conversion Button (WhatsApp) */}
       <a
         href="https://wa.me/256740373021?text=Hi"
@@ -261,7 +277,7 @@ export default async function Home() {
         className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-sm md:text-base rounded-xl transition-all w-full sm:w-auto"
       >
         <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
         Need Support?
       </a>
