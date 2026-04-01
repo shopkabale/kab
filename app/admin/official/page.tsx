@@ -78,9 +78,9 @@ export default function OfficialProductsManager() {
   // ------------------------------------------------------------------
   // NEW: Toggle Function to update Firestore
   // ------------------------------------------------------------------
-  const toggleBadge = async (productId: string, field: "isOfficialStore" | "isApprovedQuality", currentValue: boolean) => {
+  const toggleBadge = async (productId: string, field: "isOfficialStore" | "isApprovedQuality" | "ladies_home", currentValue: boolean) => {
     const newValue = !currentValue;
-    
+
     // 1. Optimistic UI update (feels instant to the user)
     setProducts(prev => 
       prev.map(p => p.id === productId ? { ...p, [field]: newValue } : p)
@@ -119,7 +119,7 @@ export default function OfficialProductsManager() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[900px]">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
                 <th className="p-4 px-6">Product</th>
@@ -127,17 +127,18 @@ export default function OfficialProductsManager() {
                 <th className="p-4 px-6">Stock</th>
                 <th className="p-4 px-6 text-center">Official Store</th>
                 <th className="p-4 px-6 text-center">Approved Quality</th>
+                <th className="p-4 px-6 text-center">Ladies Home</th>
                 <th className="p-4 px-6 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                  <tr>
-                   <td colSpan={6} className="px-6 py-12 text-center text-slate-500">Loading official inventory...</td>
+                   <td colSpan={7} className="px-6 py-12 text-center text-slate-500">Loading official inventory...</td>
                  </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-slate-500 font-medium">No official products found.</td>
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500 font-medium">No official products found.</td>
                 </tr>
               ) : (
                 products.map((product) => (
@@ -185,6 +186,17 @@ export default function OfficialProductsManager() {
                         title="Toggle Approved Quality Status"
                       >
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.isApprovedQuality ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </td>
+
+                    {/* LADIES HOME TOGGLE */}
+                    <td className="p-4 px-6 text-center">
+                      <button
+                        onClick={() => toggleBadge(product.id, "ladies_home", !!product.ladies_home)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.ladies_home ? 'bg-pink-500' : 'bg-slate-300'}`}
+                        title="Toggle Ladies Home Status"
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.ladies_home ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </td>
 
