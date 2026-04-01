@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Ladies' Top Picks 💖 | Kabale Online",
   description: "Shop handbags, perfumes, jewelry, and beauty essentials on Kabale Online. Handpicked for quality and style in Kabale.",
+  keywords: ["ladies", "women's fashion", "handbags", "perfumes", "jewelry", "Kabale Online", "Uganda shopping"],
   openGraph: {
     title: "Ladies' Top Picks 💖 | Kabale Online",
     description: "Shop handbags, perfumes, jewelry, and beauty essentials. Handpicked for quality and style in Kabale.",
