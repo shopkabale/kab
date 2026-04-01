@@ -179,6 +179,7 @@ export default function AdminProductsPage() {
                         <option value="electronics">Electronics</option>
                         <option value="agriculture">Agriculture</option>
                         <option value="student_item">Student Market</option>
+                        <option value="ladies">Ladies' Picks</option>
                       </select>
                     </td>
 
