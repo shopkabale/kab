@@ -69,7 +69,7 @@ export default function SellPage() {
         // Generate previews
         const newPreviews = compressedFiles.map(file => URL.createObjectURL(file));
         setImagePreviews(prev => [...prev, ...newPreviews]);
-        
+
       } catch (error) {
         console.error("Compression error:", error);
         alert("There was an issue processing your images. Please try again.");
@@ -148,7 +148,7 @@ export default function SellPage() {
         });
 
         const uploadResults = await Promise.all(uploadPromises);
-        
+
         // Let Cloudinary convert to WebP/AVIF when serving to buyers
         imageUrls = uploadResults.map(data => {
           const originalUrl = data.secure_url;
@@ -245,7 +245,7 @@ export default function SellPage() {
           >
             View Live Item
           </Link>
-          
+
           {/* 🔥 The Cache-Busting Dashboard Link */}
           <Link 
             href="/profile?refresh=true"
@@ -269,7 +269,7 @@ export default function SellPage() {
           + Post Another Item
         </button>
 
-        
+
       </div>
     );
   }
@@ -285,7 +285,7 @@ export default function SellPage() {
       </div>
 
       <form onSubmit={handleSubmitClick} className="space-y-4">
-        
+
         {/* STEP 1: PHOTO UPLOAD */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
           <label className="block text-sm font-bold text-slate-900 mb-3">1. Upload Photos *</label>
@@ -324,7 +324,7 @@ export default function SellPage() {
 
         {/* STEP 2: MAIN DETAILS */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-          
+
           <div>
             <label className="block text-sm font-bold text-slate-900 mb-2">2. What are you selling? *</label>
             <input required type="text" placeholder="e.g. HP Laptop, Nike Shoes" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50" 
@@ -344,6 +344,7 @@ export default function SellPage() {
                 <option value="electronics">Electronics</option>
                 <option value="agriculture">Agriculture</option>
                 <option value="student_item">Student Market</option>
+                <option value="ladies">Ladies' Picks</option>
               </select>
             </div>
           </div>
@@ -381,7 +382,7 @@ export default function SellPage() {
           >
             <span>{showOptional ? "▲ Hide Description" : "▼ Add Description (Optional)"}</span>
           </button>
-          
+
           {showOptional && (
             <div className="p-4 sm:p-6 border-t border-slate-100">
               <label className="block text-sm font-semibold text-slate-900 mb-2">Product Description</label>
