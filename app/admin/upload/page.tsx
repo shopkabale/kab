@@ -218,7 +218,7 @@ function AdminUploadContent() {
         });
 
         const uploadResults = await Promise.all(uploadPromises);
-        
+
         // Cloudinary URL Optimization: Auto format, quality, and width capping
         newlyUploadedUrls = uploadResults.map(data => {
           const originalUrl = data.secure_url;
@@ -340,6 +340,7 @@ function AdminUploadContent() {
                 <option value="electronics">Electronics</option>
                 <option value="agriculture">Agriculture</option>
                 <option value="student_item">Student Market</option>
+                <option value="ladies">Ladies' Picks</option>
               </select>
             </div>
             <div>
