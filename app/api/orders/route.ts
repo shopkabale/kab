@@ -75,36 +75,38 @@ export async function POST(request: Request) {
       });
     });
 
-    // ==========================================
-    // 3. BACKGROUND TRIGGERS (Fire & Forget)
+        // ==========================================
+    // 3. BACKGROUND TRIGGERS (Awaited for Vercel)
     // ==========================================
     if (sellerPhone) {
-       // 🔥 Trigger Meta WhatsApp Templates (Buyer + Seller)
-       NotificationService.orderCreated(
-         sellerPhone, 
-         contactPhone, 
-         productName, 
-         buyerName, 
-         orderNumber
-       ).catch(err => console.error("WhatsApp Notification Error:", err));
+       console.log("-> Executing Notification Promises...");
+       
+       // Force Vercel to wait for both to finish before returning the response.
+       // We use Promise.allSettled so if WhatsApp fails, the Email still sends (and vice versa).
+       await Promise.allSettled([
+         NotificationService.orderCreated(
+           sellerPhone, 
+           contactPhone, 
+           productName, 
+           buyerName, 
+           orderNumber
+         ).catch(err => console.error("❌ WhatsApp Notification Error:", err)),
+         
+         sendAdminAlert(
+           orderNumber, 
+           productName, 
+           Number(total), 
+           contactPhone, 
+           sellerPhone
+         ).catch(err => console.error("❌ Admin Email Error:", err))
+       ]);
 
-       // 🔥 Trigger Admin Ledger Email
-       sendAdminAlert(
-         orderNumber, 
-         productName, 
-         Number(total), 
-         contactPhone, 
-         sellerPhone
-       ).catch(err => console.error("Admin Email Error:", err));
+       console.log("✅ All notifications dispatched successfully.");
     }
 
+    // Now it is safe to return the response and let Vercel freeze the container
     return NextResponse.json({ success: true, orderId: orderNumber });
 
-  } catch (error: any) {
-    console.error("❌ Order creation error:", error.message);
-    return NextResponse.json({ error: error.message || "Failed to create order" }, { status: 500 });
-  }
-}
 
 // ==========================================
 // PATCH: Admin updates order status
