@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import ProductSection from "@/components/ProductSection";
@@ -6,13 +7,50 @@ import Link from "next/link";
 // Forces the page to always fetch the freshest inventory
 export const dynamic = "force-dynamic";
 
+// ==========================================
+// SEO & OPEN GRAPH METADATA
+// ==========================================
+export const metadata: Metadata = {
+  title: "Official Store ⭐ | Kabale Online",
+  description: "Shop premium, verified products sold directly by Kabale Online. Guaranteed quality, secure mobile payments, and fast delivery across Kabale and Kigezi.",
+  keywords: [
+    "Kabale Online Official Store", 
+    "verified products Kabale", 
+    "secure shopping Uganda", 
+    "Kigezi e-commerce", 
+    "buy premium items Kabale"
+  ],
+  openGraph: {
+    title: "Official Store ⭐ | Kabale Online",
+    description: "Shop premium, verified products sold directly by Kabale Online. Guaranteed quality, secure mobile payments, and fast delivery.",
+    url: "https://kabaleonline.com/officialStore",
+    siteName: "Kabale Online",
+    images: [
+      {
+        url: "/official-og-image.jpg", // Make sure to add this image to your /public folder!
+        width: 1200,
+        height: 630,
+        alt: "Kabale Online Official Store",
+      },
+    ],
+    locale: "en_UG",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Official Store ⭐ | Kabale Online",
+    description: "Shop premium, verified products sold directly by Kabale Online. Guaranteed quality and fast delivery.",
+    images: ["/official-og-image.jpg"],
+  },
+};
+
 export default async function OfficialStorePage() {
   // Fetch ALL products where the admin uploaded them directly
   const officialQ = query(
     collection(db, "products"), 
     where("isAdminUpload", "==", true)
   );
-  
+
   const officialSnap = await getDocs(officialQ);
   const officialProducts = officialSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
@@ -25,7 +63,7 @@ export default async function OfficialStorePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-12 font-sans selection:bg-[#D97706] selection:text-white">
-      
+
       {/* TRUST & AUTHORITY HEADER */}
       <section className="bg-slate-900 dark:bg-black text-white py-12 md:py-16 px-4 text-center border-b-4 border-[#D97706]">
         <div className="max-w-[800px] mx-auto">
