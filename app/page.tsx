@@ -217,6 +217,15 @@ export default async function Home() {
             <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
               <ProductSection title="Just Added" products={latestProducts} />
             </div>
+            {/* View All Products CTA */}
+            <div className="mt-8 flex flex-col items-center text-center px-4">
+              <p className="text-slate-700 dark:text-slate-300 font-bold mb-3 text-sm sm:text-base">
+                Discover thousands of items across all categories
+              </p>
+              <Link href="/products" className="px-8 py-3 bg-[#D97706] hover:bg-amber-600 text-white font-black text-sm uppercase tracking-wider shadow-md rounded-sm transition-colors">
+                View All Products &gt;&gt;
+              </Link>
+            </div>
           </section>
         )}
 
