@@ -55,7 +55,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   });
 
   // 3. Category Hubs 
-  const categories = ["electronics", "agriculture", "student_item"];
+  const categories = ["electronics", "agriculture", "student_item", "ladies"]; // <-- Added 'ladies' category here
 
   const categoryEntries = categories.map(cat => ({
     url: `${baseUrl}/category/${cat}`,
@@ -68,6 +68,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages = [
     { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 1.0 },
     { url: `${baseUrl}/officialStore`, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 0.9 },
+    { url: `${baseUrl}/ladies`, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 0.9 }, // <-- Added the new Ladies landing page here
     { url: `${baseUrl}/blog`, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 0.9 },
     { url: `${baseUrl}/products`, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 0.9 },
     { url: `${baseUrl}/sell`, lastModified: new Date(), changeFrequency: 'monthly' as const, priority: 0.8 },
