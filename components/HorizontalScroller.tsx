@@ -55,16 +55,17 @@ export default function HorizontalScroller({ title, products }: { title: string,
           {products.map((p) => {
             const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
             const isJustPosted = checkIsNew(p);
-            
+            const isSold = p.status === "sold";
+
             // Badge Logic
             const isApproved = p.isApprovedQuality;
             const isOfficial = p.isOfficialStore || p.isAdminUpload;
 
             return (
-              // MATCHED TO PRODUCT SECTION: rounded-sm, soft shadow, gap-2 width
-              <div key={p.id} className="snap-start shrink-0 w-[150px] sm:w-[190px] group flex flex-col bg-white dark:bg-[#151515] rounded-sm overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-none dark:border dark:border-slate-800 transition-shadow hover:shadow-md h-full relative">
+              // MATCHED TO PRODUCT SECTION: rounded-sm, soft shadow, grayscale if sold
+              <div key={p.id} className={`snap-start shrink-0 w-[150px] sm:w-[190px] group flex flex-col bg-white dark:bg-[#151515] rounded-sm overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-none dark:border dark:border-slate-800 transition-shadow hover:shadow-md h-full relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
 
-                <Link href={`/product/${p.publicId || p.id}`} className="flex flex-col flex-grow">
+                <Link href={`/product/${p.publicId || p.id}`} className="flex flex-col flex-grow relative pointer-events-auto">
                   {/* Image Area: aspect-square for uniformity */}
                   <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
                     {optimizedImage ? (
@@ -79,21 +80,30 @@ export default function HorizontalScroller({ title, products }: { title: string,
                       <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">No Image</div>
                     )}
 
+                    {/* 🚫 SOLD OUT OVERLAY (Takes priority over other badges visually) */}
+                    {isSold && (
+                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-[2px]">
+                         <span className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-lg transform -rotate-6">
+                           Sold Out
+                         </span>
+                      </div>
+                    )}
+
                     {/* Conditional "Just Posted" Overlay */}
-                    {isJustPosted && (
+                    {!isSold && isJustPosted && (
                       <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center gap-1 shadow-sm z-10">
                          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
                          New
                       </div>
                     )}
 
-                    {/* Trust Badges Overlay (Sitting EXACTLY at the bottom left edge of the image container) */}
-                    {isApproved ? (
-                      <div className="absolute bottom-0 left-0 bg-emerald-600/95 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1.5 rounded-tr-sm flex items-center shadow-sm z-10">
+                    {/* Trust Badges Overlay (Sitting EXACTLY at the bottom left edge, halved in size) */}
+                    {!isSold && isApproved ? (
+                      <div className="absolute bottom-0 left-0 bg-emerald-600/95 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 leading-none rounded-tr-sm flex items-center shadow-sm z-10 tracking-widest uppercase">
                          Approved Quality
                       </div>
-                    ) : isOfficial ? (
-                      <div className="absolute bottom-0 left-0 bg-[#D97706]/95 backdrop-blur-sm text-white text-[10px] font-bold px-2.5 py-1.5 rounded-tr-sm flex items-center shadow-sm z-10">
+                    ) : !isSold && isOfficial ? (
+                      <div className="absolute bottom-0 left-0 bg-[#D97706]/95 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 leading-none rounded-tr-sm flex items-center shadow-sm z-10 tracking-widest uppercase">
                          Official Product
                       </div>
                     ) : null}
@@ -106,7 +116,7 @@ export default function HorizontalScroller({ title, products }: { title: string,
                       {p.title || p.name}
                     </h3>
                     <div className="mt-auto pt-1">
-                      <span className="text-sm sm:text-base font-black text-[#D97706] dark:text-yellow-500">
+                      <span className={`text-sm sm:text-base font-black ${isSold ? 'text-slate-500' : 'text-[#D97706] dark:text-yellow-500'}`}>
                         UGX {Number(p.price).toLocaleString()}
                       </span>
                     </div>
@@ -115,15 +125,20 @@ export default function HorizontalScroller({ title, products }: { title: string,
 
                 {/* Bottom Quick Actions (Exact match to ProductSection) */}
                 <div className="grid grid-cols-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-[#111] mt-auto">
-                   <a 
-                     href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I am interested in this item on Kabale Online: *${p.title || p.name}*\n\nProduct ID: [${p.id}]`)}`}
-                     target="_blank"
-                     rel="noopener noreferrer"
-                     // Updated: Added px-2 sm:px-3 and changed justify-center to justify-start
-                     className="col-span-3 py-2 px-2 sm:px-3 border-r border-slate-100 dark:border-slate-800 hover:bg-[#25D366] text-slate-900 dark:text-white hover:text-white text-[11px] font-bold uppercase flex justify-start items-center gap-1.5 transition-colors group/wa"
-                   >
-                     <span>WhatsApp</span>
-                   </a>
+                   {isSold ? (
+                     <div className="col-span-3 py-2 px-2 sm:px-3 border-r border-slate-100 dark:border-slate-800 text-slate-400 text-[11px] font-bold uppercase flex justify-start items-center cursor-not-allowed">
+                       Unavailable
+                     </div>
+                   ) : (
+                     <a 
+                       href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I am interested in this item on Kabale Online: *${p.title || p.name}*\n\nProduct ID: [${p.id}]`)}`}
+                       target="_blank"
+                       rel="noopener noreferrer"
+                       className="col-span-3 py-2 px-2 sm:px-3 border-r border-slate-100 dark:border-slate-800 hover:bg-[#25D366] text-slate-900 dark:text-white hover:text-white text-[11px] font-bold uppercase flex justify-start items-center gap-1.5 transition-colors group/wa"
+                     >
+                       <span>WhatsApp</span>
+                     </a>
+                   )}
                    <button className="col-span-1 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-400 hover:text-red-500 flex justify-center items-center transition-colors">
                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
