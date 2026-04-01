@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     }
 
     const productRef = adminDb.collection("products").doc(productId);
-    
+
     let orderNumber = "";
     let sellerPhone = "";
     let productName = "";
@@ -27,9 +27,9 @@ export async function POST(request: Request) {
     await adminDb.runTransaction(async (transaction) => {
       const productSnap = await transaction.get(productRef);
       if (!productSnap.exists) throw new Error("Product not found");
-      
+
       const product = productSnap.data()!;
-      
+
       // Check if someone else just bought it
       if (product.stock <= 0 || product.status === "sold_out") {
         throw new Error("Sorry, this item is sold out!");
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
       productName = product.title || product.name || "Unknown Item";
       sellerPhone = product.sellerPhone;
-      
+
       // Lock the product and reduce stock
       transaction.update(productRef, {
         stock: FieldValue.increment(-1),
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
       // Create the official Order Document
       orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
       const orderRef = adminDb.collection("orders").doc(orderNumber);
-      
+
       transaction.set(orderRef, {
         id: orderNumber,
         orderId: orderNumber,
@@ -75,14 +75,13 @@ export async function POST(request: Request) {
       });
     });
 
-        // ==========================================
+    // ==========================================
     // 3. BACKGROUND TRIGGERS (Awaited for Vercel)
     // ==========================================
     if (sellerPhone) {
        console.log("-> Executing Notification Promises...");
-       
+
        // Force Vercel to wait for both to finish before returning the response.
-       // We use Promise.allSettled so if WhatsApp fails, the Email still sends (and vice versa).
        await Promise.allSettled([
          NotificationService.orderCreated(
            sellerPhone, 
@@ -91,7 +90,7 @@ export async function POST(request: Request) {
            buyerName, 
            orderNumber
          ).catch(err => console.error("❌ WhatsApp Notification Error:", err)),
-         
+
          sendAdminAlert(
            orderNumber, 
            productName, 
@@ -106,6 +105,14 @@ export async function POST(request: Request) {
 
     // Now it is safe to return the response and let Vercel freeze the container
     return NextResponse.json({ success: true, orderId: orderNumber });
+
+  // 👇 THIS IS WHAT WAS MISSING 👇
+  } catch (error: any) {
+    console.error("❌ Order creation error:", error.message);
+    return NextResponse.json({ error: error.message || "Failed to create order" }, { status: 500 });
+  }
+}
+  // 👆 THIS IS WHAT WAS MISSING 👆
 
 
 // ==========================================
