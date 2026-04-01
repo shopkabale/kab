@@ -9,7 +9,7 @@ import {
   FaFacebookF, 
   FaXTwitter, 
   FaInstagram,
-  FaTiktok // Added TikTok back here
+  FaTiktok 
 } from "react-icons/fa6";
 
 // Tell TypeScript what our navigation objects look like
@@ -29,6 +29,34 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const pathname = usePathname();
   const { user, loading, signIn, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Banner state management
+  const [showGuideBanner, setShowGuideBanner] = useState(false);
+  const [isMounted, setIsMounted] = useState(false); // Prevents hydration mismatch
+
+  // Handle LocalStorage check for the 7-day rule
+  useEffect(() => {
+    setIsMounted(true);
+    const dismissedAt = localStorage.getItem('guideBannerDismissedAt');
+    
+    if (dismissedAt) {
+      const SEVEN_DAYS_IN_MS = 7 * 24 * 60 * 60 * 1000;
+      const timeSinceDismissed = Date.now() - parseInt(dismissedAt, 10);
+      
+      if (timeSinceDismissed < SEVEN_DAYS_IN_MS) {
+        setShowGuideBanner(false);
+      } else {
+        setShowGuideBanner(true); // 7 days have passed, show it again
+      }
+    } else {
+      setShowGuideBanner(true); // Never dismissed before
+    }
+  }, []);
+
+  const handleCloseBanner = () => {
+    setShowGuideBanner(false);
+    localStorage.setItem('guideBannerDismissedAt', Date.now().toString());
+  };
 
   // Lock body scroll AND broadcast state to hide other UI elements
   useEffect(() => {
@@ -91,6 +119,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       textClass: "text-black text-xs",
       links: [
         { name: "ai shopping guide ✨", href: "/ai" },
+        { name: "need help ? | read our guide", href: "/guide" }, 
       ]
     }
   ];
@@ -100,9 +129,32 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       {/* ============================================== */}
       {/* DESKTOP NAVBAR                                 */}
       {/* ============================================== */}
-      <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white/95 backdrop-blur-md border-b border-slate-200 z-40 transition-all`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <nav className={`fixed w-full flex flex-col ${bannerVisible ? "top-8" : "top-0"} bg-white/95 backdrop-blur-md border-b border-slate-200 z-40 transition-all`}>
+        
+        {/* VERY SLIM TOP GUIDE LINK WITH CLOSE 'X' */}
+        {isMounted && showGuideBanner && (
+          <div className="relative w-full h-5 bg-slate-50 border-b border-slate-100 flex items-center justify-center">
+            <Link 
+              href="/guide" 
+              className="text-[10px] text-slate-500 hover:text-[#D97706] transition-colors flex items-center justify-center w-full h-full"
+            >
+              Need help | <span className="underline ml-1">Read our guide</span>
+            </Link>
+            <button 
+              onClick={handleCloseBanner}
+              className="absolute right-2 sm:right-4 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors h-full px-2"
+              aria-label="Close guide banner"
+            >
+              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+          {/* REDUCED HEIGHT: Changed from h-16 to h-12 to compensate for the top bar */}
+          <div className="flex justify-between items-center h-12">
 
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="text-2xl font-black text-slate-900 tracking-tight">
@@ -229,7 +281,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             <div className="mb-2">
               <p className="text-slate-800 font-medium mb-4 text-base">Our social network pages</p>
               <div className="flex flex-wrap gap-2">
-                {/* Added TikTok right here */}
                 {[
                   { icon: FaWhatsapp, href: "https://wa.me/256759997376", label: "WhatsApp" }, 
                   { icon: FaFacebookF, href: "https://www.fb.com/l/6lp1kJRRR", label: "Facebook" }, 
