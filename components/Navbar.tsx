@@ -119,7 +119,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       textClass: "text-black text-xs",
       links: [
         { name: "ai shopping guide ✨", href: "/ai" },
-        { name: "need help ? | read our guide", href: "/guide" }, 
+        { name: "need help | read our guide", href: "/guide" }, 
       ]
     }
   ];
@@ -131,29 +131,8 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       {/* ============================================== */}
       <nav className={`fixed w-full flex flex-col ${bannerVisible ? "top-8" : "top-0"} bg-white/95 backdrop-blur-md border-b border-slate-200 z-40 transition-all`}>
         
-        {/* VERY SLIM TOP GUIDE LINK WITH CLOSE 'X' */}
-        {isMounted && showGuideBanner && (
-          <div className="relative w-full h-5 bg-slate-50 border-b border-slate-100 flex items-center justify-center">
-            <Link 
-              href="/guide" 
-              className="text-[10px] text-slate-500 hover:text-[#D97706] transition-colors flex items-center justify-center w-full h-full"
-            >
-              Need help | <span className="underline ml-1">Read our guide</span>
-            </Link>
-            <button 
-              onClick={handleCloseBanner}
-              className="absolute right-2 sm:right-4 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors h-full px-2"
-              aria-label="Close guide banner"
-            >
-              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        )}
-
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          {/* REDUCED HEIGHT: Changed from h-16 to h-12 to compensate for the top bar */}
+          {/* Main Navbar explicitly set to h-12 */}
           <div className="flex justify-between items-center h-12">
 
             <div className="flex-shrink-0 flex items-center">
@@ -214,6 +193,29 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
 
           </div>
         </div>
+
+        {/* ============================================== */}
+        {/* SUB-NAV GUIDE BANNER (Below main nav - h-7)    */}
+        {/* ============================================== */}
+        {isMounted && showGuideBanner && (
+          <div className="relative w-full h-7 bg-slate-50 border-t border-slate-200 flex items-center justify-center">
+            <Link 
+              href="/guide" 
+              className="text-[10px] text-slate-500 hover:text-[#D97706] hover:bg-slate-100 transition-colors flex items-center justify-center w-full h-full"
+            >
+              Need help | <span className="underline ml-1">Read our guide</span>
+            </Link>
+            <button 
+              onClick={handleCloseBanner}
+              className="absolute right-2 sm:right-4 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors h-full px-2"
+              aria-label="Close guide banner"
+            >
+              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        )}
       </nav>
 
       {/* ============================================== */}
