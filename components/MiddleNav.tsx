@@ -16,7 +16,7 @@ export default function MiddleNav() {
       {/* CONNECTED RECTANGLES NAV BAR */}
       <div className="w-full max-w-[1200px] mx-auto px-4 py-4">
         <div className="flex w-full md:max-w-[800px] mx-auto border-2 border-slate-900 dark:border-white rounded-md overflow-hidden bg-white dark:bg-[#111] shadow-sm">
-          
+
           <button 
             onClick={() => setIsCategoryModalOpen(true)}
             className="flex-1 py-3.5 px-2 flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors border-r-2 border-slate-900 dark:border-white text-slate-900 dark:text-white font-black text-xs sm:text-sm uppercase tracking-wide"
@@ -41,7 +41,7 @@ export default function MiddleNav() {
           >
             <span>Sell</span>
           </Link>
-          
+
         </div>
       </div>
 
@@ -51,10 +51,13 @@ export default function MiddleNav() {
           <div className="bg-[#1a1a1a] w-full sm:w-[400px] rounded-t-3xl sm:rounded-3xl p-6 text-white animate-slide-up">
             <div className="w-12 h-1 bg-slate-600 rounded-full mx-auto mb-6"></div>
             <h3 className="text-center text-xl font-bold mb-6">Categories</h3>
-            
+
             <div className="flex flex-col gap-4 text-lg">
               <Link href="/officialStore" onClick={() => setIsCategoryModalOpen(false)} className="hover:text-[#D97706] transition-colors py-2 border-b border-slate-800">
                 Official Store
+              </Link>
+              <Link href="/ladies" onClick={() => setIsCategoryModalOpen(false)} className="hover:text-[#D97706] transition-colors py-2 border-b border-slate-800">
+                Ladies' Picks 💖
               </Link>
               <Link href="/category/student_item" onClick={() => setIsCategoryModalOpen(false)} className="hover:text-[#D97706] transition-colors py-2 border-b border-slate-800">
                 Student market
