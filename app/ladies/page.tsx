@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import SearchBar from "@/components/SearchBar";
 import ProductSection from "@/components/ProductSection";
 import Link from "next/link";
@@ -6,13 +7,43 @@ import { db } from "@/lib/firebase/config";
 
 export const dynamic = "force-dynamic";
 
+// ==========================================
+// SEO & OPEN GRAPH METADATA
+// ==========================================
+export const metadata: Metadata = {
+  title: "Ladies' Top Picks 💖 | Kabale Online",
+  description: "Shop handbags, perfumes, jewelry, and beauty essentials on Kabale Online. Handpicked for quality and style in Kabale.",
+  openGraph: {
+    title: "Ladies' Top Picks 💖 | Kabale Online",
+    description: "Shop handbags, perfumes, jewelry, and beauty essentials. Handpicked for quality and style in Kabale.",
+    url: "https://kabaleonline.com/ladies",
+    siteName: "Kabale Online",
+    images: [
+      {
+        url: "/ladies-og-image.jpg", // Make sure to add this image to your /public folder!
+        width: 1200,
+        height: 630,
+        alt: "Kabale Online Ladies Collection",
+      },
+    ],
+    locale: "en_UG",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Ladies' Top Picks 💖 | Kabale Online",
+    description: "Shop handbags, perfumes, jewelry, and beauty essentials. Handpicked for quality and style in Kabale.",
+    images: ["/ladies-og-image.jpg"],
+  },
+};
+
 export default async function LadiesPage() {
   // 1. Fetch all products where category is "ladies"
   const ladiesQ = query(
     collection(db, "products"),
     where("category", "==", "ladies")
   );
-  
+
   const snap = await getDocs(ladiesQ);
   let products = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
@@ -21,7 +52,7 @@ export default async function LadiesPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-12 font-sans selection:bg-pink-500 selection:text-white">
-      
+
       {/* SEARCH SECTION - Keeps navigation consistent */}
       <section className="py-6 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 flex items-center gap-4">
