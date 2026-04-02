@@ -1,7 +1,7 @@
 import type { Config } from "tailwindcss";
 
 const config: Config = {
-  darkMode: 'media', // Adapts automatically to the device's dark/light mode
+  darkMode: 'class', // <--- This prevents automatic dark mode
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
     "./components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -15,7 +15,6 @@ const config: Config = {
     },
   },
   plugins: [
-    // This custom plugin hides the ugly native scrollbar on mobile
     function ({ addUtilities }: any) {
       addUtilities({
         '.no-scrollbar::-webkit-scrollbar': { 'display': 'none' },
