@@ -61,7 +61,7 @@ export default async function Home() {
   ladiesProducts = shuffleArray(ladiesProducts);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-12 pt-2 sm:pt-6 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 pb-12 pt-6 sm:pt-20 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
 
 
       {/* NEW TOP MESSAGE (Replacing Search Bar & Trust Section) */}
