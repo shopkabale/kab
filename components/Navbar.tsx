@@ -12,51 +12,10 @@ import {
   FaTiktok 
 } from "react-icons/fa6";
 
-// Tell TypeScript what our navigation objects look like
-type NavLink = {
-  name: string;
-  href: string;
-};
-
-type NavGroup = {
-  label: string;
-  bgClass: string;
-  textClass: string;
-  links: NavLink[];
-};
-
 export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const pathname = usePathname();
   const { user, loading, signIn, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  // Banner state management
-  const [showGuideBanner, setShowGuideBanner] = useState(false);
-  const [isMounted, setIsMounted] = useState(false); // Prevents hydration mismatch
-
-  // Handle LocalStorage check for the 7-day rule
-  useEffect(() => {
-    setIsMounted(true);
-    const dismissedAt = localStorage.getItem('guideBannerDismissedAt');
-    
-    if (dismissedAt) {
-      const SEVEN_DAYS_IN_MS = 7 * 24 * 60 * 60 * 1000;
-      const timeSinceDismissed = Date.now() - parseInt(dismissedAt, 10);
-      
-      if (timeSinceDismissed < SEVEN_DAYS_IN_MS) {
-        setShowGuideBanner(false);
-      } else {
-        setShowGuideBanner(true); // 7 days have passed, show it again
-      }
-    } else {
-      setShowGuideBanner(true); // Never dismissed before
-    }
-  }, []);
-
-  const handleCloseBanner = () => {
-    setShowGuideBanner(false);
-    localStorage.setItem('guideBannerDismissedAt', Date.now().toString());
-  };
 
   // Lock body scroll AND broadcast state to hide other UI elements
   useEffect(() => {
@@ -84,56 +43,19 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const isActive = (path: string) => pathname === path;
   const closeMenu = () => setIsMobileMenuOpen(false);
 
-  // Strongly typed Navigation Groups - Black and neutral tones
-  const mobileNavGroups: NavGroup[] = [
-    {
-      label: "Shop",
-      bgClass: "bg-slate-100",
-      textClass: "text-black text-xs",
-      links: [
-        { name: "all items", href: "/products" },
-        { name: "electronics", href: "/category/electronics" },
-        { name: "agriculture", href: "/category/agriculture" },
-        { name: "student market", href: "/category/student_item" },
-      ]
-    },
-    {
-      label: "Buyer Needs",
-      bgClass: "bg-slate-100",
-      textClass: "text-black text-xs",
-      links: [
-        { name: "buyer requests", href: "/requests" },
-      ]
-    },
-    {
-      label: "News",
-      bgClass: "bg-slate-100",
-      textClass: "text-black text-xs",
-      links: [
-        { name: "journal & updates", href: "/blog" },
-      ]
-    },
-    {
-      label: "Help & Answers",
-      bgClass: "bg-slate-100",
-      textClass: "text-black text-xs",
-      links: [
-        { name: "ai shopping guide ✨", href: "/ai" },
-        { name: "need help | read our guide", href: "/guide" }, 
-      ]
-    }
-  ];
+  // SVG Helper components for the Jumia-style mobile menu
+  const ChevronRight = () => (
+    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+  );
 
   return (
     <>
       {/* ============================================== */}
       {/* DESKTOP NAVBAR                                 */}
       {/* ============================================== */}
-      <nav className={`fixed w-full flex flex-col ${bannerVisible ? "top-8" : "top-0"} bg-white/95 backdrop-blur-md border-b border-slate-200 z-40 transition-all`}>
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          {/* Main Navbar explicitly set to h-12 */}
-          <div className="flex justify-between items-center h-12">
+      <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white/95 backdrop-blur-md border-b border-slate-200 z-40 transition-all`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
 
             <div className="flex-shrink-0 flex items-center">
               <Link href="/" className="text-2xl font-black text-slate-900 tracking-tight">
@@ -193,110 +115,143 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
 
           </div>
         </div>
-
-        {/* ============================================== */}
-        {/* SUB-NAV GUIDE BANNER (Below main nav - h-7)    */}
-        {/* ============================================== */}
-        {isMounted && showGuideBanner && (
-          <div className="relative w-full h-7 bg-slate-50 border-t border-slate-200 flex items-center justify-center">
-            <Link 
-              href="/guide" 
-              className="text-[10px] text-slate-500 hover:text-[#D97706] hover:bg-slate-100 transition-colors flex items-center justify-center w-full h-full"
-            >
-              Need help | <span className="underline ml-1">Read our guide</span>
-            </Link>
-            <button 
-              onClick={handleCloseBanner}
-              className="absolute right-2 sm:right-4 flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors h-full px-2"
-              aria-label="Close guide banner"
-            >
-              <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-        )}
       </nav>
 
       {/* ============================================== */}
-      {/* MOBILE MENU DRAWER                           */}
+      {/* MOBILE MENU DRAWER (JUMIA STYLE)               */}
       {/* ============================================== */}
       <div 
-        className={`fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[90] xl:hidden transition-opacity duration-300 ${isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90] xl:hidden transition-opacity duration-300 ${isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={closeMenu}
       />
 
       <div 
-        className={`fixed top-0 left-0 h-[100dvh] w-[85vw] max-w-sm bg-white z-[100] xl:hidden flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed top-0 left-0 h-[100dvh] w-[85vw] max-w-sm bg-white z-[100] xl:hidden flex flex-col shadow-2xl transition-transform duration-300 ease-in-out overflow-hidden ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex justify-between items-center px-6 py-5 border-b border-slate-100 bg-white">
-          <Link href="/" onClick={closeMenu} className="text-2xl font-black text-slate-900 tracking-tight">Kabale<span className="text-[#D97706]">Online</span></Link>
-          <button onClick={closeMenu} className="w-8 h-8 flex items-center justify-center border border-slate-200 rounded text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-colors">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        {/* Header */}
+        <div className="flex items-center px-4 py-4 border-b border-slate-100 bg-white">
+          <button onClick={closeMenu} className="mr-4 text-slate-900 focus:outline-none" aria-label="Close menu">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
+          <Link href="/" onClick={closeMenu} className="text-xl font-black text-slate-900 tracking-tight flex-1">
+            Kabale<span className="text-[#D97706]">Online</span>
+          </Link>
         </div>
 
-        <div className="flex-1 overflow-y-auto bg-white flex flex-col pb-6">
-          <div className="flex gap-3 p-6 bg-slate-50/50 border-b border-slate-100">
-            {loading ? (
-              <div className="w-full flex justify-center py-2"><div className="h-6 w-6 rounded-full border-2 border-[#D97706] border-t-transparent animate-spin"></div></div>
-            ) : user ? (
-              <>
-                <Link href="/profile" onClick={closeMenu} className="flex-1 bg-white border border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-widest py-3.5 text-center shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors">Profile</Link>
-                <button onClick={() => { signOut(); closeMenu(); }} className="flex-1 bg-white border border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-widest py-3.5 text-center shadow-sm hover:border-red-500 hover:text-red-600 transition-colors">Logout</button>
-              </>
-            ) : (
-              <>
-                <button onClick={() => { signIn(); closeMenu(); }} className="flex-1 bg-white border border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-widest py-3.5 shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors">Login</button>
-                <button onClick={() => { signIn(); closeMenu(); }} className="flex-1 bg-white border border-slate-200 text-slate-800 font-bold text-xs uppercase tracking-widest py-3.5 shadow-sm hover:border-[#D97706] hover:text-[#D97706] transition-colors">Register</button>
-              </>
+        <div className="flex-1 overflow-y-auto bg-white flex flex-col">
+          
+          {/* Need Help Section */}
+          <Link href="/guide" onClick={closeMenu} className="flex justify-between items-center px-5 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors">
+            <span className="text-[13px] font-bold text-slate-600 tracking-wide uppercase">Need Help?</span>
+            <ChevronRight />
+          </Link>
+
+          {/* My Account Section */}
+          <div className="border-b border-slate-100 py-2">
+            <Link href="/profile" onClick={closeMenu} className="flex justify-between items-center px-5 py-2 mb-1">
+              <span className="text-[13px] font-bold text-slate-600 tracking-wide uppercase">My Account</span>
+              <ChevronRight />
+            </Link>
+            
+            {!loading && !user && (
+              <div className="px-5 py-2 flex gap-3">
+                <button onClick={() => { signIn(); closeMenu(); }} className="flex-1 border border-[#D97706] text-[#D97706] rounded py-1.5 text-sm font-bold">Login</button>
+              </div>
+            )}
+
+            <div className="flex flex-col">
+              <Link href="/profile" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+                <span className="text-[15px]">Orders</span>
+              </Link>
+              <Link href="/sell" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
+                <span className="text-[15px]">My Listings</span>
+              </Link>
+              <Link href="/profile" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
+                <span className="text-[15px]">Saved Items</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Categories Section (Extracted from Home.tsx) */}
+          <div className="border-b border-slate-100 py-2">
+            <div className="flex justify-between items-center px-5 py-2 mb-1">
+              <span className="text-[13px] font-bold text-slate-600 tracking-wide uppercase">Our Categories</span>
+              <Link href="/products" onClick={closeMenu} className="text-[13px] font-medium text-[#D97706]">See All</Link>
+            </div>
+
+            <div className="flex flex-col pb-2">
+              <Link href="/officialStore" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
+                <span className="text-[15px]">Official Store</span>
+              </Link>
+              
+              <Link href="/ladies" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
+                <span className="text-[15px]">Ladies' Picks</span>
+              </Link>
+
+              <Link href="/category/student_item" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14v7" /></svg>
+                <span className="text-[15px]">Student Market</span>
+              </Link>
+
+              <Link href="/category/electronics" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                <span className="text-[15px]">Electronics</span>
+              </Link>
+
+              <Link href="/category/agriculture" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+                <span className="text-[15px]">Agriculture</span>
+              </Link>
+            </div>
+          </div>
+
+          {/* Other Links */}
+          <div className="py-2 mb-6">
+             <div className="px-5 py-2 mb-1">
+              <span className="text-[13px] font-bold text-slate-600 tracking-wide uppercase">Explore More</span>
+            </div>
+            <Link href="/requests" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+              <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
+              <span className="text-[15px]">Buyer Requests</span>
+            </Link>
+            <Link href="/ai" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+              <span className="w-6 h-6 mr-4 text-center text-lg leading-none">✨</span>
+              <span className="text-[15px]">AI Shopping Guide</span>
+            </Link>
+            <Link href="/blog" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+              <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2.5 2.5 0 00-2.5-2.5H14" /></svg>
+              <span className="text-[15px]">Journal & Updates</span>
+            </Link>
+          </div>
+
+          {/* Bottom Socials & Logout */}
+          <div className="mt-auto bg-slate-50 border-t border-slate-100 p-5">
+            <div className="flex justify-center gap-3 mb-6">
+              {[
+                { icon: FaWhatsapp, href: "https://wa.me/256759997376" }, 
+                { icon: FaFacebookF, href: "https://www.fb.com/l/6lp1kJRRR" }, 
+                { icon: FaInstagram, href: "https://instagram.com/kabale.online" },
+                { icon: FaXTwitter, href: "https://x.com/Kabale_Online" },
+                { icon: FaTiktok, href: "https://tiktok.com/@kabale.online" },
+              ].map((social, idx) => (
+                <a key={idx} href={social.href} target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white border border-slate-200 text-slate-600 flex items-center justify-center rounded-full transition-colors hover:text-[#D97706] hover:border-[#D97706]">
+                  <social.icon size={16} />
+                </a>
+              ))}
+            </div>
+
+            {user && (
+              <button onClick={() => { signOut(); closeMenu(); }} className="w-full bg-white border border-slate-200 text-slate-700 py-3 rounded text-[15px] font-medium hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-colors">
+                Logout
+              </button>
             )}
           </div>
 
-          <div className="flex flex-col pt-2">
-            {mobileNavGroups.map((group, groupIdx) => (
-              <div key={groupIdx} className="mb-2">
-                <div className={`px-6 py-2.5 font-black uppercase tracking-widest ${group.bgClass} ${group.textClass}`}>
-                  {group.label}
-                </div>
-
-                <div className="flex flex-col">
-                  {group.links.map((link, linkIdx) => (
-                    <Link 
-                      key={linkIdx} 
-                      href={link.href} 
-                      onClick={closeMenu}
-                      className={`px-6 py-3.5 border-b border-slate-50 hover:bg-slate-50 hover:pl-8 transition-all duration-200 text-[15px] font-bold lowercase tracking-wide
-                        ${isActive(link.href) ? 'text-[#D97706] bg-amber-50/30 pl-8 border-l-4 border-l-[#D97706]' : 'text-slate-500 border-l-4 border-l-transparent'}
-                      `}
-                    >
-                      {link.name}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-auto p-6 bg-slate-50/50 border-t border-slate-100">
-            <Link href="/sell" onClick={closeMenu} className="block w-full bg-[#3f4e24] hover:bg-[#2d3819] text-white text-center py-4 text-sm font-bold uppercase tracking-widest rounded-sm transition-colors shadow-sm mb-8">Sell Now</Link>
-            <div className="mb-2">
-              <p className="text-slate-800 font-medium mb-4 text-base">Our social network pages</p>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { icon: FaWhatsapp, href: "https://wa.me/256759997376", label: "WhatsApp" }, 
-                  { icon: FaFacebookF, href: "https://www.fb.com/l/6lp1kJRRR", label: "Facebook" }, 
-                  { icon: FaInstagram, href: "https://instagram.com/kabale.online", label: "Instagram" },
-                  { icon: FaXTwitter, href: "https://x.com/Kabale_Online", label: "X" },
-                  { icon: FaTiktok, href: "https://tiktok.com/@kabale.online", label: "TikTok" },
-                ].map((social, idx) => (
-                  <a key={idx} href={social.href} target="_blank" rel="noopener noreferrer" aria-label={social.label} className="w-10 h-10 bg-[#424242] hover:bg-[#D97706] text-white flex items-center justify-center rounded-sm transition-colors hover:scale-105">
-                    <social.icon size={18} />
-                  </a>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </>
