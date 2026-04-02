@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { optimizeImage } from "@/lib/utils";
 
-export default function HorizontalScroller({ title, products }: { title: string, products: any[] }) {
+// Added optional viewAllLink prop to support the new requirement
+export default function HorizontalScroller({ title, products, viewAllLink }: { title: string, products: any[], viewAllLink?: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [progress, setProgress] = useState(0);
 
@@ -38,11 +39,17 @@ export default function HorizontalScroller({ title, products }: { title: string,
   return (
     <div className="w-full overflow-hidden mb-4">
 
-      {/* TITLE ALIGNED WITH GLOBAL LAYOUT */}
-      <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 mb-3">
+      {/* TITLE ALIGNED WITH GLOBAL LAYOUT + VIEW ALL LINK */}
+      <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 mb-3 flex justify-between items-end">
         <h2 className="text-lg md:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
           {title}
         </h2>
+        {viewAllLink && (
+          <Link href={viewAllLink} className="text-[#D97706] hover:text-amber-600 text-xs sm:text-sm font-bold uppercase tracking-widest flex items-center gap-1 transition-colors">
+            View All
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+          </Link>
+        )}
       </div>
 
       {/* SCROLL CONTAINER */}
@@ -62,8 +69,7 @@ export default function HorizontalScroller({ title, products }: { title: string,
             const isOfficial = p.isOfficialStore || p.isAdminUpload;
 
             return (
-              // MATCHED TO PRODUCT SECTION: rounded-sm, soft shadow, grayscale if sold
-              <div key={p.id} className={`snap-start shrink-0 w-[150px] sm:w-[190px] group flex flex-col bg-white dark:bg-[#151515] rounded-sm overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-none dark:border dark:border-slate-800 transition-shadow hover:shadow-md h-full relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
+              <div key={p.id} className={`snap-start shrink-0 w-[150px] sm:w-[190px] group flex flex-col bg-white dark:bg-[#151515] rounded-sm overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-none dark:border dark:border-slate-800 transition-shadow hover:shadow-md h-auto relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
 
                 <Link href={`/product/${p.publicId || p.id}`} className="flex flex-col flex-grow relative pointer-events-auto">
                   {/* Image Area: aspect-square for uniformity */}
@@ -80,7 +86,7 @@ export default function HorizontalScroller({ title, products }: { title: string,
                       <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">No Image</div>
                     )}
 
-                    {/* 🚫 SOLD OUT OVERLAY (Takes priority over other badges visually) */}
+                    {/* 🚫 SOLD OUT OVERLAY */}
                     {isSold && (
                       <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-[2px]">
                          <span className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-lg transform -rotate-6">
@@ -97,7 +103,7 @@ export default function HorizontalScroller({ title, products }: { title: string,
                       </div>
                     )}
 
-                    {/* Trust Badges Overlay (Sitting EXACTLY at the bottom left edge, halved in size) */}
+                    {/* Trust Badges Overlay */}
                     {!isSold && isApproved ? (
                       <div className="absolute bottom-0 left-0 bg-emerald-600/95 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 leading-none rounded-tr-sm flex items-center shadow-sm z-10 tracking-widest uppercase">
                          Approved Quality
@@ -111,7 +117,6 @@ export default function HorizontalScroller({ title, products }: { title: string,
 
                   {/* Details Area */}
                   <div className="p-2 sm:p-3 flex flex-col flex-grow bg-white dark:bg-[#151515]">
-                    {/* Fixed height to ensure uniform card sizing even if titles are 1 or 2 lines */}
                     <h3 className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-200 line-clamp-2 leading-snug mb-1 group-hover:text-[#D97706] transition-colors h-[34px] sm:h-[40px]">
                       {p.title || p.name}
                     </h3>
@@ -123,7 +128,7 @@ export default function HorizontalScroller({ title, products }: { title: string,
                   </div>
                 </Link>
 
-                {/* Bottom Quick Actions (Exact match to ProductSection) */}
+                {/* Bottom Quick Actions */}
                 <div className="grid grid-cols-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-[#111] mt-auto">
                    {isSold ? (
                      <div className="col-span-3 py-2 px-2 sm:px-3 border-r border-slate-100 dark:border-slate-800 text-slate-400 text-[11px] font-bold uppercase flex justify-start items-center cursor-not-allowed">
@@ -148,6 +153,19 @@ export default function HorizontalScroller({ title, products }: { title: string,
               </div>
             );
           })}
+
+          {/* VIEW ALL CARD (Appended at the very end of the scroller) */}
+          {viewAllLink && (
+            <div className="snap-start shrink-0 w-[150px] sm:w-[190px] flex flex-col bg-slate-50 dark:bg-[#111] rounded-sm border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-[#D97706] dark:hover:border-[#D97706] transition-colors group h-auto">
+              <Link href={viewAllLink} className="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-[#D97706] p-4 min-h-[220px]">
+                <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform mb-3">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+                </div>
+                <span className="text-sm font-black uppercase tracking-wider text-center">View All</span>
+              </Link>
+            </div>
+          )}
+
         </div>
       </div>
 
