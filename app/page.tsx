@@ -61,7 +61,8 @@ export default async function Home() {
   ladiesProducts = shuffleArray(ladiesProducts);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-12 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 pb-12 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
+
 
       {/* NEW TOP MESSAGE (Replacing Search Bar & Trust Section) */}
       <section className="py-4 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-slate-800 shadow-sm flex justify-center px-4">
