@@ -6,7 +6,8 @@ import Link from "next/link";
 import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
-export const dynamic = "force-dynamic";
+// ✅ Add this line instead:
+export const revalidate = 60;
 
 // --- SHUFFLE HELPER FUNCTION ---
 const shuffleArray = (array: any[]) => {
