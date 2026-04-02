@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>You're Offline | Kabale Online</title>
+  <style>
+    /* Inline CSS so it works perfectly without an internet connection to fetch stylesheets */
+    body { 
+      font-family: system-ui, -apple-system, sans-serif; 
+      background-color: #f8fafc; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      height: 100vh; 
+      margin: 0; 
+      padding: 1rem; 
+      color: #0f172a; 
+    }
+    .card { 
+      background: white; 
+      max-width: 400px; 
+      width: 100%; 
+      text-align: center; 
+      padding: 2rem; 
+      border-radius: 1.5rem; 
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); 
+      border: 1px solid #e2e8f0; 
+    }
+    .icon { 
+      font-size: 3.5rem; 
+      background: #f8fafc; 
+      display: inline-flex; 
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%; 
+      margin-bottom: 1.5rem; 
+    }
+    h1 { 
+      margin: 0 0 0.5rem; 
+      font-size: 1.875rem; 
+      font-weight: 900; 
+      letter-spacing: -0.025em; 
+    }
+    p { 
+      margin: 0 0 2rem; 
+      color: #475569; 
+      line-height: 1.5; 
+      font-size: 1rem;
+    }
+    button { 
+      width: 100%; 
+      padding: 1rem; 
+      background-color: #D97706; 
+      color: white; 
+      border: none; 
+      border-radius: 0.75rem; 
+      font-size: 1rem; 
+      font-weight: bold; 
+      text-transform: uppercase; 
+      letter-spacing: 0.05em;
+      cursor: pointer; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      gap: 0.5rem;
+      transition: background-color 0.2s;
+    }
+    button:hover { 
+      background-color: #b45309; 
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">📡</div>
+    <h1>You're offline</h1>
+    <p>You can still browse items you've already viewed while we wait for your connection to return.</p>
+    <button onclick="window.location.reload()">↻ Try reloading</button>
+  </div>
+</body>
+</html>
