@@ -5,10 +5,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { optimizeImage } from "@/lib/utils";
 
-// Added optional viewAllLink prop to support the new requirement
 export default function HorizontalScroller({ title, products, viewAllLink }: { title: string, products: any[], viewAllLink?: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [progress, setProgress] = useState(0);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const [scrollRatio, setScrollRatio] = useState(0);
+  const [isScrolling, setIsScrolling] = useState(false);
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
@@ -16,16 +18,30 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
     const totalScroll = scrollWidth - clientWidth;
 
     if (totalScroll <= 0) {
-      setProgress(0);
+      setScrollRatio(0);
       return;
     }
 
-    const currentProgress = (scrollLeft / totalScroll) * 100;
-    setProgress(currentProgress);
+    // Calculate position ratio from 0 to 1
+    setScrollRatio(scrollLeft / totalScroll);
+    
+    // Show the indicator
+    setIsScrolling(true);
+
+    // Clear existing timeout and set a new one to hide after 1 second of inactivity
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+    }, 1000);
   };
 
   useEffect(() => {
+    // Run once on mount to establish initial state
     handleScroll();
+    
+    return () => {
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    };
   }, [products]);
 
   // Helper to dynamically check if an item is less than 7 days old
@@ -37,7 +53,7 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
   if (!products || products.length === 0) return null;
 
   return (
-    <div className="w-full overflow-hidden mb-4">
+    <div className="w-full overflow-hidden mb-4 relative">
 
       {/* TITLE ALIGNED WITH GLOBAL LAYOUT + VIEW ALL LINK */}
       <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 mb-3 flex justify-between items-end">
@@ -169,12 +185,12 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
         </div>
       </div>
 
-      {/* Progress Bar - Aligned to global padding */}
-      <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 mt-1">
-        <div className="w-full h-1 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+      {/* JUMIA-STYLE POSITION INDICATOR */}
+      <div className={`w-full max-w-[1200px] mx-auto flex justify-center mt-2 transition-opacity duration-300 ${isScrolling ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="w-16 md:w-20 h-1 bg-slate-200 dark:bg-slate-800 rounded-full relative overflow-hidden">
           <div 
-            className="h-full bg-[#D97706] rounded-full transition-all duration-75 ease-out" 
-            style={{ width: `${progress}%` }} 
+            className="absolute top-0 left-0 h-full w-1/2 bg-[#D97706] rounded-full transition-transform duration-75 ease-out" 
+            style={{ transform: `translateX(${scrollRatio * 100}%)` }} 
           />
         </div>
       </div>
