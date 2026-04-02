@@ -7,7 +7,8 @@ const withPWA = withPWAInit({
   register: true,
   skipWaiting: true,
   fallbacks: {
-    document: '/offline',
+    // Points directly to the static HTML file we created to bypass React hydration
+    document: '/offline.html',
   },
 
   // PRODUCTION GRADE CACHING:
