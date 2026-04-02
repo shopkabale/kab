@@ -67,7 +67,10 @@ export default function LayoutClient({
 
       {/* MAIN CONTENT */}
       {/* 🔥 REMOVED: pb-8 from this tag to eliminate the extra bottom space */}
-      <main className="flex-grow pt-28 w-full transition-all">
+
+      <main className="flex-grow pt-[140px] lg:pt-[90px] w-full transition-all">
+
+
         {children}
       </main>
 
