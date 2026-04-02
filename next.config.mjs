@@ -1,13 +1,28 @@
+// next.config.mjs
 import withPWAInit from "next-pwa";
-import defaultCache from "next-pwa/cache.js"; 
+import defaultCache from "next-pwa/cache.js";
 
 const withPWA = withPWAInit({
   dest: "public",
   register: true,
   skipWaiting: true,
-  
+  fallbacks: {
+    document: '/offline',
+  },
+
   // PRODUCTION GRADE CACHING:
   runtimeCaching: [
+    {
+      urlPattern: ({ request }) => request.mode === 'navigate',
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'html-cache',
+        networkTimeoutSeconds: 3,
+        cacheableResponse: {
+          statuses: [0, 200],
+        },
+      },
+    },
     {
       urlPattern: /^https:\/\/(res\.cloudinary\.com|lh3\.googleusercontent\.com)\/.*/i,
       handler: 'CacheFirst',
@@ -27,11 +42,14 @@ const withPWA = withPWAInit({
     },
     {
       urlPattern: /\/api\/.*/i,
-      handler: 'NetworkFirst',
+      handler: 'StaleWhileRevalidate',
       options: {
         cacheName: 'api-data-cache',
-        expiration: { maxEntries: 100, maxAgeSeconds: 24 * 60 * 60 },
-        networkTimeoutSeconds: 5, 
+        expiration: { 
+          maxEntries: 200, 
+          maxAgeSeconds: 7 * 24 * 60 * 60 // 7 days
+        },
+        cacheableResponse: { statuses: [0, 200] },
       },
     },
     ...defaultCache,
@@ -41,7 +59,7 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    unoptimized: true, 
+    unoptimized: true,
     remotePatterns: [
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
