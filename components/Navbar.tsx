@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { 
   FaWhatsapp, 
@@ -14,8 +14,10 @@ import {
 
 export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, loading, signIn, signOut } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Lock body scroll AND broadcast state to hide other UI elements
   useEffect(() => {
@@ -25,8 +27,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       } else {
         document.body.style.overflow = 'unset';
       }
-
-      // Broadcast the menu state to BottomNav and AiChatWidget
       window.dispatchEvent(new CustomEvent("mobileMenuState", { detail: isMobileMenuOpen }));
     }
 
@@ -43,7 +43,13 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const isActive = (path: string) => pathname === path;
   const closeMenu = () => setIsMobileMenuOpen(false);
 
-  // SVG Helper components for the Jumia-style mobile menu
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
   const ChevronRight = () => (
     <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
   );
@@ -51,74 +57,111 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   return (
     <>
       {/* ============================================== */}
-      {/* DESKTOP NAVBAR                                 */}
+      {/* NAVBAR CONTAINER                               */}
       {/* ============================================== */}
-      <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white/95 backdrop-blur-md border-b border-slate-200 z-40 transition-all`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white border-b border-slate-200 z-40 transition-all shadow-sm`}>
+        
+        {/* === DESKTOP VIEW === */}
+        <div className="hidden xl:flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 justify-between items-center h-16">
+          <div className="flex-shrink-0 flex items-center">
+            <Link href="/" className="text-2xl font-black text-slate-900 tracking-tight">
+              Kabale<span className="text-[#D97706]">Online</span>
+            </Link>
+          </div>
 
-            <div className="flex-shrink-0 flex items-center">
-              <Link href="/" className="text-2xl font-black text-slate-900 tracking-tight">
+          <div className="flex items-center space-x-7">
+            <Link href="/products" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/products') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>All Items</Link>
+            <Link href="/category/electronics" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/electronics') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Electronics</Link>
+            <Link href="/category/agriculture" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/agriculture') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Agriculture</Link>
+            <Link href="/category/student_item" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/student_item') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Student Market</Link>
+            
+            <Link href="/ai" className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${isActive('/ai') ? 'text-[#D97706] bg-amber-50' : 'text-slate-700 hover:text-[#D97706] hover:bg-slate-50'}`}>
+              <span className="text-[#D97706] text-sm leading-none">✨</span> 
+              <span className="text-sm font-bold uppercase tracking-wide">AI Guide</span>
+            </Link>
+
+            <div className="h-6 w-px bg-slate-200 mx-1"></div>
+
+            <Link href="/sell" className="flex items-center gap-2 bg-[#D97706] text-white px-5 py-2.5 rounded-md text-sm font-bold uppercase tracking-wide hover:bg-amber-600 transition-colors shadow-sm">
+              Sell Now
+            </Link>
+
+            {loading ? (
+              <div className="h-6 w-6 rounded-full border-2 border-[#D97706] border-t-transparent animate-spin ml-2"></div>
+            ) : user ? (
+              <div className="flex items-center gap-3 relative group ml-2">
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold shadow-sm cursor-pointer overflow-hidden">
+                     {user.photoURL ? <img src={user.photoURL} alt="profile" className="w-full h-full object-cover" /> : (user.displayName || "U").charAt(0).toUpperCase()}
+                  </div>
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+                    <div className="px-4 py-2 border-b border-slate-100 mb-1">
+                      <p className="text-xs text-slate-500 font-medium">Logged in as</p>
+                      <p className="text-sm font-bold text-slate-900 truncate">{user.displayName || "User"}</p>
+                    </div>
+                    <Link href="/profile" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-[#D97706]">My Profile</Link>
+                    <Link href="/sell" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-[#D97706]">My Listings</Link>
+                    <button onClick={signOut} className="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Sign Out</button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <button onClick={signIn} className="text-sm font-bold uppercase tracking-wide text-slate-700 hover:text-[#D97706] transition-colors ml-2">
+                Login / Register
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* === MOBILE VIEW === */}
+        <div className="xl:hidden flex flex-col w-full">
+          {/* Top Row: Hamburger, Logo, Profile, Cart */}
+          <div className="flex items-center justify-between h-14 px-4">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-900 focus:outline-none" aria-label="Open menu">
+                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+              </button>
+              <Link href="/" className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
                 Kabale<span className="text-[#D97706]">Online</span>
               </Link>
             </div>
-
-            <div className="hidden xl:flex items-center space-x-7">
-              <Link href="/products" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/products') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>All Items</Link>
-              <Link href="/category/electronics" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/electronics') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Electronics</Link>
-              <Link href="/category/agriculture" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/agriculture') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Agriculture</Link>
-              <Link href="/category/student_item" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/student_item') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Student Market</Link>
-              <Link href="/blog" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/blog') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Journal</Link>
-
-              <Link href="/ai" className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${isActive('/ai') ? 'text-[#D97706] bg-amber-50' : 'text-slate-700 hover:text-[#D97706] hover:bg-slate-50'}`}>
-                <span className="text-[#D97706] text-sm leading-none">✨</span> 
-                <span className="text-sm font-bold uppercase tracking-wide">AI Guide</span>
-              </Link>
-
-              <div className="h-6 w-px bg-slate-200 mx-1"></div>
-
-              <Link href="/sell" className="flex items-center gap-2 bg-[#D97706] text-white px-5 py-2.5 rounded-md text-sm font-bold uppercase tracking-wide hover:bg-amber-600 transition-colors shadow-sm">
-                Sell Now
-              </Link>
-
-              {loading ? (
-                <div className="h-6 w-6 rounded-full border-2 border-[#D97706] border-t-transparent animate-spin ml-2"></div>
-              ) : user ? (
-                <div className="flex items-center gap-3 relative group ml-2">
-                  <div className="relative">
-                    <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold shadow-sm cursor-pointer overflow-hidden">
-                       {user.photoURL ? <img src={user.photoURL} alt="profile" className="w-full h-full object-cover" /> : (user.displayName || "U").charAt(0).toUpperCase()}
-                    </div>
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 py-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                      <div className="px-4 py-2 border-b border-slate-100 mb-1">
-                        <p className="text-xs text-slate-500 font-medium">Logged in as</p>
-                        <p className="text-sm font-bold text-slate-900 truncate">{user.displayName || "User"}</p>
-                      </div>
-                      <Link href="/profile" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-[#D97706]">My Profile</Link>
-                      <Link href="/sell" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-[#D97706]">My Listings</Link>
-                      <button onClick={signOut} className="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Sign Out</button>
-                    </div>
-                  </div>
-                </div>
+            
+            <div className="flex items-center gap-4 text-slate-800">
+              {user ? (
+                <Link href="/profile" aria-label="Profile">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                </Link>
               ) : (
-                <button onClick={signIn} className="text-sm font-bold uppercase tracking-wide text-slate-700 hover:text-[#D97706] transition-colors ml-2">
-                  Login / Register
+                <button onClick={signIn} aria-label="Login">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </button>
               )}
+              <Link href="/cart" aria-label="Cart" className="relative">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+              </Link>
             </div>
+          </div>
 
-            <div className="flex items-center xl:hidden">
-              <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-900 p-2 focus:outline-none" aria-label="Open menu">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="square" strokeLinejoin="miter" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" /></svg>
-              </button>
-            </div>
-
+          {/* Bottom Row: Search Bar */}
+          <div className="px-3 pb-3">
+            <form onSubmit={handleSearch} className="relative flex items-center w-full bg-slate-100 rounded-md overflow-hidden border border-slate-200">
+              <div className="pl-3 py-2 text-slate-500">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+              </div>
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products, brands and categories" 
+                className="w-full bg-transparent border-none outline-none text-[15px] px-2 py-2.5 text-slate-900 placeholder:text-slate-500"
+              />
+            </form>
           </div>
         </div>
       </nav>
 
       {/* ============================================== */}
-      {/* MOBILE MENU DRAWER (JUMIA STYLE)               */}
+      {/* MOBILE MENU DRAWER                           */}
       {/* ============================================== */}
       <div 
         className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90] xl:hidden transition-opacity duration-300 ${isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
@@ -155,7 +198,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             
             {!loading && !user && (
               <div className="px-5 py-2 flex gap-3">
-                <button onClick={() => { signIn(); closeMenu(); }} className="flex-1 border border-[#D97706] text-[#D97706] rounded py-1.5 text-sm font-bold">Login</button>
+                <button onClick={() => { signIn(); closeMenu(); }} className="flex-1 border border-[#D97706] text-[#D97706] rounded py-1.5 text-sm font-bold hover:bg-amber-50">Login</button>
               </div>
             )}
 
@@ -164,10 +207,19 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
                 <span className="text-[15px]">Orders</span>
               </Link>
+
+              {/* Updated: Sell on Kabale */}
               <Link href="/sell" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4v16m8-8H4" /></svg>
+                <span className="text-[15px]">Sell on Kabale</span>
+              </Link>
+
+              {/* Updated: My Listings points to /profile */}
+              <Link href="/profile" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
                 <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
                 <span className="text-[15px]">My Listings</span>
               </Link>
+
               <Link href="/profile" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
                 <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
                 <span className="text-[15px]">Saved Items</span>
@@ -175,7 +227,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             </div>
           </div>
 
-          {/* Categories Section (Extracted from Home.tsx) */}
+          {/* Categories Section */}
           <div className="border-b border-slate-100 py-2">
             <div className="flex justify-between items-center px-5 py-2 mb-1">
               <span className="text-[13px] font-bold text-slate-600 tracking-wide uppercase">Our Categories</span>
