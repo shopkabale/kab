@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { collection, query, getDocs, limit } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
+import SearchBar from "@/components/SearchBar";
 import { 
   FaWhatsapp, 
   FaFacebookF, 
@@ -16,17 +15,8 @@ import {
 
 export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { user, loading, signIn, signOut } = useAuth();
-  
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-
-  const desktopSearchRef = useRef<HTMLDivElement>(null);
-  const mobileSearchRef = useRef<HTMLDivElement>(null);
 
   // Lock body scroll AND broadcast state to hide other UI elements
   useEffect(() => {
@@ -47,117 +37,10 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
     };
   }, [isMobileMenuOpen]);
 
-  // Click outside to close search suggestions
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
-      if (
-        (desktopSearchRef.current && !desktopSearchRef.current.contains(target)) &&
-        (mobileSearchRef.current && !mobileSearchRef.current.contains(target))
-      ) {
-        setShowSuggestions(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Fetch Suggestions
-  useEffect(() => {
-    const fetchSuggestions = async () => {
-      if (!searchQuery.trim()) {
-        setSuggestions([]);
-        return;
-      }
-      setIsSearching(true);
-      try {
-        const q = query(collection(db, "products"), limit(40));
-        const snap = await getDocs(q);
-        const term = searchQuery.toLowerCase();
-        
-        // Filter locally for fast broad matching
-        const matches = snap.docs
-          .map(d => ({ id: d.id, ...d.data() } as any))
-          .filter(p => p.name?.toLowerCase().includes(term) || p.category?.toLowerCase().includes(term))
-          .slice(0, 5); // Limit to top 5 hits
-          
-        setSuggestions(matches);
-      } catch (error) {
-        console.error("Search error:", error);
-      } finally {
-        setIsSearching(false);
-      }
-    };
-
-    const timer = setTimeout(fetchSuggestions, 300); // Debounce
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
   if (pathname?.startsWith("/admin")) return null; 
 
   const isActive = (path: string) => pathname === path;
   const closeMenu = () => setIsMobileMenuOpen(false);
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      setShowSuggestions(false);
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
-
-  const renderSearchBar = (ref: React.RefObject<HTMLDivElement>) => (
-    <div className="relative w-full z-50" ref={ref}>
-      <form onSubmit={handleSearch} className="flex items-center w-full bg-slate-100 rounded-md overflow-visible border border-slate-200 focus-within:border-[#D97706] transition-colors">
-        <input 
-          type="text" 
-          value={searchQuery}
-          onChange={(e) => {
-             setSearchQuery(e.target.value);
-             setShowSuggestions(true);
-          }}
-          onFocus={() => setShowSuggestions(true)}
-          placeholder="Search products, brands and categories" 
-          className="w-full bg-transparent border-none outline-none text-[15px] px-4 py-2.5 text-slate-900 placeholder:text-slate-500"
-        />
-        <button type="submit" className="px-5 py-2.5 bg-slate-200 hover:bg-[#D97706] hover:text-white text-slate-700 font-bold uppercase text-sm tracking-wide transition-colors border-l border-slate-300">
-          Search
-        </button>
-      </form>
-
-      {/* Suggestions Dropdown */}
-      {showSuggestions && (searchQuery.trim().length > 0) && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-xl rounded-md overflow-hidden">
-          {isSearching ? (
-             <div className="p-4 text-center text-sm text-slate-500">Loading...</div>
-          ) : suggestions.length > 0 ? (
-             suggestions.map(s => (
-               <div 
-                 key={s.id} 
-                 onClick={() => {
-                   setSearchQuery(s.name);
-                   setShowSuggestions(false);
-                   router.push(`/search?q=${encodeURIComponent(s.name)}`);
-                 }}
-                 className="p-3 border-b border-slate-100 hover:bg-slate-50 cursor-pointer flex items-center gap-3"
-               >
-                 {s.images?.[0] ? (
-                   <img src={s.images[0]} alt={s.name} className="w-10 h-10 object-cover rounded bg-slate-100" />
-                 ) : (
-                   <div className="w-10 h-10 bg-slate-100 rounded flex items-center justify-center text-slate-400">
-                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                   </div>
-                 )}
-                 <span className="text-sm font-bold text-slate-700 line-clamp-1">{s.name}</span>
-               </div>
-             ))
-          ) : (
-             <div className="p-4 text-center text-sm text-slate-500">No matches found.</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
 
   const ChevronRight = () => (
     <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
@@ -178,9 +61,9 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             </Link>
           </div>
 
-          {/* Desktop Search Bar */}
-          <div className="flex-1 max-w-2xl">
-            {renderSearchBar(desktopSearchRef)}
+          {/* Desktop Search Bar using your existing component */}
+          <div className="flex-1 max-w-2xl w-full">
+            <SearchBar />
           </div>
 
           <div className="flex items-center space-x-6">
@@ -246,7 +129,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 </button>
               )}
               
-              {/* Replaced Cart with WhatsApp */}
               <a 
                 href="https://wa.me/256759997376" 
                 target="_blank" 
@@ -259,9 +141,9 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             </div>
           </div>
 
-          {/* Bottom Row: Search Bar */}
-          <div className="px-3 pb-3">
-             {renderSearchBar(mobileSearchRef)}
+          {/* Bottom Row: Search Bar using your existing component */}
+          <div className="px-3 pb-3 w-full">
+             <SearchBar />
           </div>
         </div>
       </nav>
