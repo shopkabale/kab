@@ -51,8 +51,9 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       {/* ============================================== */}
       {/* NAVBAR CONTAINER                               */}
       {/* ============================================== */}
-      <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white border-b border-slate-200 z-40 transition-all shadow-sm`}>
-        
+      {/* ADDED: border-b-[3px] border-blue-500 to create the blue line */}
+      <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white border-b-[3px] border-blue-500 z-40 transition-all shadow-sm`}>
+
         {/* === DESKTOP VIEW === */}
         <div className="hidden lg:flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 justify-between items-center h-16 gap-6">
           <div className="flex-shrink-0 flex items-center">
@@ -68,7 +69,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
 
           <div className="flex items-center space-x-6">
             <Link href="/category/student_item" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/student_item') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Student Market</Link>
-            
+
             <Link href="/ai" className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${isActive('/ai') ? 'text-[#D97706] bg-amber-50' : 'text-slate-700 hover:text-[#D97706] hover:bg-slate-50'}`}>
               <span className="text-[#D97706] text-sm leading-none">✨</span> 
               <span className="text-sm font-bold uppercase tracking-wide">AI Guide</span>
@@ -117,7 +118,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 Kabale<span className="text-[#D97706]">Online</span>
               </Link>
             </div>
-            
+
             <div className="flex items-center gap-5 text-slate-800">
               {user ? (
                 <Link href="/profile" aria-label="Profile">
@@ -128,7 +129,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </button>
               )}
-              
+
               <a 
                 href="https://wa.me/256759997376" 
                 target="_blank" 
@@ -170,7 +171,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
         </div>
 
         <div className="flex-1 overflow-y-auto bg-white flex flex-col">
-          
+
           <Link href="/guide" onClick={closeMenu} className="flex justify-between items-center px-5 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors">
             <span className="text-[13px] font-bold text-slate-600 tracking-wide uppercase">Need Help?</span>
             <ChevronRight />
@@ -181,7 +182,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
               <span className="text-[13px] font-bold text-slate-600 tracking-wide uppercase">My Account</span>
               <ChevronRight />
             </Link>
-            
+
             {!loading && !user && (
               <div className="px-5 py-2 flex gap-3">
                 <button onClick={() => { signIn(); closeMenu(); }} className="flex-1 border border-[#D97706] text-[#D97706] rounded py-1.5 text-sm font-bold hover:bg-amber-50">Login</button>
@@ -222,7 +223,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
                 <span className="text-[15px]">Official Store</span>
               </Link>
-              
+
               <Link href="/ladies" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
                 <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
                 <span className="text-[15px]">Ladies' Picks</span>
