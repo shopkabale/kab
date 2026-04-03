@@ -48,9 +48,7 @@ export default async function AllProductsPage() {
             Discover everything our local Kabale vendors have to offer. Fast delivery, pay strictly on arrival.
           </p>
 
-          <div className="max-w-xl mx-auto">
-            <SearchBar />
-          </div>
+          
         </div>
       </section>
 
