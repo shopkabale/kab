@@ -165,14 +165,16 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
       </div>
 
       {/* FIXED PROGRESS INDICATOR */}
-      <div className={`w-full max-w-[1200px] mx-auto flex justify-center mt-2 transition-opacity duration-300 ${isScrolling ? 'opacity-100' : 'opacity-0'}`}>
-        <div className="w-20 h-1 bg-slate-200 dark:bg-slate-800 rounded-full relative overflow-hidden">
+      <div className={`w-full mt-2 transition-opacity duration-300 ${isScrolling ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="w-full h-1 bg-slate-200 dark:bg-slate-800 relative overflow-hidden">
           <div 
-            className="absolute top-0 left-0 h-full w-1/2 bg-[#D97706] rounded-full transition-transform duration-75 ease-out" 
+            className="absolute top-0 h-full w-[15%] sm:w-[10%] bg-[#D97706] rounded-full transition-all duration-75 ease-out" 
             style={{ 
-              // This ensures the 50% width bar moves exactly from the far left to the far right
-              transform: `translateX(${scrollRatio * 100}%)` 
-            }} 
+              // Moves the dash exactly across the available space. 
+              // It subtracts its own width (10% on sm, 15% on mobile) so it stops flush at the right edge.
+              left: `calc(${scrollRatio} * (100% - var(--dash-width)))`,
+              '--dash-width': '15%' // You can adjust this to match the w-[...] class above
+            } as React.CSSProperties} 
           />
         </div>
       </div>
