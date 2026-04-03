@@ -59,19 +59,7 @@ export default async function LadiesPage() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-12 font-sans selection:bg-pink-500 selection:text-white">
 
-      {/* SEARCH SECTION */}
-      <section className="py-6 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 flex items-center gap-4">
-          <Link href="/" className="flex items-center justify-center w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shrink-0">
-            <svg className="w-5 h-5 text-slate-700 dark:text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
-          <div className="flex-1">
-            <SearchBar />
-          </div>
-        </div>
-      </section>
+      
 
       {/* HERO BANNER */}
       <section className="relative w-full bg-pink-50 dark:bg-pink-950/20 py-12 md:py-16 border-b border-pink-100 dark:border-pink-900/50 overflow-hidden">
