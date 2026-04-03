@@ -31,6 +31,23 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     return await processBotFlow(senderPhone, { type: "image", mediaId: message.image.id });
   }
 
+  const upperText = text.trim().toUpperCase();
+
+  // ==========================================
+  // 🚨 THE UPLOAD ESCAPE HATCH
+  // ==========================================
+  if (upperText === "CANCEL" || upperText === "STOP") {
+    // 1. Delete their active bot state/session from Firebase
+    // ⚠️ Change "bot_sessions" if your botFlow uses a different collection name!
+    await adminDb.collection("bot_sessions").doc(senderPhone).delete().catch(() => {});
+    
+    // 2. Send the confirmation
+    await sendWhatsAppMessage(senderPhone, "🚫 *Action Cancelled*\nYour upload has been safely cancelled.\n\nType *MENU* to start over.");
+    
+    // 3. Return true so the webhook knows the bot handled this message
+    return true; 
+  }
+
   // 2. Catch the Buyer's Website Inquiry (Regex for "Product ID: [xxx]")
   const productIdMatch = text.match(/Product ID:\s*\[([a-zA-Z0-9_-]+)\]/i);
   if (productIdMatch) {
