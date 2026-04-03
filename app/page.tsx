@@ -290,50 +290,66 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 12. ORIGINAL CATEGORIES BLOCK */}
-        <section className="py-6">
+                {/* 12. BROWSE MORE COLLECTIONS */}
+        <section className="py-8 mt-4 mb-8">
           <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
-            <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
-              Explore by category
+            <h3 className="text-xl md:text-2xl font-bold text-center mb-6 text-slate-800 dark:text-slate-200">
+              Browse More Collections
             </h3>
 
-            <div className="flex flex-col gap-3 sm:gap-4 max-w-3xl mx-auto">
+            {/* Collection Grid: 2 columns on mobile, 3 on desktop */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-4xl mx-auto">
               {[
-                { name: "Official Store", href: "/officialStore", desc: "Premium, verified products sold directly by Kabale Online", icon: "⭐" },
-                { name: "Ladies' Picks 💖", href: "/ladies", desc: "Handbags, perfumes, jewelry, and beauty essentials", icon: "🛍️" },
-                { name: "Student market", href: "/category/student_item", desc: "Hostel items, textbooks, gadgets, and campus essentials", icon: "🎓" }, 
-                { name: "Electronics", href: "/category/electronics", desc: "Smartphones, laptops, TVs, audio, and accessories", icon: "💻" }, 
-                { name: "Agriculture", href: "/category/agriculture", desc: "Fresh produce, farm tools, livestock, and fertilizers", icon: "🌱" }
+                { 
+                  name: "Verified Premium ⭐", 
+                  href: "/officialStore",
+                  image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500&q=80" // Sleek, premium shopping vibe
+                },
+                { 
+                  name: "Her Glow Up 💖", 
+                  href: "/ladies",
+                  image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500&q=80" // Cosmetics / Beauty / Fashion
+                },
+                { 
+                  name: "Tech & Gadgets 💻", 
+                  href: "/category/electronics",
+                  image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=80" // Sleek electronics setup
+                },
+                { 
+                  name: "Campus Survival Kits 🎓", 
+                  href: "/category/student_item",
+                  image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&q=80" // Backpack and student essentials
+                },
+                { 
+                  name: "Farm Fresh Harvest 🌱", 
+                  href: "/category/agriculture",
+                  image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80" // Vibrant fresh produce
+                },
+                { 
+                  name: "Just Dropped 🔥", 
+                  href: "/products",
+                  image: "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=500&q=80" // Cool store/shopping bags for new arrivals
+                },
               ].map((cat) => (
-                <Link 
-                  key={cat.name} 
-                  href={cat.href} 
-                  className="group flex items-center justify-between p-4 sm:p-5 bg-white dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-sm hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-200 w-full"
-                >
-                  <div className="flex items-center gap-4 sm:gap-5 overflow-hidden">
-                    <div className="w-12 h-12 sm:w-14 sm:h-14 bg-slate-50 dark:bg-slate-800/50 rounded-full flex items-center justify-center text-2xl shrink-0 group-hover:scale-110 transition-transform duration-300 border border-slate-100 dark:border-slate-800">
-                      {cat.icon}
-                    </div>
-                    <div className="flex flex-col text-left overflow-hidden">
-                      <span className="text-base sm:text-lg font-black text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors truncate">
-                        {cat.name}
-                      </span>
-                      <span className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-0.5 truncate pr-2">
-                        {cat.desc}
-                      </span>
-                    </div>
+                <Link key={cat.name} href={cat.href} className="group flex flex-col items-center outline-none">
+                  {/* Image Container with matching purple-ish border from your screenshot */}
+                  <div className="w-full aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg border-2 border-[#A890D3] dark:border-[#7a64a3] overflow-hidden mb-3 relative shadow-sm group-hover:shadow-md group-hover:border-[#D97706] transition-all duration-300">
+                    <img 
+                      src={cat.image} 
+                      alt={cat.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
                   </div>
-                  <div className="flex items-center gap-2 text-slate-300 dark:text-slate-600 group-hover:text-[#D97706] transition-colors pl-2 shrink-0">
-                    <span className="text-xs font-bold uppercase tracking-widest hidden sm:block">View</span>
-                    <svg className="w-5 h-5 sm:w-6 sm:h-6 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
+                  {/* Category Name Below */}
+                  <span className="text-sm sm:text-base font-bold text-slate-700 dark:text-slate-300 group-hover:text-[#D97706] transition-colors text-center">
+                    {cat.name}
+                  </span>
                 </Link>
               ))}
             </div>
           </div>
         </section>
+
 
       </div>
     </div>
