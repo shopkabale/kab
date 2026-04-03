@@ -306,7 +306,9 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
         price: productPrice,
         quantity: 1
       }],
-      createdAt: Date.now() 
+      createdAt: Date.now(),
+      updatedAt: Date.now(), // 🔥 Syncs perfectly with webhook ghost sweeper
+      messageCount: 0        // 🔥 Required for the 5-message reminder
     });
 
     // 🔥 NEW: Trigger the silent Admin Email Ledger!
@@ -365,7 +367,9 @@ async function handleNewWebsiteInquiry(buyerPhone: string, productId: string, or
         price: productPrice,
         quantity: 1
       }],
-      createdAt: Date.now() 
+      createdAt: Date.now(),
+      updatedAt: Date.now(), // 🔥 Syncs perfectly with webhook ghost sweeper
+      messageCount: 0        // 🔥 Required for the 5-message reminder
     });
 
     // 🔥 NEW: Trigger the silent Admin Email Ledger!
