@@ -92,10 +92,14 @@ async function processWhatsAppMessage(message: any): Promise<void> {
       incomingText = message.text?.body || "";
     } else if (message.type === "interactive") {
       if (message.interactive?.type === "button_reply") {
-        incomingText = `[Button: ${message.interactive.button_reply?.title}]`;
+        incomingText = message.interactive.button_reply?.title || "";
       } else if (message.interactive?.type === "list_reply") {
-        incomingText = `[List Selection: ${message.interactive.list_reply?.title}]`;
+        incomingText = message.interactive.list_reply?.title || "";
       }
+    } else if (message.type === "button") {
+      // 🔥 FIX FOR SELLER TEMPLATE BUTTONS
+      // If there is a hidden payload, we use it. Otherwise, we use the button text.
+      incomingText = message.button?.payload || message.button?.text || "[Template Button Clicked]";
     } else {
       isUnsupportedMedia = true;
     }
@@ -111,65 +115,15 @@ async function processWhatsAppMessage(message: any): Promise<void> {
     logChat(fromPhone, "incoming", message.type, incomingText).catch(console.error);
 
     // ==========================================
-    // 4. The "First Contact" Deep Link Interceptor
-    // ==========================================
-    if (message.type === "text" && incomingText.includes("Product ID:")) {
-      const productIdMatch = incomingText.match(/Product ID:\s*\[(.*?)\]/);
-      
-      if (productIdMatch && productIdMatch[1]) {
-        const productId = productIdMatch[1];
-        
-        const productSnap = await adminDb.collection("products").doc(productId).get();
-        
-        if (productSnap.exists) {
-          const productData = productSnap.data();
-          const rawSellerPhone = productData?.sellerPhone;
-          const sellerPhone = normalizeForMeta(rawSellerPhone || "");
-          const buyerPhone = normalizeForMeta(fromPhone);
-
-          if (sellerPhone && sellerPhone !== buyerPhone) {
-            const sellerMsg = `🚨 *New Buyer Inquiry!*\n\nSomeone is interested in your: *${productData?.name || "item"}*\n\nBuyer says:\n"${incomingText}"\n\n_Reply to this message to chat with them. Your number is hidden._`;
-            await sendWhatsAppMessage(sellerPhone, sellerMsg);
-            logChat(sellerPhone, "outgoing", "text", sellerMsg).catch(console.error);
-
-            const existingSession = await adminDb.collection("orders")
-              .where("buyerPhone", "==", buyerPhone)
-              .where("sellerPhone", "==", sellerPhone)
-              .where("productId", "==", productId)
-              .where("status", "==", "pending")
-              .get();
-
-            if (existingSession.empty) {
-              const newOrderRef = adminDb.collection("orders").doc();
-              const now = Date.now();
-              await newOrderRef.set({
-                id: newOrderRef.id,
-                productId: productId,
-                productName: productData?.name || "Unknown Item",
-                buyerPhone: buyerPhone,
-                sellerPhone: sellerPhone,
-                status: "pending",
-                createdAt: now,
-                updatedAt: now,
-                messageCount: 0 // Initialize the counter
-              });
-            }
-            return; 
-          }
-        }
-      }
-    }
-
-    // ==========================================
-    // 5. Let the Bot try to handle it first
+    // 4. Let the Bot try to handle it first (This will trigger handlers.ts)
     // ==========================================
     const isBotHandled = await checkIsBotFlow(fromPhone, message);
     if (isBotHandled) {
-      return; 
+      return; // Handlers.ts successfully handled it!
     }
 
     // ==========================================
-    // 6. NEW: The "Escape Hatch" (Manual Close)
+    // 5. ESCAPE HATCH (Manual Close)
     // ==========================================
     if (incomingText.trim().toUpperCase() === "END CHAT") {
       const activeSession = await getActiveChatPartner(fromPhone);
@@ -186,7 +140,7 @@ async function processWhatsAppMessage(message: any): Promise<void> {
     }
 
     // ==========================================
-    // 7. PROXY RELAY LOGIC (With 5-Message Rule)
+    // 6. PROXY RELAY LOGIC (With 5-Message Rule)
     // ==========================================
     const activeSession = await getActiveChatPartner(fromPhone);
 
