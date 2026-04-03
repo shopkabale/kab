@@ -21,7 +21,7 @@ export async function GET(request: Request) {
       console.log("✅ Webhook verified successfully!");
       return new NextResponse(challenge, { status: 200 });
     }
-    
+
     console.warn("⚠️ Webhook verification failed. Invalid token or mode.");
     return new NextResponse("Forbidden", { status: 403 });
   } catch (error) {
@@ -110,15 +110,72 @@ async function processWhatsAppMessage(message: any): Promise<void> {
       console.error(`⚠️ Failed to log chat for ${fromPhone}:`, err)
     );
 
-    // 3. Let the Bot try to handle it first
+    // ==========================================
+    // 3. NEW: The "First Contact" Deep Link Interceptor
+    // ==========================================
+    if (message.type === "text" && incomingText.includes("Product ID:")) {
+      const productIdMatch = incomingText.match(/Product ID:\s*\[(.*?)\]/);
+      
+      if (productIdMatch && productIdMatch[1]) {
+        const productId = productIdMatch[1];
+        console.log(`🔍 Deep link intercepted for Product ID: ${productId}`);
+
+        // Fetch product from DB to find the seller
+        const productSnap = await adminDb.collection("products").doc(productId).get();
+        
+        if (productSnap.exists) {
+          const productData = productSnap.data();
+          const rawSellerPhone = productData?.sellerPhone;
+          const sellerPhone = normalizeForMeta(rawSellerPhone || "");
+          const buyerPhone = normalizeForMeta(fromPhone);
+
+          if (sellerPhone && sellerPhone !== buyerPhone) {
+            // Forward the inquiry to the Seller
+            const sellerMsg = `🚨 *New Buyer Inquiry!*\n\nSomeone is interested in your: *${productData?.name || "item"}*\n\nBuyer says:\n"${incomingText}"\n\n_Reply to this message to chat with them. Your number is hidden._`;
+            await sendWhatsAppMessage(sellerPhone, sellerMsg);
+            logChat(sellerPhone, "outgoing", "text", sellerMsg).catch(console.error);
+
+            // 🔥 FIX THE PROXY: Create a 'pending' order so future messages route correctly
+            // First, check if a session already exists to prevent spam
+            const existingSession = await adminDb.collection("orders")
+              .where("buyerPhone", "==", buyerPhone)
+              .where("sellerPhone", "==", sellerPhone)
+              .where("productId", "==", productId)
+              .where("status", "==", "pending")
+              .get();
+
+            if (existingSession.empty) {
+              const newOrderRef = adminDb.collection("orders").doc();
+              await newOrderRef.set({
+                id: newOrderRef.id,
+                productId: productId,
+                productName: productData?.name || "Unknown Item",
+                buyerPhone: buyerPhone,
+                sellerPhone: sellerPhone,
+                status: "pending",
+                createdAt: Date.now(), // Keeps sorting intact for getActiveChatPartner
+              });
+              console.log(`✅ Created new proxy session between ${buyerPhone} and ${sellerPhone}`);
+            }
+
+            // Return immediately so the bot doesn't try to handle this message
+            return; 
+          }
+        } else {
+          console.log(`⚠️ Product ${productId} not found in database.`);
+        }
+      }
+    }
+    // ==========================================
+
+    // 4. Let the Bot try to handle it first (if it wasn't a deep link)
     const isBotHandled = await checkIsBotFlow(fromPhone, message);
     if (isBotHandled) {
       console.log(`🤖 Bot fully handled the interaction for ${fromPhone}.`);
       return; 
     }
 
-    // 4. Proxy Relay Logic (Human-to-Human)
-    // Only attempt to relay text or media that the bot ignored
+    // 5. Proxy Relay Logic (Human-to-Human)
     const targetPhone = await getActiveChatPartner(fromPhone);
 
     if (targetPhone) {
@@ -131,12 +188,18 @@ async function processWhatsAppMessage(message: any): Promise<void> {
       logChat(targetPhone, "outgoing", "text", incomingText).catch(console.error);
 
       console.log(`✅ Relayed message seamlessly from ${fromPhone} to ${targetPhone}`);
-    } else {
-      console.log(`ℹ️ No active transaction found for ${fromPhone}. Message stored in Inbox.`);
+        } else {
+      console.log(`ℹ️ No active transaction found for ${fromPhone}. Sending fallback reply.`);
+      
+      // 🚨 NEW: The "Friendly Fallback" Reply
+      const fallbackText = `Hi there! 👋 Welcome to *Kabale Online*.\n\nI am your campus marketplace bot. I can help you safely buy or sell laptops, phones, and more right here at uni.\n\n👉 Type *MENU* to see options.\n👉 Or visit kabaleonline.com to find an item!`;
+
+      await sendWhatsAppMessage(fromPhone, fallbackText);
+      logChat(fromPhone, "outgoing", "text", fallbackText).catch(console.error);
     }
 
+
   } catch (error: any) {
-    // Isolated Error Boundary: A crash here won't break other messages in the same payload
     console.error(`❌ FAILED TO PROCESS MESSAGE FROM ${fromPhone}:`, error.message);
   }
 }
