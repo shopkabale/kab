@@ -135,10 +135,7 @@ export default async function CategoryPage({
             {info.description}
           </p>
 
-          {/* Integrated Search Bar */}
-          <div className="max-w-xl mx-auto">
-            <SearchBar />
-          </div>
+          
         </div>
       </section>
 
