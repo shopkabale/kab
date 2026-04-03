@@ -7,7 +7,8 @@ import { collection, query, where, getDocs, limit, orderBy } from "firebase/fire
 import { db } from "@/lib/firebase/config";
 
 // ✅ Revalidation set
-export const revalidate = 60;
+export const revalidate = 3600; // Cache for 1 hour (60 seconds * 60 minutes)
+
 
 // --- SHUFFLE HELPER FUNCTION ---
 const shuffleArray = (array: any[]) => {
