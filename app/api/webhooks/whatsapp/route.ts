@@ -37,7 +37,6 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    // 1. Validate Payload Origin
     if (body?.object !== "whatsapp_business_account") {
       return new NextResponse("Not Found", { status: 404 });
     }
@@ -45,38 +44,30 @@ export async function POST(request: Request) {
     const entries = body.entry || [];
     const messagePromises: Promise<void>[] = [];
 
-    // 2. Extract all messages and push them to a concurrent processing queue
     for (const entry of entries) {
       const changes = entry.changes || [];
       for (const change of changes) {
         const value = change.value;
 
-        // Handle Status Updates (Read Receipts, Delivered, etc.)
         if (value?.statuses) {
           for (const status of value.statuses) {
             console.log(`ℹ️ Status update: Message ${status.id} is ${status.status}`);
           }
         }
 
-        // Handle Actual Messages
         if (value?.messages && value.messages.length > 0) {
           for (const message of value.messages) {
-            // 🔥 Push to array instead of awaiting here to process concurrently!
             messagePromises.push(processWhatsAppMessage(message));
           }
         }
       }
     }
 
-    // 3. Execute all messages simultaneously and safely catch any individual failures
     await Promise.allSettled(messagePromises);
-
-    // 4. Always return a fast 200 OK so Meta doesn't retry and send duplicates
     return NextResponse.json({ success: true }, { status: 200 });
 
   } catch (error: any) {
     console.error("🚨 FATAL WEBHOOK CRASH:", error.message);
-    // Still return 200 to Meta on soft crashes to prevent infinite retry loops
     return NextResponse.json({ error: "Internal Server Error handled safely" }, { status: 200 });
   }
 }
@@ -91,8 +82,12 @@ async function processWhatsAppMessage(message: any): Promise<void> {
   try {
     console.log(`💬 Processing incoming payload from ${fromPhone}...`);
 
-    // 1. Determine the text content for logging & proxying safely
-    let incomingText = "[Media/Unsupported]";
+    // ==========================================
+    // 3. Determine text content & Filter Media
+    // ==========================================
+    let incomingText = "";
+    let isUnsupportedMedia = false;
+
     if (message.type === "text") {
       incomingText = message.text?.body || "";
     } else if (message.type === "interactive") {
@@ -101,26 +96,29 @@ async function processWhatsAppMessage(message: any): Promise<void> {
       } else if (message.interactive?.type === "list_reply") {
         incomingText = `[List Selection: ${message.interactive.list_reply?.title}]`;
       }
-    } else if (message.type === "image") {
-       incomingText = "[Image Received]";
+    } else {
+      isUnsupportedMedia = true;
     }
 
-    // 2. Background logging (Fire and forget)
-    logChat(fromPhone, "incoming", message.type, incomingText).catch(err => 
-      console.error(`⚠️ Failed to log chat for ${fromPhone}:`, err)
-    );
+    // 🚨 THE GRACEFUL BOUNCE
+    if (isUnsupportedMedia) {
+      console.log(`🚫 Blocked unsupported media type (${message.type}) from ${fromPhone}`);
+      const bounceText = "⚠️ *Media Not Supported:* For your security, this private chat only supports text messages. Please type out your message.";
+      await sendWhatsAppMessage(fromPhone, bounceText);
+      return; 
+    }
+
+    logChat(fromPhone, "incoming", message.type, incomingText).catch(console.error);
 
     // ==========================================
-    // 3. NEW: The "First Contact" Deep Link Interceptor
+    // 4. The "First Contact" Deep Link Interceptor
     // ==========================================
     if (message.type === "text" && incomingText.includes("Product ID:")) {
       const productIdMatch = incomingText.match(/Product ID:\s*\[(.*?)\]/);
       
       if (productIdMatch && productIdMatch[1]) {
         const productId = productIdMatch[1];
-        console.log(`🔍 Deep link intercepted for Product ID: ${productId}`);
-
-        // Fetch product from DB to find the seller
+        
         const productSnap = await adminDb.collection("products").doc(productId).get();
         
         if (productSnap.exists) {
@@ -130,13 +128,10 @@ async function processWhatsAppMessage(message: any): Promise<void> {
           const buyerPhone = normalizeForMeta(fromPhone);
 
           if (sellerPhone && sellerPhone !== buyerPhone) {
-            // Forward the inquiry to the Seller
             const sellerMsg = `🚨 *New Buyer Inquiry!*\n\nSomeone is interested in your: *${productData?.name || "item"}*\n\nBuyer says:\n"${incomingText}"\n\n_Reply to this message to chat with them. Your number is hidden._`;
             await sendWhatsAppMessage(sellerPhone, sellerMsg);
             logChat(sellerPhone, "outgoing", "text", sellerMsg).catch(console.error);
 
-            // 🔥 FIX THE PROXY: Create a 'pending' order so future messages route correctly
-            // First, check if a session already exists to prevent spam
             const existingSession = await adminDb.collection("orders")
               .where("buyerPhone", "==", buyerPhone)
               .where("sellerPhone", "==", sellerPhone)
@@ -146,6 +141,7 @@ async function processWhatsAppMessage(message: any): Promise<void> {
 
             if (existingSession.empty) {
               const newOrderRef = adminDb.collection("orders").doc();
+              const now = Date.now();
               await newOrderRef.set({
                 id: newOrderRef.id,
                 productId: productId,
@@ -153,51 +149,83 @@ async function processWhatsAppMessage(message: any): Promise<void> {
                 buyerPhone: buyerPhone,
                 sellerPhone: sellerPhone,
                 status: "pending",
-                createdAt: Date.now(), // Keeps sorting intact for getActiveChatPartner
+                createdAt: now,
+                updatedAt: now,
+                messageCount: 0 // Initialize the counter
               });
-              console.log(`✅ Created new proxy session between ${buyerPhone} and ${sellerPhone}`);
             }
-
-            // Return immediately so the bot doesn't try to handle this message
             return; 
           }
-        } else {
-          console.log(`⚠️ Product ${productId} not found in database.`);
         }
       }
     }
-    // ==========================================
 
-    // 4. Let the Bot try to handle it first (if it wasn't a deep link)
+    // ==========================================
+    // 5. Let the Bot try to handle it first
+    // ==========================================
     const isBotHandled = await checkIsBotFlow(fromPhone, message);
     if (isBotHandled) {
-      console.log(`🤖 Bot fully handled the interaction for ${fromPhone}.`);
       return; 
     }
 
-    // 5. Proxy Relay Logic (Human-to-Human)
-    const targetPhone = await getActiveChatPartner(fromPhone);
+    // ==========================================
+    // 6. NEW: The "Escape Hatch" (Manual Close)
+    // ==========================================
+    if (incomingText.trim().toUpperCase() === "END CHAT") {
+      const activeSession = await getActiveChatPartner(fromPhone);
+      if (activeSession) {
+        await adminDb.collection("orders").doc(activeSession.orderId).update({ 
+          status: "closed", 
+          updatedAt: Date.now() 
+        });
+        
+        await sendWhatsAppMessage(fromPhone, "✅ *Chat ended successfully.*\nYou are no longer connected to the other person.\n\nType *MENU* to browse more items.");
+        await sendWhatsAppMessage(activeSession.phone, "ℹ️ *Chat Ended*\nThe other person has manually ended the chat. You are no longer connected.");
+        return; 
+      }
+    }
 
-    if (targetPhone) {
+    // ==========================================
+    // 7. PROXY RELAY LOGIC (With 5-Message Rule)
+    // ==========================================
+    const activeSession = await getActiveChatPartner(fromPhone);
+
+    if (activeSession) {
+      const targetPhone = activeSession.phone;
       const forwardedText = `*New Message:*\n${incomingText}`;
 
-      // Send the forwarded message
+      // A. Relay the message
       await sendWhatsAppMessage(targetPhone, forwardedText);
-
-      // Log the outgoing message so it appears correctly in your Admin Inbox
       logChat(targetPhone, "outgoing", "text", incomingText).catch(console.error);
 
-      console.log(`✅ Relayed message seamlessly from ${fromPhone} to ${targetPhone}`);
-        } else {
+      // B. Fetch and increment the message count
+      const sessionDoc = await adminDb.collection("orders").doc(activeSession.orderId).get();
+      const currentCount = sessionDoc.data()?.messageCount || 0;
+      const newCount = currentCount + 1;
+
+      // C. Update DB with new count and restart the clock
+      adminDb.collection("orders").doc(activeSession.orderId).update({ 
+        updatedAt: Date.now(),
+        messageCount: newCount
+      }).catch(console.error);
+
+      // D. THE 5-MESSAGE REMINDER
+      if (newCount === 5) {
+        const reminderText = "ℹ️ *System Tip:* You are chatting securely through Kabale Online. When you have finished negotiating, simply type *END CHAT* to close this connection.";
+        await sendWhatsAppMessage(fromPhone, reminderText);
+        await sendWhatsAppMessage(targetPhone, reminderText);
+      }
+
+      console.log(`✅ Relayed message from ${fromPhone} to ${targetPhone}. Count: ${newCount}`);
+    } else {
+      // THE FALLBACK: No active chat, not a bot command.
       console.log(`ℹ️ No active transaction found for ${fromPhone}. Sending fallback reply.`);
       
-      // 🚨 NEW: The "Friendly Fallback" Reply
       const fallbackText = `Hi there! 👋 Welcome to *Kabale Online*.\n\nI am your campus marketplace bot. I can help you safely buy or sell laptops, phones, and more right here at uni.\n\n👉 Type *MENU* to see options.\n👉 Or visit kabaleonline.com to find an item!`;
 
       await sendWhatsAppMessage(fromPhone, fallbackText);
       logChat(fromPhone, "outgoing", "text", fallbackText).catch(console.error);
     }
-
 
   } catch (error: any) {
     console.error(`❌ FAILED TO PROCESS MESSAGE FROM ${fromPhone}:`, error.message);
@@ -217,9 +245,9 @@ function normalizeForMeta(phone: string): string {
 }
 
 // ==========================================
-// HELPER FUNCTION: Find who to send it to (BULLETPROOF EDITION)
+// HELPER FUNCTION: Find who to send it to (WITH GHOST SWEEPER)
 // ==========================================
-async function getActiveChatPartner(senderPhone: string): Promise<string | null> {
+async function getActiveChatPartner(senderPhone: string): Promise<{ phone: string, orderId: string } | null> {
   try {
     const ordersRef = adminDb.collection("orders"); 
     const activeStatuses = ["pending", "confirmed", "out for delivery", "out_for_delivery"];
@@ -229,35 +257,41 @@ async function getActiveChatPartner(senderPhone: string): Promise<string | null>
       phoneVariations.push(`0${senderPhone.substring(3)}`); 
     }
 
-    // Fetch ALL active orders for this user
     const [buyerSnap, sellerSnap] = await Promise.all([
       ordersRef.where("buyerPhone", "in", phoneVariations).where("status", "in", activeStatuses).get(),
       ordersRef.where("sellerPhone", "in", phoneVariations).where("status", "in", activeStatuses).get()
     ]);
 
     let allActiveOrders: any[] = [];
-
     buyerSnap.forEach(doc => allActiveOrders.push(doc.data()));
     sellerSnap.forEach(doc => allActiveOrders.push(doc.data()));
 
     // Sort by newest first
-    allActiveOrders.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    allActiveOrders.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
     const normalizedSender = normalizeForMeta(senderPhone);
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+    const now = Date.now();
 
-    // Loop through the orders to find a valid, DIFFERENT chat partner
     for (const order of allActiveOrders) {
+      const lastActive = order.updatedAt || order.createdAt || 0;
+
+      // 🚨 THE GHOST SWEEPER
+      if (now - lastActive > TWENTY_FOUR_HOURS) {
+        console.log(`⏱️ Auto-closing expired proxy session: ${order.id}`);
+        ordersRef.doc(order.id).update({ status: "closed", updatedAt: now }).catch(console.error);
+        continue; 
+      }
+
       const normalizedBuyer = normalizeForMeta(order.buyerPhone);
       const normalizedSeller = normalizeForMeta(order.sellerPhone);
 
-      // SCENARIO 1: Sender is the Buyer. Target is the Seller.
       if (normalizedSender === normalizedBuyer && normalizedSeller !== normalizedSender) {
-        return normalizedSeller; 
+        return { phone: normalizedSeller, orderId: order.id }; 
       }
 
-      // SCENARIO 2: Sender is the Seller. Target is the Buyer.
       if (normalizedSender === normalizedSeller && normalizedBuyer !== normalizedSender) {
-        return normalizedBuyer; 
+        return { phone: normalizedBuyer, orderId: order.id }; 
       }
     }
 
