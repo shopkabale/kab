@@ -1,404 +1,195 @@
-// 🔥 1. REMOVE force-dynamic
-// 🔥 2. ADD revalidate to cache this product page for 1 hour
-export const revalidate = 3600;
+"use client";
 
-import { Metadata } from "next";
-import Link from "next/link";
+import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
-import { notFound } from "next/navigation";
-import { getProductByPublicId, getProducts } from "@/lib/firebase/firestore";
-import ImageGallery from "@/components/ImageGallery";
-import ProductActions from "@/components/ProductActions";
-import FastBuy from "@/components/FastBuy"; 
-import ProductTracker from "@/components/ProductTracker";
-import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
-import SaveProductButton from "@/components/SaveProductButton";
+import Link from "next/link";
 import { optimizeImage } from "@/lib/utils";
-import MakeOfferButton from "@/components/MakeOfferButton";
 
-export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
-  const product = await getProductByPublicId(params.publicId);
+export default function HorizontalScroller({ title, products, viewAllLink }: { title: string, products: any[], viewAllLink?: string }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  if (!product) return { title: "Item Not Found | Kabale Online" };
+  const [scrollRatio, setScrollRatio] = useState(0);
+  const [isScrolling, setIsScrolling] = useState(false);
 
-  const safeName = product.name || "Unnamed Item";
-  const formattedPrice = `UGX ${(Number(product.price) || 0).toLocaleString()}`;
+  const handleScroll = () => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+    const maxScroll = scrollWidth - clientWidth;
 
-  const title = `${safeName} - Available in Kabale | ${formattedPrice}`;
-  const description = product.description?.slice(0, 150) || `Buy this ${safeName} for ${formattedPrice}. Pay strictly Cash on Delivery in Kabale town.`;
-
-  const imageUrl = product.images?.[0] || "https://www.kabaleonline.com/og-image.jpg";
-
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      url: `https://www.kabaleonline.com/product/${params.publicId}`,
-      siteName: "Kabale Online",
-      images: [{ url: imageUrl, width: 1200, height: 630, alt: safeName }],
-      type: "website",
-    },
-    twitter: { card: "summary_large_image", title, description, images: [imageUrl] },
-  };
-}
-
-// ==========================================
-// THE DAILY SHUFFLE ALGORITHM
-// ==========================================
-// We add this here so we can shuffle the related products stably without breaking the cache!
-function getDailyRandomScore(id: string) {
-  const today = new Date().toISOString().split('T')[0];
-  const seedString = id + today; 
-  let hash = 0;
-  for (let i = 0; i < seedString.length; i++) {
-    hash = (hash << 5) - hash + seedString.charCodeAt(i);
-    hash |= 0; 
-  }
-  return hash;
-}
-
-export default async function ProductDetailsPage({ params }: { params: { publicId: string } }) {
-  const product = await getProductByPublicId(params.publicId);
-
-  if (!product) notFound();
-
-  const safeName = product.name || "Unnamed Item";
-  const safePrice = Number(product.price) || 0;
-  const safeCondition = product.condition || "used";
-  const safeCategory = product.category || "general";
-
-  // ==========================================
-  // 1. BULLETPROOF STOCK PARSING
-  // ==========================================
-  let safeStock = 1;
-  if (product.stock !== undefined && product.stock !== null) {
-    const parsed = Number(product.stock);
-    if (!isNaN(parsed)) {
-      safeStock = parsed;
+    if (maxScroll <= 0) {
+      setScrollRatio(0);
+      return;
     }
-  }
-  
-  // Logic for Authentic Scarcity
-  const isLowStock = safeStock > 0 && safeStock <= 5;
-  const isAvailable = safeStock > 0;
 
-  // ==========================================
-  // 2. BULLETPROOF ADMIN CHECK
-  // ==========================================
-  const sellerNameStr = String(product.sellerName || "").toLowerCase();
-  const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
+    // Calculate position ratio from 0 to 1
+    setScrollRatio(scrollLeft / maxScroll);
 
-  // ==========================================
-  // 3. OPTIMIZE IMAGES
-  // ==========================================
-  const optimizedImages = product.images?.map((img: string) => optimizeImage(img)) || [];
+    // Show the indicator
+    setIsScrolling(true);
 
-  // ==========================================
-  // 4. FETCH RELATED PRODUCTS
-  // ==========================================
-  const rawCategoryProducts = await getProducts(safeCategory, 12);
-
-  const relatedProducts = rawCategoryProducts
-    .filter((p) => p.id !== product.id && p.publicId !== product.publicId)
-    .sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id))
-    .slice(0, 8) 
-    .map((p) => ({
-      ...p,
-      images: p.images?.map((img: string) => optimizeImage(img)) || []
-    }));
-
-  // ==========================================
-  // 5. HELPER: RENDER DESCRIPTION AS BULLETS
-  // ==========================================
-  const renderDescription = (desc?: string) => {
-    if (!desc) return <p className="text-slate-700 text-sm">No description provided by the seller.</p>;
-
-    const lines = desc.split('\n').filter(line => line.trim() !== '');
-
-    return (
-      <ul className="space-y-2">
-        {lines.map((line, idx) => {
-          const cleanLine = line.replace(/^[-*•]\s*/, '').trim();
-          return (
-            <li key={idx} className="text-slate-700 text-sm leading-relaxed flex items-start gap-2">
-              <span className="text-slate-400 mt-[2px]">•</span>
-              <span>{cleanLine}</span>
-            </li>
-          );
-        })}
-      </ul>
-    );
+    if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    scrollTimeoutRef.current = setTimeout(() => {
+      setIsScrolling(false);
+    }, 1000);
   };
+
+  useEffect(() => {
+    handleScroll();
+    return () => {
+      if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
+    };
+  }, [products]);
+
+  const checkIsNew = (p: any) => {
+    const pDate = p.createdAt?.seconds ? p.createdAt.seconds * 1000 : new Date(p.createdAt || 0).getTime();
+    return pDate > 0 && (Date.now() - pDate) < (7 * 24 * 60 * 60 * 1000); 
+  };
+
+  if (!products || products.length === 0) return null;
 
   return (
-    <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6">
-      <ProductTracker productId={product.id} />
-      <RecentlyViewedTracker product={product} />   
-
-      {/* BREADCRUMBS */}  
-      <div className="mb-8 flex items-center text-sm text-slate-500 font-medium overflow-x-auto whitespace-nowrap scrollbar-hide">  
-        <Link href="/" className="hover:text-[#D97706] transition-colors">Home</Link>  
-        <span className="mx-2">/</span>  
-        <Link href={`/category/${safeCategory}`} className="hover:text-[#D97706] transition-colors capitalize">  
-          {safeCategory.replace(/_/g, ' ')}  
-        </Link>  
-        <span className="mx-2">/</span>  
-        <span className="text-slate-900 truncate max-w-[200px]">{safeName}</span>  
-      </div>  
-
-      {/* MODERN E-COMMERCE LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-16">  
-
-        {/* LEFT COLUMN: Image Gallery (Sticky on Desktop) */}  
-        <div className="w-full flex flex-col lg:sticky lg:top-24 h-fit">  
-          <ImageGallery images={optimizedImages} title={safeName} />  
-          <p className="text-[11px] text-slate-400 mt-4 text-center italic">  
-            * Note: Actual color variations may occur due to lighting or screen settings.  
-          </p>  
-        </div>  
-
-        {/* RIGHT COLUMN: Product Details */}  
-        <div className="flex flex-col">  
-
-          {/* Badges */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">  
-            <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${  
-              safeCondition === 'new' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'  
-            }`}>  
-              {safeCondition === 'new' ? 'Brand New' : 'Used'}  
-            </span>  
-          </div>  
-
-          {/* Title */}
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight mb-3">  
-            {safeName}
-          </h1>  
-
-          {/* Price */}
-          <div className="mb-4 flex items-center gap-4">  
-            <span className="text-4xl font-black text-[#D97706]">  
-              UGX {safePrice.toLocaleString()}  
-            </span>  
-          </div>  
-
-          {/* AUTHENTIC SCARCITY INDICATOR */}
-          {isAvailable && (
-            <div className={`mb-6 flex items-center gap-2 text-sm font-bold p-3 rounded-xl border w-fit ${
-              isLowStock 
-                ? "bg-red-50 text-red-600 border-red-100" 
-                : "bg-green-50 text-green-700 border-green-100"
-            }`}>
-              {isLowStock ? (
-                <>
-                  <svg className="w-5 h-5 animate-pulse shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>High Demand: Only {safeStock} left in stock!</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>In Stock & Ready to Deliver</span>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* FAST BUY ACTION */}
-          <div className="mb-6">
-            <FastBuy product={{...product, images: optimizedImages}} />
-          </div>
-
-          {/* INLINE TRUST BOX (Conversion Machine Core) */}
-          <div className="mb-10 bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4 shadow-sm">
-            {/* Trust Signal 1: Risk Reversal */}
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-slate-900 mb-0.5 tracking-tight">
-                  Payment is after you receive the product
-                </h4>
-                <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                  Inspect the item first. If it is not exactly as described, simply hand it back. You only pay when you are 100% satisfied. Zero risk.
-                </p>
-              </div>
-            </div>
-
-            {/* Trust Signal 2: Local Delivery */}
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#D97706]/10 text-[#D97706] flex items-center justify-center shrink-0 mt-0.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <div>
-                <h4 className="text-sm font-black text-slate-900 mb-0.5 tracking-tight">
-                  Fast Delivery in Kabale & Kigezi
-                </h4>
-                <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                  Direct delivery to your doorstep, shop, or hostel. No waiting days for packages from Kampala.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* DESCRIPTION */}  
-          <div className="mb-8">  
-            <h3 className="text-sm font-bold text-slate-900 mb-4 uppercase tracking-wider">Description</h3>  
-            {renderDescription(product.description)}
-          </div>  
-
-          {/* 2-COLUMN SPECS TABLE (Cleaned Up) */}
-          <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-4 bg-white">
-            <table className="w-full text-sm text-left">
-              <tbody className="divide-y divide-slate-200">
-                <tr className="divide-x divide-slate-200">
-                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700 whitespace-nowrap">Stock Status</th>
-                  <td className="px-4 py-3 text-slate-900 font-medium flex items-center bg-white">
-                    <span className={safeStock > 0 ? "text-green-700" : "text-red-600"}>
-                      {safeStock > 0 ? 'In Stock' : 'Out of Stock'}
-                    </span>
-                  </td>
-                </tr>
-                <tr className="divide-x divide-slate-200">
-                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Location</th>
-                  <td className="px-4 py-3 text-slate-900 bg-white">Available in Kabale</td>
-                </tr>
-                <tr className="divide-x divide-slate-200">
-                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Delivery</th>
-                  <td className="px-4 py-3 text-slate-900 bg-white">Same day (if ordered 7 AM - 3 PM)</td>
-                </tr>
-                <tr className="divide-x divide-slate-200">
-                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Sold By</th>
-                  <td className="px-4 py-3 text-slate-900 font-bold uppercase bg-white flex items-center gap-2">
-                    {product.sellerName || "Verified Seller"} 
-                    {isAdmin && (
-                      <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">Verified ✓</span>
-                    )}
-                  </td>
-                </tr>
-                <tr className="divide-x divide-slate-200">
-                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Returns</th>
-                  <td className="px-4 py-3 text-slate-900 bg-white">Reject on delivery if unsatisfied</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-{/* 6. MERCHANT CODES SECTION */}
-        <section className="w-full max-w-[800px] mx-auto px-4 py-8 bg-white dark:bg-[#1a1a1a] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-center">
-          <h4 className="text-sm uppercase tracking-widest font-black text-slate-500 mb-6">Secure Payment Merchant Codes</h4>
-          <div className="flex flex-col sm:flex-row justify-center gap-6">
-            <div className="bg-red-50 dark:bg-red-950/30 p-4 rounded-lg border border-red-100 dark:border-red-900 w-full sm:w-48">
-              <span className="block text-red-600 dark:text-red-400 font-bold mb-1">Airtel Money</span>
-              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-widest">7050183</span>
-            </div>
-            <div className="bg-yellow-50 dark:bg-yellow-950/30 p-4 rounded-lg border border-yellow-100 dark:border-yellow-900 w-full sm:w-48">
-              <span className="block text-yellow-600 dark:text-yellow-500 font-bold mb-1">MTN MoMo</span>
-              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-widest">14843537</span>
-            </div>
-          </div>
-        </section>
-
-          {/* SECONDARY ACTIONS (Chat, Make Offer, Save) */}
-          <div className="mb-10 border-b border-slate-200 pb-10">
-            <ProductActions product={{...product, images: optimizedImages}}>
-                <div className="flex flex-col gap-3 mt-2 w-full">
-                  <MakeOfferButton product={product} />
-                  <SaveProductButton product={product} />
-                </div>
-            </ProductActions>
-          </div> 
-
-        </div>  
-      </div>  
-
-      {/* ========================================== */}  
-      {/* HORIZONTALLY SCROLLABLE RELATED PRODUCTS   */}  
-      {/* ========================================== */}  
-      {relatedProducts.length > 0 && (  
-        <div className="mt-16 mb-8 pt-10 border-t border-slate-200">  
-          <div className="flex items-center justify-between mb-8">  
-            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">You Might Also Like</h2>  
-          </div>  
-
-          {/* Scrollable Container */}
-          <div className="flex overflow-x-auto gap-4 pb-6 snap-x snap-mandatory scrollbar-hide">  
-            {relatedProducts.map((relProduct) => (  
-              <Link   
-                key={relProduct.id}   
-                href={`/product/${relProduct.publicId || relProduct.id}`}   
-                className="flex-none w-[160px] sm:w-[220px] snap-start bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col hover:border-slate-300 transition-colors"  
-              >  
-                {/* Image */}  
-                <div className="aspect-square relative bg-slate-100 overflow-hidden">  
-                  {relProduct.images?.[0] ? (  
-                    <Image   
-                      src={relProduct.images[0]}   
-                      alt={relProduct.name}  
-                      fill   
-                      sizes="(max-width: 768px) 160px, 220px"  
-                      className="object-cover"  
-                    />  
-                  ) : (  
-                    <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">No Image</div>  
-                  )}  
-                </div>  
-
-                {/* Details */}  
-                <div className="p-4 flex flex-col flex-grow">  
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">  
-                    {safeCategory.replace(/_/g, ' ')}  
-                  </span>  
-                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 mb-2">  
-                    {relProduct.name}  
-                  </h3>  
-                  <div className="mt-auto pt-2">  
-                    <p className="text-base font-black text-[#D97706]">UGX {Number(relProduct.price).toLocaleString()}</p>  
-                  </div>  
-                </div>  
-              </Link>  
-            ))}  
-
-            {/* View More Card at the end of the scroll */}
-            <Link 
-              href={`/category/${safeCategory}`} 
-              className="flex-none w-[160px] sm:w-[220px] snap-start bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-500 p-4 hover:bg-slate-100 transition-colors"
-            >
-              <div className="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center mb-3 shadow-sm">
-                <span className="text-xl font-bold">→</span>
-              </div>
-              <span className="text-sm font-bold text-center">
-                View more <br/>
-                <span className="capitalize text-[#D97706]">{safeCategory.replace(/_/g, ' ')}</span>
-              </span>
-            </Link>
-          </div>  
-        </div>  
-      )}  
-
-      {/* ========================================== */}  
-      {/* SELLER ACQUISITION PROMPT                  */}  
-      {/* ========================================== */}
-      <div className="mt-8 mb-12 border-t border-slate-200 pt-8 text-center px-4">
-        <p className="text-slate-600 text-sm font-medium">
-          Got something to sell?{' '}
-          <Link 
-            href="/sell" 
-            className="text-[#D97706] font-bold underline decoration-2 underline-offset-4"
-          >
-            Start selling on Kabale Online
+    <div className="w-full overflow-hidden mb-4 relative select-none">
+      {/* HEADER */}
+      <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 mb-3 flex justify-between items-end">
+        <h2 className="text-lg md:text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">
+          {title}
+        </h2>
+        {viewAllLink && (
+          <Link href={viewAllLink} className="text-[#D97706] hover:text-amber-600 text-xs sm:text-sm font-bold uppercase tracking-widest flex items-center gap-1 transition-colors outline-none">
+            View All
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
           </Link>
-        </p>
+        )}
       </div>
 
+      {/* SCROLL CONTAINER */}
+      <div className="w-full max-w-[1200px] mx-auto">
+        <div 
+          ref={scrollRef}
+          onScroll={handleScroll}
+          className="flex gap-2 overflow-x-auto snap-x no-scrollbar px-3 sm:px-4 pb-4 w-full items-stretch outline-none"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {products.map((p) => {
+            const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
+            const isJustPosted = checkIsNew(p);
+            const isSold = p.status === "sold";
+            const isApproved = p.isApprovedQuality;
+            const isOfficial = p.isOfficialStore || p.isAdminUpload;
+            
+            // Parse stock safely (defaults to 1 if not set)
+            const currentStock = parseInt(p.stock?.toString() || "1", 10);
+
+            return (
+              <div key={p.id} className={`snap-start shrink-0 w-[150px] sm:w-[190px] group flex flex-col bg-white dark:bg-[#151515] rounded-sm overflow-hidden shadow-sm dark:border dark:border-slate-800 transition-all hover:shadow-md h-auto relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
+                <Link href={`/product/${p.publicId || p.id}`} className="flex flex-col flex-grow relative outline-none">
+                  <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900">
+                    {optimizedImage ? (
+                      <Image 
+                        src={optimizedImage} 
+                        alt={p.title || p.name || 'Product'} 
+                        fill 
+                        sizes="(max-width: 768px) 50vw, 20vw" 
+                        className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">No Image</div>
+                    )}
+
+                    {isSold && (
+                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-[2px]">
+                         <span className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-lg transform -rotate-6">
+                           Sold Out
+                         </span>
+                      </div>
+                    )}
+
+                    {!isSold && isJustPosted && (
+                      <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center gap-1 z-10">
+                         <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                         New
+                      </div>
+                    )}
+
+                    {!isSold && (isApproved || isOfficial) && (
+                      <div className={`absolute bottom-0 left-0 ${isApproved ? 'bg-emerald-600' : 'bg-[#D97706]'} text-white text-[8px] font-bold px-1.5 py-1 leading-none rounded-tr-sm z-10 tracking-widest uppercase`}>
+                         {isApproved ? 'Approved Quality' : 'Official Product'}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="p-2 sm:p-3 flex flex-col flex-grow">
+                    {/* GRAY TITLE (Turns Orange on hover) */}
+                    <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 line-clamp-2 leading-snug mb-1 transition-colors duration-200 h-[34px] sm:h-[40px] group-hover:text-[#D97706] dark:group-hover:text-[#D97706]">
+                      {p.title || p.name}
+                    </h3>
+                    
+                    <div className="mt-auto pt-1 flex flex-col">
+                      {/* BOLD BLACK PRICE (Turns Orange on hover) */}
+                      <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-500' : 'text-black dark:text-white group-hover:text-[#D97706] dark:group-hover:text-[#D97706]'}`}>
+                        UGX {Number(p.price).toLocaleString()}
+                      </span>
+                      
+                      {/* LIGHT RED STOCK INDICATOR */}
+                      {!isSold && (currentStock === 1 || currentStock === 2) && (
+                        <span className="text-red-400 dark:text-red-400 text-[10px] font-bold mt-0.5">
+                          Only {currentStock} left
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </Link>
+
+                {/* FULL WIDTH CTA (Turns Orange on hover) */}
+                <div className="border-t border-slate-100 dark:border-slate-800 bg-gray-50 dark:bg-[#1a1a1a]">
+                  {isSold ? (
+                    <div className="w-full py-2 px-2 sm:px-3 text-slate-400 text-[11px] font-bold uppercase flex items-center justify-center">
+                      Unavailable
+                    </div>
+                  ) : (
+                    <a 
+                      href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I am interested in this item: *${p.title || p.name}*`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-2.5 px-2 sm:px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-[11px] font-black uppercase flex items-center justify-center gap-2 transition-colors duration-200 outline-none group-hover:text-[#D97706] dark:group-hover:text-[#D97706]"
+                    >
+                      <svg className="w-4 h-4 fill-current text-[#25D366]" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.012c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.82 9.82 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+                      </svg>
+                      <span>Chat with Seller</span>
+                    </a>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+
+          {viewAllLink && (
+            <div className="snap-start shrink-0 w-[150px] sm:w-[190px] flex flex-col bg-slate-50 dark:bg-[#111] rounded-sm border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-[#D97706] transition-colors group">
+              <Link href={viewAllLink} className="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-[#D97706] p-4 min-h-[220px] outline-none">
+                <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform mb-3">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+                </div>
+                <span className="text-sm font-black uppercase tracking-wider">View All</span>
+              </Link>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* FIXED PROGRESS INDICATOR */}
+      <div className={`w-full mt-2 transition-opacity duration-300 ${isScrolling ? 'opacity-100' : 'opacity-0'}`}>
+        <div className="w-full h-1 bg-slate-200 dark:bg-slate-800 relative overflow-hidden">
+          <div 
+            className="absolute top-0 h-full w-[15%] sm:w-[10%] bg-[#D97706] rounded-full transition-all duration-75 ease-out" 
+            style={{ 
+              left: `calc(${scrollRatio} * (100% - var(--dash-width)))`,
+              '--dash-width': '15%'
+            } as React.CSSProperties} 
+          />
+        </div>
+      </div>
     </div>
   );
 }
