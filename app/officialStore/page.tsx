@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
-import ProductSection from "@/components/ProductSection";
-import Link from "next/link";
+import OfficialProductFeed from "@/components/OfficialProductFeed";
 
 // Forces the page to always fetch the freshest inventory
 export const dynamic = "force-dynamic";
@@ -27,7 +26,7 @@ export const metadata: Metadata = {
     siteName: "Kabale Online",
     images: [
       {
-        url: "/official-og-image.jpg", // Make sure to add this image to your /public folder!
+        url: "/official-og-image.jpg",
         width: 1200,
         height: 630,
         alt: "Kabale Online Official Store",
@@ -44,21 +43,28 @@ export const metadata: Metadata = {
   },
 };
 
+const PAGE_SIZE = 20;
+
 export default async function OfficialStorePage() {
-  // Fetch ALL products where the admin uploaded them directly
+  // Fetch INITIAL batch of products where the admin uploaded them directly
   const officialQ = query(
     collection(db, "products"), 
-    where("isAdminUpload", "==", true)
+    where("isAdminUpload", "==", true),
+    orderBy("createdAt", "desc"), // Ensures newest are first
+    limit(PAGE_SIZE)
   );
 
   const officialSnap = await getDocs(officialQ);
-  const officialProducts = officialSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-
-  // Sort by newest first so returning customers see fresh stock at the top
-  const sortedProducts = officialProducts.sort((a, b) => {
-    const dateA = a.createdAt?.seconds ? a.createdAt.seconds * 1000 : new Date(a.createdAt || 0).getTime();
-    const dateB = b.createdAt?.seconds ? b.createdAt.seconds * 1000 : new Date(b.createdAt || 0).getTime();
-    return dateB - dateA;
+  
+  // Clean data so it can be passed safely to the Client Component
+  const initialProducts = officialSnap.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      // Convert Timestamps to numbers to prevent Next.js serialization errors
+      createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : data.createdAt
+    };
   });
 
   return (
@@ -79,28 +85,9 @@ export default async function OfficialStorePage() {
         </div>
       </section>
 
-      {/* PRODUCT GRID USING YOUR EXACT HOMEPAGE COMPONENT */}
+      {/* PRODUCT GRID USING THE NEW CLIENT FEED */}
       <section className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 mt-8 md:mt-12">
-        {sortedProducts.length > 0 ? (
-          <ProductSection 
-            title="Available Inventory" 
-            products={sortedProducts} 
-          />
-        ) : (
-          <div className="text-center py-20 bg-white dark:bg-[#111] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm mt-8">
-            <span className="text-4xl mb-4 block">📦</span>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Inventory Updating</h3>
-            <p className="text-slate-500 dark:text-slate-400 font-medium mb-6">
-              We are currently restocking our official items. Check back soon.
-            </p>
-            <Link 
-              href="/" 
-              className="inline-block px-8 py-3 bg-slate-900 dark:bg-slate-200 text-white dark:text-black rounded-full font-bold shadow-md hover:scale-105 transition-transform"
-            >
-              Return to Homepage
-            </Link>
-          </div>
-        )}
+        <OfficialProductFeed initialProducts={initialProducts} />
       </section>
 
     </div>
