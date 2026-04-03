@@ -6,7 +6,7 @@ import Link from "next/link";
 import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
-// ✅ Add this line instead:
+// ✅ Revalidation set
 export const revalidate = 60;
 
 // --- SHUFFLE HELPER FUNCTION ---
@@ -19,6 +19,11 @@ const shuffleArray = (array: any[]) => {
   return shuffled;
 };
 
+// --- DIVIDER COMPONENT ---
+const SectionDivider = () => (
+  <div className="w-full h-px bg-slate-200 dark:bg-slate-800 my-6 sm:my-8" />
+);
+
 export default async function Home() {
   const now = Date.now();
 
@@ -28,7 +33,7 @@ export default async function Home() {
   let officialProducts = officialSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
   officialProducts = shuffleArray(officialProducts);
 
-  // 2. Fetch Approved Quality
+  // 2. Fetch Approved Quality (Tested & Trusted)
   const approvedQ = query(collection(db, "products"), where("isApprovedQuality", "==", true), limit(12));
   const approvedSnap = await getDocs(approvedQ);
   let approvedProducts = approvedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
@@ -56,16 +61,33 @@ export default async function Home() {
   const latestProducts = latestSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
   // 6. Fetch "For Her" Products
-  const ladiesQ = query(collection(db, "products"), where("ladies_home", "==", true), limit(8));
+  const ladiesQ = query(collection(db, "products"), where("ladies_home", "==", true), limit(12));
   const ladiesSnap = await getDocs(ladiesQ);
   let ladiesProducts = ladiesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
   ladiesProducts = shuffleArray(ladiesProducts);
 
+  // 7. Fetch Electronics & Gadgets
+  const electronicsQ = query(collection(db, "products"), where("category", "==", "electronics"), limit(12));
+  const electronicsSnap = await getDocs(electronicsQ);
+  let electronicsProducts = electronicsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+  electronicsProducts = shuffleArray(electronicsProducts);
+
+  // 8. Fetch Student Essentials
+  const studentQ = query(collection(db, "products"), where("category", "==", "student_item"), limit(12));
+  const studentSnap = await getDocs(studentQ);
+  let studentProducts = studentSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+  studentProducts = shuffleArray(studentProducts);
+
+  // 9. Fetch Farm & Fresh Produce
+  const agriQ = query(collection(db, "products"), where("category", "==", "agriculture"), limit(12));
+  const agriSnap = await getDocs(agriQ);
+  let agriProducts = agriSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+  agriProducts = shuffleArray(agriProducts);
+
   return (
     <div className="min-h-screen bg-slate-50 pb-12 pt-6 sm:pt-20 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
 
-
-      {/* NEW TOP MESSAGE (Replacing Search Bar & Trust Section) */}
+      {/* TOP MESSAGE */}
       <section className="py-4 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-slate-800 shadow-sm flex justify-center px-4">
         <h1 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-200 text-center tracking-wide">
           Find Trusted Products in Kabale — <span className="text-[#D97706] font-black">Pay After Inspecting the item</span>
@@ -75,9 +97,10 @@ export default async function Home() {
       {/* MIDDLE NAV */}
       <MiddleNav />
 
-      <div className="w-full mt-6 space-y-12">
+      {/* MAIN CONTENT WRAPPER - Removed space-y-12 to handle spacing manually with dividers */}
+      <div className="w-full mt-6">
 
-        {/* 1. OFFICIAL STORES (Now a Horizontal Scroller) */}
+        {/* 1. OFFICIAL STORES */}
         {officialProducts.length > 0 && (
           <section className="w-full pt-2">
             <HorizontalScroller 
@@ -88,21 +111,21 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 2. QUICK SHIP MESSAGE */}
-        <section className="w-full max-w-[800px] mx-auto px-4">
-          <div className="bg-white dark:bg-[#111] rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-shadow hover:shadow-md">
-            <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6">
+        {/* FULL WIDTH QUICK SHIP BANNER */}
+        <section className="w-full bg-green-50 dark:bg-[#0a2010] border-y border-green-200 dark:border-green-900/50 py-8 my-6">
+          <div className="max-w-[800px] mx-auto px-4">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
               <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4">
-                <div className="w-12 h-12 bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-500 rounded-full flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 bg-white dark:bg-green-950 text-green-600 dark:text-green-500 rounded-full flex items-center justify-center shrink-0 shadow-sm">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
                 <div>
-                  <h3 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight mb-1">
+                  <h3 className="text-xl sm:text-2xl font-black text-green-950 dark:text-green-50 tracking-tight mb-1">
                     Need it today?
                   </h3>
-                  <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
+                  <p className="text-sm sm:text-base text-green-800 dark:text-green-300">
                     Get fast, direct delivery in Kabale. Chat with our local support team to arrange it right now.
                   </p>
                 </div>
@@ -122,29 +145,27 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 3. TESTED & TRUSTED (As it is now) */}
+        {/* 3. TESTED & TRUSTED */}
         {approvedProducts.length > 0 && (
-          <section className="flex flex-col items-center w-full">
-            <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
-              <ProductSection title="Tested & Trusted Products" products={approvedProducts} />
-            </div>
-            <div className="mt-8 flex flex-col items-center text-center px-4">
-              <p className="text-slate-700 dark:text-slate-300 font-bold mb-3 text-sm sm:text-base max-w-md">
-                See more quality verified products in official stores section
-              </p>
-              <Link href="/officialStore" className="px-8 py-3 bg-[#D97706] hover:bg-amber-600 text-white font-black text-sm uppercase tracking-wider shadow-md rounded-sm transition-colors">
-                Official products &gt;&gt;
-              </Link>
-            </div>
+          <section className="w-full">
+            <HorizontalScroller 
+              title="Tested & Trusted Products" 
+              products={approvedProducts} 
+              viewAllLink="/officialStore" 
+            />
           </section>
         )}
+
+        <SectionDivider />
 
         {/* 4. URGENT STORIES */}
         <UrgentStories />
 
-        {/* 5. HOT PICKS FOR HER (Now a Horizontal Scroller) */}
+        <SectionDivider />
+
+        {/* 5. HOT PICKS FOR HER */}
         {ladiesProducts.length > 0 && (
-          <section className="w-full pt-2">
+          <section className="w-full">
             <HorizontalScroller 
               title="Hot Picks for Her 💖" 
               products={ladiesProducts} 
@@ -153,11 +174,50 @@ export default async function Home() {
           </section>
         )}
 
-        
+        <SectionDivider />
 
-        {/* 7. JUST ADDED (Now a Horizontal Scroller) */}
+        {/* 6. ELECTRONICS & GADGETS */}
+        {electronicsProducts.length > 0 && (
+          <section className="w-full">
+            <HorizontalScroller 
+              title="Electronics & Gadgets" 
+              products={electronicsProducts} 
+              viewAllLink="/category/electronics" 
+            />
+          </section>
+        )}
+
+        <SectionDivider />
+
+        {/* 7. STUDENT ESSENTIALS */}
+        {studentProducts.length > 0 && (
+          <section className="w-full">
+            <HorizontalScroller 
+              title="Student Essentials" 
+              products={studentProducts} 
+              viewAllLink="/category/student_item" 
+            />
+          </section>
+        )}
+
+        <SectionDivider />
+
+        {/* 8. FARM & FRESH PRODUCE */}
+        {agriProducts.length > 0 && (
+          <section className="w-full">
+            <HorizontalScroller 
+              title="Farm & Fresh Produce" 
+              products={agriProducts} 
+              viewAllLink="/category/agriculture" 
+            />
+          </section>
+        )}
+
+        <SectionDivider />
+
+        {/* 9. JUST ADDED */}
         {latestProducts.length > 0 && (
-          <section className="w-full pt-2">
+          <section className="w-full">
             <HorizontalScroller 
               title="Just Added" 
               products={latestProducts} 
@@ -166,14 +226,16 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 8. BOOSTED CAROUSEL & SELL CTA */}
+        <SectionDivider />
+
+        {/* 10. BOOSTED CAROUSEL & SELL CTA */}
         {boostedProducts.length > 0 && (
           <>
-            <section className="w-full pt-6">
+            <section className="w-full">
               <HorizontalScroller title="Today’s Sponsored Deals" products={boostedProducts} />
             </section>
 
-            <section className="relative py-10 md:py-12 overflow-hidden w-full bg-white dark:bg-[#111] my-4">
+            <section className="relative py-10 md:py-12 overflow-hidden w-full bg-white dark:bg-[#111] my-8 border-y border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#D97706]/10 blur-[100px] rounded-full pointer-events-none" />
 
               <div className="relative z-10 w-full max-w-[900px] mx-auto px-4 flex flex-col items-center text-center">
@@ -220,15 +282,16 @@ export default async function Home() {
           </>
         )}
 
-        {/* 9. FEATURED CAROUSEL */}
+        {/* 11. FEATURED CAROUSEL */}
         {featuredProducts.length > 0 && (
           <section className="w-full">
             <HorizontalScroller title="Featured Picks" products={featuredProducts} />
+            <SectionDivider />
           </section>
         )}
 
-        {/* 10. ORIGINAL CATEGORIES BLOCK */}
-        <section className="py-12 border-t border-slate-200 dark:border-slate-800 mt-12">
+        {/* 12. ORIGINAL CATEGORIES BLOCK */}
+        <section className="py-6">
           <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest text-center mb-8">
               Explore by category
