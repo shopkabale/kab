@@ -153,20 +153,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 6. MERCHANT CODES SECTION */}
-        <section className="w-full max-w-[800px] mx-auto px-4 py-8 bg-white dark:bg-[#1a1a1a] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm text-center">
-          <h4 className="text-sm uppercase tracking-widest font-black text-slate-500 mb-6">Secure Payment Merchant Codes</h4>
-          <div className="flex flex-col sm:flex-row justify-center gap-6">
-            <div className="bg-red-50 dark:bg-red-950/30 p-4 rounded-lg border border-red-100 dark:border-red-900 w-full sm:w-48">
-              <span className="block text-red-600 dark:text-red-400 font-bold mb-1">Airtel Money</span>
-              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-widest">7050183</span>
-            </div>
-            <div className="bg-yellow-50 dark:bg-yellow-950/30 p-4 rounded-lg border border-yellow-100 dark:border-yellow-900 w-full sm:w-48">
-              <span className="block text-yellow-600 dark:text-yellow-500 font-bold mb-1">MTN MoMo</span>
-              <span className="text-2xl font-black text-slate-900 dark:text-white tracking-widest">14843537</span>
-            </div>
-          </div>
-        </section>
+        
 
         {/* 7. JUST ADDED (Now a Horizontal Scroller) */}
         {latestProducts.length > 0 && (
