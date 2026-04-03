@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     siteName: "Kabale Online",
     images: [
       {
-        url: "/official-og-image.jpg",
+        url: "/official-og-image.jpg", // Make sure to add this image to your /public folder!
         width: 1200,
         height: 630,
         alt: "Kabale Online Official Store",
@@ -46,24 +46,26 @@ export const metadata: Metadata = {
 const PAGE_SIZE = 20;
 
 export default async function OfficialStorePage() {
-  // Fetch INITIAL batch of products where the admin uploaded them directly
+  // 1. PROFESSIONAL QUERY: Only fetch 20, properly sorted.
+  // ⚠️ NOTE: Ensure your Firebase Composite Index is built for this!
   const officialQ = query(
     collection(db, "products"), 
     where("isAdminUpload", "==", true),
-    orderBy("createdAt", "desc"), // Ensures newest are first
+    orderBy("createdAt", "desc"),
     limit(PAGE_SIZE)
   );
 
   const officialSnap = await getDocs(officialQ);
   
-  // Clean data so it can be passed safely to the Client Component
+  // 2. SAFE SERIALIZATION: Clean data so Next.js doesn't crash on Server-to-Client pass
   const initialProducts = officialSnap.docs.map(doc => {
     const data = doc.data();
     return {
       id: doc.id,
       ...data,
-      // Convert Timestamps to numbers to prevent Next.js serialization errors
-      createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : data.createdAt
+      // Force any timestamps into safe numbers, fallback to 0 if missing
+      createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (new Date(data.createdAt || 0).getTime()),
+      updatedAt: data.updatedAt?.toMillis ? data.updatedAt.toMillis() : (new Date(data.updatedAt || 0).getTime()),
     };
   });
 
@@ -85,7 +87,7 @@ export default async function OfficialStorePage() {
         </div>
       </section>
 
-      {/* PRODUCT GRID USING THE NEW CLIENT FEED */}
+      {/* PRODUCT GRID USING THE CLIENT FEED */}
       <section className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 mt-8 md:mt-12">
         <OfficialProductFeed initialProducts={initialProducts} />
       </section>
