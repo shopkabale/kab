@@ -77,7 +77,7 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
             const isSold = p.status === "sold";
             const isApproved = p.isApprovedQuality;
             const isOfficial = p.isOfficialStore || p.isAdminUpload;
-            
+
             // Parse stock safely (defaults to 1 if not set)
             const currentStock = parseInt(p.stock?.toString() || "1", 10);
 
@@ -124,13 +124,13 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
                     <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 line-clamp-2 leading-snug mb-1 transition-colors duration-200 h-[34px] sm:h-[40px] group-hover:text-[#D97706] dark:group-hover:text-[#D97706]">
                       {p.title || p.name}
                     </h3>
-                    
+
                     <div className="mt-auto pt-1 flex flex-col">
                       {/* BOLD BLACK PRICE (Turns Orange on hover) */}
                       <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-500' : 'text-black dark:text-white group-hover:text-[#D97706] dark:group-hover:text-[#D97706]'}`}>
                         UGX {Number(p.price).toLocaleString()}
                       </span>
-                      
+
                       {/* LIGHT RED STOCK INDICATOR */}
                       {!isSold && (currentStock === 1 || currentStock === 2) && (
                         <span className="text-red-400 dark:text-red-400 text-[10px] font-bold mt-0.5">
@@ -149,7 +149,7 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
                     </div>
                   ) : (
                     <a 
-                      href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I am interested in this item: *${p.title || p.name}*`)}`}
+                      href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I am interested in this item on Kabale Online: *${p.title || p.name}*\n\nProduct ID: [${p.id}]`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full py-2.5 px-2 sm:px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-[11px] font-black uppercase flex items-center justify-center gap-2 transition-colors duration-200 outline-none group-hover:text-[#D97706] dark:group-hover:text-[#D97706]"
