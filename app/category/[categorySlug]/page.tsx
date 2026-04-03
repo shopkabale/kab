@@ -1,13 +1,11 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { getProducts } from "@/lib/firebase/firestore";
-// 🔥 Swapped ClientProductGrid for ProductSection to match Home Page
-import ProductSection from "@/components/ProductSection";
+import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
+import { db } from "@/lib/firebase/config";
+import CategoryProductFeed from "@/components/CategoryProductFeed";
 import SearchBar from "@/components/SearchBar";
-import { optimizeImage } from "@/lib/utils";
 
-// 🔥 1. REMOVED force-dynamic. 
-// 🔥 2. ADDED revalidate. Caches this category page for 1 hour.
+// 🔥 Caches this category page for 1 hour.
 // This saves you massive amounts of Firebase quota on high-traffic days.
 export const revalidate = 3600;
 
@@ -82,20 +80,7 @@ export async function generateMetadata({ params }: { params: { categorySlug: str
   };
 }
 
-// ==========================================
-// THE DAILY SHUFFLE ALGORITHM
-// ==========================================
-function getDailyRandomScore(id: string) {
-  const today = new Date().toISOString().split('T')[0];
-  const seedString = id + today; 
-
-  let hash = 0;
-  for (let i = 0; i < seedString.length; i++) {
-    hash = (hash << 5) - hash + seedString.charCodeAt(i);
-    hash |= 0; 
-  }
-  return hash;
-}
+const PAGE_SIZE = 20;
 
 // ==========================================
 // MAIN PAGE COMPONENT
@@ -105,28 +90,34 @@ export default async function CategoryPage({
 }: { 
   params: { categorySlug: string };
 }) {
-  // 🔥 3. PASS A LIMIT TO THE FIREBASE QUERY
-  // We pass 100 here. It fetches the 100 newest items for this category.
-  // This guarantees this page costs exactly 100 reads per hour max.
-  const rawCategoryProducts = await getProducts(params.categorySlug, 100);
+  const slug = params.categorySlug;
 
-  // 4. SHUFFLE THEM (Stable Daily Randomization on the 100 recent items)
-  rawCategoryProducts.sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id));
+  // 1. DYNAMIC FIREBASE QUERY: Get the first 20 items for this specific category
+  const categoryQ = query(
+    collection(db, "products"),
+    where("category", "==", slug),
+    orderBy("createdAt", "desc"),
+    limit(PAGE_SIZE)
+  );
 
-  // 5. OPTIMIZE ALL IMAGES
-  const allCategoryProducts = rawCategoryProducts.map((product) => {
-    if (!product.images || product.images.length === 0) return product;
+  const snap = await getDocs(categoryQ);
 
+  // 2. SAFE SERIALIZATION: Clean data so Next.js doesn't crash on Server-to-Client pass
+  const initialProducts = snap.docs.map(doc => {
+    const data = doc.data();
     return {
-      ...product,
-      images: product.images.map((img: string) => optimizeImage(img))
+      id: doc.id,
+      ...data,
+      // Force any timestamps into safe numbers, fallback to 0 if missing
+      createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (new Date(data.createdAt || 0).getTime()),
+      updatedAt: data.updatedAt?.toMillis ? data.updatedAt.toMillis() : (new Date(data.updatedAt || 0).getTime()),
     };
   });
 
-  // 6. Get the dynamic UI details for the hero banner
-  const info = categoryDetails[params.categorySlug] || {
-    title: params.categorySlug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    description: `Browse all items in ${params.categorySlug.replace(/_/g, ' ')}.`,
+  // 3. Get the dynamic UI details for the hero banner
+  const info = categoryDetails[slug] || {
+    title: slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+    description: `Browse all items in ${slug.replace(/_/g, ' ')}.`,
   };
 
   return (
@@ -156,14 +147,25 @@ export default async function CategoryPage({
       {/* ========================================== */}
       <div className="max-w-[1600px] mx-auto mt-8 space-y-6">
 
-        {/* THE HOMEPAGE PRODUCT SECTION 
-            Passed the dynamic info.title and item count into the ProductSection title 
+        {/* THE NEW PAGINATED FEED 
+          We pass the initial 20 items, the category slug to fetch more of, and the title.
         */}
         <div className="px-1 sm:px-4 pb-12">
-          <ProductSection 
-            title={`Latest ${info.title} Deals`} 
-            products={allCategoryProducts} 
-          />
+          {initialProducts.length > 0 ? (
+             <CategoryProductFeed 
+               initialProducts={initialProducts} 
+               categoryName={slug} 
+               title={`Latest ${info.title} Deals`} 
+             />
+          ) : (
+            <div className="text-center py-20 bg-white dark:bg-[#111] rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm mx-3">
+              <span className="text-4xl mb-4 block">🛒</span>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No items yet</h3>
+              <p className="text-slate-500 dark:text-slate-400 font-medium">
+                Check back soon! New deals are posted daily.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* ========================================== */}
@@ -197,7 +199,7 @@ export default async function CategoryPage({
                 }
               ].map((cat) => {
                 // Hide the current category from the "Other Categories" list
-                if (cat.link === params.categorySlug) return null;
+                if (cat.link === slug) return null;
 
                 return (
                   <Link 
