@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import SearchBar from "@/components/SearchBar";
-import ProductSection from "@/components/ProductSection";
 import Link from "next/link";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
+import CategoryProductFeed from "@/components/CategoryProductFeed";
 
 export const dynamic = "force-dynamic";
 
@@ -16,45 +16,50 @@ export const metadata: Metadata = {
   keywords: ["ladies", "women's fashion", "handbags", "perfumes", "jewelry", "Kabale Online", "Uganda shopping"],
   openGraph: {
     title: "Ladies' Top Picks 💖 | Kabale Online",
-    description: "Shop handbags, perfumes, jewelry, and beauty essentials. Handpicked for quality and style in Kabale.",
+    description: "Shop handbags, perfumes, jewelry, and beauty essentials.",
     url: "https://kabaleonline.com/ladies",
     siteName: "Kabale Online",
-    images: [
-      {
-        url: "/ladies-og-image.jpg", // Make sure to add this image to your /public folder!
-        width: 1200,
-        height: 630,
-        alt: "Kabale Online Ladies Collection",
-      },
-    ],
+    images: [{ url: "/ladies-og-image.jpg", width: 1200, height: 630, alt: "Kabale Online Ladies Collection" }],
     locale: "en_UG",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Ladies' Top Picks 💖 | Kabale Online",
-    description: "Shop handbags, perfumes, jewelry, and beauty essentials. Handpicked for quality and style in Kabale.",
+    description: "Shop handbags, perfumes, jewelry, and beauty essentials.",
     images: ["/ladies-og-image.jpg"],
   },
 };
 
+const PAGE_SIZE = 20;
+
 export default async function LadiesPage() {
-  // 1. Fetch all products where category is "ladies"
+  // 1. Fetch exactly 20 items for the "ladies" category, newest first
+  // ⚠️ IMPORTANT: You will need a Firebase Composite Index for (category + createdAt)
   const ladiesQ = query(
     collection(db, "products"),
-    where("category", "==", "ladies")
+    where("category", "==", "ladies"),
+    orderBy("createdAt", "desc"),
+    limit(PAGE_SIZE)
   );
 
   const snap = await getDocs(ladiesQ);
-  let products = snap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-
-  // 2. Sort by newest first (done in JS to avoid needing a custom Firestore index immediately)
-  products.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  
+  // 2. Safely serialize timestamps to prevent Next.js Digest errors
+  const initialProducts = snap.docs.map(doc => {
+    const data = doc.data();
+    return {
+      id: doc.id,
+      ...data,
+      createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (new Date(data.createdAt || 0).getTime()),
+      updatedAt: data.updatedAt?.toMillis ? data.updatedAt.toMillis() : (new Date(data.updatedAt || 0).getTime()),
+    };
+  });
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-12 font-sans selection:bg-pink-500 selection:text-white">
 
-      {/* SEARCH SECTION - Keeps navigation consistent */}
+      {/* SEARCH SECTION */}
       <section className="py-6 bg-white dark:bg-[#111] border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 flex items-center gap-4">
           <Link href="/" className="flex items-center justify-center w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors shrink-0">
@@ -68,9 +73,8 @@ export default async function LadiesPage() {
         </div>
       </section>
 
-      {/* HERO BANNER - Emotional Hook & Visual Appeal */}
+      {/* HERO BANNER */}
       <section className="relative w-full bg-pink-50 dark:bg-pink-950/20 py-12 md:py-16 border-b border-pink-100 dark:border-pink-900/50 overflow-hidden">
-        {/* Decorative Background Elements */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-pink-200/50 dark:bg-pink-900/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/3"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#D97706]/10 rounded-full blur-2xl translate-y-1/3 -translate-x-1/4"></div>
 
@@ -87,17 +91,20 @@ export default async function LadiesPage() {
         </div>
       </section>
 
-      {/* PRODUCT GRID */}
+      {/* PRODUCT GRID & PAGINATION */}
       <div className="w-full mt-8 md:mt-12">
-        {products.length > 0 ? (
+        {initialProducts.length > 0 ? (
           <section className="flex flex-col items-center w-full">
             <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
-              {/* Reusing your ProductSection component */}
-              <ProductSection title="All Ladies Collection" products={products} />
+              <CategoryProductFeed 
+                initialProducts={initialProducts} 
+                categoryName="ladies" 
+                title="All Ladies Collection" 
+              />
             </div>
           </section>
         ) : (
-          // EMPTY STATE - Crucial for UX if the category is empty
+          // EMPTY STATE
           <div className="flex flex-col items-center justify-center py-20 px-4 text-center">
             <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
               <span className="text-3xl">🛍️</span>
@@ -115,9 +122,9 @@ export default async function LadiesPage() {
         )}
       </div>
 
-      {/* PERSONAL SHOPPER CTA - Direct to WhatsApp */}
-      {products.length > 0 && (
-        <section className="w-full max-w-[800px] mx-auto px-4 mt-16 mb-8">
+      {/* PERSONAL SHOPPER CTA */}
+      {initialProducts.length > 0 && (
+        <section className="w-full max-w-[800px] mx-auto px-4 mt-8 mb-8">
           <div className="bg-pink-600 rounded-2xl p-6 sm:p-8 text-center sm:text-left flex flex-col sm:flex-row items-center justify-between gap-6 shadow-lg shadow-pink-600/20">
             <div>
               <h3 className="text-xl sm:text-2xl font-black text-white mb-2">Can't find what you need?</h3>
