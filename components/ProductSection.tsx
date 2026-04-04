@@ -31,9 +31,13 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
           // Badge Logic
           const isApproved = p.isApprovedQuality;
           const isOfficial = p.isOfficialStore || p.isAdminUpload;
-          
+
           // Parse stock safely (defaults to 1 if not set)
           const currentStock = parseInt(p.stock?.toString() || "1", 10);
+          
+          // Check if title is short enough to fit on one line (approx 24 characters)
+          const titleStr = p.title || p.name || 'Product';
+          const isShortTitle = titleStr.length <= 24;
 
           return (
             // Added opacity-80 if sold to subtly fade the card
@@ -45,7 +49,7 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
                   {optimizedImage ? (
                     <Image 
                       src={optimizedImage} 
-                      alt={p.name} 
+                      alt={titleStr} 
                       fill 
                       sizes="(max-width: 768px) 50vw, 20vw" 
                       className="object-cover group-hover:scale-105 transition-transform duration-500" 
@@ -85,22 +89,45 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
 
                 {/* Details Area */}
                 <div className="p-2 sm:p-3 flex flex-col flex-grow bg-white dark:bg-[#151515]">
-                  {/* GRAY TITLE (Turns Orange on hover) */}
-                  <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 line-clamp-2 leading-snug mb-1 transition-colors duration-200 h-[34px] sm:h-[40px] group-hover:text-[#D97706] dark:group-hover:text-[#D97706]">
-                    {p.name}
-                  </h3>
-                  
+                  {/* TITLE AREA (Fixed height, fills gap if short) */}
+                  <div className="h-[36px] sm:h-[42px] mb-1 flex flex-col justify-start">
+                    <h3 className={`text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 leading-snug transition-colors duration-200 group-hover:text-[#D97706] dark:group-hover:text-[#D97706] ${isShortTitle ? 'line-clamp-1' : 'line-clamp-2'}`}>
+                      {titleStr}
+                    </h3>
+                    {/* Short Title Filler: Delivery Notice */}
+                    {!isSold && isShortTitle && (
+                      <span className="text-[9px] text-emerald-600 dark:text-emerald-500 font-bold mt-0.5 flex items-center gap-0.5">
+                        <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        Ready for delivery
+                      </span>
+                    )}
+                  </div>
+
                   <div className="mt-auto pt-1 flex flex-col">
                     {/* BOLD BLACK PRICE (Turns Orange on hover) */}
                     <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-500' : 'text-black dark:text-white group-hover:text-[#D97706] dark:group-hover:text-[#D97706]'}`}>
                       UGX {Number(p.price).toLocaleString()}
                     </span>
 
-                    {/* LIGHT RED STOCK INDICATOR */}
-                    {!isSold && (currentStock === 1 || currentStock === 2) && (
-                      <span className="text-red-400 dark:text-red-400 text-[10px] font-bold mt-0.5">
-                        Only {currentStock} left
-                      </span>
+                    {/* TRAFFIC LIGHT STOCK INDICATOR */}
+                    {!isSold && (
+                      <div className="mt-0.5">
+                        {currentStock >= 6 && (
+                          <span className="text-emerald-500 dark:text-emerald-400 text-[10px] font-bold">
+                            In Stock (6+)
+                          </span>
+                        )}
+                        {currentStock >= 3 && currentStock <= 5 && (
+                          <span className="text-amber-500 dark:text-amber-400 text-[10px] font-bold">
+                            Only {currentStock} left
+                          </span>
+                        )}
+                        {currentStock >= 1 && currentStock <= 2 && (
+                          <span className="text-red-500 dark:text-red-400 text-[10px] font-bold">
+                            Only {currentStock} left
+                          </span>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -114,7 +141,7 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
                    </div>
                  ) : (
                    <a 
-                     href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I am interested in this item on Kabale Online: *${p.name}*\n\nProduct ID: [${p.id}]`)}`}
+                     href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I am interested in this item on Kabale Online: *${titleStr}*\n\nProduct ID: [${p.id}]`)}`}
                      target="_blank"
                      rel="noopener noreferrer"
                      className="w-full py-2.5 px-2 sm:px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-[11px] font-black uppercase flex justify-center items-center gap-2 transition-colors duration-200 outline-none group-hover:text-[#D97706] dark:group-hover:text-[#D97706]"
