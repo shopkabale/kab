@@ -54,7 +54,7 @@ export default function BottomNav() {
   // 3. Base navigation items
   const baseNavItems = [
     { label: "Home", href: "/" },
-    { label: "Sell", href: "/sell" },
+    { label: "Deals", href: "/products" },
     { label: "Profile", href: "/profile" },
   ];
 
