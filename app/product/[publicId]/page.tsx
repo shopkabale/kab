@@ -14,7 +14,6 @@ import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
 import SaveProductButton from "@/components/SaveProductButton";
 import { optimizeImage } from "@/lib/utils";
-import MakeOfferButton from "@/components/MakeOfferButton";
 
 export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
   const product = await getProductByPublicId(params.publicId);
@@ -82,7 +81,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
   // Logic for Authentic Scarcity
   const isLowStock = safeStock > 0 && safeStock <= 5;
-  const isAvailable = safeStock > 0;
+  const isSoldOut = safeStock <= 0;
 
   // ==========================================
   // 2. BULLETPROOF ADMIN CHECK
@@ -177,36 +176,56 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
           </h1>  
 
           {/* Price */}
-          <div className="mb-4 flex items-center gap-4">  
+          <div className="mb-1.5 flex items-center gap-4">  
             <span className="text-4xl font-black text-[#D97706]">  
               UGX {safePrice.toLocaleString()}  
             </span>  
           </div>  
 
+          {/* 🔥 NEW: INLINE MAKE OFFER LINK 🔥 */}
+          <div className="mb-6">
+            <p className="text-sm text-slate-500 font-medium">
+              Do you think the price is high? {' '}
+              <a 
+                href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021"}?text=${encodeURIComponent(`Hi! I want to make an offer for this item on Kabale Online:\n\n*${safeName}*\nProduct ID: [${product.id}]\n\nMy offer is: UGX `)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#D97706] font-bold underline decoration-slate-300 underline-offset-4 hover:decoration-[#D97706] transition-colors"
+              >
+                Tap me to tell us your price.
+              </a>
+            </p>
+          </div>
+
           {/* AUTHENTIC SCARCITY INDICATOR */}
-          {isAvailable && (
-            <div className={`mb-6 flex items-center gap-2 text-sm font-bold p-3 rounded-xl border w-fit ${
-              isLowStock 
+          <div className={`mb-6 flex items-center gap-2 text-sm font-bold p-3 rounded-xl border w-fit ${
+            isSoldOut 
+              ? "bg-slate-100 text-slate-600 border-slate-200"
+              : isLowStock 
                 ? "bg-red-50 text-red-600 border-red-100" 
                 : "bg-green-50 text-green-700 border-green-100"
-            }`}>
-              {isLowStock ? (
-                <>
-                  <svg className="w-5 h-5 animate-pulse shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>High Demand: Only {safeStock} left in stock!</span>
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
-                  </svg>
-                  <span>In Stock & Ready to Deliver</span>
-                </>
-              )}
-            </div>
-          )}
+          }`}>
+            {isSoldOut ? (
+               <>
+                <span className="text-lg">ℹ️</span>
+                <span>This item may be out of stock, but you can still inquire!</span>
+               </>
+            ) : isLowStock ? (
+              <>
+                <svg className="w-5 h-5 animate-pulse shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>High Demand: Only {safeStock} left in stock!</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+                <span>In Stock & Ready to Deliver</span>
+              </>
+            )}
+          </div>
 
           {/* FAST BUY ACTION */}
           <div className="mb-6">
@@ -215,7 +234,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
           {/* INLINE TRUST BOX (Conversion Machine Core) */}
           <div className="mb-10 bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4 shadow-sm">
-            {/* Trust Signal 1: Risk Reversal */}
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,7 +250,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </div>
             </div>
 
-            {/* Trust Signal 2: Local Delivery */}
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-[#D97706]/10 text-[#D97706] flex items-center justify-center shrink-0 mt-0.5">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -256,7 +273,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             {renderDescription(product.description)}
           </div>  
 
-          {/* 2-COLUMN SPECS TABLE (Cleaned Up) */}
+          {/* 2-COLUMN SPECS TABLE */}
           <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-10 bg-white">
             <table className="w-full text-sm text-left">
               <tbody className="divide-y divide-slate-200">
@@ -293,11 +310,10 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </table>
           </div>
 
-          {/* SECONDARY ACTIONS (Chat, Make Offer, Save) */}
+          {/* SECONDARY ACTIONS (Chat, Save) */}
           <div className="mb-10 border-b border-slate-200 pb-10">
             <ProductActions product={{...product, images: optimizedImages}}>
                 <div className="flex flex-col gap-3 mt-2 w-full">
-                  <MakeOfferButton product={product} />
                   <SaveProductButton product={product} />
                 </div>
             </ProductActions>
@@ -353,7 +369,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </Link>  
             ))}  
 
-            {/* View More Card at the end of the scroll */}
+            {/* View More Card */}
             <Link 
               href={`/category/${safeCategory}`} 
               className="flex-none w-[160px] sm:w-[220px] snap-start bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-500 p-4 hover:bg-slate-100 transition-colors"
@@ -370,9 +386,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         </div>  
       )}  
 
-      {/* ========================================== */}  
-      {/* SELLER ACQUISITION PROMPT                  */}  
-      {/* ========================================== */}
+      {/* SELLER ACQUISITION PROMPT */}
       <div className="mt-8 mb-12 border-t border-slate-200 pt-8 text-center px-4">
         <p className="text-slate-600 text-sm font-medium">
           Got something to sell?{' '}
