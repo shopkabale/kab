@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Product } from "@/types";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
 
 export default function ProductActions({ product, children }: { product: Product, children?: React.ReactNode }) {
   const { user } = useAuth();
@@ -15,34 +13,8 @@ export default function ProductActions({ product, children }: { product: Product
   const [showMore, setShowMore] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const [currentStock, setCurrentStock] = useState(Number(product.stock) || 0);
-  const [isLocked, setIsLocked] = useState((product as any).locked === true);
-  const [productStatus, setProductStatus] = useState(product.status);
-
   // Securely pull the WhatsApp Bot Number
   const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
-
-  useEffect(() => {
-    const fetchLiveStock = async () => {
-      try {
-        const docRef = doc(db, "products", product.id);
-        const snap = await getDoc(docRef);
-        if (snap.exists()) {
-          const liveData = snap.data();
-          setCurrentStock(Number(liveData.stock) || 0);
-          setIsLocked(liveData.locked === true);
-          setProductStatus(liveData.status);
-        }
-      } catch (error) {
-        console.error("Failed to fetch live stock:", error);
-      }
-    };
-    fetchLiveStock();
-  }, [product.id]);
-
-  const isSoldOut = currentStock <= 0 || productStatus === "sold_out";
-  const isReserved = isLocked;
-  const isUnavailable = isSoldOut || isReserved;
 
   // --- SELLER LOGIC ---
   const sellerNameStr = String(product.sellerName || "").toLowerCase();
@@ -50,7 +22,7 @@ export default function ProductActions({ product, children }: { product: Product
   const displayName = product.sellerName || "Verified Seller";
   const replyText = isOfficial ? "Replies within minutes" : "Response times vary";
 
-  // Route inquiries through the bot
+  // Route inquiries through the bot (Always active)
   const handleBotInquiry = () => {
     const rawMessage = `Hi! I have a question about this item on Kabale Online: *${product.name}*\n\nProduct ID: [${product.id}]`;
     const encodedMessage = encodeURIComponent(rawMessage);
@@ -84,19 +56,13 @@ export default function ProductActions({ product, children }: { product: Product
     }
   };
 
-  // Dynamic Button Styling
+  // Dynamic Button Styling (Only changes state for active loading)
   let btnLabel = "Have questions? Chat with seller";
   let btnClass = "bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300";
 
   if (loading) {
     btnLabel = "Processing...";
     btnClass = "bg-slate-100 text-slate-400 border border-slate-200 cursor-wait";
-  } else if (isSoldOut) {
-    btnLabel = "Sold Out";
-    btnClass = "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed";
-  } else if (isReserved) {
-    btnLabel = "Reserved (Pending Delivery)";
-    btnClass = "bg-amber-50 text-amber-700 border border-amber-200 cursor-not-allowed";
   }
 
   return (
@@ -104,7 +70,7 @@ export default function ProductActions({ product, children }: { product: Product
 
       {/* 1. SELLER INFO & CHAT BUTTON */}
       <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col gap-4">
-        
+
         {/* Seller Details */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-black text-lg border border-amber-200">
@@ -119,10 +85,10 @@ export default function ProductActions({ product, children }: { product: Product
           </div>
         </div>
 
-        {/* Chat Action */}
+        {/* Chat Action (No longer disabled by stock/status) */}
         <button 
           onClick={handleBotInquiry}
-          disabled={isUnavailable || loading}
+          disabled={loading}
           className={`w-full py-3 rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm ${btnClass}`}
         >
           <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -136,14 +102,14 @@ export default function ProductActions({ product, children }: { product: Product
       <div className="mt-2">
         <button 
           onClick={() => setShowMore(!showMore)}
-          className="text-sm font-bold text-slate-500 flex items-center gap-1 py-2 px-1"
+          className="text-sm font-bold text-slate-500 flex items-center gap-1 py-2 px-1 hover:text-slate-700 transition-colors"
         >
           {showMore ? "− Hide options" : "+ More options"}
         </button>
 
         {showMore && (
           <div className="mt-3 bg-slate-50 rounded-xl p-4 flex flex-col gap-3 border border-slate-100">
-            <button onClick={handleCopyLink} disabled={loading} className="w-full bg-white text-slate-700 border border-slate-200 py-3 rounded-xl font-bold text-sm flex justify-center gap-2 shadow-sm">
+            <button onClick={handleCopyLink} disabled={loading} className="w-full bg-white text-slate-700 border border-slate-200 py-3 rounded-xl font-bold text-sm flex justify-center gap-2 shadow-sm hover:bg-slate-100 transition-colors">
               {copied ? "✅ Link Copied!" : "🔗 Copy Link"}
             </button>
 
@@ -151,7 +117,7 @@ export default function ProductActions({ product, children }: { product: Product
             {children}
 
             {user?.role === "admin" && (
-              <button onClick={handleAdminDelete} disabled={loading} className="w-full bg-red-50 text-red-600 border border-red-200 py-3 rounded-xl font-bold text-sm flex justify-center mt-2">
+              <button onClick={handleAdminDelete} disabled={loading} className="w-full bg-red-50 text-red-600 border border-red-200 py-3 rounded-xl font-bold text-sm flex justify-center mt-2 hover:bg-red-100 transition-colors">
                 🗑️ Admin Delete
               </button>
             )}
