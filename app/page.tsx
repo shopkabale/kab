@@ -66,7 +66,7 @@ export default async function Home() {
   let ladiesProducts = ladiesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
   ladiesProducts = shuffleArray(ladiesProducts);
 
-  // 6.5 Fetch Watches (🔥 NOW LISTENS TO THE NEW ADMIN TOGGLE)
+  // 6.5 Fetch Watches (Admin Toggled)
   const watchQ = query(collection(db, "products"), where("watch_home", "==", true), limit(12));
   const watchSnap = await getDocs(watchQ);
   let watchProducts = watchSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
@@ -106,40 +106,11 @@ export default async function Home() {
       {/* MAIN CONTENT WRAPPER */}
       <div className="w-full mt-6">
 
-        {/* 1. OFFICIAL STORES */}
-        {officialProducts.length > 0 && (
+        {/* 1. TRENDING FOR HER (Moved to top!) */}
+        {ladiesProducts.length > 0 && (
           <section className="w-full pt-2">
             <HorizontalScroller 
-              title="From Official Stores" 
-              products={officialProducts} 
-              viewAllLink="/officialStore" 
-            />
-          </section>
-        )}
-
-        {/* 3. TESTED & TRUSTED */}
-        {approvedProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Tested & Trusted Products" 
-              products={approvedProducts} 
-              viewAllLink="/officialStore" 
-            />
-          </section>
-        )}
-
-        <SectionDivider />
-
-        {/* 4. URGENT STORIES */}
-        <UrgentStories />
-
-        <SectionDivider />
-
-        {/* 5. HOT PICKS FOR HER */}
-        {ladiesProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Hot Picks for Her 💖" 
+              title="Trending for Her" 
               products={ladiesProducts} 
               viewAllLink="/ladies" 
             />
@@ -148,15 +119,60 @@ export default async function Home() {
 
         <SectionDivider />
 
-        {/* ========================================== */}
-        {/* ⌚ FIND YOUR WATCH (ADMIN BADGE TOGGLED)   */}
-        {/* ========================================== */}
+        {/* 2. DISCOVER YOUR WATCH STYLE (View all goes to officialStore) */}
         {watchProducts.length > 0 && (
           <>
             <section className="w-full">
               <HorizontalScroller 
-                title="Find Your Watch ⌚" 
+                title="Discover Your Watch Style" 
                 products={watchProducts} 
+                viewAllLink="/officialStore" 
+              />
+            </section>
+            <SectionDivider />
+          </>
+        )}
+
+        {/* 3. OFFICIAL COLLECTION */}
+        {officialProducts.length > 0 && (
+          <>
+            <section className="w-full">
+              <HorizontalScroller 
+                title="Official Collection" 
+                products={officialProducts} 
+                viewAllLink="/officialStore" 
+              />
+            </section>
+            <SectionDivider />
+          </>
+        )}
+
+        {/* 4. VERIFIED & TRUSTED */}
+        {approvedProducts.length > 0 && (
+          <>
+            <section className="w-full">
+              <HorizontalScroller 
+                title="Verified & Trusted" 
+                products={approvedProducts} 
+                viewAllLink="/officialStore" 
+              />
+            </section>
+            <SectionDivider />
+          </>
+        )}
+
+        {/* URGENT STORIES (Breaking up the flow) */}
+        <UrgentStories />
+
+        <SectionDivider />
+
+        {/* 5. NEW ARRIVALS */}
+        {latestProducts.length > 0 && (
+          <>
+            <section className="w-full">
+              <HorizontalScroller 
+                title="New Arrivals" 
+                products={latestProducts} 
                 viewAllLink="/products" 
               />
             </section>
@@ -164,63 +180,11 @@ export default async function Home() {
           </>
         )}
 
-        {/* 6. ELECTRONICS & GADGETS */}
-        {electronicsProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Electronics & Gadgets" 
-              products={electronicsProducts} 
-              viewAllLink="/category/electronics" 
-            />
-          </section>
-        )}
-
-        <SectionDivider />
-
-        {/* 7. STUDENT ESSENTIALS */}
-        {studentProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Student Essentials" 
-              products={studentProducts} 
-              viewAllLink="/category/student_item" 
-            />
-          </section>
-        )}
-
-        <SectionDivider />
-
-        {/* 8. FARM & FRESH PRODUCE */}
-        {agriProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Farm & Fresh Produce" 
-              products={agriProducts} 
-              viewAllLink="/category/agriculture" 
-            />
-          </section>
-        )}
-
-        <SectionDivider />
-
-        {/* 9. JUST ADDED */}
-        {latestProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Just Added" 
-              products={latestProducts} 
-              viewAllLink="/products" 
-            />
-          </section>
-        )}
-
-        <SectionDivider />
-
-        {/* 10. BOOSTED CAROUSEL & SELL CTA */}
+        {/* 6. SPONSORED PICKS & SELL CTA */}
         {boostedProducts.length > 0 && (
           <>
             <section className="w-full">
-              <HorizontalScroller title="Today’s Sponsored Deals" products={boostedProducts} />
+              <HorizontalScroller title="Sponsored Picks" products={boostedProducts} />
             </section>
 
             <section className="relative py-10 md:py-12 overflow-hidden w-full bg-white dark:bg-[#111] my-8 border-y border-slate-200 dark:border-slate-800 shadow-sm">
@@ -270,15 +234,59 @@ export default async function Home() {
           </>
         )}
 
-        {/* 11. FEATURED CAROUSEL */}
-        {featuredProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller title="Featured Picks" products={featuredProducts} />
+        {/* 7. TECH ESSENTIALS */}
+        {electronicsProducts.length > 0 && (
+          <>
+            <section className="w-full">
+              <HorizontalScroller 
+                title="Tech Essentials" 
+                products={electronicsProducts} 
+                viewAllLink="/category/electronics" 
+              />
+            </section>
             <SectionDivider />
-          </section>
+          </>
         )}
 
-        {/* 12. BROWSE MORE COLLECTIONS */}
+        {/* 8. TOP PICKS */}
+        {featuredProducts.length > 0 && (
+          <>
+            <section className="w-full">
+              <HorizontalScroller title="Top Picks" products={featuredProducts} />
+            </section>
+            <SectionDivider />
+          </>
+        )}
+
+        {/* 9. CAMPUS DEALS */}
+        {studentProducts.length > 0 && (
+          <>
+            <section className="w-full">
+              <HorizontalScroller 
+                title="Campus Deals" 
+                products={studentProducts} 
+                viewAllLink="/category/student_item" 
+              />
+            </section>
+            <SectionDivider />
+          </>
+        )}
+
+        {/* 10. FRESH MARKET */}
+        {agriProducts.length > 0 && (
+          <>
+            <section className="w-full">
+              <HorizontalScroller 
+                title="Fresh Market" 
+                products={agriProducts} 
+                viewAllLink="/category/agriculture" 
+              />
+            </section>
+            <SectionDivider />
+          </>
+        )}
+
+        {/* BROWSE MORE COLLECTIONS */}
         <section className="py-8 mt-4 mb-8">
           <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
             <h3 className="text-xl md:text-2xl font-bold text-center mb-6 text-slate-800 dark:text-slate-200">
