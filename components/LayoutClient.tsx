@@ -9,6 +9,10 @@ import FloatingHelpButton from "@/components/FloatingHelpButton";
 import BottomNav from "@/components/BottomNav";
 import GlobalLoader from "@/components/GlobalLoader";
 
+// 🔥 1. IMPORT GTM NEXT.JS LIBRARY AND YOUR ID
+import { GoogleTagManager } from '@next/third-parties/google';
+import { GTM_ID } from "@/lib/analytics";
+
 export default function LayoutClient({
   children,
 }: {
@@ -51,37 +55,39 @@ export default function LayoutClient({
   const isBannerVisible = showBannerOnScroll && !isClosedManually;
 
   return (
-    <AuthProvider>
-      {/* 🔥 The Suspense boundary fixes the useSearchParams build crash */}
-      <Suspense fallback={null}>
-        <GlobalLoader />
-      </Suspense>
+    <>
+      {/* 🔥 2. INJECT GTM GLOBALLY ONLY IF ID EXISTS */}
+      {GTM_ID && <GoogleTagManager gtmId={GTM_ID} />}
 
-      {/* FIXED WEBSITE BANNER */}
-      {isBannerVisible && (
-        <WebsiteBanner onClose={() => setIsClosedManually(true)} />
-      )}
+      <AuthProvider>
+        {/* 🔥 The Suspense boundary fixes the useSearchParams build crash */}
+        <Suspense fallback={null}>
+          <GlobalLoader />
+        </Suspense>
 
-      {/* NAVBAR (moves up and down smoothly depending on banner visibility) */}
-      <Navbar bannerVisible={isBannerVisible} />
+        {/* FIXED WEBSITE BANNER */}
+        {isBannerVisible && (
+          <WebsiteBanner onClose={() => setIsClosedManually(true)} />
+        )}
 
-      {/* MAIN CONTENT */}
-      {/* 🔥 REMOVED: pb-8 from this tag to eliminate the extra bottom space */}
+        {/* NAVBAR (moves up and down smoothly depending on banner visibility) */}
+        <Navbar bannerVisible={isBannerVisible} />
 
-      <main className="flex-grow pt-[140px] lg:pt-[90px] w-full transition-all">
+        {/* MAIN CONTENT */}
+        {/* 🔥 REMOVED: pb-8 from this tag to eliminate the extra bottom space */}
+        <main className="flex-grow pt-[140px] lg:pt-[90px] w-full transition-all">
+          {children}
+        </main>
 
+        {/* FOOTER */}
+        <Footer />
 
-        {children}
-      </main>
+        {/* MOBILE BOTTOM NAV */}
+        <BottomNav />
 
-      {/* FOOTER */}
-      <Footer />
-
-      {/* MOBILE BOTTOM NAV */}
-      <BottomNav />
-
-      {/* FLOATING HELP BUTTON */}
-      <FloatingHelpButton />
-    </AuthProvider>
+        {/* FLOATING HELP BUTTON */}
+        <FloatingHelpButton />
+      </AuthProvider>
+    </>
   );
 }
