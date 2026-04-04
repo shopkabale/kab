@@ -3,12 +3,11 @@ import ProductSection from "@/components/ProductSection";
 import HorizontalScroller from "@/components/HorizontalScroller";
 import MiddleNav from "@/components/MiddleNav"; 
 import Link from "next/link";
-import { collection, query, where, getDocs, limit, orderBy, doc, getDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
 // ✅ Revalidation set
 export const revalidate = 3600; // Cache for 1 hour (60 seconds * 60 minutes)
-
 
 // --- SHUFFLE HELPER FUNCTION ---
 const shuffleArray = (array: any[]) => {
@@ -27,12 +26,6 @@ const SectionDivider = () => (
 
 export default async function Home() {
   const now = Date.now();
-
-  // 0. Fetch Global Settings (For Admin Toggles)
-  const settingsRef = doc(db, "settings", "home");
-  const settingsSnap = await getDoc(settingsRef);
-  const homeSettings = settingsSnap.exists() ? settingsSnap.data() : {};
-  const showWatchSection = homeSettings.showWatchSection === true;
 
   // 1. Fetch Official Stores
   const officialQ = query(collection(db, "products"), where("isAdminUpload", "==", true), limit(12));
@@ -73,15 +66,11 @@ export default async function Home() {
   let ladiesProducts = ladiesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
   ladiesProducts = shuffleArray(ladiesProducts);
 
-  // 6.5 Fetch Watches (ONLY IF TOGGLED ON IN ADMIN)
-  let watchProducts: any[] = [];
-  if (showWatchSection) {
-    // Note: Ensure you have products with category "watches"
-    const watchQ = query(collection(db, "products"), where("category", "==", "watches"), limit(12));
-    const watchSnap = await getDocs(watchQ);
-    watchProducts = watchSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-    watchProducts = shuffleArray(watchProducts);
-  }
+  // 6.5 Fetch Watches (🔥 NOW LISTENS TO THE NEW ADMIN TOGGLE)
+  const watchQ = query(collection(db, "products"), where("watch_home", "==", true), limit(12));
+  const watchSnap = await getDocs(watchQ);
+  let watchProducts = watchSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+  watchProducts = shuffleArray(watchProducts);
 
   // 7. Fetch Electronics & Gadgets
   const electronicsQ = query(collection(db, "products"), where("category", "==", "electronics"), limit(12));
@@ -114,7 +103,7 @@ export default async function Home() {
       {/* MIDDLE NAV */}
       <MiddleNav />
 
-      {/* MAIN CONTENT WRAPPER - Removed space-y-12 to handle spacing manually with dividers */}
+      {/* MAIN CONTENT WRAPPER */}
       <div className="w-full mt-6">
 
         {/* 1. OFFICIAL STORES */}
@@ -127,7 +116,6 @@ export default async function Home() {
             />
           </section>
         )}
-
 
         {/* 3. TESTED & TRUSTED */}
         {approvedProducts.length > 0 && (
@@ -161,15 +149,15 @@ export default async function Home() {
         <SectionDivider />
 
         {/* ========================================== */}
-        {/* ⌚ FIND YOUR WATCH (ADMIN TOGGLED)         */}
+        {/* ⌚ FIND YOUR WATCH (ADMIN BADGE TOGGLED)   */}
         {/* ========================================== */}
-        {showWatchSection && watchProducts.length > 0 && (
+        {watchProducts.length > 0 && (
           <>
             <section className="w-full">
               <HorizontalScroller 
                 title="Find Your Watch ⌚" 
                 products={watchProducts} 
-                viewAllLink="/category/watches" 
+                viewAllLink="/products" 
               />
             </section>
             <SectionDivider />
@@ -290,7 +278,7 @@ export default async function Home() {
           </section>
         )}
 
-                {/* 12. BROWSE MORE COLLECTIONS */}
+        {/* 12. BROWSE MORE COLLECTIONS */}
         <section className="py-8 mt-4 mb-8">
           <div className="w-full max-w-[1200px] mx-auto px-3 sm:px-4">
             <h3 className="text-xl md:text-2xl font-bold text-center mb-6 text-slate-800 dark:text-slate-200">
@@ -303,36 +291,35 @@ export default async function Home() {
                 { 
                   name: "Verified Premium ⭐", 
                   href: "/officialStore",
-                  image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500&q=80" // Sleek, premium shopping vibe
+                  image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500&q=80" 
                 },
                 { 
                   name: "Her Glow Up 💖", 
                   href: "/ladies",
-                  image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500&q=80" // Cosmetics / Beauty / Fashion
+                  image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500&q=80" 
                 },
                 { 
                   name: "Tech & Gadgets 💻", 
                   href: "/category/electronics",
-                  image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=80" // Sleek electronics setup
+                  image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=80" 
                 },
                 { 
                   name: "Campus Survival Kits 🎓", 
                   href: "/category/student_item",
-                  image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&q=80" // Backpack and student essentials
+                  image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&q=80" 
                 },
                 { 
                   name: "Farm Fresh Harvest 🌱", 
                   href: "/category/agriculture",
-                  image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80" // Vibrant fresh produce
+                  image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80" 
                 },
                 { 
                   name: "Just Dropped 🔥", 
                   href: "/products",
-                  image: "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=500&q=80" // Cool store/shopping bags for new arrivals
+                  image: "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=500&q=80" 
                 },
               ].map((cat) => (
                 <Link key={cat.name} href={cat.href} className="group flex flex-col items-center outline-none">
-                  {/* Image Container with matching purple-ish border from your screenshot */}
                   <div className="w-full aspect-square bg-slate-100 dark:bg-slate-800 rounded-lg border-2 border-[#A890D3] dark:border-[#7a64a3] overflow-hidden mb-3 relative shadow-sm group-hover:shadow-md group-hover:border-[#D97706] transition-all duration-300">
                     <img 
                       src={cat.image} 
@@ -340,7 +327,6 @@ export default async function Home() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                   </div>
-                  {/* Category Name Below */}
                   <span className="text-sm sm:text-base font-bold text-slate-700 dark:text-slate-300 group-hover:text-[#D97706] transition-colors text-center">
                     {cat.name}
                   </span>
@@ -349,7 +335,8 @@ export default async function Home() {
             </div>
           </div>
         </section>
-{/* FULL WIDTH QUICK SHIP BANNER */}
+
+        {/* FULL WIDTH QUICK SHIP BANNER */}
         <section className="w-full bg-green-50 dark:bg-[#0a2010] border-y border-green-200 dark:border-green-900/50 py-8 my-6">
           <div className="max-w-[800px] mx-auto px-4">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
