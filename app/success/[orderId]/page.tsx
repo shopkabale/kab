@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { adminDb } from "@/lib/firebase/admin";
 import { redirect } from "next/navigation";
+import SuccessTracker from "@/components/SuccessTracker"; // 🔥 IMPORT TRACKER
 
 // This is a Server Component, so we can fetch data directly and securely
 export default async function SuccessPage({ params }: { params: { orderId: string } }) {
@@ -16,10 +17,24 @@ export default async function SuccessPage({ params }: { params: { orderId: strin
   const safeOrderNumber = orderData.orderNumber || "KAB-PENDING";
   const safeTotal = Number(orderData.total) || 0;
   const buyerName = orderData.buyerName || "Customer";
+  const productId = orderData.productId || "unknown_product";
 
   return (
     <div className="min-h-[80vh] flex flex-col items-center justify-center px-4 py-12 bg-slate-50">
-      
+
+      {/* 🔥 INVISIBLE PURCHASE TRACKER FOR GOOGLE ADS */}
+      <SuccessTracker 
+        orderId={safeOrderNumber} 
+        total={safeTotal} 
+        items={[
+          { 
+            id: productId, 
+            name: orderData.productName || "Ordered Item", 
+            price: safeTotal 
+          }
+        ]} 
+      />
+
       {/* Success Icon */}
       <div className="relative mb-8">
         <div className="absolute inset-0 bg-green-200 rounded-full animate-ping opacity-50"></div>
