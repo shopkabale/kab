@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import Image from "next/image";
-import { doc, updateDoc, getDoc, setDoc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/config"; // Ensure this path matches your setup
 
 export default function OfficialProductsManager() {
@@ -14,28 +14,10 @@ export default function OfficialProductsManager() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Global Settings State
-  const [showWatchSection, setShowWatchSection] = useState(false);
-
   // Pagination States
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastDocId, setLastDocId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
-
-  // ------------------------------------------------------------------
-  // FETCH GLOBAL SETTINGS
-  // ------------------------------------------------------------------
-  const fetchSettings = async () => {
-    try {
-      const settingsRef = doc(db, "settings", "home");
-      const snap = await getDoc(settingsRef);
-      if (snap.exists()) {
-        setShowWatchSection(!!snap.data().showWatchSection);
-      }
-    } catch (error) {
-      console.error("Failed to fetch global settings:", error);
-    }
-  };
 
   const fetchOfficialProducts = async (isLoadMore = false) => {
     if (!user || user.role !== "admin") return;
@@ -89,36 +71,18 @@ export default function OfficialProductsManager() {
 
   useEffect(() => {
     if (user?.role === "admin") {
-      fetchSettings();
       fetchOfficialProducts();
     }
   }, [user]);
 
   // ------------------------------------------------------------------
-  // TOGGLE GLOBAL HOMEPAGE SECTION
-  // ------------------------------------------------------------------
-  const toggleGlobalWatchSection = async () => {
-    const newValue = !showWatchSection;
-    
-    // Optimistic UI Update
-    setShowWatchSection(newValue);
-
-    try {
-      const settingsRef = doc(db, "settings", "home");
-      // Use setDoc with merge: true in case the document doesn't exist yet
-      await setDoc(settingsRef, { showWatchSection: newValue }, { merge: true });
-    } catch (error) {
-      console.error("Failed to update global settings:", error);
-      // Revert if failed
-      setShowWatchSection(!newValue);
-      alert("Failed to update homepage layout. Please check your connection.");
-    }
-  };
-
-  // ------------------------------------------------------------------
   // TOGGLE PRODUCT BADGES
   // ------------------------------------------------------------------
-  const toggleBadge = async (productId: string, field: "isOfficialStore" | "isApprovedQuality" | "ladies_home", currentValue: boolean) => {
+  const toggleBadge = async (
+    productId: string, 
+    field: "isOfficialStore" | "isApprovedQuality" | "ladies_home" | "watch_home", 
+    currentValue: boolean
+  ) => {
     const newValue = !currentValue;
 
     // 1. Optimistic UI update (feels instant to the user)
@@ -148,36 +112,21 @@ export default function OfficialProductsManager() {
   return (
     <div className="max-w-7xl mx-auto pb-20 md:pb-0 px-4">
       
-      {/* HEADER & GLOBAL SETTINGS */}
+      {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900">Official Store Manager</h1>
           <p className="text-slate-500 font-medium mt-1">Manage Kabale Online's internal inventory & Badges</p>
         </div>
-
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-          {/* Global Homepage Toggles */}
-          <div className="flex items-center justify-between w-full sm:w-auto gap-4 bg-white border border-slate-200 px-4 py-3 rounded-xl shadow-sm">
-            <span className="text-sm font-bold text-slate-700 whitespace-nowrap">⌚ "Find Your Watch" Section</span>
-            <button
-              onClick={toggleGlobalWatchSection}
-              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${showWatchSection ? 'bg-[#D97706]' : 'bg-slate-300'}`}
-              title="Toggle Watch Section on Homepage"
-            >
-              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showWatchSection ? 'translate-x-6' : 'translate-x-1'}`} />
-            </button>
-          </div>
-
-          <Link href="/admin/upload" className="bg-[#D97706] text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md flex items-center justify-center gap-2 w-full sm:w-auto shrink-0">
-            <span>+</span> Add New Item
-          </Link>
-        </div>
+        <Link href="/admin/upload" className="bg-[#D97706] text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md flex items-center justify-center gap-2 w-full sm:w-auto shrink-0">
+          <span>+</span> Add New Item
+        </Link>
       </div>
 
       {/* PRODUCTS TABLE */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+          <table className="w-full text-left border-collapse min-w-[1100px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
                 <th className="p-4 px-6">Product</th>
@@ -186,17 +135,18 @@ export default function OfficialProductsManager() {
                 <th className="p-4 px-6 text-center">Official Store</th>
                 <th className="p-4 px-6 text-center">Approved Quality</th>
                 <th className="p-4 px-6 text-center">Ladies Home</th>
+                <th className="p-4 px-6 text-center">Watch Home</th>
                 <th className="p-4 px-6 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                  <tr>
-                   <td colSpan={7} className="px-6 py-12 text-center text-slate-500">Loading official inventory...</td>
+                   <td colSpan={8} className="px-6 py-12 text-center text-slate-500">Loading official inventory...</td>
                  </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500 font-medium">No official products found.</td>
+                  <td colSpan={8} className="px-6 py-12 text-center text-slate-500 font-medium">No official products found.</td>
                 </tr>
               ) : (
                 products.map((product) => (
@@ -255,6 +205,17 @@ export default function OfficialProductsManager() {
                         title="Toggle Ladies Home Status"
                       >
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.ladies_home ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </td>
+
+                    {/* WATCH HOME TOGGLE (NEW) */}
+                    <td className="p-4 px-6 text-center">
+                      <button
+                        onClick={() => toggleBadge(product.id, "watch_home", !!product.watch_home)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.watch_home ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                        title="Toggle Watch Home Status"
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.watch_home ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </td>
 
