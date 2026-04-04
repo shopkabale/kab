@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import Image from "next/image";
-import { doc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/config"; // Ensure this path matches your setup
 
 export default function OfficialProductsManager() {
@@ -14,10 +14,28 @@ export default function OfficialProductsManager() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Global Settings State
+  const [showWatchSection, setShowWatchSection] = useState(false);
+
   // Pagination States
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastDocId, setLastDocId] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
+
+  // ------------------------------------------------------------------
+  // FETCH GLOBAL SETTINGS
+  // ------------------------------------------------------------------
+  const fetchSettings = async () => {
+    try {
+      const settingsRef = doc(db, "settings", "home");
+      const snap = await getDoc(settingsRef);
+      if (snap.exists()) {
+        setShowWatchSection(!!snap.data().showWatchSection);
+      }
+    } catch (error) {
+      console.error("Failed to fetch global settings:", error);
+    }
+  };
 
   const fetchOfficialProducts = async (isLoadMore = false) => {
     if (!user || user.role !== "admin") return;
@@ -71,12 +89,34 @@ export default function OfficialProductsManager() {
 
   useEffect(() => {
     if (user?.role === "admin") {
+      fetchSettings();
       fetchOfficialProducts();
     }
   }, [user]);
 
   // ------------------------------------------------------------------
-  // NEW: Toggle Function to update Firestore
+  // TOGGLE GLOBAL HOMEPAGE SECTION
+  // ------------------------------------------------------------------
+  const toggleGlobalWatchSection = async () => {
+    const newValue = !showWatchSection;
+    
+    // Optimistic UI Update
+    setShowWatchSection(newValue);
+
+    try {
+      const settingsRef = doc(db, "settings", "home");
+      // Use setDoc with merge: true in case the document doesn't exist yet
+      await setDoc(settingsRef, { showWatchSection: newValue }, { merge: true });
+    } catch (error) {
+      console.error("Failed to update global settings:", error);
+      // Revert if failed
+      setShowWatchSection(!newValue);
+      alert("Failed to update homepage layout. Please check your connection.");
+    }
+  };
+
+  // ------------------------------------------------------------------
+  // TOGGLE PRODUCT BADGES
   // ------------------------------------------------------------------
   const toggleBadge = async (productId: string, field: "isOfficialStore" | "isApprovedQuality" | "ladies_home", currentValue: boolean) => {
     const newValue = !currentValue;
@@ -107,16 +147,34 @@ export default function OfficialProductsManager() {
 
   return (
     <div className="max-w-7xl mx-auto pb-20 md:pb-0 px-4">
+      
+      {/* HEADER & GLOBAL SETTINGS */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-200 pb-6">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900">Official Store Manager</h1>
           <p className="text-slate-500 font-medium mt-1">Manage Kabale Online's internal inventory & Badges</p>
         </div>
-        <Link href="/admin/upload" className="bg-[#D97706] text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md flex items-center gap-2">
-          <span>+</span> Add New Item
-        </Link>
+
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+          {/* Global Homepage Toggles */}
+          <div className="flex items-center justify-between w-full sm:w-auto gap-4 bg-white border border-slate-200 px-4 py-3 rounded-xl shadow-sm">
+            <span className="text-sm font-bold text-slate-700 whitespace-nowrap">⌚ "Find Your Watch" Section</span>
+            <button
+              onClick={toggleGlobalWatchSection}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none ${showWatchSection ? 'bg-[#D97706]' : 'bg-slate-300'}`}
+              title="Toggle Watch Section on Homepage"
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${showWatchSection ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          <Link href="/admin/upload" className="bg-[#D97706] text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md flex items-center justify-center gap-2 w-full sm:w-auto shrink-0">
+            <span>+</span> Add New Item
+          </Link>
+        </div>
       </div>
 
+      {/* PRODUCTS TABLE */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse min-w-[1000px]">
