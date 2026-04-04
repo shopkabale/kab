@@ -133,7 +133,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
   return (
     <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6">
-      <ProductTracker productId={product.id} />
+      <ProductTracker product={product} />
+
       <RecentlyViewedTracker product={product} />   
 
       {/* BREADCRUMBS */}  
