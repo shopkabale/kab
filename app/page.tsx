@@ -3,7 +3,7 @@ import ProductSection from "@/components/ProductSection";
 import HorizontalScroller from "@/components/HorizontalScroller";
 import MiddleNav from "@/components/MiddleNav"; 
 import Link from "next/link";
-import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs, limit, orderBy, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
 // ✅ Revalidation set
@@ -27,6 +27,12 @@ const SectionDivider = () => (
 
 export default async function Home() {
   const now = Date.now();
+
+  // 0. Fetch Global Settings (For Admin Toggles)
+  const settingsRef = doc(db, "settings", "home");
+  const settingsSnap = await getDoc(settingsRef);
+  const homeSettings = settingsSnap.exists() ? settingsSnap.data() : {};
+  const showWatchSection = homeSettings.showWatchSection === true;
 
   // 1. Fetch Official Stores
   const officialQ = query(collection(db, "products"), where("isAdminUpload", "==", true), limit(12));
@@ -66,6 +72,16 @@ export default async function Home() {
   const ladiesSnap = await getDocs(ladiesQ);
   let ladiesProducts = ladiesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
   ladiesProducts = shuffleArray(ladiesProducts);
+
+  // 6.5 Fetch Watches (ONLY IF TOGGLED ON IN ADMIN)
+  let watchProducts: any[] = [];
+  if (showWatchSection) {
+    // Note: Ensure you have products with category "watches"
+    const watchQ = query(collection(db, "products"), where("category", "==", "watches"), limit(12));
+    const watchSnap = await getDocs(watchQ);
+    watchProducts = watchSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    watchProducts = shuffleArray(watchProducts);
+  }
 
   // 7. Fetch Electronics & Gadgets
   const electronicsQ = query(collection(db, "products"), where("category", "==", "electronics"), limit(12));
@@ -112,7 +128,7 @@ export default async function Home() {
           </section>
         )}
 
-        
+
         {/* 3. TESTED & TRUSTED */}
         {approvedProducts.length > 0 && (
           <section className="w-full">
@@ -143,6 +159,22 @@ export default async function Home() {
         )}
 
         <SectionDivider />
+
+        {/* ========================================== */}
+        {/* ⌚ FIND YOUR WATCH (ADMIN TOGGLED)         */}
+        {/* ========================================== */}
+        {showWatchSection && watchProducts.length > 0 && (
+          <>
+            <section className="w-full">
+              <HorizontalScroller 
+                title="Find Your Watch ⌚" 
+                products={watchProducts} 
+                viewAllLink="/category/watches" 
+              />
+            </section>
+            <SectionDivider />
+          </>
+        )}
 
         {/* 6. ELECTRONICS & GADGETS */}
         {electronicsProducts.length > 0 && (
@@ -350,8 +382,6 @@ export default async function Home() {
             </div>
           </div>
         </section>
-
-
 
       </div>
     </div>
