@@ -84,9 +84,9 @@ export default function Footer() {
               <li><Link href="/officialStore" className="hover:text-[#D97706] transition-colors">Official Store</Link></li>
               <li><Link href="/ladies" className="hover:text-[#D97706] transition-colors">Ladies' Picks 💖</Link></li>
               <li><Link href="/category/student_item" className="hover:text-[#D97706] transition-colors">Student Market</Link></li>
-              <li><Link href="/products" className="hover:text-[#D97706] transition-colors">All Items</Link></li>
               <li><Link href="/category/electronics" className="hover:text-[#D97706] transition-colors">Electronics</Link></li>
               <li><Link href="/category/agriculture" className="hover:text-[#D97706] transition-colors">Agriculture</Link></li>
+              <li><Link href="/products" className="hover:text-[#D97706] transition-colors">View All Products</Link></li>
             </ul>
           </div>
 
@@ -97,8 +97,14 @@ export default function Footer() {
             </h3>
             <ul className="space-y-3">
               <li><Link href="/requests" className="hover:text-[#D97706] transition-colors">Buyer Requests</Link></li>
-              <li><Link href="/ai" className="hover:text-[#D97706] transition-colors flex items-center gap-1.5"><span className="text-[#D97706] text-sm">✨</span> AI Shopping Guide</Link></li>
+              <li>
+                <Link href="/ai" className="hover:text-[#D97706] transition-colors flex items-center gap-1.5">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                  AI Shopping Guide
+                </Link>
+              </li>
               <li><Link href="/blog" className="hover:text-[#D97706] transition-colors">Journal & Updates</Link></li>
+              <li><Link href="/guide" className="hover:text-[#D97706] transition-colors">Read Documentation</Link></li>
               <li><Link href="/guide" className="hover:text-[#D97706] transition-colors">Need Help?</Link></li>
               <li><Link href="/faq" className="hover:text-[#D97706] transition-colors">FAQ</Link></li>
             </ul>
