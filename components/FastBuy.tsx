@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Product } from "@/types";
+import { trackBeginCheckout } from "@/lib/analytics"; // 🔥 ADDED ANALYTICS
 
 export default function FastBuy({ product }: { product: Product }) {
   const { user } = useAuth();
@@ -22,6 +23,15 @@ export default function FastBuy({ product }: { product: Product }) {
   // ==========================================
   const handleBuyNowClick = () => {
     if (user && user.displayName) setBuyerName(user.displayName);
+    
+    // 🔥 Fire the Order Intent Event
+    trackBeginCheckout({
+      id: product.id,
+      name: product.name || "Unknown Item",
+      price: Number(product.price) || 0,
+      category: product.category || "general"
+    });
+
     setShowModal(true);
   };
 
