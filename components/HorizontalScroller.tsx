@@ -80,15 +80,19 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
 
             // Parse stock safely (defaults to 1 if not set)
             const currentStock = parseInt(p.stock?.toString() || "1", 10);
+            
+            // Check if title is short enough to fit on one line (approx 24 characters)
+            const titleStr = p.title || p.name || 'Product';
+            const isShortTitle = titleStr.length <= 24;
 
             return (
               <div key={p.id} className={`snap-start shrink-0 w-[150px] sm:w-[190px] group flex flex-col bg-white dark:bg-[#151515] rounded-sm overflow-hidden shadow-sm dark:border dark:border-slate-800 transition-all hover:shadow-md h-auto relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
                 <Link href={`/product/${p.publicId || p.id}`} className="flex flex-col flex-grow relative outline-none">
-                  <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900">
+                  <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
                     {optimizedImage ? (
                       <Image 
                         src={optimizedImage} 
-                        alt={p.title || p.name || 'Product'} 
+                        alt={titleStr} 
                         fill 
                         sizes="(max-width: 768px) 50vw, 20vw" 
                         className="object-cover group-hover:scale-105 transition-transform duration-500" 
@@ -113,17 +117,26 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
                     )}
 
                     {!isSold && (isApproved || isOfficial) && (
-                      <div className={`absolute bottom-0 left-0 ${isApproved ? 'bg-emerald-600' : 'bg-[#D97706]'} text-white text-[8px] font-bold px-1.5 py-1 leading-none rounded-tr-sm z-10 tracking-widest uppercase`}>
+                      <div className={`absolute bottom-0 left-0 ${isApproved ? 'bg-emerald-600' : 'bg-[#D97706]'} text-white text-[8px] font-bold px-1.5 py-1 leading-none rounded-tr-sm z-10 tracking-widest uppercase shadow-sm`}>
                          {isApproved ? 'Approved Quality' : 'Official Product'}
                       </div>
                     )}
                   </div>
 
                   <div className="p-2 sm:p-3 flex flex-col flex-grow">
-                    {/* GRAY TITLE (Turns Orange on hover) */}
-                    <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 line-clamp-2 leading-snug mb-1 transition-colors duration-200 h-[34px] sm:h-[40px] group-hover:text-[#D97706] dark:group-hover:text-[#D97706]">
-                      {p.title || p.name}
-                    </h3>
+                    {/* TITLE AREA (Fixed height, fills gap if short) */}
+                    <div className="h-[36px] sm:h-[42px] mb-1 flex flex-col justify-start">
+                      <h3 className={`text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 leading-snug transition-colors duration-200 group-hover:text-[#D97706] dark:group-hover:text-[#D97706] ${isShortTitle ? 'line-clamp-1' : 'line-clamp-2'}`}>
+                        {titleStr}
+                      </h3>
+                      {/* Short Title Filler: Delivery Notice */}
+                      {!isSold && isShortTitle && (
+                        <span className="text-[9px] text-emerald-600 dark:text-emerald-500 font-bold mt-0.5 flex items-center gap-0.5">
+                          <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                          Ready for delivery
+                        </span>
+                      )}
+                    </div>
 
                     <div className="mt-auto pt-1 flex flex-col">
                       {/* BOLD BLACK PRICE (Turns Orange on hover) */}
@@ -131,17 +144,31 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
                         UGX {Number(p.price).toLocaleString()}
                       </span>
 
-                      {/* LIGHT RED STOCK INDICATOR */}
-                      {!isSold && (currentStock === 1 || currentStock === 2) && (
-                        <span className="text-red-400 dark:text-red-400 text-[10px] font-bold mt-0.5">
-                          Only {currentStock} left
-                        </span>
+                      {/* TRAFFIC LIGHT STOCK INDICATOR */}
+                      {!isSold && (
+                        <div className="mt-0.5">
+                          {currentStock >= 6 && (
+                            <span className="text-emerald-500 dark:text-emerald-400 text-[10px] font-bold">
+                              In Stock (6+)
+                            </span>
+                          )}
+                          {currentStock >= 3 && currentStock <= 5 && (
+                            <span className="text-amber-500 dark:text-amber-400 text-[10px] font-bold">
+                              Only {currentStock} left
+                            </span>
+                          )}
+                          {currentStock >= 1 && currentStock <= 2 && (
+                            <span className="text-red-500 dark:text-red-400 text-[10px] font-bold">
+                              Only {currentStock} left
+                            </span>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
                 </Link>
 
-                {/* FULL WIDTH CTA (Turns Orange on hover) */}
+                {/* FULL WIDTH CTA */}
                 <div className="border-t border-slate-100 dark:border-slate-800 bg-gray-50 dark:bg-[#1a1a1a]">
                   {isSold ? (
                     <div className="w-full py-2 px-2 sm:px-3 text-slate-400 text-[11px] font-bold uppercase flex items-center justify-center">
@@ -149,7 +176,7 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
                     </div>
                   ) : (
                     <a 
-                      href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I am interested in this item on Kabale Online: *${p.title || p.name}*\n\nProduct ID: [${p.id}]`)}`}
+                      href={`https://wa.me/256740373021?text=${encodeURIComponent(`Hi! I am interested in this item on Kabale Online: *${titleStr}*\n\nProduct ID: [${p.id}]`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="w-full py-2.5 px-2 sm:px-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 text-[11px] font-black uppercase flex items-center justify-center gap-2 transition-colors duration-200 outline-none group-hover:text-[#D97706] dark:group-hover:text-[#D97706]"
