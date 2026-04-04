@@ -1,11 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Product } from "@/types";
-import { doc, getDoc } from "firebase/firestore"; 
-import { db } from "@/lib/firebase/config";
 
 export default function FastBuy({ product }: { product: Product }) {
   const { user } = useAuth();
@@ -15,37 +13,9 @@ export default function FastBuy({ product }: { product: Product }) {
   const [showModal, setShowModal] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Form States - Stripped down to absolute essentials
+  // Form States
   const [buyerName, setBuyerName] = useState(""); 
   const [contactPhone, setContactPhone] = useState("");
-
-  // Live Stock States
-  const [currentStock, setCurrentStock] = useState(Number(product.stock) || 0);
-  const [isLocked, setIsLocked] = useState((product as any).locked === true);
-  const [productStatus, setProductStatus] = useState(product.status);
-
-  useEffect(() => {
-    const fetchLiveStock = async () => {
-      try {
-        const docRef = doc(db, "products", product.id);
-        const snap = await getDoc(docRef);
-
-        if (snap.exists()) {
-          const liveData = snap.data();
-          setCurrentStock(Number(liveData.stock) || 0);
-          setIsLocked(liveData.locked === true);
-          setProductStatus(liveData.status);
-        }
-      } catch (error) {
-        console.error("Failed to fetch live stock from database:", error);
-      }
-    };
-    fetchLiveStock();
-  }, [product.id]); 
-
-  const isSoldOut = currentStock <= 0 || productStatus === "sold_out";
-  const isReserved = isLocked;
-  const isUnavailable = isSoldOut || isReserved;
 
   // ==========================================
   // FAST CHECKOUT LOGIC
@@ -88,7 +58,7 @@ export default function FastBuy({ product }: { product: Product }) {
           router.push(`/success/${data.orderId}`);
         }, 3000); 
       } else {  
-        alert(data.error || "Failed to place order. The item might have just been taken.");  
+        alert(data.error || "Failed to place order.");  
         setShowModal(false);
       }  
     } catch (error) {  
@@ -102,23 +72,17 @@ export default function FastBuy({ product }: { product: Product }) {
   return (
     <>
       <div className="flex flex-col gap-1.5 mt-8 mb-4">
-        {/* 🟢 PRIMARY BUTTON (High Intent) */}
+        {/* 🟢 PRIMARY BUTTON (Always Active & High Intent) */}
         <button   
           onClick={handleBuyNowClick}  
-          disabled={isUnavailable || loading}  
-          className={`w-full py-4 px-8 rounded-2xl font-black text-xl transition-all shadow-lg flex items-center justify-center gap-2 ${
-            isUnavailable 
-              ? "bg-slate-100 text-slate-400 cursor-not-allowed shadow-none" 
-              : "bg-[#D97706] text-white hover:bg-[#b46305] active:scale-[0.98]"
-          }`}  
+          disabled={loading}  
+          className="w-full py-4 px-8 rounded-2xl font-black text-xl transition-all shadow-lg flex items-center justify-center gap-2 bg-[#D97706] text-white hover:bg-[#b46305] active:scale-[0.98]"  
         >  
-          {isUnavailable ? (isSoldOut ? "❌ Sold Out" : "⚡ Reserved") : "Buy Now (Fast Order)"}
+          Buy Now (Fast Order)
         </button>
-        {!isUnavailable && (
-          <p className="text-center text-xs font-bold text-slate-500 tracking-wide mt-1">
-            ⚡ No account needed. Confirm instantly via WhatsApp.
-          </p>
-        )}
+        <p className="text-center text-xs font-bold text-slate-500 tracking-wide mt-1">
+          ⚡ No account needed. Confirm instantly via WhatsApp.
+        </p>
       </div>
 
       {/* ========================================== */}
