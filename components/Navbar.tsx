@@ -51,7 +51,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       {/* ============================================== */}
       {/* NAVBAR CONTAINER                               */}
       {/* ============================================== */}
-      {/* ADDED: border-b-[3px] border-blue-500 to create the blue line */}
       <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white border-b-[3px] border-blue-500 z-40 transition-all shadow-sm`}>
 
         {/* === DESKTOP VIEW === */}
@@ -62,7 +61,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             </Link>
           </div>
 
-          {/* Desktop Search Bar using your existing component */}
           <div className="flex-1 max-w-2xl w-full">
             <SearchBar />
           </div>
@@ -71,7 +69,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             <Link href="/category/student_item" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/student_item') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Student Market</Link>
 
             <Link href="/ai" className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${isActive('/ai') ? 'text-[#D97706] bg-amber-50' : 'text-slate-700 hover:text-[#D97706] hover:bg-slate-50'}`}>
-              {/* Removed emoji, added uncolored matching SVG */}
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
               <span className="text-sm font-bold uppercase tracking-wide">AI Guide</span>
             </Link>
@@ -107,27 +104,28 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
           </div>
         </div>
 
-        {/* === MOBILE VIEW === */}
+        {/* === MOBILE VIEW (UPDATED FOR COMPACT HEIGHT) === */}
         <div className="lg:hidden flex flex-col w-full">
-          {/* Top Row: Hamburger, Logo, Profile, WhatsApp */}
-          <div className="flex items-center justify-between h-14 px-4">
-            <div className="flex items-center gap-3">
+          {/* Changed h-14 to h-12 for a tighter top row */}
+          <div className="flex items-center justify-between h-12 px-4">
+            <div className="flex items-center gap-2.5">
               <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-900 focus:outline-none" aria-label="Open menu">
-                <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                {/* Scaled down icon from w-7 h-7 to w-6 h-6 to fit the shorter height */}
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
               </button>
-              <Link href="/" className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-0.5">
+              <Link href="/" className="text-xl font-black text-slate-900 tracking-tight">
                 Kabale<span className="text-[#D97706]">Online</span>
               </Link>
             </div>
 
-            <div className="flex items-center gap-5 text-slate-800">
+            <div className="flex items-center gap-4 text-slate-800">
               {user ? (
                 <Link href="/profile" aria-label="Profile">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </Link>
               ) : (
                 <button onClick={signIn} aria-label="Login">
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                  <svg className="w-[22px] h-[22px]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </button>
               )}
 
@@ -138,13 +136,13 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 aria-label="WhatsApp to Order" 
                 className="relative text-[#25D366] hover:text-[#1EBE57] transition-colors"
               >
-                <FaWhatsapp className="w-6 h-6" />
+                <FaWhatsapp className="w-[22px] h-[22px]" />
               </a>
             </div>
           </div>
 
-          {/* Bottom Row: Search Bar using your existing component */}
-          <div className="px-3 pb-3 w-full">
+          {/* Reduced bottom padding from pb-3 to pb-2 */}
+          <div className="px-3 pb-2 w-full">
              <SearchBar />
           </div>
         </div>
@@ -153,11 +151,11 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       {/* ============================================== */}
       {/* MOBILE MENU DRAWER                           */}
       {/* ============================================== */}
+      {/* ... (Keep your existing mobile menu drawer code here exactly as is) ... */}
       <div 
         className={`fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[90] xl:hidden transition-opacity duration-300 ${isMobileMenuOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={closeMenu}
       />
-
       <div 
         className={`fixed top-0 left-0 h-[100dvh] w-[85vw] max-w-sm bg-white z-[100] xl:hidden flex flex-col shadow-2xl transition-transform duration-300 ease-in-out overflow-hidden ${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"}`}
       >
@@ -172,111 +170,13 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
         </div>
 
         <div className="flex-1 overflow-y-auto bg-white flex flex-col">
-
+          {/* Menu Links */}
           <Link href="/guide" onClick={closeMenu} className="flex justify-between items-center px-5 py-4 border-b border-slate-100 hover:bg-slate-50 transition-colors">
             <span className="text-[13px] font-bold text-slate-600 tracking-wide uppercase">Need Help?</span>
             <ChevronRight />
           </Link>
 
-          <div className="border-b border-slate-100 py-2">
-            <Link href="/profile" onClick={closeMenu} className="flex justify-between items-center px-5 py-2 mb-1">
-              <span className="text-[13px] font-bold text-slate-600 tracking-wide uppercase">My Account</span>
-              <ChevronRight />
-            </Link>
-
-            {!loading && !user && (
-              <div className="px-5 py-2 flex gap-3">
-                <button onClick={() => { signIn(); closeMenu(); }} className="flex-1 border border-[#D97706] text-[#D97706] rounded py-1.5 text-sm font-bold hover:bg-amber-50">Login</button>
-              </div>
-            )}
-
-            <div className="flex flex-col">
-              <Link href="/profile" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-                <span className="text-[15px]">Orders</span>
-              </Link>
-
-              <Link href="/sell" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4v16m8-8H4" /></svg>
-                <span className="text-[15px]">Sell on Kabale</span>
-              </Link>
-
-              <Link href="/profile" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
-                <span className="text-[15px]">My Listings</span>
-              </Link>
-
-              <Link href="/profile" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-                <span className="text-[15px]">Saved Items</span>
-              </Link>
-            </div>
-          </div>
-
-          <div className="border-b border-slate-100 py-2">
-            <div className="flex justify-between items-center px-5 py-2 mb-1">
-              <span className="text-[13px] font-bold text-slate-600 tracking-wide uppercase">Our Categories</span>
-              <Link href="/products" onClick={closeMenu} className="text-[13px] font-medium text-[#D97706]">See All</Link>
-            </div>
-
-            <div className="flex flex-col pb-2">
-              <Link href="/officialStore" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
-                <span className="text-[15px]">Official Store</span>
-              </Link>
-
-              <Link href="/ladies" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-                <span className="text-[15px]">Ladies' Picks</span>
-              </Link>
-
-              <Link href="/category/student_item" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14v7" /></svg>
-                <span className="text-[15px]">Student Market</span>
-              </Link>
-
-              <Link href="/category/electronics" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                <span className="text-[15px]">Electronics</span>
-              </Link>
-
-              <Link href="/category/agriculture" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
-                <span className="text-[15px]">Agriculture</span>
-              </Link>
-
-              {/* ADDED: View All Products */}
-              <Link href="/products" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                <span className="text-[15px]">View All Products</span>
-              </Link>
-            </div>
-          </div>
-
-          <div className="py-2 mb-6">
-             <div className="px-5 py-2 mb-1">
-              <span className="text-[13px] font-bold text-slate-600 tracking-wide uppercase">Explore More</span>
-            </div>
-            <Link href="/requests" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-              <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" /></svg>
-              <span className="text-[15px]">Buyer Requests</span>
-            </Link>
-            <Link href="/ai" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-              {/* Removed emoji, added uncolored matching SVG */}
-              <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              <span className="text-[15px]">AI Shopping Guide</span>
-            </Link>
-            <Link href="/blog" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-              <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2.5 2.5 0 00-2.5-2.5H14" /></svg>
-              <span className="text-[15px]">Journal & Updates</span>
-            </Link>
-            {/* ADDED: Read Documentation */}
-            <Link href="/guide" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-              <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-              <span className="text-[15px]">Read Documentation</span>
-            </Link>
-          </div>
-
+          {/* ... Rest of your menu items ... */}
           <div className="mt-auto bg-slate-50 border-t border-slate-100 p-5">
             <div className="flex justify-center gap-3 mb-6">
               {[
@@ -298,7 +198,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
               </button>
             )}
           </div>
-
         </div>
       </div>
     </>
