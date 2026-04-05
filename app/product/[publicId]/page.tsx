@@ -46,7 +46,6 @@ export async function generateMetadata({ params }: { params: { publicId: string 
 // ==========================================
 // THE DAILY SHUFFLE ALGORITHM
 // ==========================================
-// We add this here so we can shuffle the related products stably without breaking the cache!
 function getDailyRandomScore(id: string) {
   const today = new Date().toISOString().split('T')[0];
   const seedString = id + today; 
@@ -58,6 +57,14 @@ function getDailyRandomScore(id: string) {
   return hash;
 }
 
+// ==========================================
+// HELPER: CHECK IF ITEM IS NEW (< 7 DAYS)
+// ==========================================
+const checkIsNew = (p: any) => {
+  const pDate = p.createdAt?.seconds ? p.createdAt.seconds * 1000 : new Date(p.createdAt || 0).getTime();
+  return pDate > 0 && (Date.now() - pDate) < (7 * 24 * 60 * 60 * 1000); 
+};
+
 export default async function ProductDetailsPage({ params }: { params: { publicId: string } }) {
   const product = await getProductByPublicId(params.publicId);
 
@@ -67,6 +74,11 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const safePrice = Number(product.price) || 0;
   const safeCondition = product.condition || "used";
   const safeCategory = product.category || "general";
+
+  // Product States
+  const isMainProductNew = checkIsNew(product);
+  const isMainApproved = product.isApprovedQuality;
+  const isMainOfficial = product.isOfficialStore || product.isAdminUpload;
 
   // ==========================================
   // 1. BULLETPROOF STOCK PARSING
@@ -81,7 +93,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
   // Logic for Authentic Scarcity
   const isLowStock = safeStock > 0 && safeStock <= 5;
-  const isSoldOut = safeStock <= 0;
+  const isSoldOut = safeStock <= 0 || product.status === "sold";
 
   // ==========================================
   // 2. BULLETPROOF ADMIN CHECK
@@ -134,11 +146,10 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   return (
     <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6">
       <ProductTracker product={product} />
-
       <RecentlyViewedTracker product={product} />   
 
       {/* BREADCRUMBS */}  
-      <div className="mb-8 flex items-center text-sm text-slate-500 font-medium overflow-x-auto whitespace-nowrap scrollbar-hide">  
+      <div className="mb-6 flex items-center text-sm text-slate-500 font-medium overflow-x-auto whitespace-nowrap scrollbar-hide">  
         <Link href="/" className="hover:text-[#D97706] transition-colors">Home</Link>  
         <span className="mx-2">/</span>  
         <Link href={`/category/${safeCategory}`} className="hover:text-[#D97706] transition-colors capitalize">  
@@ -162,13 +173,30 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         {/* RIGHT COLUMN: Product Details */}  
         <div className="flex flex-col">  
 
-          {/* Badges */}
+          {/* INTEGRATED BADGES AREA (No buttons, purely visual trust signals) */}
           <div className="flex flex-wrap items-center gap-2 mb-4">  
             <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${  
               safeCondition === 'new' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'  
             }`}>  
               {safeCondition === 'new' ? 'Brand New' : 'Used'}  
             </span>  
+
+            {isMainProductNew && (
+              <span className="bg-slate-900 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5 uppercase tracking-wider">
+                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                 Just Added
+              </span>
+            )}
+
+            {isMainApproved ? (
+              <span className="bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                 Approved Quality
+              </span>
+            ) : isMainOfficial ? (
+              <span className="bg-[#D97706] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
+                 Official Product
+              </span>
+            ) : null}
           </div>  
 
           {/* Title */}
@@ -183,7 +211,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </span>  
           </div>  
 
-          {/* 🔥 NEW: INLINE MAKE OFFER LINK 🔥 */}
+          {/* INLINE MAKE OFFER LINK */}
           <div className="mb-6">
             <p className="text-sm text-slate-500 font-medium">
               Do you think the price is high? {' '}
@@ -209,7 +237,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             {isSoldOut ? (
                <>
                 <span className="text-lg">ℹ️</span>
-                <span>This item may be out of stock, but you can still inquire!</span>
+                <span>This item is currently sold out. Check similar items below!</span>
                </>
             ) : isLowStock ? (
               <>
@@ -228,12 +256,20 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             )}
           </div>
 
-          {/* FAST BUY ACTION */}
+          {/* MAIN CALL TO ACTIONS (Kept completely separate so they don't fight) */}
           <div className="mb-6">
-            <FastBuy product={{...product, images: optimizedImages}} />
+            <FastBuy product={{...product, images: optimizedImages}} disabled={isSoldOut} />
           </div>
 
-          {/* INLINE TRUST BOX (Conversion Machine Core) */}
+          <div className="mb-10 border-b border-slate-200 pb-8">
+            <ProductActions product={{...product, images: optimizedImages}}>
+                <div className="flex flex-col gap-3 mt-2 w-full">
+                  <SaveProductButton product={product} />
+                </div>
+            </ProductActions>
+          </div> 
+
+          {/* INLINE TRUST BOX */}
           <div className="mb-10 bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4 shadow-sm">
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
@@ -281,8 +317,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                 <tr className="divide-x divide-slate-200">
                   <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700 whitespace-nowrap">Stock Status</th>
                   <td className="px-4 py-3 text-slate-900 font-medium flex items-center bg-white">
-                    <span className={safeStock > 0 ? "text-green-700" : "text-red-600"}>
-                      {safeStock > 0 ? 'In Stock' : 'Out of Stock'}
+                    <span className={safeStock > 0 && !isSoldOut ? "text-green-700" : "text-red-600"}>
+                      {safeStock > 0 && !isSoldOut ? 'In Stock' : 'Out of Stock'}
                     </span>
                   </td>
                 </tr>
@@ -311,15 +347,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </table>
           </div>
 
-          {/* SECONDARY ACTIONS (Chat, Save) */}
-          <div className="mb-10 border-b border-slate-200 pb-10">
-            <ProductActions product={{...product, images: optimizedImages}}>
-                <div className="flex flex-col gap-3 mt-2 w-full">
-                  <SaveProductButton product={product} />
-                </div>
-            </ProductActions>
-          </div> 
-
         </div>  
       </div>  
 
@@ -334,53 +361,80 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
           {/* Scrollable Container */}
           <div className="flex overflow-x-auto gap-4 pb-6 snap-x snap-mandatory scrollbar-hide">  
-            {relatedProducts.map((relProduct) => (  
-              <Link   
-                key={relProduct.id}   
-                href={`/product/${relProduct.publicId || relProduct.id}`}   
-                className="flex-none w-[160px] sm:w-[220px] snap-start bg-white rounded-2xl border border-slate-200 overflow-hidden flex flex-col hover:border-slate-300 transition-colors"  
-              >  
-                {/* Image */}  
-                <div className="aspect-square relative bg-slate-100 overflow-hidden">  
-                  {relProduct.images?.[0] ? (  
-                    <Image   
-                      src={relProduct.images[0]}   
-                      alt={relProduct.name}  
-                      fill   
-                      sizes="(max-width: 768px) 160px, 220px"  
-                      className="object-cover"  
-                    />  
-                  ) : (  
-                    <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">No Image</div>  
-                  )}  
-                </div>  
+            {relatedProducts.map((relProduct) => {
+              const isRelSold = relProduct.status === "sold" || Number(relProduct.stock) <= 0;
+              const isRelNew = checkIsNew(relProduct);
+              const isRelApproved = relProduct.isApprovedQuality;
+              const isRelOfficial = relProduct.isOfficialStore || relProduct.isAdminUpload;
 
-                {/* Details */}  
-                <div className="p-4 flex flex-col flex-grow">  
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">  
-                    {safeCategory.replace(/_/g, ' ')}  
-                  </span>  
-                  <h3 className="text-sm font-bold text-slate-900 line-clamp-2 mb-2">  
-                    {relProduct.name}  
-                  </h3>  
-                  <div className="mt-auto pt-2">  
-                    <p className="text-base font-black text-[#D97706]">UGX {Number(relProduct.price).toLocaleString()}</p>  
+              return (
+                <Link   
+                  key={relProduct.id}   
+                  href={`/product/${relProduct.publicId || relProduct.id}`}   
+                  className={`flex-none w-[150px] sm:w-[190px] snap-start bg-white rounded-md border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition-all relative ${isRelSold ? 'opacity-80 grayscale-[20%]' : ''}`}  
+                >  
+                  {/* Image Area with Integrated Tags */}  
+                  <div className="aspect-square relative bg-slate-50 overflow-hidden border-b border-slate-100">  
+                    {relProduct.images?.[0] ? (  
+                      <Image   
+                        src={relProduct.images[0]}   
+                        alt={relProduct.name}  
+                        fill   
+                        sizes="(max-width: 768px) 150px, 190px"  
+                        className="object-cover transition-transform duration-500 hover:scale-105"  
+                      />  
+                    ) : (  
+                      <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">No Image</div>  
+                    )}  
+
+                    {/* OVERLAYS IMPORTED FROM HORIZONTAL SCROLLER */}
+                    {isRelSold && (
+                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 backdrop-blur-[2px]">
+                         <span className="bg-slate-900 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-lg transform -rotate-6">
+                           Sold Out
+                         </span>
+                      </div>
+                    )}
+
+                    {!isRelSold && isRelNew && (
+                      <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center gap-1 z-10">
+                         <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                         New
+                      </div>
+                    )}
+
+                    {!isRelSold && (isRelApproved || isRelOfficial) && (
+                      <div className={`absolute bottom-0 left-0 ${isRelApproved ? 'bg-emerald-600' : 'bg-[#D97706]'} text-white text-[8px] font-bold px-1.5 py-1 leading-none rounded-tr-sm z-10 tracking-widest uppercase shadow-sm`}>
+                         {isRelApproved ? 'Approved Quality' : 'Official Product'}
+                      </div>
+                    )}
                   </div>  
-                </div>  
-              </Link>  
-            ))}  
+
+                  {/* Details */}  
+                  <div className="p-3 flex flex-col flex-grow">  
+                    <h3 className="text-xs sm:text-sm font-medium text-slate-600 line-clamp-2 leading-snug mb-1">  
+                      {relProduct.name}  
+                    </h3>  
+                    <div className="mt-auto pt-1 flex flex-col">  
+                      <span className={`text-sm sm:text-base font-black ${isRelSold ? 'text-slate-500' : 'text-slate-900'}`}>
+                        UGX {Number(relProduct.price).toLocaleString()}
+                      </span>  
+                    </div>  
+                  </div>  
+                </Link>  
+              )
+            })}  
 
             {/* View More Card */}
             <Link 
               href={`/category/${safeCategory}`} 
-              className="flex-none w-[160px] sm:w-[220px] snap-start bg-slate-50 rounded-2xl border border-slate-200 flex flex-col items-center justify-center text-slate-500 p-4 hover:bg-slate-100 transition-colors"
+              className="flex-none w-[150px] sm:w-[190px] snap-start bg-slate-50 rounded-md border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-500 p-4 hover:border-[#D97706] hover:text-[#D97706] transition-colors group"
             >
-              <div className="w-12 h-12 rounded-full bg-white border border-slate-200 flex items-center justify-center mb-3 shadow-sm">
-                <span className="text-xl font-bold">→</span>
+              <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center mb-3 transition-transform group-hover:scale-110">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
               </div>
-              <span className="text-sm font-bold text-center">
-                View more <br/>
-                <span className="capitalize text-[#D97706]">{safeCategory.replace(/_/g, ' ')}</span>
+              <span className="text-sm font-black text-center uppercase tracking-wider">
+                View All
               </span>
             </Link>
           </div>  
