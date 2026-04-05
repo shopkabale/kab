@@ -19,7 +19,7 @@ function InboxContent() {
   useEffect(() => {
     if (!user || user.role !== "admin") return;
 
-    const q = query(collection(db, "chats"), orderBy("lastActivity", "desc"));
+    const q = query(collection(db, "chats"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const chatDocs = snapshot.docs.map((doc) => ({
