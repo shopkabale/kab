@@ -176,7 +176,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         {/* RIGHT COLUMN: Product Details */}  
         <div className="flex flex-col">  
 
-          {/* INTEGRATED BADGES AREA (No buttons, purely visual trust signals) */}
+          {/* INTEGRATED BADGES AREA */}
           <div className="flex flex-wrap items-center gap-2 mb-4">  
             <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${  
               safeCondition === 'new' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'  
@@ -259,9 +259,10 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             )}
           </div>
 
-          {/* MAIN CALL TO ACTIONS (Kept completely separate so they don't fight) */}
-          <div className="mb-6">
-            <FastBuy product={{...product, images: optimizedImages}} disabled={isSoldOut} />
+          {/* MAIN CALL TO ACTIONS */}
+          {/* We wrap FastBuy in a div that visually disables it if sold out, avoiding TS errors */}
+          <div className={`mb-6 ${isSoldOut ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+            <FastBuy product={{...product, images: optimizedImages}} />
           </div>
 
           <div className="mb-10 border-b border-slate-200 pb-8">
