@@ -22,13 +22,15 @@ function InboxContent() {
     const q = query(collection(db, "chats"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      let chatDocs = snapshot.docs.map((doc) => ({
+      // TypeScript Fix: Explicitly define as any[]
+      let chatDocs: any[] = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
 
       // SORT IN MEMORY: Newest lastActivity first, older (or missing) at the bottom
-      chatDocs.sort((a, b) => {
+      // TypeScript Fix: Explicitly define a and b as any
+      chatDocs.sort((a: any, b: any) => {
         const timeA = a.lastActivity?.toMillis?.() || 0;
         const timeB = b.lastActivity?.toMillis?.() || 0;
         return timeB - timeA; 
@@ -53,7 +55,7 @@ function InboxContent() {
     const q = query(messagesRef, orderBy("timestamp", "asc"));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map(doc => ({
+      const msgs: any[] = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
@@ -72,7 +74,7 @@ function InboxContent() {
 
   return (
     <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 h-screen flex flex-col">
-      {/* Header Section (Unchanged, remains fully responsive) */}
+      {/* Header Section (Remains fully responsive) */}
       <div className="bg-slate-900 rounded-3xl p-8 mb-6 text-white flex flex-col md:flex-row md:items-center justify-between shadow-xl flex-shrink-0">
         <div>
           <span className="bg-[#D97706] text-white text-[10px] uppercase font-black px-3 py-1 rounded-full tracking-widest mb-3 inline-block">
