@@ -34,7 +34,7 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
 
           // Parse stock safely (defaults to 1 if not set)
           const currentStock = parseInt(p.stock?.toString() || "1", 10);
-          
+
           // 🔥 The subtle "Ready for delivery" psychological append
           const titleStr = p.title || p.name || 'Product';
           const isShortTitle = titleStr.length <= 24;
