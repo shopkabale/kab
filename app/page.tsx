@@ -6,6 +6,9 @@ import Link from "next/link";
 import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
+// ✅ Revalidation restored (Cache for 1 hour)
+export const revalidate = 3600; 
+
 // --- SHUFFLE HELPER FUNCTION ---
 const shuffleArray = (array: any[]) => {
   const shuffled = [...array];
@@ -114,7 +117,7 @@ export default async function Home() {
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          Call to report a scam or undelivery
+          Tap to call 075 999 7376 to report a scam or undelivery
         </a>
       </section>
 
@@ -186,9 +189,13 @@ export default async function Home() {
           </section>
         )}
 
-        {/* BROWSE MORE COLLECTIONS - Moved up, 3x2 Grid, Softer Gray Background */}
+        {/* BROWSE MORE COLLECTIONS - Centered Title, 3x2 Grid */}
         <section className="bg-slate-100 dark:bg-[#1a1a1a] border-y border-slate-200 dark:border-slate-800 py-4 px-3 sm:px-4">
-          <SectionHeader title="Browse more collections" />
+          <div className="w-full text-center py-2 mb-1">
+            <h2 className="text-base md:text-lg font-black text-slate-900 dark:text-white capitalize tracking-tight">
+              Browse more collections
+            </h2>
+          </div>
 
           {/* Collection Grid: Strictly 3 columns (3x2) */}
           <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-4xl mx-auto mt-2">
