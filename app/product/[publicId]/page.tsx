@@ -13,6 +13,7 @@ import FastBuy from "@/components/FastBuy";
 import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
 import SaveProductButton from "@/components/SaveProductButton";
+import InlineOfferLink from "@/components/InlineOfferLink";
 import { optimizeImage } from "@/lib/utils";
 
 export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
@@ -218,14 +219,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
           <div className="mb-6">
             <p className="text-sm text-slate-500 font-medium">
               Do you think the price is high? {' '}
-              <a 
-                href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021"}?text=${encodeURIComponent(`Hi! I want to make an offer for this item on Kabale Online:\n\n*${safeName}*\nProduct ID: [${product.id}]\n\nMy offer is: UGX `)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#D97706] font-bold underline decoration-slate-300 underline-offset-4 hover:decoration-[#D97706] transition-colors"
-              >
-                Tap me to tell us your price.
-              </a>
+              <InlineOfferLink product={product} safeName={safeName} />
             </p>
           </div>
 
