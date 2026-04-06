@@ -2,6 +2,7 @@
 import UrgentStories from "@/components/UrgentStories";
 import ProductSection from "@/components/ProductSection";
 import HorizontalScroller from "@/components/HorizontalScroller";
+import ContinueBrowsing from "@/components/ContinueBrowsing"; // 🔥 ADDED
 import Link from "next/link";
 import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
@@ -36,6 +37,30 @@ const SectionHeader = ({ title, viewAllLink }: { title: string, viewAllLink?: st
 
 export default async function Home() {
   const now = Date.now();
+
+  // 🔥 0. FETCH BASE POOL FOR ALGORITHMS (Top 50 viewed items)
+  const basePoolQ = query(collection(db, "products"), orderBy("views", "desc"), limit(50));
+  const basePoolSnap = await getDocs(basePoolQ);
+  const basePool = basePoolSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+
+  // 🔥 ALGORITHM 1: TRENDING (Score = views + (sales * 3))
+  const trendingProducts = [...basePool]
+    .sort((a, b) => {
+      const scoreA = (a.views || 0) + ((a.sales || 0) * 3);
+      const scoreB = (b.views || 0) + ((b.sales || 0) * 3);
+      return scoreB - scoreA;
+    })
+    .slice(0, 10);
+
+  // 🔥 ALGORITHM 2: BEST DEALS (Score = (views + 1) / price)
+  const dealsProducts = [...basePool]
+    .filter(p => Number(p.price) > 0) // Prevent division by zero
+    .sort((a, b) => {
+      const scoreA = ((a.views || 0) + 1) / Number(a.price);
+      const scoreB = ((b.views || 0) + 1) / Number(b.price);
+      return scoreB - scoreA;
+    })
+    .slice(0, 10);
 
   // 1. Fetch Official Stores
   const officialQ = query(collection(db, "products"), where("isAdminUpload", "==", true), limit(12));
@@ -124,7 +149,38 @@ export default async function Home() {
       {/* MAIN CONTENT WRAPPER */}
       <div className="w-full space-y-2 mt-2">
 
-        {/* 1. TRENDING FOR HER */}
+        {/* ========================================== */}
+        {/* 🔥 NEW BEHAVIORAL SECTIONS INTRODUCED HERE */}
+        {/* ========================================== */}
+
+        {/* 1. 🔥 TRENDING */}
+        {trendingProducts.length > 0 && (
+          <section className="w-full">
+            <div className="px-4 pt-2 -mb-2 z-10 relative">
+              <p className="text-xs text-slate-500 font-bold tracking-wide italic">Most viewed items in Kabale right now</p>
+            </div>
+            <HorizontalScroller title="🔥 Trending" products={trendingProducts} />
+          </section>
+        )}
+
+        {/* 2. 💸 BEST DEALS */}
+        {dealsProducts.length > 0 && (
+          <section className="w-full">
+            <div className="px-4 pt-2 -mb-2 z-10 relative">
+              <p className="text-xs text-slate-500 font-bold tracking-wide italic">Affordable & popular items people love</p>
+            </div>
+            <HorizontalScroller title="💸 Best Deals in Kabale" products={dealsProducts} />
+          </section>
+        )}
+
+        {/* 3. 🔁 CONTINUE BROWSING */}
+        <ContinueBrowsing fallbackProducts={trendingProducts} />
+
+        {/* ========================================== */}
+        {/* 🛍 CATEGORY & STANDARD SECTIONS */}
+        {/* ========================================== */}
+
+        {/* TRENDING FOR HER */}
         {ladiesProducts.length > 0 && (
           <section className="w-full">
             <HorizontalScroller 
@@ -135,7 +191,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 2. DISCOVER YOUR WATCH STYLE */}
+        {/* DISCOVER YOUR WATCH STYLE */}
         {watchProducts.length > 0 && (
           <section className="w-full">
             <HorizontalScroller 
@@ -146,7 +202,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 3. OFFICIAL COLLECTION */}
+        {/* OFFICIAL COLLECTION */}
         {officialProducts.length > 0 && (
           <section className="w-full">
             <HorizontalScroller 
@@ -157,7 +213,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 4. VERIFIED & TRUSTED */}
+        {/* VERIFIED & TRUSTED */}
         {approvedProducts.length > 0 && (
           <section className="w-full">
             <HorizontalScroller 
@@ -171,7 +227,7 @@ export default async function Home() {
         {/* URGENT STORIES */}
         <UrgentStories />
 
-        {/* 5. NEW ARRIVALS */}
+        {/* NEW ARRIVALS */}
         {latestProducts.length > 0 && (
           <section className="w-full">
             <HorizontalScroller 
@@ -182,7 +238,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 6. SPONSORED PICKS */}
+        {/* SPONSORED PICKS */}
         {boostedProducts.length > 0 && (
           <section className="w-full">
             <HorizontalScroller title="Sponsored picks" products={boostedProducts} />
@@ -247,7 +303,7 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* 7. TECH ESSENTIALS */}
+        {/* TECH ESSENTIALS */}
         {electronicsProducts.length > 0 && (
           <section className="w-full">
             <HorizontalScroller 
@@ -258,14 +314,14 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 8. TOP PICKS */}
+        {/* TOP PICKS */}
         {featuredProducts.length > 0 && (
           <section className="w-full">
             <HorizontalScroller title="Top picks" products={featuredProducts} />
           </section>
         )}
 
-        {/* 9. CAMPUS DEALS */}
+        {/* CAMPUS DEALS */}
         {studentProducts.length > 0 && (
           <section className="w-full">
             <HorizontalScroller 
@@ -276,7 +332,7 @@ export default async function Home() {
           </section>
         )}
 
-        {/* 10. FRESH MARKET */}
+        {/* FRESH MARKET */}
         {agriProducts.length > 0 && (
           <section className="w-full">
             <HorizontalScroller 
