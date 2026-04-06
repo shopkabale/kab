@@ -1,6 +1,9 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { optimizeImage } from "@/lib/utils";
+import { trackSelectItem } from "@/lib/analytics"; // 🔥 Added Analytics Import
 
 export default function ProductSection({ title, products, hideTitle }: { title?: string, products: any[], hideTitle?: boolean }) {
   if (!products || products.length === 0) return null;
@@ -35,7 +38,7 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
           const isApproved = p.isApprovedQuality;
           const isOfficial = p.isOfficialStore || p.isAdminUpload;
 
-          // 🔥 The subtle "Ready for delivery" psychological append
+          // The subtle "Ready for delivery" psychological append
           const titleStr = p.title || p.name || 'Product';
           const isShortTitle = titleStr.length <= 24;
           const displayTitle = (!isSold && isShortTitle) ? `${titleStr} (Ready for delivery)` : titleStr;
@@ -44,7 +47,19 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
             // Added opacity-80 if sold to subtly fade the card
             <div key={p.id} className={`group flex flex-col bg-white dark:bg-[#151515] rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 dark:border dark:border-slate-800 h-full relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
 
-              <Link href={`/product/${p.publicId || p.id}`} className="flex flex-col flex-grow relative pointer-events-auto outline-none">
+              <Link 
+                href={`/product/${p.publicId || p.id}`} 
+                className="flex flex-col flex-grow relative pointer-events-auto outline-none"
+                // 🔥 ADDED CLICK TRACKING HERE
+                onClick={() => {
+                  trackSelectItem({
+                    id: p.id,
+                    name: titleStr, // using the raw title string
+                    price: Number(p.price) || 0,
+                    category: p.category || "general",
+                  });
+                }}
+              >
                 {/* Image Area: Strict square for uniform alignment */}
                 <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
                   {optimizedImage ? (
