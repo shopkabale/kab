@@ -12,12 +12,8 @@ import { Order } from "@/types";
 // --- CUSTOM MODAL TYPES ---
 type ModalState = {
   isOpen: boolean;
-  type: "payment" | "queue_full" | "verify_prompt" | "delete_confirm" | "none";
-  title?: string;
-  message?: string;
-  actionType?: "boost" | "feature" | "urgent";
+  type: "delete_confirm" | "none";
   product?: any;
-  cost?: number;
 };
 
 export default function UnifiedDashboard() {
@@ -44,10 +40,9 @@ export default function UnifiedDashboard() {
 
   const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified">("unverified");
   const [isVerifying, setIsVerifying] = useState(false);
-  
+
   // Custom Modal State
   const [modal, setModal] = useState<ModalState>({ isOpen: false, type: "none" });
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   // --- CACHE LOGIC ---
   const saveToCache = useCallback((type: 'listings' | 'sales' | 'purchases', data: any[]) => {
@@ -210,69 +205,6 @@ export default function UnifiedDashboard() {
     } finally { setIsVerifying(false); }
   };
 
-  // --- PREMIUM ACTIONS WITH LIMIT CHECKS ---
-  const checkActiveCount = async (field: string) => {
-    const q = query(collection(db, "products"), where(field, "==", true));
-    const snap = await getDocs(q);
-    const now = Date.now();
-    return snap.docs.filter(d => {
-      const data = d.data();
-      const expiryField = field === "isBoosted" ? "boostExpiresAt" : field === "isFeatured" ? "featureExpiresAt" : "urgentExpiresAt";
-      return data[expiryField] && data[expiryField] > now;
-    }).length;
-  };
-
-  const initiatePremiumAction = async (product: any, actionType: "boost" | "feature" | "urgent") => {
-    if (!user) return;
-
-    let count = 0;
-    let limitMax = 0;
-    
-    if (actionType === "boost") {
-      count = await checkActiveCount("isBoosted");
-      limitMax = 6;
-    } else if (actionType === "feature") {
-      count = await checkActiveCount("isFeatured");
-      limitMax = 6;
-    } else if (actionType === "urgent") {
-      count = await checkActiveCount("isUrgent");
-      limitMax = 20;
-    }
-
-    if (count >= limitMax) {
-      setModal({ isOpen: true, type: "queue_full", actionType });
-      return;
-    }
-
-    if (actionType === "urgent") {
-      const now = Date.now();
-      const expiresAt = now + (24 * 60 * 60 * 1000);
-      try {
-        await updateDoc(doc(db, "products", product.id), { isUrgent: true, urgentActivatedAt: now, urgentExpiresAt: expiresAt });
-        const updatedListings = listings.map(item => item.id === product.id ? { ...item, isUrgent: true, urgentExpiresAt: expiresAt } : item);
-        setListings(updatedListings);
-        saveToCache('listings', updatedListings);
-      } catch (error) { console.error(error); }
-      return;
-    }
-
-    const cost = actionType === "boost" ? 1000 : 3000;
-    setModal({ isOpen: true, type: "payment", product, actionType, cost });
-  };
-
-  const confirmPaymentSent = async () => {
-    if (!modal.product || !modal.actionType) return;
-    const productId = modal.product.id;
-    
-    try {
-      await updateDoc(doc(db, "products", productId), { pendingVerification: modal.actionType });
-      const updatedListings = listings.map(item => item.id === productId ? { ...item, pendingVerification: modal.actionType } : item);
-      setListings(updatedListings);
-      saveToCache('listings', updatedListings);
-      closeModal();
-    } catch (error) { console.error("Error setting pending state", error); }
-  };
-
   const confirmDelete = async () => {
     if (!modal.product) return;
     try {
@@ -284,15 +216,8 @@ export default function UnifiedDashboard() {
     } catch (error) { console.error(error); }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedCode(text);
-    setTimeout(() => setCopiedCode(null), 2000);
-  };
-
   const closeModal = () => {
     setModal({ isOpen: false, type: "none" });
-    setCopiedCode(null);
   };
 
   // --- RENDER ---
@@ -318,87 +243,6 @@ export default function UnifiedDashboard() {
       {modal.isOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            
-            {/* QUEUE FULL MODAL */}
-            {modal.type === "queue_full" && (
-              <div className="p-6 text-center">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">⏳</div>
-                <h3 className="text-xl font-black text-slate-900 mb-2">Queue is Full</h3>
-                <p className="text-slate-600 text-sm mb-6 leading-relaxed">
-                  We only accept {modal.actionType === 'urgent' ? '20' : '6'} active <span className="font-bold capitalize">{modal.actionType}</span> items at a time to guarantee maximum visibility for sellers. Good luck tomorrow!
-                </p>
-                <button onClick={closeModal} className="w-full py-3 bg-slate-900 text-white font-bold rounded-xl active:scale-95 transition-transform">
-                  Got it
-                </button>
-              </div>
-            )}
-
-            {/* PAYMENT INSTRUCTIONS MODAL */}
-            {modal.type === "payment" && (
-              <div className="p-6 text-center">
-                <h3 className="text-xl font-black text-slate-900 mb-1">Activate <span className="capitalize">{modal.actionType}</span></h3>
-                <p className="text-slate-500 text-sm mb-4">Pay securely using Merchant Codes</p>
-                
-                <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-5">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs font-bold text-slate-500 uppercase">Amount Due</span>
-                    <span className="text-lg font-black text-[#D97706]">UGX {modal.cost?.toLocaleString()}</span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 text-left">For {modal.actionType === 'feature' ? '3 days' : '24 hours'} of premium visibility.</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  <div 
-                    onClick={() => copyToClipboard('7050183')}
-                    className="border border-red-200 bg-red-50 rounded-lg p-3 cursor-pointer hover:bg-red-100 transition-colors relative group"
-                  >
-                    <span className="block text-[10px] font-bold text-red-600 uppercase mb-1">Airtel Money</span>
-                    <span className="text-lg font-black text-slate-900 tracking-wider">7050183</span>
-                    {copiedCode === '7050183' && <span className="absolute -top-3 right-2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded shadow-sm">Copied!</span>}
-                  </div>
-                  <div 
-                    onClick={() => copyToClipboard('14843537')}
-                    className="border border-yellow-200 bg-yellow-50 rounded-lg p-3 cursor-pointer hover:bg-yellow-100 transition-colors relative group"
-                  >
-                    <span className="block text-[10px] font-bold text-yellow-600 uppercase mb-1">MTN MoMo</span>
-                    <span className="text-lg font-black text-slate-900 tracking-wider">14843537</span>
-                    {copiedCode === '14843537' && <span className="absolute -top-3 right-2 bg-slate-900 text-white text-[10px] px-2 py-1 rounded shadow-sm">Copied!</span>}
-                  </div>
-                </div>
-
-                <div className="bg-blue-50 text-blue-800 text-xs p-3 rounded-lg text-left mb-6 font-medium">
-                  <span className="font-bold block mb-1">Next steps:</span>
-                  1. Send the payment to a code above.<br/>
-                  2. Send the screenshot via WhatsApp to <span className="font-bold">256759997376</span>.<br/>
-                  3. Click "I have paid" below.
-                </div>
-
-                <div className="flex gap-2">
-                  <button onClick={closeModal} className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl active:bg-slate-200 transition-colors">Cancel</button>
-                  <button onClick={confirmPaymentSent} className="flex-[2] py-3 bg-[#D97706] text-white font-bold rounded-xl active:bg-amber-600 transition-colors shadow-sm">I have paid</button>
-                </div>
-                <p className="text-[9px] font-bold text-slate-400 mt-4 uppercase tracking-widest">* Automated system coming soon *</p>
-              </div>
-            )}
-
-            {/* VERIFY PROMPT MODAL */}
-            {modal.type === "verify_prompt" && (
-              <div className="p-6 text-center">
-                <div className="w-16 h-16 bg-amber-50 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-amber-100">⏳</div>
-                <h3 className="text-xl font-black text-slate-900 mb-2">Verifying Payment</h3>
-                <p className="text-slate-600 text-sm mb-6 leading-relaxed">
-                  We are checking your payment for this <span className="font-bold capitalize">{modal.actionType}</span>. Did you remember to send the screenshot to our Admin on WhatsApp?
-                </p>
-                <div className="flex flex-col gap-3">
-                  <a href="https://wa.me/256759997376" target="_blank" rel="noopener noreferrer" className="w-full py-3 bg-[#25D366] text-white font-bold rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform">
-                    <span>📱</span> Send Screenshot Now
-                  </a>
-                  <button onClick={closeModal} className="w-full py-3 bg-slate-100 text-slate-700 font-bold rounded-xl active:bg-slate-200 transition-colors">
-                    Close
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* DELETE CONFIRM MODAL */}
             {modal.type === "delete_confirm" && (
@@ -449,7 +293,7 @@ export default function UnifiedDashboard() {
       </div>
 
       <div className="p-4">
-        {/* === TAB 1: MY LISTINGS === */}
+        {/* === TAB 1: MY LISTINGS (With AI Analytics) === */}
         {activeTab === "listings" && (
           <div className="space-y-4">
              {loadingListings && listings.length === 0 ? (
@@ -469,13 +313,14 @@ export default function UnifiedDashboard() {
                    const isSold = item.status === "sold";
                    const now = Date.now();
 
-                   // ACTIVE STATES
-                   const isUrgentActive = item.isUrgent && item.urgentExpiresAt > now;
+                   // Read AI Engine badging
                    const isBoostedActive = item.isBoosted && item.boostExpiresAt > now;
                    const isFeaturedActive = item.isFeatured && item.featureExpiresAt > now;
 
-                   // PENDING STATES (Awaiting Admin verification)
-                   const pendingAction = item.pendingVerification; 
+                   // Performance Stats
+                   const views = item.views || 0;
+                   const inquiries = item.inquiries || 0;
+                   const aiScore = item.aiScore || 0;
 
                    return (
                      <div key={item.id} className="bg-white rounded-xl border border-slate-200 p-3 shadow-sm flex flex-col gap-3">
@@ -485,7 +330,7 @@ export default function UnifiedDashboard() {
                            {item.images?.[0] ? (
                              <Image src={item.images[0]} alt={item.name} fill className="object-cover" sizes="80px" />
                            ) : <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-300 uppercase">No Img</span>}
-                           {isFeaturedActive && <span className="absolute bottom-0 w-full bg-[#D97706] text-white text-[8px] font-black text-center py-0.5 uppercase tracking-widest">Featured</span>}
+                           {isFeaturedActive && <span className="absolute bottom-0 w-full bg-blue-600 text-white text-[8px] font-black text-center py-0.5 uppercase tracking-widest">Top Pick</span>}
                          </div>
                          <div className="flex-1 flex flex-col py-1 justify-between">
                            <div>
@@ -496,63 +341,37 @@ export default function UnifiedDashboard() {
                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wide ${isSold ? "bg-slate-100 text-slate-500" : "bg-emerald-50 text-emerald-600 border border-emerald-100"}`}>
                                {isSold ? "Sold Out" : "Active"}
                              </span>
-                             {isBoostedActive && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide bg-amber-50 text-amber-600 border border-amber-100">🚀 Boosted</span>}
+                             {isBoostedActive && <span className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide bg-amber-50 text-amber-600 border border-amber-100">🚀 Trending</span>}
                            </div>
                          </div>
                        </div>
 
-                       {/* Action Controls */}
-                       <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
-                         <div className="grid grid-cols-2 gap-2">
-                           <Link href={`/edit/${item.publicId || item.id}`} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md border border-slate-200 active:bg-slate-100">Edit</Link>
-                           <button onClick={() => setModal({ isOpen: true, type: "delete_confirm", product: item })} className="text-[11px] font-bold text-center py-2 bg-red-50 text-red-600 rounded-md border border-red-100 active:bg-red-100">Delete</button>
-                         </div>
-
-                         {/* Free Controls */}
-                         <div className="grid grid-cols-2 gap-2">
-                            <button onClick={() => handleToggleSold(item)} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md border border-slate-200 active:bg-slate-100">
-                              {isSold ? "✅ Set Active" : "Mark Sold"}
-                            </button>
-                            <button 
-                              onClick={() => initiatePremiumAction(item, 'urgent')} 
-                              disabled={isUrgentActive}
-                              className={`text-[11px] font-bold py-2 rounded-md border transition-colors ${isUrgentActive ? "bg-amber-50 text-amber-700 border-amber-200 opacity-80" : "border-slate-200 text-slate-600 bg-slate-50 active:bg-slate-100"}`}
-                            >
-                              {isUrgentActive ? "⚡ Urgent Active" : "⚡ Urgent"}
-                            </button>
-                         </div>
+                       {/* 🔥 NEW: AI Analytics Dashboard 🔥 */}
+                       <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 flex justify-between items-center">
+                          <div className="flex gap-4">
+                            <div className="text-center">
+                              <span className="block text-[10px] text-slate-400 font-bold uppercase">Views</span>
+                              <span className="block text-sm font-black text-slate-700">{views}</span>
+                            </div>
+                            <div className="text-center">
+                              <span className="block text-[10px] text-slate-400 font-bold uppercase">Chats</span>
+                              <span className="block text-sm font-black text-slate-700">{inquiries}</span>
+                            </div>
+                          </div>
+                          <div className="text-right border-l border-slate-200 pl-4">
+                              <span className="block text-[10px] text-slate-400 font-bold uppercase">AI Rank Score</span>
+                              <span className="block text-sm font-black text-[#D97706]">{aiScore}</span>
+                          </div>
                        </div>
 
-                       {/* Premium Growth Controls */}
-                       {!isSold && (
-                         <div className="flex gap-2 mt-1">
-                           {/* BOOST BUTTON */}
-                           <button 
-                             onClick={() => pendingAction === 'boost' ? setModal({ isOpen: true, type: "verify_prompt", actionType: "boost" }) : initiatePremiumAction(item, 'boost')} 
-                             disabled={isBoostedActive}
-                             className={`flex-1 text-[11px] font-bold py-2.5 rounded-md transition-colors ${
-                               isBoostedActive ? "bg-green-50 text-green-700 border border-green-200 opacity-90" : 
-                               pendingAction === 'boost' ? "bg-slate-100 text-slate-600 border border-slate-200" : 
-                               "bg-amber-100 text-amber-900 active:bg-amber-200"
-                             }`}
-                           >
-                             {isBoostedActive ? "🚀 Boost Active" : pendingAction === 'boost' ? "⏳ Verify Payment" : "🚀 Boost (24h)"}
-                           </button>
-
-                           {/* FEATURE BUTTON */}
-                           <button 
-                             onClick={() => pendingAction === 'feature' ? setModal({ isOpen: true, type: "verify_prompt", actionType: "feature" }) : initiatePremiumAction(item, 'feature')} 
-                             disabled={isFeaturedActive}
-                             className={`flex-1 text-[11px] font-bold py-2.5 rounded-md transition-colors ${
-                               isFeaturedActive ? "bg-green-50 text-green-700 border border-green-200 opacity-90" : 
-                               pendingAction === 'feature' ? "bg-slate-100 text-slate-600 border border-slate-200" : 
-                               "bg-slate-900 text-white active:bg-slate-800 shadow-sm"
-                             }`}
-                           >
-                             {isFeaturedActive ? "⭐ Feature Active" : pendingAction === 'feature' ? "⏳ Verify Payment" : "⭐ Feature (3d)"}
-                           </button>
-                         </div>
-                       )}
+                       {/* Action Controls */}
+                       <div className="grid grid-cols-3 gap-2 border-t border-slate-100 pt-3">
+                         <Link href={`/edit/${item.publicId || item.id}`} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md border border-slate-200 active:bg-slate-100">Edit</Link>
+                         <button onClick={() => setModal({ isOpen: true, type: "delete_confirm", product: item })} className="text-[11px] font-bold text-center py-2 bg-red-50 text-red-600 rounded-md border border-red-100 active:bg-red-100">Delete</button>
+                         <button onClick={() => handleToggleSold(item)} className="text-[11px] font-bold text-center py-2 bg-slate-900 text-white rounded-md active:bg-slate-800">
+                           {isSold ? "Set Active" : "Mark Sold"}
+                         </button>
+                       </div>
                      </div>
                    )
                  })}
@@ -657,46 +476,6 @@ export default function UnifiedDashboard() {
            </div>
         )}
 
-      </div>
-
-      {/* 4. BOTTOM SECTION (Growth Hooks) */}
-      <div className="px-4 mt-2 pb-8 pt-4">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Grow your business</p>
-        <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x pb-2">
-
-          <div className="snap-start flex-shrink-0 w-[200px] bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-between">
-            <div>
-              <h4 className="text-sm font-bold text-slate-900 mb-1">🚀 Boost Listing</h4>
-              <p className="text-[10px] text-slate-500 mb-2 leading-tight">Get 10x more views today. Click "Boost" on your active ads!</p>
-            </div>
-            <button onClick={() => setActiveTab('listings')} className="text-[10px] font-bold bg-amber-100 text-amber-900 px-3 py-1.5 rounded-md w-full mt-2">Go to Listings</button>
-          </div>
-
-          {verificationStatus !== "verified" && (
-            <div className="snap-start flex-shrink-0 w-[200px] bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-between">
-              <div>
-                <h4 className="text-sm font-bold text-slate-900 mb-1">🛡️ Get Verified</h4>
-                <p className="text-[10px] text-slate-500 mb-2 leading-tight">Build trust with buyers by verifying your local business.</p>
-              </div>
-              <button 
-                onClick={handleVerifyProfile}
-                disabled={verificationStatus === "pending" || isVerifying}
-                className={`text-[10px] font-bold px-3 py-1.5 rounded-md w-full transition-colors mt-2 ${verificationStatus === "pending" ? "bg-slate-100 text-slate-500" : "bg-blue-100 text-blue-900 active:bg-blue-200"}`}
-              >
-                {isVerifying ? "Submitting..." : verificationStatus === "pending" ? "Review Pending ⏳" : "Verify Profile"}
-              </button>
-            </div>
-          )}
-
-          <div className="snap-start flex-shrink-0 w-[200px] bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-col justify-between">
-            <div>
-              <h4 className="text-sm font-bold text-slate-900 mb-1">⭐ Feature Item</h4>
-              <p className="text-[10px] text-slate-500 mb-2 leading-tight">Pin your item to the top of the homepage for 7 days.</p>
-            </div>
-            <button onClick={() => setActiveTab('listings')} className="text-[10px] font-bold bg-slate-900 text-white px-3 py-1.5 rounded-md w-full mt-2">Go to Listings</button>
-          </div>
-
-        </div>
       </div>
 
       <Link 
