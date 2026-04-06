@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { optimizeImage } from "@/lib/utils";
+import { trackSelectItem } from "@/lib/analytics"; // 🔥 Added Analytics Import
 
 export default function HorizontalScroller({ title, products, viewAllLink }: { title: string, products: any[], viewAllLink?: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -78,15 +79,26 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
             const isApproved = p.isApprovedQuality;
             const isOfficial = p.isOfficialStore || p.isAdminUpload;
 
-            // 🔥 The subtle "Ready for delivery" psychological append
+            // The subtle "Ready for delivery" psychological append
             const titleStr = p.title || p.name || 'Product';
             const isShortTitle = titleStr.length <= 24;
             const displayTitle = (!isSold && isShortTitle) ? `${titleStr} (Ready for delivery)` : titleStr;
 
             return (
-              // ✅ RESTORED ORIGINAL WIDTHS: w-[150px] sm:w-[190px] to force horizontal scrolling affordance
               <div key={p.id} className={`snap-start shrink-0 w-[150px] sm:w-[190px] group flex flex-col bg-white dark:bg-[#151515] rounded-sm overflow-hidden shadow-sm dark:border dark:border-slate-800 transition-all hover:shadow-md relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
-                <Link href={`/product/${p.publicId || p.id}`} className="flex flex-col flex-grow relative outline-none">
+                <Link 
+                  href={`/product/${p.publicId || p.id}`} 
+                  className="flex flex-col flex-grow relative outline-none"
+                  // 🔥 ADDED CLICK TRACKING HERE
+                  onClick={() => {
+                    trackSelectItem({
+                      id: p.id,
+                      name: titleStr, // using the raw title string, not the appended one
+                      price: Number(p.price) || 0,
+                      category: p.category || "general",
+                    });
+                  }}
+                >
                   <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
                     {optimizedImage ? (
                       <Image 
@@ -143,7 +155,6 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
           })}
 
           {viewAllLink && (
-            // ✅ RESTORED ORIGINAL WIDTHS HERE TOO
             <div className="snap-start shrink-0 w-[150px] sm:w-[190px] flex flex-col bg-slate-50 dark:bg-[#111] rounded-sm border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-[#D97706] transition-colors group">
               <Link href={viewAllLink} className="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-[#D97706] p-4 min-h-[220px] outline-none">
                 <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform mb-3">
