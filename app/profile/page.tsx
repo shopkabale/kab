@@ -236,6 +236,12 @@ export default function UnifiedDashboard() {
     );
   }
 
+  // Calculate Metrics from Loaded Listings
+  const totalViews = listings.reduce((sum, item) => sum + (item.views || 0), 0);
+  const totalChats = listings.reduce((sum, item) => sum + (item.inquiries || 0), 0);
+  const totalScore = listings.reduce((sum, item) => sum + (item.aiScore || 0), 0);
+  const avgScore = listings.length > 0 ? Math.round(totalScore / listings.length) : 0;
+
   return (
     <div className="pb-24 max-w-md mx-auto bg-slate-50 min-h-screen sm:border-x sm:border-slate-200 shadow-sm relative">
 
@@ -261,26 +267,39 @@ export default function UnifiedDashboard() {
         </div>
       )}
 
-      {/* 1. TOP SECTION (User Overview) */}
+      {/* 1. TOP SECTION (User Overview & Metrics) */}
       <div className="bg-white px-4 pt-6 pb-5 border-b border-slate-200">
-        <div className="flex items-center gap-3 mb-5">
-          {user.photoURL ? (
-            <Image src={user.photoURL} alt={user.displayName || "User"} width={56} height={56} className="rounded-full object-cover border-2 border-slate-100" />
-          ) : (
-            <div className="w-14 h-14 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center text-2xl font-bold border border-amber-200">
-              {(user.displayName || "S").charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div className="flex-1">
-            <h1 className="text-lg font-extrabold text-slate-900 flex items-center gap-2">
-              {user.displayName || "Kabale Seller"}
+        <div className="flex justify-between items-start mb-4">
+          <div className="flex-1 pr-4">
+            <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2 mb-1">
+              Hello, {user.displayName?.split(" ")[0] || "Seller"}
               {verificationStatus === "verified" && (
                 <span className="text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wide border bg-blue-50 text-blue-600 border-blue-200">✓ Verified</span>
               )}
             </h1>
-            <p className="text-slate-500 text-xs font-medium">{user.email || "No email"}</p>
+            <p className="text-slate-500 text-xs leading-relaxed">
+              Welcome to your dashboard, manage your items, orders, sales, delete, edit, mark as sold here.
+            </p>
           </div>
-          <button onClick={signOut} className="text-[10px] text-slate-400 font-bold hover:text-red-600 bg-slate-50 px-2 py-1.5 rounded-md">Log Out</button>
+          <button onClick={signOut} className="text-[10px] text-slate-500 font-bold hover:text-red-600 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 shrink-0 shadow-sm active:bg-slate-100">
+            Log Out
+          </button>
+        </div>
+
+        {/* Aggregate Stats */}
+        <div className="grid grid-cols-3 gap-2 mt-4">
+          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
+            <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Total Views</span>
+            <span className="block text-lg font-black text-slate-700">{totalViews}</span>
+          </div>
+          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
+            <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Total Chats</span>
+            <span className="block text-lg font-black text-slate-700">{totalChats}</span>
+          </div>
+          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
+            <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Avg Score</span>
+            <span className="block text-lg font-black text-[#D97706]">{avgScore}</span>
+          </div>
         </div>
       </div>
 
@@ -346,7 +365,7 @@ export default function UnifiedDashboard() {
                          </div>
                        </div>
 
-                       {/* 🔥 NEW: AI Analytics Dashboard 🔥 */}
+                       {/* 🔥 AI Analytics Dashboard 🔥 */}
                        <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 flex justify-between items-center">
                           <div className="flex gap-4">
                             <div className="text-center">
