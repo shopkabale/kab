@@ -14,12 +14,12 @@ export const pushToDataLayer = (event: Record<string, any>) => {
   if (typeof window !== "undefined") {
     const w = window as unknown as WindowWithDataLayer;
     w.dataLayer = w.dataLayer || [];
-    
+
     // Clear the previous ecommerce object to prevent data leaking across Next.js routes
     if (event.ecommerce) {
       w.dataLayer.push({ ecommerce: null });
     }
-    
+
     w.dataLayer.push(event);
   }
 };
@@ -79,6 +79,25 @@ export const trackPurchase = (orderId: string, total: number, items: Array<{ id:
         price: item.price,
         quantity: 1,
       })),
+    },
+  });
+};
+
+export const trackSelectItem = (product: { id: string; name: string; price: number; category: string }) => {
+  pushToDataLayer({
+    event: "select_item",
+    ecommerce: {
+      currency: "UGX",
+      value: product.price,
+      items: [
+        {
+          item_id: product.id,
+          item_name: product.name,
+          price: product.price,
+          item_category: product.category,
+          quantity: 1,
+        },
+      ],
     },
   });
 };
