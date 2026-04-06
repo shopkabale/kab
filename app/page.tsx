@@ -2,7 +2,7 @@
 import UrgentStories from "@/components/UrgentStories";
 import ProductSection from "@/components/ProductSection";
 import HorizontalScroller from "@/components/HorizontalScroller";
-import ContinueBrowsing from "@/components/ContinueBrowsing"; // 🔥 ADDED
+import ContinueBrowsing from "@/components/ContinueBrowsing";
 import Link from "next/link";
 import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
@@ -38,19 +38,16 @@ const SectionHeader = ({ title, viewAllLink }: { title: string, viewAllLink?: st
 export default async function Home() {
   const now = Date.now();
 
-  // 🔥 0. FETCH BASE POOL FOR ALGORITHMS (Top 50 viewed items)
+  // 🔥 0. FETCH BASE POOL FOR "BEST DEALS" ALGORITHM
   const basePoolQ = query(collection(db, "products"), orderBy("views", "desc"), limit(50));
   const basePoolSnap = await getDocs(basePoolQ);
   const basePool = basePoolSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
-  // 🔥 ALGORITHM 1: TRENDING (Score = views + (sales * 3))
-  const trendingProducts = [...basePool]
-    .sort((a, b) => {
-      const scoreA = (a.views || 0) + ((a.sales || 0) * 3);
-      const scoreB = (b.views || 0) + ((b.sales || 0) * 3);
-      return scoreB - scoreA;
-    })
-    .slice(0, 10);
+  // 🔥 ALGORITHM 1: TRUE AI TRENDING (Directly from the Midnight Engine)
+  // No more manual math! Just fetch the highest AI Scores directly from Firebase.
+  const trendingQ = query(collection(db, "products"), orderBy("aiScore", "desc"), limit(10));
+  const trendingSnap = await getDocs(trendingQ);
+  const trendingProducts = trendingSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
 
   // 🔥 ALGORITHM 2: BEST DEALS (Score = (views + 1) / price)
   const dealsProducts = [...basePool]
