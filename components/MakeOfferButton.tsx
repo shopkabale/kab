@@ -27,6 +27,13 @@ export default function MakeOfferButton({ product }: { product: any }) {
       return;
     }
 
+    // 🔥 NEW: Silently track the inquiry!
+    fetch("/api/products/inquiry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: product.id }),
+    }).catch(console.error);
+
     const numericOffer = Number(offerAmount);
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.kabaleonline.com";
     const itemUrl = `${baseUrl}/product/${product.publicId || product.id}`;
