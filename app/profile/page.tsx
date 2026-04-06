@@ -41,6 +41,9 @@ export default function UnifiedDashboard() {
   const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified">("unverified");
   const [isVerifying, setIsVerifying] = useState(false);
 
+  // 🔥 NEW: Real-time Metrics State 🔥
+  const [metrics, setMetrics] = useState({ views: 0, chats: 0, avgScore: 0 });
+
   // Custom Modal State
   const [modal, setModal] = useState<ModalState>({ isOpen: false, type: "none" });
 
@@ -154,8 +157,35 @@ export default function UnifiedDashboard() {
       setLoadingSaved(false);
     });
 
+    // 🔥 NEW: Real-time listener for ALL seller metrics 🔥
+    const metricsQuery = query(collection(db, "products"), where("sellerId", "==", user.id));
+    const unsubscribeMetrics = onSnapshot(metricsQuery, (snapshot) => {
+      let totalViews = 0;
+      let totalChats = 0;
+      let totalScore = 0;
+      let itemCount = 0;
+
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        totalViews += data.views || 0;
+        totalChats += data.inquiries || 0;
+        totalScore += data.aiScore || 0;
+        itemCount++;
+      });
+
+      setMetrics({
+        views: totalViews,
+        chats: totalChats,
+        avgScore: itemCount > 0 ? Math.round(totalScore / itemCount) : 0
+      });
+    });
+
     if (shouldForceRefresh) window.history.replaceState({}, document.title, window.location.pathname);
-    return () => unsubscribeWishlist();
+    
+    return () => {
+      unsubscribeWishlist();
+      unsubscribeMetrics(); // Clean up listener
+    };
   }, [user?.id, authLoading, fetchListings, fetchSales, fetchPurchases, listings.length, purchases.length, sales.length]);
 
   // --- STANDARD ACTIONS ---
@@ -236,12 +266,6 @@ export default function UnifiedDashboard() {
     );
   }
 
-  // Calculate Metrics from Loaded Listings
-  const totalViews = listings.reduce((sum, item) => sum + (item.views || 0), 0);
-  const totalChats = listings.reduce((sum, item) => sum + (item.inquiries || 0), 0);
-  const totalScore = listings.reduce((sum, item) => sum + (item.aiScore || 0), 0);
-  const avgScore = listings.length > 0 ? Math.round(totalScore / listings.length) : 0;
-
   return (
     <div className="pb-24 max-w-md mx-auto bg-slate-50 min-h-screen sm:border-x sm:border-slate-200 shadow-sm relative">
 
@@ -286,19 +310,19 @@ export default function UnifiedDashboard() {
           </button>
         </div>
 
-        {/* Aggregate Stats */}
+        {/* Real-time Aggregate Stats */}
         <div className="grid grid-cols-3 gap-2 mt-4">
           <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
             <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Total Views</span>
-            <span className="block text-lg font-black text-slate-700">{totalViews}</span>
+            <span className="block text-lg font-black text-slate-700">{metrics.views}</span>
           </div>
           <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
             <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Total Chats</span>
-            <span className="block text-lg font-black text-slate-700">{totalChats}</span>
+            <span className="block text-lg font-black text-slate-700">{metrics.chats}</span>
           </div>
           <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
             <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Avg Score</span>
-            <span className="block text-lg font-black text-[#D97706]">{avgScore}</span>
+            <span className="block text-lg font-black text-[#D97706]">{metrics.avgScore}</span>
           </div>
         </div>
       </div>
