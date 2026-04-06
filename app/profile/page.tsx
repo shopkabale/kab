@@ -41,8 +41,11 @@ export default function UnifiedDashboard() {
   const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified">("unverified");
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // 🔥 NEW: Real-time Metrics State 🔥
-  const [metrics, setMetrics] = useState({ views: 0, chats: 0, avgScore: 0 });
+  // 🔥 UPDATE: Added totalItems and isLoaded to metrics
+  const [metrics, setMetrics] = useState({ views: 0, chats: 0, avgScore: 0, totalItems: -1, isLoaded: false });
+
+  // Link Copy State
+  const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Custom Modal State
   const [modal, setModal] = useState<ModalState>({ isOpen: false, type: "none" });
@@ -157,7 +160,7 @@ export default function UnifiedDashboard() {
       setLoadingSaved(false);
     });
 
-    // 🔥 NEW: Real-time listener for ALL seller metrics 🔥
+    // Real-time listener for ALL seller metrics
     const metricsQuery = query(collection(db, "products"), where("sellerId", "==", user.id));
     const unsubscribeMetrics = onSnapshot(metricsQuery, (snapshot) => {
       let totalViews = 0;
@@ -176,7 +179,9 @@ export default function UnifiedDashboard() {
       setMetrics({
         views: totalViews,
         chats: totalChats,
-        avgScore: itemCount > 0 ? Math.round(totalScore / itemCount) : 0
+        avgScore: itemCount > 0 ? Math.round(totalScore / itemCount) : 0,
+        totalItems: itemCount,
+        isLoaded: true
       });
     });
 
@@ -184,7 +189,7 @@ export default function UnifiedDashboard() {
     
     return () => {
       unsubscribeWishlist();
-      unsubscribeMetrics(); // Clean up listener
+      unsubscribeMetrics(); 
     };
   }, [user?.id, authLoading, fetchListings, fetchSales, fetchPurchases, listings.length, purchases.length, sales.length]);
 
@@ -246,6 +251,14 @@ export default function UnifiedDashboard() {
     } catch (error) { console.error(error); }
   };
 
+  const handleCopyProductLink = (publicId: string, id: string) => {
+    const url = `${window.location.origin}/product/${publicId || id}`;
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    });
+  };
+
   const closeModal = () => {
     setModal({ isOpen: false, type: "none" });
   };
@@ -265,6 +278,8 @@ export default function UnifiedDashboard() {
       </div>
     );
   }
+
+  const hasInventory = metrics.totalItems > 0;
 
   return (
     <div className="pb-24 max-w-md mx-auto bg-slate-50 min-h-screen sm:border-x sm:border-slate-200 shadow-sm relative">
@@ -310,41 +325,100 @@ export default function UnifiedDashboard() {
           </button>
         </div>
 
-        {/* Real-time Aggregate Stats */}
-        <div className="grid grid-cols-3 gap-2 mt-4">
-          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
-            <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Total Views</span>
-            <span className="block text-lg font-black text-slate-700">{metrics.views}</span>
-          </div>
-          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
-            <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Total Chats</span>
-            <span className="block text-lg font-black text-slate-700">{metrics.chats}</span>
-          </div>
-          <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
-            <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Avg Score</span>
-            <span className="block text-lg font-black text-[#D97706]">{metrics.avgScore}</span>
-          </div>
-        </div>
+        {/* Real-time Aggregate Stats (Only show if they have items) */}
+        {hasInventory && metrics.isLoaded && (
+          <>
+            <div className="grid grid-cols-3 gap-2 mt-4">
+              <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
+                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Total Views</span>
+                <span className="block text-lg font-black text-slate-700">{metrics.views}</span>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
+                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Total Chats</span>
+                <span className="block text-lg font-black text-slate-700">{metrics.chats}</span>
+              </div>
+              <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
+                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Avg Score</span>
+                <span className="block text-lg font-black text-[#D97706]">{metrics.avgScore}</span>
+              </div>
+            </div>
+
+            {/* 🔥 DYNAMIC AI ALERTS 🔥 */}
+            <div className="mt-3">
+              {metrics.avgScore < 50 && (
+                <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-start gap-3">
+                  <span className="relative flex h-3 w-3 mt-1 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                  </span>
+                  <p className="text-xs text-red-800 font-medium leading-relaxed">
+                    <span className="font-bold block mb-0.5">Low Engagement Alert</span>
+                    Your products aren't getting enough views, sales, or inquiries. Share your product links on WhatsApp to boost your AI score and rank highly on the homepage!
+                  </p>
+                </div>
+              )}
+              {metrics.avgScore >= 50 && metrics.avgScore < 80 && (
+                <div className="bg-amber-50 border border-amber-200 p-3 rounded-lg flex items-start gap-3">
+                  <span className="text-amber-500 shrink-0 mt-0.5">📈</span>
+                  <p className="text-xs text-amber-800 font-medium leading-relaxed">
+                    <span className="font-bold block mb-0.5">You're Getting Noticed</span>
+                    You have decent views, but need more chats or sales. Try sharing your links or lowering your prices slightly to turn views into sales and climb the ranks!
+                  </p>
+                </div>
+              )}
+              {metrics.avgScore >= 80 && metrics.avgScore < 100 && (
+                <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg flex items-start gap-3">
+                  <span className="text-blue-500 shrink-0 mt-0.5">⭐</span>
+                  <p className="text-xs text-blue-800 font-medium leading-relaxed">
+                    <span className="font-bold block mb-0.5">Great Performance</span>
+                    Your items are popular! Keep sharing your links in groups to push your score over 100 and hit the Top Picks section on the homepage.
+                  </p>
+                </div>
+              )}
+              {metrics.avgScore >= 100 && (
+                <div className="bg-emerald-50 border border-emerald-200 p-3 rounded-lg flex items-start gap-3">
+                  <span className="text-emerald-500 shrink-0 mt-0.5">🔥</span>
+                  <p className="text-xs text-emerald-800 font-medium leading-relaxed">
+                    <span className="font-bold block mb-0.5">Top Seller Status</span>
+                    Amazing! Your AI score is exceptional, and your items are dominating the Kabale Online homepage. Keep up the great work!
+                  </p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {/* 2. MAIN CONTENT AREA (Tabbed Interface) */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-10 flex overflow-x-auto no-scrollbar">
-        <button onClick={() => setActiveTab("listings")} className={`flex-1 min-w-[100px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "listings" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>My Ads</button>
-        <button onClick={() => setActiveTab("sales")} className={`flex-1 min-w-[100px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "sales" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>Orders</button>
+        {hasInventory ? (
+          <>
+            <button onClick={() => setActiveTab("listings")} className={`flex-1 min-w-[100px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "listings" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>My Ads</button>
+            <button onClick={() => setActiveTab("sales")} className={`flex-1 min-w-[100px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "sales" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>Orders</button>
+          </>
+        ) : (
+          <button onClick={() => setActiveTab("listings")} className={`flex-1 min-w-[100px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "listings" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>Start Selling</button>
+        )}
         <button onClick={() => setActiveTab("purchases")} className={`flex-1 min-w-[100px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "purchases" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>Purchases</button>
         <button onClick={() => setActiveTab("saved")} className={`flex-1 min-w-[100px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "saved" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>Saved</button>
       </div>
 
       <div className="p-4">
-        {/* === TAB 1: MY LISTINGS (With AI Analytics) === */}
+        {/* === TAB 1: MY LISTINGS / START SELLING === */}
         {activeTab === "listings" && (
           <div className="space-y-4">
              {loadingListings && listings.length === 0 ? (
-               <div className="text-center py-10 text-slate-400 text-sm">Loading listings...</div>
-             ) : listings.length === 0 ? (
-               <div className="bg-white rounded-xl border border-slate-200 p-8 text-center shadow-sm">
-                 <span className="text-4xl block mb-3">🛍️</span>
-                 <p className="text-slate-800 font-bold mb-1">Start selling in under 60 seconds</p>
+               <div className="text-center py-10 text-slate-400 text-sm">Loading data...</div>
+             ) : !hasInventory && metrics.isLoaded ? (
+               <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center shadow-sm mt-4 animate-in fade-in zoom-in-95 duration-500">
+                  <div className="w-20 h-20 bg-[#D97706]/10 text-[#D97706] rounded-full flex items-center justify-center text-4xl mx-auto mb-4">💸</div>
+                  <h2 className="text-2xl font-black text-slate-900 mb-2 leading-tight">Turn your items into cash instantly</h2>
+                  <p className="text-slate-600 text-sm mb-8 leading-relaxed">
+                    Join hundreds of successful sellers in Kabale. Post your unused items, reach thousands of local buyers daily, and keep 100% of your profits.
+                  </p>
+                  <Link href="/sell" className="w-full block py-4 bg-[#D97706] text-white font-black text-lg rounded-xl shadow-md hover:bg-amber-600 active:scale-95 transition-all">
+                    Post Your First Item Free
+                  </Link>
                </div>
              ) : (
                <>
@@ -389,7 +463,7 @@ export default function UnifiedDashboard() {
                          </div>
                        </div>
 
-                       {/* 🔥 AI Analytics Dashboard 🔥 */}
+                       {/* AI Analytics Dashboard */}
                        <div className="bg-slate-50 rounded-lg p-2 border border-slate-100 flex justify-between items-center">
                           <div className="flex gap-4">
                             <div className="text-center">
@@ -402,19 +476,32 @@ export default function UnifiedDashboard() {
                             </div>
                           </div>
                           <div className="text-right border-l border-slate-200 pl-4">
-                              <span className="block text-[10px] text-slate-400 font-bold uppercase">AI Rank Score</span>
+                              <span className="block text-[10px] text-slate-400 font-bold uppercase">AI Rank</span>
                               <span className="block text-sm font-black text-[#D97706]">{aiScore}</span>
                           </div>
                        </div>
 
                        {/* Action Controls */}
-                       <div className="grid grid-cols-3 gap-2 border-t border-slate-100 pt-3">
+                       <div className="grid grid-cols-3 gap-2 pt-1">
                          <Link href={`/edit/${item.publicId || item.id}`} className="text-[11px] font-bold text-center py-2 bg-slate-50 text-slate-600 rounded-md border border-slate-200 active:bg-slate-100">Edit</Link>
                          <button onClick={() => setModal({ isOpen: true, type: "delete_confirm", product: item })} className="text-[11px] font-bold text-center py-2 bg-red-50 text-red-600 rounded-md border border-red-100 active:bg-red-100">Delete</button>
                          <button onClick={() => handleToggleSold(item)} className="text-[11px] font-bold text-center py-2 bg-slate-900 text-white rounded-md active:bg-slate-800">
                            {isSold ? "Set Active" : "Mark Sold"}
                          </button>
                        </div>
+
+                       {/* 🔥 Copy Link Button 🔥 */}
+                       <button
+                         onClick={() => handleCopyProductLink(item.publicId, item.id)}
+                         className={`w-full py-2.5 rounded-lg text-xs font-bold transition-all border flex items-center justify-center gap-2 ${
+                           copiedId === item.id 
+                             ? "bg-green-50 text-green-700 border-green-200" 
+                             : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 active:bg-slate-200"
+                         }`}
+                       >
+                         {copiedId === item.id ? "✅ Link Copied!" : "🔗 Tap to copy product link"}
+                       </button>
+
                      </div>
                    )
                  })}
@@ -430,7 +517,7 @@ export default function UnifiedDashboard() {
         )}
 
         {/* === TAB 2: ORDERS (Sales) === */}
-        {activeTab === "sales" && (
+        {activeTab === "sales" && hasInventory && (
           <div className="space-y-3">
             {loadingSales && sales.length === 0 ? (
               <div className="text-center py-10 text-slate-400 text-sm">Loading orders...</div>
