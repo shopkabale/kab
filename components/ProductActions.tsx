@@ -1,3 +1,4 @@
+// components/ProductActions.tsx
 "use client";
 
 import { useState } from "react";
@@ -22,8 +23,15 @@ export default function ProductActions({ product, children }: { product: Product
   const displayName = product.sellerName || "Verified Seller";
   const replyText = isOfficial ? "Replies within minutes" : "Response times vary";
 
-  // Route inquiries through the bot (Always active)
+  // Route inquiries through the bot
   const handleBotInquiry = () => {
+    // 🔥 NEW: Silently track the inquiry in the database
+    fetch("/api/products/inquiry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ productId: product.id }),
+    }).catch(console.error);
+
     const rawMessage = `Hi! I have a question about this item on Kabale Online: *${product.name}*\n\nProduct ID: [${product.id}]`;
     const encodedMessage = encodeURIComponent(rawMessage);
     window.open(`https://wa.me/${botPhoneNumber}?text=${encodedMessage}`, "_blank");
@@ -56,7 +64,6 @@ export default function ProductActions({ product, children }: { product: Product
     }
   };
 
-  // Dynamic Button Styling (Only changes state for active loading)
   let btnLabel = "Have questions? Chat with seller";
   let btnClass = "bg-white border-2 border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300";
 
@@ -67,11 +74,8 @@ export default function ProductActions({ product, children }: { product: Product
 
   return (
     <div className="mt-6 flex flex-col gap-3">
-
       {/* 1. SELLER INFO & CHAT BUTTON */}
       <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col gap-4">
-
-        {/* Seller Details */}
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-black text-lg border border-amber-200">
             {displayName.charAt(0).toUpperCase()}
@@ -85,7 +89,7 @@ export default function ProductActions({ product, children }: { product: Product
           </div>
         </div>
 
-        {/* Chat Action (No longer disabled by stock/status) */}
+        {/* Chat Action */}
         <button 
           onClick={handleBotInquiry}
           disabled={loading}
@@ -113,7 +117,6 @@ export default function ProductActions({ product, children }: { product: Product
               {copied ? "✅ Link Copied!" : "🔗 Copy Link"}
             </button>
 
-            {/* Slot for MakeOfferButton / SaveProductButton */}
             {children}
 
             {user?.role === "admin" && (
