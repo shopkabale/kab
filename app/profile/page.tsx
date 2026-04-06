@@ -41,7 +41,7 @@ export default function UnifiedDashboard() {
   const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified">("unverified");
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // 🔥 UPDATE: Added totalItems and isLoaded to metrics
+  // Real-time Metrics State
   const [metrics, setMetrics] = useState({ views: 0, chats: 0, avgScore: 0, totalItems: -1, isLoaded: false });
 
   // Link Copy State
@@ -143,7 +143,7 @@ export default function UnifiedDashboard() {
 
   useEffect(() => {
     if (!user || authLoading) return;
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = newSearchParams(window.location.search);
     const shouldForceRefresh = urlParams.get('refresh') === 'true';
 
     getDoc(doc(db, "users", user.id)).then(userDoc => {
@@ -391,7 +391,7 @@ export default function UnifiedDashboard() {
 
       {/* 2. MAIN CONTENT AREA (Tabbed Interface) */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-10 flex overflow-x-auto no-scrollbar">
-        {hasInventory ? (
+        {hasInventory || !metrics.isLoaded ? (
           <>
             <button onClick={() => setActiveTab("listings")} className={`flex-1 min-w-[100px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "listings" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>My Ads</button>
             <button onClick={() => setActiveTab("sales")} className={`flex-1 min-w-[100px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "sales" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>Orders</button>
