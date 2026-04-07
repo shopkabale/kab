@@ -3,11 +3,8 @@ import UrgentStories from "@/components/UrgentStories";
 import HorizontalScroller from "@/components/HorizontalScroller";
 import ContinueBrowsing from "@/components/ContinueBrowsing";
 import Link from "next/link";
-import { collection, query, where, getDocs, limit, orderBy } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
-
-// ✅ Cache this page for 1 hour to protect Firebase Quota
-//export const revalidate = 3600; 
+// 🔥 NEW: Import our custom cache fetcher instead of raw Firebase
+import { getCachedHomepageData } from "@/lib/firebase/fetchers";
 
 // --- SHUFFLE HELPER FUNCTION ---
 const shuffleArray = (array: any[]) => {
@@ -21,50 +18,21 @@ const shuffleArray = (array: any[]) => {
 
 export default async function Home() {
   const now = Date.now();
-  const productsRef = collection(db, "products");
 
   // ==========================================
-  // 1. DEFINE ALL QUERIES (NO WAITING YET)
+  // 🔥 FETCH DATA INSTANTLY FROM CACHE 🔥
   // ==========================================
-  const basePoolQ = query(productsRef, orderBy("views", "desc"), limit(50));
-  const trendingQ = query(productsRef, orderBy("aiScore", "desc"), limit(10));
-  const officialQ = query(productsRef, where("isAdminUpload", "==", true), limit(12));
-  const approvedQ = query(productsRef, where("isApprovedQuality", "==", true), limit(12));
-  const boostedQ = query(productsRef, where("isBoosted", "==", true), limit(6));
-  const featuredQ = query(productsRef, where("isFeatured", "==", true), limit(6));
-  const latestQ = query(productsRef, orderBy("createdAt", "desc"), limit(12));
-  const ladiesQ = query(productsRef, where("ladies_home", "==", true), limit(12));
-  const watchQ = query(productsRef, where("watch_home", "==", true), limit(12));
-  const electronicsQ = query(productsRef, where("category", "==", "electronics"), limit(12));
-  const studentQ = query(productsRef, where("category", "==", "student_item"), limit(12));
-  const agriQ = query(productsRef, where("category", "==", "agriculture"), limit(12));
+  const data = await getCachedHomepageData();
 
   // ==========================================
-  // 2. 🔥 PARALLEL FETCHING (THE PROFESSIONAL WAY) 🔥
-  // Fire all 12 queries simultaneously to reduce server load time by 90%
-  // ==========================================
-  const [
-    basePoolSnap, trendingSnap, officialSnap, approvedSnap, 
-    boostedSnap, featuredSnap, latestSnap, ladiesSnap, 
-    watchSnap, electronicsSnap, studentSnap, agriSnap
-  ] = await Promise.all([
-    getDocs(basePoolQ), getDocs(trendingQ), getDocs(officialQ), getDocs(approvedQ),
-    getDocs(boostedQ), getDocs(featuredQ), getDocs(latestQ), getDocs(ladiesQ),
-    getDocs(watchQ), getDocs(electronicsQ), getDocs(studentQ), getDocs(agriQ)
-  ]);
-
-  // ==========================================
-  // 3. DATA PROCESSING & MATH
+  // DATA PROCESSING & MATH (In-Memory, Lightning Fast)
   // ==========================================
   
-  // Base Pool for Deals Math
-  const basePool = basePoolSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-  
-  // ALGORITHM 1: True AI Trending (Fetched directly via aiScore)
-  const trendingProducts = trendingSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+  // ALGORITHM 1: True AI Trending
+  const trendingProducts = data.trendingProducts;
 
-  // ALGORITHM 2: Best Deals Math (Calculated in-memory fast)
-  const dealsProducts = [...basePool]
+  // ALGORITHM 2: Best Deals Math 
+  const dealsProducts = [...data.basePool]
     .filter(p => Number(p.price) > 0)
     .sort((a, b) => {
       const scoreA = ((a.views || 0) + 1) / Number(a.price);
@@ -74,30 +42,28 @@ export default async function Home() {
     .slice(0, 10);
 
   // Map and Shuffle Standard Categories
-  const officialProducts = shuffleArray(officialSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-  const approvedProducts = shuffleArray(approvedSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-  const ladiesProducts = shuffleArray(ladiesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-  const watchProducts = shuffleArray(watchSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-  const electronicsProducts = shuffleArray(electronicsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-  const studentProducts = shuffleArray(studentSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
-  const agriProducts = shuffleArray(agriSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)));
+  const officialProducts = shuffleArray(data.officialProducts);
+  const approvedProducts = shuffleArray(data.approvedProducts);
+  const ladiesProducts = shuffleArray(data.ladiesProducts);
+  const watchProducts = shuffleArray(data.watchProducts);
+  const electronicsProducts = shuffleArray(data.electronicsProducts);
+  const studentProducts = shuffleArray(data.studentProducts);
+  const agriProducts = shuffleArray(data.agriProducts);
   
   // Map Latest (No shuffle, keep chronological)
-  const latestProducts = latestSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+  const latestProducts = data.latestProducts;
 
   // Filter Expired Boosts/Features
-  const boostedProducts = boostedSnap.docs
-    .map(d => ({ id: d.id, ...d.data() } as any))
-    .filter(p => p.boostExpiresAt && p.boostExpiresAt > now)
-    .sort((a, b) => b.boostedAt - a.boostedAt);
+  const boostedProducts = data.boostedProducts
+    .filter((p: any) => p.boostExpiresAt && p.boostExpiresAt > now)
+    .sort((a: any, b: any) => b.boostedAt - a.boostedAt);
 
-  const featuredProducts = featuredSnap.docs
-    .map(d => ({ id: d.id, ...d.data() } as any))
-    .filter(p => p.featureExpiresAt && p.featureExpiresAt > now)
-    .sort((a, b) => b.featuredAt - a.featuredAt);
+  const featuredProducts = data.featuredProducts
+    .filter((p: any) => p.featureExpiresAt && p.featureExpiresAt > now)
+    .sort((a: any, b: any) => b.featuredAt - a.featuredAt);
 
   // ==========================================
-  // 4. RENDER UI
+  // RENDER UI
   // ==========================================
   return (
     <div className="min-h-screen bg-slate-50 pb-8 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
@@ -124,7 +90,7 @@ export default async function Home() {
       <div className="w-full space-y-2 mt-2">
 
         {/* ========================================== */}
-        {/* 🔥 NEW BEHAVIORAL SECTIONS INTRODUCED HERE */}
+        {/* 🔥 BEHAVIORAL SECTIONS */}
         {/* ========================================== */}
 
         {/* 1. 🔥 TRENDING (Powered by AI Score) */}
