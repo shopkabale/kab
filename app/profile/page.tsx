@@ -147,7 +147,6 @@ export default function UnifiedDashboard() {
   useEffect(() => {
     if (!user || authLoading) return;
     
-    // ✅ FIX: Corrected typo 'newSearchParams' to 'new URLSearchParams'
     const urlParams = new URLSearchParams(window.location.search);
     const shouldForceRefresh = urlParams.get('refresh') === 'true';
 
@@ -207,7 +206,7 @@ export default function UnifiedDashboard() {
       unsubscribeWishlist();
       unsubscribeMetrics(); 
     };
-  }, [user?.id]); // ✅ FIX: Dependency array is clean. Only runs once per user login.
+  }, [user?.id]); 
 
   // --- STANDARD ACTIONS ---
   const handleRemoveSaved = async (productId: string) => {
@@ -223,6 +222,10 @@ export default function UnifiedDashboard() {
       const updatedListings = listings.map(item => item.id === product.id ? { ...item, status: newStatus } : item);
       setListings(updatedListings);
       saveToCache('listings', updatedListings); 
+      
+      // 🔥 BREAK CACHE WHEN ITEM STATUS CHANGES 🔥
+      await fetch('/api/revalidate');
+      
     } catch (error) { console.error("Failed to update status", error); }
   };
 
@@ -264,6 +267,10 @@ export default function UnifiedDashboard() {
       setListings(updatedListings);
       saveToCache('listings', updatedListings); 
       closeModal();
+      
+      // 🔥 BREAK CACHE WHEN ITEM IS DELETED 🔥
+      await fetch('/api/revalidate');
+      
     } catch (error) { console.error(error); }
   };
 
