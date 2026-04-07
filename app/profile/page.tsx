@@ -141,9 +141,14 @@ export default function UnifiedDashboard() {
     setLoadingPurchases(false);
   }, [user, hasMorePurchases, purchases, loadFromCache, saveToCache]);
 
+  // ==========================================
+  // EFFECT 1: STANDARD DATA & URL FETCHING
+  // ==========================================
   useEffect(() => {
     if (!user || authLoading) return;
-    const urlParams = newSearchParams(window.location.search);
+    
+    // ✅ FIX: Corrected typo 'newSearchParams' to 'new URLSearchParams'
+    const urlParams = new URLSearchParams(window.location.search);
     const shouldForceRefresh = urlParams.get('refresh') === 'true';
 
     getDoc(doc(db, "users", user.id)).then(userDoc => {
@@ -154,13 +159,25 @@ export default function UnifiedDashboard() {
     if (sales.length === 0 || shouldForceRefresh) fetchSales(false, shouldForceRefresh);
     if (purchases.length === 0 || shouldForceRefresh) fetchPurchases(false, shouldForceRefresh);
 
+    if (shouldForceRefresh) window.history.replaceState({}, document.title, window.location.pathname);
+    
+  }, [user?.id, authLoading, fetchListings, fetchSales, fetchPurchases, listings.length, purchases.length, sales.length]);
+
+
+  // ==========================================
+  // EFFECT 2: REAL-TIME LISTENERS (ISOLATED TO PREVENT LOOP)
+  // ==========================================
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // 1. Wishlist Listener
     const wishlistRef = collection(db, "users", user.id, "wishlist");
     const unsubscribeWishlist = onSnapshot(query(wishlistRef, orderBy("savedAt", "desc"), limit(10)), (snapshot) => {
       setSavedItems(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoadingSaved(false);
     });
 
-    // Real-time listener for ALL seller metrics
+    // 2. Metrics Listener
     const metricsQuery = query(collection(db, "products"), where("sellerId", "==", user.id));
     const unsubscribeMetrics = onSnapshot(metricsQuery, (snapshot) => {
       let totalViews = 0;
@@ -185,13 +202,12 @@ export default function UnifiedDashboard() {
       });
     });
 
-    if (shouldForceRefresh) window.history.replaceState({}, document.title, window.location.pathname);
-    
+    // Clean up when component unmounts or user changes
     return () => {
       unsubscribeWishlist();
       unsubscribeMetrics(); 
     };
-  }, [user?.id, authLoading, fetchListings, fetchSales, fetchPurchases, listings.length, purchases.length, sales.length]);
+  }, [user?.id]); // ✅ FIX: Dependency array is clean. Only runs once per user login.
 
   // --- STANDARD ACTIONS ---
   const handleRemoveSaved = async (productId: string) => {
