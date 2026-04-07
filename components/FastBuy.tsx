@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { Product } from "@/types";
-import { trackBeginCheckout } from "@/lib/analytics"; // 🔥 ADDED ANALYTICS
+import { trackBeginCheckout } from "@/lib/analytics"; 
+import { calculateDepositAmount } from "@/lib/utils";
 
 export default function FastBuy({ product }: { product: Product }) {
   const { user } = useAuth();
@@ -18,17 +19,22 @@ export default function FastBuy({ product }: { product: Product }) {
   const [buyerName, setBuyerName] = useState(""); 
   const [contactPhone, setContactPhone] = useState("");
 
+  // 🧮 DEPOSIT CALCULATIONS
+  const price = Number(product.price) || 0;
+  // Passing 'false' for admin restricted by default, adjust if your product type supports it
+  const depositRequired = calculateDepositAmount(price, false); 
+  const balanceOnDelivery = price - depositRequired;
+
   // ==========================================
   // FAST CHECKOUT LOGIC
   // ==========================================
   const handleBuyNowClick = () => {
     if (user && user.displayName) setBuyerName(user.displayName);
-    
-    // 🔥 Fire the Order Intent Event
+
     trackBeginCheckout({
       id: product.id,
       name: product.name || "Unknown Item",
-      price: Number(product.price) || 0,
+      price: price,
       category: product.category || "general"
     });
 
@@ -46,43 +52,70 @@ export default function FastBuy({ product }: { product: Product }) {
     setLoading(true);  
 
     try {  
-      const res = await fetch("/api/orders", {  
-        method: "POST",  
-        headers: { "Content-Type": "application/json" },  
-        body: JSON.stringify({  
-          userId: user ? user.id : "GUEST",  
-          buyerName: buyerName.trim(), 
-          productId: product.id,  
-          sellerId: product.sellerId || "SYSTEM",  
-          total: product.price, // Locked to single item price
-          contactPhone: cleanPhone
-        }),  
-      });  
+      if (depositRequired > 0) {
+        // 🚀 FLOW A: DEPOSIT REQUIRED (LIVEPAY API)
+        const res = await fetch("/api/payments/initiate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userId: user ? user.id : "GUEST",
+            buyerName: buyerName.trim(),
+            productId: product.id,
+            contactPhone: cleanPhone,
+          }),
+        });
 
-      const data = await res.json();  
+        const data = await res.json();
 
-      if (res.ok && data.success) {  
-        // 🔥 Trigger the success UI state
-        setShowSuccess(true);
-        setTimeout(() => {
-          router.push(`/success/${data.orderId}`);
-        }, 3000); 
-      } else {  
-        alert(data.error || "Failed to place order.");  
-        setShowModal(false);
-      }  
+        if (res.ok) {
+          // Redirect to the real-time waiting screen with the Firestore Order ID
+          router.push(`/checkout/waiting?orderId=${data.orderId}`);
+        } else {
+          alert(data.error || "Payment initiation failed. Please try again.");
+          setLoading(false);
+        }
+
+      } else {
+        // 🚚 FLOW B: PURE COD (EXISTING LOGIC)
+        const res = await fetch("/api/orders", {  
+          method: "POST",  
+          headers: { "Content-Type": "application/json" },  
+          body: JSON.stringify({  
+            userId: user ? user.id : "GUEST",  
+            buyerName: buyerName.trim(), 
+            productId: product.id,  
+            sellerId: product.sellerId || "SYSTEM",  
+            total: price, 
+            contactPhone: cleanPhone
+          }),  
+        });  
+
+        const data = await res.json();  
+
+        if (res.ok && data.success) {  
+          setShowSuccess(true);
+          setTimeout(() => {
+            router.push(`/success/${data.orderId}`);
+          }, 3000); 
+        } else {  
+          alert(data.error || "Failed to place order.");  
+          setShowModal(false);
+        }  
+      }
     } catch (error) {  
       console.error(error);  
       alert("Something went wrong with the connection.");  
     } finally {
-      setLoading(false);  
+      // Only disable loading if it's COD or it failed. If deposit is required, 
+      // we leave loading true to prevent double-clicks while redirecting.
+      if (depositRequired === 0) setLoading(false); 
     }
   };
 
   return (
     <>
       <div className="flex flex-col gap-1.5 mt-8 mb-4">
-        {/* 🟢 PRIMARY BUTTON (Always Active & High Intent) */}
+        {/* 🟢 PRIMARY BUTTON */}
         <button   
           onClick={handleBuyNowClick}  
           disabled={loading}  
@@ -91,7 +124,9 @@ export default function FastBuy({ product }: { product: Product }) {
           Buy Now (Fast Order)
         </button>
         <p className="text-center text-xs font-bold text-slate-500 tracking-wide mt-1">
-          ⚡ No account needed. Confirm instantly via WhatsApp.
+          {depositRequired > 0 
+            ? "⚡ Small deposit required to secure this item." 
+            : "⚡ No account needed. Confirm instantly via WhatsApp."}
         </p>
       </div>
 
@@ -103,7 +138,7 @@ export default function FastBuy({ product }: { product: Product }) {
           <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl relative overflow-hidden">  
 
             {showSuccess ? (
-              // 🔥 SUCCESS STATE UI
+              // 🔥 SUCCESS STATE UI (COD ONLY)
               <div className="text-center py-8">
                 <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <span className="text-4xl">✅</span>
@@ -115,17 +150,38 @@ export default function FastBuy({ product }: { product: Product }) {
                 <p className="text-sm text-slate-400 mt-4 animate-pulse">Redirecting...</p>
               </div>
             ) : (
-              // 📝 FORM UI (Ultra-Lean)
+              // 📝 FORM UI
               <>
                 <div className="absolute top-0 left-0 w-full h-2 bg-[#D97706]"></div>  
                 <h2 className="text-2xl font-black text-slate-900 mb-2">Fast Order</h2>  
 
+                {/* 🧮 DYNAMIC SUMMARY BOX */}
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-5 mt-4">  
                   <p className="font-bold text-lg text-slate-900 leading-tight line-clamp-2">{product.name}</p>  
-                  <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">  
-                    <span className="text-sm font-medium text-slate-500">Total (COD):</span>  
-                    <span className="font-black text-[#D97706] text-lg">UGX {Number(product.price).toLocaleString()}</span>  
-                  </div>  
+                  
+                  {depositRequired > 0 ? (
+                    // DEPOSIT UI
+                    <div className="mt-3 pt-3 border-t border-slate-200">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-slate-500">Total Price:</span>
+                        <span className="font-bold text-slate-700">UGX {price.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-sm font-bold text-green-700">Pay Now (Deposit):</span>
+                        <span className="font-black text-green-600 text-lg">UGX {depositRequired.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-xs text-slate-500 mt-1">
+                        <span>Balance on Delivery:</span>
+                        <span>UGX {balanceOnDelivery.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    // PURE COD UI
+                    <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-200">  
+                      <span className="text-sm font-medium text-slate-500">Total (COD):</span>  
+                      <span className="font-black text-[#D97706] text-lg">UGX {price.toLocaleString()}</span>  
+                    </div>  
+                  )}
                 </div>  
 
                 <div className="space-y-4 mb-6">
@@ -137,7 +193,9 @@ export default function FastBuy({ product }: { product: Product }) {
 
                   {/* Phone */}
                   <div>  
-                    <label className="block text-sm font-bold text-slate-700 mb-1.5">WhatsApp Number</label>  
+                    <label className="block text-sm font-bold text-slate-700 mb-1.5">
+                      {depositRequired > 0 ? "MTN/Airtel Mobile Money Number" : "WhatsApp Number"}
+                    </label>  
                     <input required type="tel" placeholder="e.g. 077... or 075..." className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-[#D97706]" value={contactPhone} onChange={e => setContactPhone(e.target.value)} />  
                   </div>
                 </div>  
@@ -146,7 +204,7 @@ export default function FastBuy({ product }: { product: Product }) {
                 <div className="flex gap-3">  
                   <button onClick={() => setShowModal(false)} disabled={loading} className="flex-1 bg-white border-2 border-slate-200 text-slate-700 py-3.5 rounded-xl font-bold hover:bg-slate-50 transition-colors">Cancel</button>  
                   <button onClick={executeFastCheckout} disabled={loading || !contactPhone.trim() || !buyerName.trim()} className="flex-[2] bg-[#D97706] text-white py-3.5 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md disabled:opacity-50">  
-                    {loading ? "Processing..." : "Submit Order"}  
+                    {loading ? "Processing..." : depositRequired > 0 ? "Pay Deposit" : "Submit Order"}  
                   </button>  
                 </div>  
               </>
