@@ -7,7 +7,7 @@ import { collection, query, where, getDocs, limit, orderBy } from "firebase/fire
 import { db } from "@/lib/firebase/config";
 
 // ✅ Cache this page for 1 hour to protect Firebase Quota
-export const revalidate = 3600; 
+//export const revalidate = 3600; 
 
 // --- SHUFFLE HELPER FUNCTION ---
 const shuffleArray = (array: any[]) => {
