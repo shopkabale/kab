@@ -14,7 +14,7 @@ import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
 import SaveProductButton from "@/components/SaveProductButton";
 import InlineOfferLink from "@/components/InlineOfferLink";
-import { optimizeImage, calculateDepositAmount } from "@/lib/utils"; // 🔥 Added calculateDepositAmount
+import { optimizeImage, calculateDepositAmount } from "@/lib/utils"; 
 
 export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
   const product = await getProductByPublicId(params.publicId);
@@ -105,7 +105,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const sellerNameStr = String(product.sellerName || "").toLowerCase();
   const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
 
-  // 🔥 CALCULATE DEPOSIT FOR UI (Using Admin status for restricted logic)
+  // 🔥 CALCULATE DEPOSIT FOR UI
   const depositRequired = calculateDepositAmount(safePrice, isAdmin);
 
   // ==========================================
@@ -206,24 +206,16 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             ) : null}
           </div>  
 
-          {/* Title */}
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 leading-tight mb-3">  
+          {/* 🔥 TITLE: Big and Light Gray */}
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-400 leading-tight mb-3">  
             {safeName}
           </h1>  
 
-          {/* Price */}
+          {/* 🔥 PRICE: Bold and Black */}
           <div className="mb-1.5 flex flex-wrap items-center gap-4">  
-            <span className="text-4xl font-black text-[#D97706]">  
+            <span className="text-4xl font-black text-slate-900">  
               UGX {safePrice.toLocaleString()}  
             </span>  
-            
-            {/* 🔥 ADDED DEPOSIT BADGE */}
-            {depositRequired > 0 && (
-              <span className="bg-green-100 text-green-800 border border-green-200 text-[11px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center gap-1">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                Deposit Required
-              </span>
-            )}
           </div>  
 
           {/* INLINE MAKE OFFER LINK */}
@@ -234,14 +226,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </p>
           </div>
 
-          {/* AUTHENTIC SCARCITY INDICATOR */}
-          <div className={`mb-6 flex items-center gap-2 text-sm font-bold p-3 rounded-xl border w-fit ${
-            isSoldOut 
-              ? "bg-slate-100 text-slate-600 border-slate-200"
-              : isLowStock 
-                ? "bg-red-50 text-red-600 border-red-100" 
-                : "bg-green-50 text-green-700 border-green-100"
-          }`}>
+          {/* 🔥 AUTHENTIC SCARCITY INDICATOR: Plain Black Text */}
+          <div className="mb-6 flex items-center gap-2 text-sm font-bold text-slate-900">
             {isSoldOut ? (
                <>
                 <span className="text-lg">ℹ️</span>
@@ -249,7 +235,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                </>
             ) : isLowStock ? (
               <>
-                <svg className="w-5 h-5 animate-pulse shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span>High Demand: Only {safeStock} left in stock!</span>
@@ -264,8 +250,22 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             )}
           </div>
 
+          {/* 🔥 NEW DEPOSIT REQUIREMENT BOX (Exactly above FastBuy) */}
+          {!isSoldOut && depositRequired > 0 && (
+            <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-4 shadow-sm">
+              <h4 className="text-sm sm:text-base font-bold text-green-800 flex items-center gap-2 mb-2">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                Commitment Deposit Required: Secure Your Item
+              </h4>
+              <p className="text-sm text-slate-900 leading-relaxed font-medium">
+                With {isLowStock ? `only ${safeStock} left in stock` : 'high demand'}, a small UGX {depositRequired.toLocaleString()} commitment deposit is required to confirm your intent, hold this unique item, and prevent duplicate claims.
+              </p>
+            </div>
+          )}
+
           {/* MAIN CALL TO ACTIONS */}
-          {/* We wrap FastBuy in a div that visually disables it if sold out, avoiding TS errors */}
           <div className={`mb-6 ${isSoldOut ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
             <FastBuy product={{...product, images: optimizedImages}} />
           </div>
