@@ -104,9 +104,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // ==========================================
   const sellerNameStr = String(product.sellerName || "").toLowerCase();
   const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
-
-  // 🔥 CALCULATE DEPOSIT FOR UI
-  const depositRequired = calculateDepositAmount(safePrice, isAdmin);
+  // 🔥 CALCULATE DEPOSIT FOR UI (Strictly enforce the 20k minimum rule)
+  const depositRequired = safePrice >= 20000 ? calculateDepositAmount(safePrice, false) : 0;
 
   // ==========================================
   // 3. OPTIMIZE IMAGES
