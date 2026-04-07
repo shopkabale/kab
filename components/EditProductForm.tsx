@@ -66,9 +66,9 @@ export default function EditProductForm({ product }: { product: Product }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ folder: "kabale_online" })
         });
-        
+
         if (!signRes.ok) throw new Error("Failed to get upload signature from server.");
-        
+
         const signData = await signRes.json();
         const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
         const apiKey = process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY;
@@ -78,7 +78,7 @@ export default function EditProductForm({ product }: { product: Product }) {
         const uploadPromises = newImageFiles.map(async (file) => {
           const formDataCloudinary = new FormData();
           formDataCloudinary.append("file", file);
-          
+
           // ✅ FIXED: Pointing to API_KEY, not CLOUD_NAME
           formDataCloudinary.append("api_key", apiKey);
           formDataCloudinary.append("timestamp", signData.timestamp.toString());
@@ -86,14 +86,14 @@ export default function EditProductForm({ product }: { product: Product }) {
           formDataCloudinary.append("folder", "kabale_online");
 
           const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: "POST", body: formDataCloudinary });
-          
+
           // ✅ FIXED: Catching exact Cloudinary rejections
           if (!res.ok) {
             const errorData = await res.json();
             console.error("Cloudinary rejection:", errorData);
             throw new Error(errorData.error?.message || "Cloudinary rejected the upload.");
           }
-          
+
           return res.json();
         });
 
@@ -118,6 +118,9 @@ export default function EditProductForm({ product }: { product: Product }) {
       const dbData = await dbRes.json();
 
       if (dbData.success) {
+        // 🔥 BREAK CACHE WHEN ITEM IS EDITED 🔥
+        await fetch('/api/revalidate');
+
         alert("Ad updated successfully!");
         router.push(`/item/${dbData.publicId || product.publicId || product.id}`);
       } else {
