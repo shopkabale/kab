@@ -179,6 +179,10 @@ export default function SellPage() {
       if (dbData.success) {
         setSuccessData({ publicId: dbData.publicId, title: formData.title });
         setLoading(false);
+
+        // 🔥 BREAK CACHE WHEN NEW ITEM IS UPLOADED 🔥
+        await fetch('/api/revalidate');
+        
       } else {
         throw new Error(dbData.error || "Database rejected the product.");
       }
