@@ -14,7 +14,7 @@ import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
 import SaveProductButton from "@/components/SaveProductButton";
 import InlineOfferLink from "@/components/InlineOfferLink";
-import { optimizeImage } from "@/lib/utils";
+import { optimizeImage, calculateDepositAmount } from "@/lib/utils"; // 🔥 Added calculateDepositAmount
 
 export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
   const product = await getProductByPublicId(params.publicId);
@@ -104,6 +104,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // ==========================================
   const sellerNameStr = String(product.sellerName || "").toLowerCase();
   const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
+
+  // 🔥 CALCULATE DEPOSIT FOR UI (Using Admin status for restricted logic)
+  const depositRequired = calculateDepositAmount(safePrice, isAdmin);
 
   // ==========================================
   // 3. OPTIMIZE IMAGES
@@ -209,10 +212,18 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
           </h1>  
 
           {/* Price */}
-          <div className="mb-1.5 flex items-center gap-4">  
+          <div className="mb-1.5 flex flex-wrap items-center gap-4">  
             <span className="text-4xl font-black text-[#D97706]">  
               UGX {safePrice.toLocaleString()}  
             </span>  
+            
+            {/* 🔥 ADDED DEPOSIT BADGE */}
+            {depositRequired > 0 && (
+              <span className="bg-green-100 text-green-800 border border-green-200 text-[11px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider flex items-center gap-1">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                Deposit Required
+              </span>
+            )}
           </div>  
 
           {/* INLINE MAKE OFFER LINK */}
@@ -276,11 +287,16 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                 </svg>
               </div>
               <div>
+                {/* 🔥 DYNAMIC TRUST MESSAGING */}
                 <h4 className="text-sm font-black text-slate-900 mb-0.5 tracking-tight">
-                  Payment is after you receive the product
+                  {depositRequired > 0 
+                    ? "Secure with a Deposit, Balance on Delivery" 
+                    : "Payment is after you receive the product"}
                 </h4>
                 <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                  Inspect the item first. If it is not exactly as described, simply hand it back. You only pay when you are 100% satisfied. Zero risk.
+                  {depositRequired > 0 
+                    ? `Pay a small UGX ${depositRequired.toLocaleString()} deposit to confirm your order. Pay the balance only after you inspect the item and are 100% satisfied.`
+                    : "Inspect the item first. If it is not exactly as described, simply hand it back. You only pay when you are 100% satisfied. Zero risk."}
                 </p>
               </div>
             </div>
