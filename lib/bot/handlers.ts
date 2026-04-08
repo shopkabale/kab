@@ -181,16 +181,22 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     return true;
   }
 
-  const greetings = ["HI", "HELLO", "HEY", "MENU", "START", "/START"];
-  if (message.type === "text" && greetings.includes(upperText)) {
+    // ==========================================
+  // BULLETPROOF GREETINGS (Catches hidden URL characters)
+  // ==========================================
+  const greetings = ["HI", "HELLO", "HEY", "MENU", "START"];
+  
+  // This strips out EVERY invisible character, space, and punctuation mark
+  const pureText = text.replace(/[^a-zA-Z]/g, "").toUpperCase();
+
+  if (message.type === "text" && greetings.includes(pureText)) {
+    // If they were locked in a support session, silently unlock them so they can see the menu!
+    await adminDb.collection("support_sessions").doc(senderPhone).delete().catch(() => {});
+    
     await sendWelcomeMenu(senderPhone);
     return true; 
   }
 
-  const isHandledByBotFlow = await processBotFlow(senderPhone, { type: "text", text });
-  if (isHandledByBotFlow) {
-    return true;
-  }
 
   // ==========================================
   // 🧠 AI NLP ROUTING & SEARCH (GEMINI)
