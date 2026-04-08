@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@getbrevo/brevo": "^4.0.0",
-    "@google/generative-ai": "^0.2.0",
+    "@google/generative-ai": "latest",
     "@next/third-parties": "latest",
     "@uiw/react-md-editor": "^4.0.5",
     "@vercel/analytics": "^1.2.2",
