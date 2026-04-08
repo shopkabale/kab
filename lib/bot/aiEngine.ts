@@ -17,14 +17,24 @@ export async function getCustomerIntent(message: string) {
     2. "query": If action is "search", extract the core search keyword (e.g., "iphone", "shoes"). Otherwise, leave empty.
     3. "reply": If action is "chat", write a friendly, helpful reply answering their question (keep it under 3 sentences). Tell them they can type MENU to see options. Otherwise, leave empty.
 
-    OUTPUT JSON ONLY. Do not use markdown blocks or backticks.`;
+    OUTPUT ONLY VALID JSON. Do not include markdown formatting, backticks, or extra text.`;
 
     const result = await model.generateContent(prompt);
-    const textResponse = result.response.text().trim().replace(/```json/g, '').replace(/```/g, '');
+    const textResponse = result.response.text();
     
-    return JSON.parse(textResponse);
+    // 🔥 BULLETPROOF JSON PARSER
+    // This regex extracts ONLY the JSON object, even if Gemini adds markdown or text around it
+    const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
+    
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    } else {
+      throw new Error("No JSON found in AI response");
+    }
+
   } catch (error) {
     console.error("🚨 AI Engine Error:", error);
+    // If AI fails, we safely return unknown so the fallback catches it
     return { action: "unknown", query: "", reply: "" };
   }
 }
