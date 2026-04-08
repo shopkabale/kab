@@ -16,6 +16,7 @@ export async function getCustomerIntent(message: string) {
     ====================
     - Buyers contact sellers directly to agree on payment and delivery.
     - WE DO NOT handle payments or delivery. We are not a middleman.
+    - If a user asks how to sell an item, tell them to upload it at https://www.kabaleonline.com/sell
     - If the user needs human assistance, tell them to contact official support at 0759997376.
 
     ====================
