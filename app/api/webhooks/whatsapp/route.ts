@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
+import * as admin from "firebase-admin"; // 🔥 Added for CRM Timestamp
 
 import { sendWhatsAppMessage } from "@/lib/whatsapp"; 
 import { checkIsBotFlow } from "@/lib/bot/handlers"; 
@@ -57,7 +58,9 @@ export async function POST(request: Request) {
 
         if (value?.messages && value.messages.length > 0) {
           for (const message of value.messages) {
-            messagePromises.push(processWhatsAppMessage(message));
+            // Pass the contact info (Name) along with the message for the CRM
+            const contactName = value.contacts?.[0]?.profile?.name || "WhatsApp User";
+            messagePromises.push(processWhatsAppMessage(message, contactName));
           }
         }
       }
@@ -75,12 +78,21 @@ export async function POST(request: Request) {
 // ==========================================
 // CORE LOGIC: Process a Single Message
 // ==========================================
-async function processWhatsAppMessage(message: any): Promise<void> {
+async function processWhatsAppMessage(message: any, contactName: string): Promise<void> {
   const fromPhone = message?.from;
   if (!fromPhone) return;
 
   try {
     console.log(`💬 Processing incoming payload from ${fromPhone}...`);
+
+    // 🔥 PHASE 1 UPGRADE: SILENT CRM DATA CAPTURE
+    // Automatically save or update this user in the database every time they message
+    adminDb.collection("customers").doc(fromPhone).set({
+      phone: fromPhone,
+      name: contactName,
+      lastInteraction: admin.firestore.FieldValue.serverTimestamp(),
+      tags: admin.firestore.FieldValue.arrayUnion("active_user") 
+    }, { merge: true }).catch(console.error);
 
     // ==========================================
     // 3. Determine text content & Filter Media
@@ -97,8 +109,6 @@ async function processWhatsAppMessage(message: any): Promise<void> {
         incomingText = message.interactive.list_reply?.title || "";
       }
     } else if (message.type === "button") {
-      // 🔥 FIX FOR SELLER TEMPLATE BUTTONS
-      // If there is a hidden payload, we use it. Otherwise, we use the button text.
       incomingText = message.button?.payload || message.button?.text || "[Template Button Clicked]";
     } else {
       isUnsupportedMedia = true;
@@ -115,7 +125,7 @@ async function processWhatsAppMessage(message: any): Promise<void> {
     logChat(fromPhone, "incoming", message.type, incomingText).catch(console.error);
 
     // ==========================================
-    // 4. Let the Bot try to handle it first (This will trigger handlers.ts)
+    // 4. Let the Bot try to handle it first (This triggers handlers.ts)
     // ==========================================
     const isBotHandled = await checkIsBotFlow(fromPhone, message);
     if (isBotHandled) {
@@ -132,7 +142,7 @@ async function processWhatsAppMessage(message: any): Promise<void> {
           status: "closed", 
           updatedAt: Date.now() 
         });
-        
+
         await sendWhatsAppMessage(fromPhone, "✅ *Chat ended successfully.*\nYou are no longer connected to the other person.\n\nType *MENU* to browse more items.");
         await sendWhatsAppMessage(activeSession.phone, "ℹ️ *Chat Ended*\nThe other person has manually ended the chat. You are no longer connected.");
         return; 
@@ -174,7 +184,7 @@ async function processWhatsAppMessage(message: any): Promise<void> {
     } else {
       // THE FALLBACK: No active chat, not a bot command.
       console.log(`ℹ️ No active transaction found for ${fromPhone}. Sending fallback reply.`);
-      
+
       const fallbackText = `Hi there! 👋 Welcome to *Kabale Online*.\n\nI am your campus marketplace bot. I can help you safely buy or sell laptops, phones, and more right here at uni.\n\n👉 Type *MENU* to see options.\n👉 Or visit kabaleonline.com to find an item!`;
 
       await sendWhatsAppMessage(fromPhone, fallbackText);
