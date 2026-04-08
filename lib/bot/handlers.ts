@@ -10,7 +10,20 @@ import { NotificationService } from "@/lib/notifications";
 import { processBotFlow } from "./botFlow"; 
 import { sendAdminAlert } from "@/lib/brevo"; 
 
-// 🔥 THE PRIMARY HUMAN HANDOVER NUMBER (Updated to 0784655792)
+// 🔥 NEW IMPORTS FOR AI & SEARCH
+import { getCustomerIntent } from "./aiEngine";
+import algoliasearch from "algoliasearch";
+
+// ==========================================
+// INITIALIZE ALGOLIA FOR AI SEARCHES
+// ==========================================
+const searchClient = algoliasearch(
+  process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "", 
+  process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY || ""
+);
+const index = searchClient.initIndex(process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "products");
+
+// 🔥 THE PRIMARY HUMAN HANDOVER NUMBER
 const HUMAN_AGENT_PHONE = "256784655792"; 
 
 // ==========================================
@@ -30,8 +43,6 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     buttonId = message.interactive.list_reply.id;
     text = message.interactive.list_reply.title;
   } else if (message.type === "image") {
-    // If it's an image and they aren't in a proxy chat, they might be trying to upload. 
-    // We redirect them to the web since we killed the WhatsApp uploader!
     await sendWhatsAppMessage(
       senderPhone, 
       "📸 *Great photo!*\n\nTo sell this item securely on Kabale Online, please upload it directly via our website:\n👉 https://www.kabaleonline.com/sell\n\n_It only takes 60 seconds!_"
@@ -59,14 +70,14 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
         senderPhone, 
         "⚠️ *Notice:* The agent you were talking to is currently busy handling a high volume of requests.\n\nFor any new or urgent inquiries, please contact our direct line: *0784655792*.\n\n_Your previous chat session has been closed. Type MENU to browse the marketplace._"
       );
-      await supportRef.delete(); // Unlock the user
-      return true; // Stop processing so they can read the message
+      await supportRef.delete(); 
+      return true; 
     } 
     
     // SCENARIO B: User explicitly wants to leave support mode early
     if (upperText === "MENU" || upperText === "CANCEL" || upperText === "STOP") {
-      await supportRef.delete(); // Unlock the user silently
-      // DO NOT return true here. We let the code continue downwards so the Welcome Menu triggers!
+      await supportRef.delete(); 
+      // Do not return true here, allow the Menu logic below to trigger
     } 
     
     // SCENARIO C: User is following up within 24 hours
@@ -75,7 +86,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
         HUMAN_AGENT_PHONE, 
         `💬 *Follow-up from +${senderPhone}:*\n"${text}"`
       );
-      await supportRef.update({ updatedAt: now }); // Reset the 24hr clock
+      await supportRef.update({ updatedAt: now }); 
       return true; 
     }
   }
@@ -85,7 +96,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   // ==========================================
   if (upperText === "CANCEL" || upperText === "STOP") {
     await adminDb.collection("bot_sessions").doc(senderPhone).delete().catch(() => {});
-    await sendWhatsAppMessage(senderPhone, "🚫 *Action Cancelled*\nYour upload has been safely cancelled.\n\nType *MENU* to start over.");
+    await sendWhatsAppMessage(senderPhone, "🚫 *Action Cancelled*\nYour action has been safely cancelled.\n\nType *MENU* to start over.");
     return true; 
   }
 
@@ -101,7 +112,6 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   // SHOPPING & CATALOG LOGIC
   // ==========================================
 
-  // A. Trigger the Categories Menu
   if (buttonId === "btn_shop" || upperText === "BUY") {
     await sendWhatsAppMessage(senderPhone, "🌐 *For easy browsing and the best experience, visit our full website:*\nhttps://kabaleonline.com\n\nOr, browse directly here on WhatsApp by tapping the menu below 👇");
 
@@ -122,30 +132,25 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     return true;
   }
 
-  // B. Handle Category Selection & Pagination
   if (buttonId.startsWith("cat_")) {
     const parts = buttonId.split("_");
     const categoryName = parts.slice(1, -1).join("_"); 
     const pageNumber = parseInt(parts[parts.length - 1]); 
-
     await handleCategoryBrowsing(senderPhone, categoryName, pageNumber);
     return true;
   }
 
-  // C. Handle "Search" Trigger
   if (buttonId === "cmd_search") {
     await processBotFlow(senderPhone, { type: "text", text: "/search" });
     return true;
   }
 
-  // D. Handle Product Selection (Aggressive Lookup)
   if (buttonId.startsWith("item_")) {
     const productId = buttonId.replace("item_", "");
     await handleProductSelection(senderPhone, productId);
     return true;
   }
 
-  // E. Handle "Buy Now" Checkout
   if (buttonId.startsWith("buy_")) {
     const productId = buttonId.replace("buy_", "");
     await handleNativeCheckout(senderPhone, productId);
@@ -164,21 +169,14 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   }
 
   // ==========================================
-  // HELP DESK
+  // HELP DESK EXPLICIT
   // ==========================================
   if (buttonId === "btn_help" || upperText === "HELP") {
-    // Lock the user into support mode
-    await adminDb.collection("support_sessions").doc(senderPhone).set({
-      status: "open",
-      updatedAt: Date.now()
-    });
-
+    await adminDb.collection("support_sessions").doc(senderPhone).set({ status: "open", updatedAt: Date.now() });
     await sendWhatsAppMessage(
       senderPhone, 
       "Connecting you to Kabale Online Support. Please type your question below and an agent will reply shortly.\n\n_If you want to stop waiting, just type MENU._"
     );
-
-    // Tag them in CRM
     await adminDb.collection("customers").doc(senderPhone).update({ tags: admin.firestore.FieldValue.arrayUnion("needs_support") }).catch(()=> {});
     return true;
   }
@@ -195,23 +193,54 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   }
 
   // ==========================================
+  // 🧠 AI NLP ROUTING & SEARCH (GEMINI)
+  // ==========================================
+  if (message.type === "text" && text.split(" ").length >= 2) {
+    console.log(`🤖 AI Processing NLP: "${text}"`);
+    
+    const aiIntent = await getCustomerIntent(text);
+
+    if (aiIntent.action === "search" && aiIntent.query) {
+      const { hits } = await index.search(aiIntent.query, { hitsPerPage: 8 });
+      
+      if (hits.length > 0) {
+        const rows = hits.map((hit: any) => ({
+          id: `item_${hit.objectID}`, 
+          title: hit.name.substring(0, 24), 
+          description: `UGX ${Number(hit.price).toLocaleString()}`.substring(0, 72)
+        }));
+
+        await sendWhatsAppListMenu(
+          senderPhone,
+          `🤖 I understand you're looking for *${aiIntent.query}*. Here are the best matches I found:`,
+          "View Matches",
+          [{ title: "AI Search Results", rows: rows }]
+        );
+        return true; 
+      } else {
+        await sendWhatsAppMessage(senderPhone, `🤖 I searched the marketplace for *${aiIntent.query}* but couldn't find any exact matches right now. Try browsing our categories or typing MENU!`);
+        return true;
+      }
+    }
+
+    // If AI detects support needed, let it fall through to the fallback below
+  }
+
+  // ==========================================
   // 🚨 FALLBACK & HUMAN HANDOVER
   // ==========================================
-  console.log(`⚠️ Bot didn't understand: "${text}" from ${senderPhone}. Forwarding to Human Agent.`);
+  console.log(`⚠️ Bot & AI Escalating: "${text}" from ${senderPhone}. Forwarding to Human Agent.`);
   
-  // 1. Lock the user in support mode
   await adminDb.collection("support_sessions").doc(senderPhone).set({
     status: "open",
     updatedAt: Date.now()
   });
 
-  // 2. Notify the User
   await sendWhatsAppMessage(
     senderPhone, 
-    "🤖 I'm not quite sure how to help with that.\n\nI have forwarded your message to our human agent. They will reply to you shortly! 🕒\n\n_If you want to stop waiting, just type MENU._"
+    "🤖 I'm not quite sure how to help with that, or you've asked for an agent.\n\nI have forwarded your message to our human team. They will reply to you shortly! 🕒\n\n_If you want to stop waiting, just type MENU._"
   );
   
-  // 3. Forward to Primary Admin
   const handoverMessage = `🚨 *BOT ESCALATION*\n\n*User:* +${senderPhone}\n*Message:* "${text}"\n\n_Please reply to them directly._`;
   await sendWhatsAppMessage(HUMAN_AGENT_PHONE, handoverMessage);
 
@@ -352,7 +381,7 @@ async function handleProductSelection(phone: string, productId: string) {
 }
 
 // ==========================================
-// HELPER: NATIVE WHATSAPP CHECKOUT
+// HELPER: NATIVE WHATSAPP CHECKOUT (LIVEPAY ENFORCED)
 // ==========================================
 async function handleNativeCheckout(buyerPhone: string, productId: string) {
   try {
@@ -364,8 +393,22 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
     }
 
     const product = productDoc.data()!;
-    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
     const productPrice = Number(product.price) || 0;
+
+    // 🔥 LIVEPAY 20K DEPOSIT RULE
+    const depositRequired = productPrice >= 20000 ? Math.max(10000, productPrice * 0.25) : 0;
+
+    if (depositRequired > 0) {
+      const checkoutUrl = `https://www.kabaleonline.com/product/${product.publicId || productId}`;
+      
+      const depositMessage = `🔒 *Commitment Deposit Required*\n\nBecause this item is in high demand, a deposit of *UGX ${depositRequired.toLocaleString()}* is required to secure it.\n\nPlease complete your secure MTN/Airtel payment here:\n👉 ${checkoutUrl}\n\n_Once paid, your order is instantly confirmed and the seller will be notified!_`;
+      
+      await sendWhatsAppMessage(buyerPhone, depositMessage);
+      return; 
+    }
+
+    // 🟢 IF UNDER 20K -> PROCEED NORMALLY
+    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
     await adminDb.collection("orders").doc(orderNumber).set({
       orderId: orderNumber,
@@ -385,28 +428,15 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
       messageCount: 0        
     });
 
-    sendAdminAlert(
-      orderNumber, 
-      product.title || product.name || "Unknown Item", 
-      productPrice, 
-      buyerPhone, 
-      product.sellerPhone
-    ).catch(console.error);
+    sendAdminAlert(orderNumber, product.title || "Unknown Item", productPrice, buyerPhone, product.sellerPhone).catch(console.error);
+    await NotificationService.orderCreated(product.sellerPhone, buyerPhone, product.title || "Unknown Item", "Valued Customer", orderNumber);
 
-    await NotificationService.orderCreated(
-      product.sellerPhone, 
-      buyerPhone, 
-      product.title || product.name, 
-      "Valued Customer", 
-      orderNumber
-    );
-
-    const followUpText = `The seller has been notified. They will reply to you right here in this chat to arrange delivery and payment! 🤝`;
+    const followUpText = `✅ *Order Placed!*\n\nThe seller has been notified. They will reply to you right here in this chat to arrange delivery and payment! 🤝`;
     await sendWhatsAppMessage(buyerPhone, followUpText);
 
   } catch (error) {
     console.error("❌ Error handling native checkout:", error);
-    await sendWhatsAppMessage(buyerPhone, "Oops, something went wrong setting up your chat. Please try again.");
+    await sendWhatsAppMessage(buyerPhone, "Oops, something went wrong setting up your order. Please try again.");
   }
 }
 
@@ -444,13 +474,7 @@ async function handleNewWebsiteInquiry(buyerPhone: string, productId: string, or
       messageCount: 0        
     });
 
-    sendAdminAlert(
-      orderNumber, 
-      product.title || product.name || "Unknown Item", 
-      productPrice, 
-      buyerPhone, 
-      product.sellerPhone
-    ).catch(console.error);
+    sendAdminAlert(orderNumber, product.title || "Unknown Item", productPrice, buyerPhone, product.sellerPhone).catch(console.error);
 
     const sellerNotification = `🛍️ *New Order Inquiry!*\n\nSomeone is interested in your item: *${product.title || product.name || "Unknown Item"}*\n\n*Buyer says:*\n"${originalMessage}"\n\n_Reply directly to this message to chat with the buyer._`;
     await sendWhatsAppMessage(product.sellerPhone, sellerNotification);
