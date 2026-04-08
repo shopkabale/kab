@@ -50,7 +50,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     return true;
   }
 
-  const upperText = text.trim().toUpperCase();
+  let upperText = text.trim().toUpperCase();
 
   // ==========================================
   // 🚦 SMART AGENT OVERFLOW & AUTO-CANCEL
@@ -200,6 +200,13 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     
     const aiIntent = await getCustomerIntent(text);
 
+    // 🟢 SCENARIO 1: AI wants to reply to a general question/greeting
+    if (aiIntent.action === "chat" && aiIntent.reply) {
+      await sendWhatsAppMessage(senderPhone, `🤖 ${aiIntent.reply}`);
+      return true; // Stop here, AI handled the conversation!
+    }
+
+    // 🔵 SCENARIO 2: AI detected a product search
     if (aiIntent.action === "search" && aiIntent.query) {
       const { hits } = await index.search(aiIntent.query, { hitsPerPage: 8 });
       
@@ -223,7 +230,10 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
       }
     }
 
-    // If AI detects support needed, let it fall through to the fallback below
+    // 🔴 SCENARIO 3: AI detected they need support.
+    if (aiIntent.action === "support") {
+        upperText = "HELP"; // This forces it to trigger your Human Handover code below!
+    }
   }
 
   // ==========================================
