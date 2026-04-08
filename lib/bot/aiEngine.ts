@@ -1,11 +1,7 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-
 export async function getCustomerIntent(message: string) {
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) throw new Error("Missing GEMINI_API_KEY in environment variables.");
 
     const prompt = `You are a friendly, intelligent shopping assistant for Kabale Online, a marketplace in Kabale, Uganda.
     Analyze this customer message: "${message}"
@@ -20,11 +16,26 @@ export async function getCustomerIntent(message: string) {
 
     OUTPUT ONLY VALID JSON. Do not include markdown formatting, backticks, or extra text.`;
 
-    const result = await model.generateContent(prompt);
-    const textResponse = result.response.text();
+    // 🚀 BYPASSING THE SDK: Directly hitting the v1beta endpoint
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }]
+      })
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error?.message || "Failed to fetch from Google AI");
+    }
+
+    const textResponse = data.candidates[0].content.parts[0].text;
     
     // 🔥 BULLETPROOF JSON PARSER
-    // This regex extracts ONLY the JSON object, even if Gemini adds markdown or text around it
     const jsonMatch = textResponse.match(/\{[\s\S]*\}/);
     
     if (jsonMatch) {
@@ -33,9 +44,9 @@ export async function getCustomerIntent(message: string) {
       throw new Error("No JSON found in AI response");
     }
 
-  } catch (error) {
-    console.error("🚨 AI Engine Error:", error);
-    // If AI fails, we safely return unknown so the fallback catches it
+  } catch (error: any) {
+    console.error("🚨 AI Engine Error:", error.message);
+    // Safe fallback to human agent if the AI fails
     return { action: "unknown", query: "", reply: "" };
   }
 }
