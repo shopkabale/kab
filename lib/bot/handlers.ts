@@ -8,7 +8,10 @@ import {
 } from "@/lib/whatsapp";
 import { NotificationService } from "@/lib/notifications";
 import { processBotFlow } from "./botFlow"; 
-import { sendAdminAlert } from "@/lib/brevo"; // 🔥 IMPORTED BREVO ALERT
+import { sendAdminAlert } from "@/lib/brevo"; 
+
+// 🔥 THE PRIMARY HUMAN HANDOVER NUMBER
+const HUMAN_AGENT_PHONE = "256759997376"; 
 
 // ==========================================
 // MAIN ROUTER: IS THIS A BOT COMMAND?
@@ -17,7 +20,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   let text = "";
   let buttonId = "";
 
-  // 1. Extract text or button ID securely from the Meta payload
+  // 1. Extract text or button ID securely
   if (message.type === "text") {
     text = message.text?.body || "";
   } else if (message.type === "interactive" && message.interactive.type === "button_reply") {
@@ -27,24 +30,62 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     buttonId = message.interactive.list_reply.id;
     text = message.interactive.list_reply.title;
   } else if (message.type === "image") {
-    // Pass image to botFlow for product uploads
-    return await processBotFlow(senderPhone, { type: "image", mediaId: message.image.id });
+    // If it's an image and they aren't in a proxy chat, they might be trying to upload. 
+    // We redirect them to the web since we killed the WhatsApp uploader!
+    await sendWhatsAppMessage(
+      senderPhone, 
+      "📸 *Great photo!*\n\nTo sell this item securely on Kabale Online, please upload it directly via our website:\n👉 https://www.kabaleonline.com/sell\n\n_It only takes 60 seconds!_"
+    );
+    return true;
   }
 
   const upperText = text.trim().toUpperCase();
 
   // ==========================================
-  // 🚨 THE UPLOAD ESCAPE HATCH
+  // 🚦 SMART AGENT OVERFLOW & AUTO-CANCEL
+  // ==========================================
+  const supportRef = adminDb.collection("support_sessions").doc(senderPhone);
+  const supportDoc = await supportRef.get();
+
+  if (supportDoc.exists) {
+    const supportData = supportDoc.data()!;
+    const lastInteraction = supportData.updatedAt || 0;
+    const now = Date.now();
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000; 
+
+    // SCENARIO A: 24 Hours have passed. Admin is busy. Auto-cancel!
+    if (now - lastInteraction > TWENTY_FOUR_HOURS) {
+      await sendWhatsAppMessage(
+        senderPhone, 
+        "⚠️ *Notice:* The agent you were talking to is currently busy handling a high volume of requests.\n\nFor any new or urgent inquiries, please contact our secondary line: *0784655792*.\n\n_Your previous chat session has been closed. Type MENU to browse the marketplace._"
+      );
+      await supportRef.delete(); // Unlock the user
+      return true; // Stop processing so they can read the message
+    } 
+    
+    // SCENARIO B: User explicitly wants to leave support mode early
+    if (upperText === "MENU" || upperText === "CANCEL" || upperText === "STOP") {
+      await supportRef.delete(); // Unlock the user silently
+      // DO NOT return true here. We let the code continue downwards so the Welcome Menu triggers!
+    } 
+    
+    // SCENARIO C: User is following up within 24 hours
+    else {
+      await sendWhatsAppMessage(
+        HUMAN_AGENT_PHONE, 
+        `💬 *Follow-up from +${senderPhone}:*\n"${text}"`
+      );
+      await supportRef.update({ updatedAt: now }); // Reset the 24hr clock
+      return true; 
+    }
+  }
+
+  // ==========================================
+  // 🚨 THE UPLOAD ESCAPE HATCH (Legacy Support)
   // ==========================================
   if (upperText === "CANCEL" || upperText === "STOP") {
-    // 1. Delete their active bot state/session from Firebase
-    // ⚠️ Change "bot_sessions" if your botFlow uses a different collection name!
     await adminDb.collection("bot_sessions").doc(senderPhone).delete().catch(() => {});
-    
-    // 2. Send the confirmation
     await sendWhatsAppMessage(senderPhone, "🚫 *Action Cancelled*\nYour upload has been safely cancelled.\n\nType *MENU* to start over.");
-    
-    // 3. Return true so the webhook knows the bot handled this message
     return true; 
   }
 
@@ -52,7 +93,6 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   const productIdMatch = text.match(/Product ID:\s*\[([a-zA-Z0-9_-]+)\]/i);
   if (productIdMatch) {
     const productId = productIdMatch[1];
-    // 🔥 THE FIX: Pass the 'text' variable here so the inquiry function gets the exact message
     await handleNewWebsiteInquiry(senderPhone, productId, text); 
     return true; 
   }
@@ -62,7 +102,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   // ==========================================
 
   // A. Trigger the Categories Menu
-  if (buttonId === "btn_shop") {
+  if (buttonId === "btn_shop" || upperText === "BUY") {
     await sendWhatsAppMessage(senderPhone, "🌐 *For easy browsing and the best experience, visit our full website:*\nhttps://kabaleonline.com\n\nOr, browse directly here on WhatsApp by tapping the menu below 👇");
 
     await sendWhatsAppListMenu(
@@ -113,24 +153,38 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   }
 
   // ==========================================
-  // EXISTING LOGIC (Sell, Help, Menu)
+  // STRICT SELLER REDIRECT
   // ==========================================
-
-  if (buttonId === "btn_sell" || text.toLowerCase() === "/add") {
-    await processBotFlow(senderPhone, { type: "text", text: "/add" });
-    return true;
-  }
-
-  if (buttonId === "btn_help") {
+  if (buttonId === "btn_sell" || upperText === "SELL" || text.toLowerCase() === "/add") {
     await sendWhatsAppMessage(
       senderPhone, 
-      "Connecting you to Kabale Online Support. Please type your question below and an admin will reply shortly."
+      "🚀 *Ready to make money?*\n\nTo ensure your item is listed beautifully and securely, please upload it directly on our website here:\n\n👉 https://www.kabaleonline.com/sell\n\n_It only takes 60 seconds!_"
     );
     return true;
   }
 
-  const greetings = ["hi", "hello", "hey", "menu", "start", "/start"];
-  if (message.type === "text" && greetings.includes(text.toLowerCase().trim())) {
+  // ==========================================
+  // HELP DESK
+  // ==========================================
+  if (buttonId === "btn_help" || upperText === "HELP") {
+    // Lock the user into support mode
+    await adminDb.collection("support_sessions").doc(senderPhone).set({
+      status: "open",
+      updatedAt: Date.now()
+    });
+
+    await sendWhatsAppMessage(
+      senderPhone, 
+      "Connecting you to Kabale Online Support. Please type your question below and an agent will reply shortly.\n\n_If you want to stop waiting, just type MENU._"
+    );
+
+    // Tag them in CRM
+    await adminDb.collection("customers").doc(senderPhone).update({ tags: admin.firestore.FieldValue.arrayUnion("needs_support") }).catch(()=> {});
+    return true;
+  }
+
+  const greetings = ["HI", "HELLO", "HEY", "MENU", "START", "/START"];
+  if (message.type === "text" && greetings.includes(upperText)) {
     await sendWelcomeMenu(senderPhone);
     return true; 
   }
@@ -140,8 +194,28 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     return true;
   }
 
-  // Fallback: Not a bot command, let the human-to-human proxy handle it
-  return false; 
+  // ==========================================
+  // 🚨 FALLBACK & HUMAN HANDOVER
+  // ==========================================
+  console.log(`⚠️ Bot didn't understand: "${text}" from ${senderPhone}. Forwarding to Human Agent.`);
+  
+  // 1. Lock the user in support mode
+  await adminDb.collection("support_sessions").doc(senderPhone).set({
+    status: "open",
+    updatedAt: Date.now()
+  });
+
+  // 2. Notify the User
+  await sendWhatsAppMessage(
+    senderPhone, 
+    "🤖 I'm not quite sure how to help with that.\n\nI have forwarded your message to our human agent. They will reply to you shortly! 🕒\n\n_If you want to stop waiting, just type MENU._"
+  );
+  
+  // 3. Forward to Primary Admin
+  const handoverMessage = `🚨 *BOT ESCALATION*\n\n*User:* +${senderPhone}\n*Message:* "${text}"\n\n_Please reply to them directly._`;
+  await sendWhatsAppMessage(HUMAN_AGENT_PHONE, handoverMessage);
+
+  return true; 
 }
 
 // ==========================================
@@ -160,7 +234,7 @@ async function sendWelcomeMenu(phone: string) {
 }
 
 // ==========================================
-// HELPER: FETCH CATEGORY ITEMS (THE "RULE OF 9" FIX)
+// HELPER: FETCH CATEGORY ITEMS
 // ==========================================
 async function handleCategoryBrowsing(phone: string, category: string, page: number) {
   try {
@@ -220,7 +294,7 @@ async function handleCategoryBrowsing(phone: string, category: string, page: num
 }
 
 // ==========================================
-// HELPER: SHOW PRODUCT DETAILS (AGGRESSIVE LOOKUP & IMAGE DISPLAY)
+// HELPER: SHOW PRODUCT DETAILS
 // ==========================================
 async function handleProductSelection(phone: string, productId: string) {
   try {
@@ -307,11 +381,10 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
         quantity: 1
       }],
       createdAt: Date.now(),
-      updatedAt: Date.now(), // 🔥 Syncs perfectly with webhook ghost sweeper
-      messageCount: 0        // 🔥 Required for the 5-message reminder
+      updatedAt: Date.now(), 
+      messageCount: 0        
     });
 
-    // 🔥 NEW: Trigger the silent Admin Email Ledger!
     sendAdminAlert(
       orderNumber, 
       product.title || product.name || "Unknown Item", 
@@ -340,7 +413,6 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
 // ==========================================
 // HELPER: PROCESS NEW WEBSITE INQUIRY
 // ==========================================
-// 🔥 THE FIX: Added 'originalMessage' to the function parameters
 async function handleNewWebsiteInquiry(buyerPhone: string, productId: string, originalMessage: string) {
   try {
     const productDoc = await adminDb.collection("products").doc(productId).get();
@@ -368,11 +440,10 @@ async function handleNewWebsiteInquiry(buyerPhone: string, productId: string, or
         quantity: 1
       }],
       createdAt: Date.now(),
-      updatedAt: Date.now(), // 🔥 Syncs perfectly with webhook ghost sweeper
-      messageCount: 0        // 🔥 Required for the 5-message reminder
+      updatedAt: Date.now(), 
+      messageCount: 0        
     });
 
-    // 🔥 NEW: Trigger the silent Admin Email Ledger!
     sendAdminAlert(
       orderNumber, 
       product.title || product.name || "Unknown Item", 
@@ -381,11 +452,9 @@ async function handleNewWebsiteInquiry(buyerPhone: string, productId: string, or
       product.sellerPhone
     ).catch(console.error);
 
-    // 🔥 THE FIX: Send the seller the actual message the buyer wrote!
     const sellerNotification = `🛍️ *New Order Inquiry!*\n\nSomeone is interested in your item: *${product.title || product.name || "Unknown Item"}*\n\n*Buyer says:*\n"${originalMessage}"\n\n_Reply directly to this message to chat with the buyer._`;
     await sendWhatsAppMessage(product.sellerPhone, sellerNotification);
 
-    // Confirm to the Buyer
     const buyerConfirmation = `✅ *Inquiry Sent!*\n\nWe have alerted the seller about your interest in *${product.title || product.name || "Unknown Item"}*.\n\nPlease wait for their reply right here in this chat.`;
     await sendWhatsAppMessage(buyerPhone, buyerConfirmation);
 
