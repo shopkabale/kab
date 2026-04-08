@@ -10,8 +10,8 @@ import { NotificationService } from "@/lib/notifications";
 import { processBotFlow } from "./botFlow"; 
 import { sendAdminAlert } from "@/lib/brevo"; 
 
-// 🔥 THE PRIMARY HUMAN HANDOVER NUMBER
-const HUMAN_AGENT_PHONE = "256759997376"; 
+// 🔥 THE PRIMARY HUMAN HANDOVER NUMBER (Updated to 0784655792)
+const HUMAN_AGENT_PHONE = "256784655792"; 
 
 // ==========================================
 // MAIN ROUTER: IS THIS A BOT COMMAND?
@@ -57,7 +57,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     if (now - lastInteraction > TWENTY_FOUR_HOURS) {
       await sendWhatsAppMessage(
         senderPhone, 
-        "⚠️ *Notice:* The agent you were talking to is currently busy handling a high volume of requests.\n\nFor any new or urgent inquiries, please contact our secondary line: *0784655792*.\n\n_Your previous chat session has been closed. Type MENU to browse the marketplace._"
+        "⚠️ *Notice:* The agent you were talking to is currently busy handling a high volume of requests.\n\nFor any new or urgent inquiries, please contact our direct line: *0784655792*.\n\n_Your previous chat session has been closed. Type MENU to browse the marketplace._"
       );
       await supportRef.delete(); // Unlock the user
       return true; // Stop processing so they can read the message
