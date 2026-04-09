@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { db } from "@/lib/firebase"; // Adjust this path to your firebase config
+import { db } from "@/lib/firebase/config"; // 🔥 Fixed Import Path!
 import { collection, addDoc, query, orderBy, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { useAuth } from "@/components/AuthProvider";
 
