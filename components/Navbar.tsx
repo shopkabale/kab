@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { useCart } from "@/context/CartContext"; // 🔥 IMPORTED CART BRAIN
 import SearchBar from "@/components/SearchBar";
 import { 
   FaWhatsapp, 
@@ -16,6 +17,7 @@ import {
 export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const pathname = usePathname();
   const { user, loading, signIn, signOut } = useAuth();
+  const { cartCount } = useCart(); // 🔥 PULLED LIVE CART COUNT
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Lock body scroll AND broadcast state to hide other UI elements
@@ -51,7 +53,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       {/* ============================================== */}
       {/* NAVBAR CONTAINER                               */}
       {/* ============================================== */}
-      {/* ADDED: border-b-[3px] border-blue-500 to create the blue line */}
       <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white border-b-[3px] border-blue-500 z-40 transition-all shadow-sm`}>
 
         {/* === DESKTOP VIEW === */}
@@ -71,9 +72,18 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             <Link href="/category/student_item" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/student_item') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Student Market</Link>
 
             <Link href="/ai" className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${isActive('/ai') ? 'text-[#D97706] bg-amber-50' : 'text-slate-700 hover:text-[#D97706] hover:bg-slate-50'}`}>
-              {/* Removed emoji, added uncolored matching SVG */}
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
               <span className="text-sm font-bold uppercase tracking-wide">AI Guide</span>
+            </Link>
+
+            {/* 🔥 NEW: DESKTOP CART ICON */}
+            <Link href="/cart" className="relative p-1 text-slate-700 hover:text-[#D97706] transition-colors">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+              {cartCount > 0 && (
+                <span className="absolute top-0 right-0 transform translate-x-1/2 -translate-y-1/4 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
+                  {cartCount}
+                </span>
+              )}
             </Link>
 
             <Link href="/sell" className="flex items-center gap-2 bg-[#D97706] text-white px-5 py-2.5 rounded-md text-sm font-bold uppercase tracking-wide hover:bg-amber-600 transition-colors shadow-sm">
@@ -120,7 +130,18 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
               </Link>
             </div>
 
-            <div className="flex items-center gap-5 text-slate-800">
+            <div className="flex items-center gap-4 text-slate-800">
+              
+              {/* 🔥 NEW: MOBILE CART ICON */}
+              <Link href="/cart" className="relative p-1 text-slate-700 hover:text-[#D97706] transition-colors">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                {cartCount > 0 && (
+                  <span className="absolute top-0 right-0 transform translate-x-1/4 -translate-y-1/4 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white">
+                    {cartCount}
+                  </span>
+                )}
+              </Link>
+
               {user ? (
                 <Link href="/profile" aria-label="Profile">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
@@ -191,6 +212,17 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             )}
 
             <div className="flex flex-col">
+              {/* 🔥 NEW: CART IN MOBILE MENU */}
+              <Link href="/cart" onClick={closeMenu} className="flex justify-between items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <div className="flex items-center">
+                  <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                  <span className="text-[15px] font-bold text-slate-900">My Cart</span>
+                </div>
+                {cartCount > 0 && (
+                  <span className="bg-red-600 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">{cartCount}</span>
+                )}
+              </Link>
+
               <Link href="/profile" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
                 <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
                 <span className="text-[15px]">Orders</span>
@@ -245,7 +277,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 <span className="text-[15px]">Agriculture</span>
               </Link>
 
-              {/* ADDED: View All Products */}
               <Link href="/products" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
                 <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
                 <span className="text-[15px]">View All Products</span>
@@ -262,7 +293,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
               <span className="text-[15px]">Buyer Requests</span>
             </Link>
             <Link href="/ai" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-              {/* Removed emoji, added uncolored matching SVG */}
               <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
               <span className="text-[15px]">AI Shopping Guide</span>
             </Link>
@@ -270,7 +300,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
               <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2.5 2.5 0 00-2.5-2.5H14" /></svg>
               <span className="text-[15px]">Journal & Updates</span>
             </Link>
-            {/* ADDED: Read Documentation */}
             <Link href="/guide" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
               <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
               <span className="text-[15px]">Read Documentation</span>
