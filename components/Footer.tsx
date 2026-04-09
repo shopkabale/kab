@@ -118,6 +118,10 @@ export default function Footer() {
             <ul className="space-y-3">
               <li><Link href="/profile" className="hover:text-[#D97706] transition-colors">My Profile</Link></li>
               <li><Link href="/sell" className="hover:text-amber-600 transition-colors text-[#D97706] font-bold">Sell on Kabale</Link></li>
+              
+              {/* 🔥 NEW POLICIES LINK ADDED HERE */}
+              <li><Link href="/policies" className="hover:text-green-600 transition-colors text-green-600 font-bold">Policies & Refunds</Link></li>
+              
               <li><Link href="/about" className="hover:text-[#D97706] transition-colors">About Us</Link></li>
               <li><Link href="/contact" className="hover:text-[#D97706] transition-colors">Contact Us</Link></li>
               <li><Link href="/terms" className="hover:text-[#D97706] transition-colors">Terms & Conditions</Link></li>
