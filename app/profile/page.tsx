@@ -7,10 +7,10 @@ import { collection, query, onSnapshot, doc, getDoc, where } from "firebase/fire
 import { db } from "@/lib/firebase/config";
 
 // --- IMPORT OUR NEW ISOLATED COMPONENTS ---
-import ListingsTab from "./components/ListingsTab";
-import OrdersTab from "./components/OrdersTab";
-import PurchasesTab from "./components/PurchasesTab";
-import WishlistTab from "./components/WishlistTab";
+import ListingsTab from "@/components/dashboard/ListingsTab";
+import OrdersTab from "@/components/dashboard/OrdersTab";
+import PurchasesTab from "@/components/dashboard/PurchasesTab";
+import WishlistTab from "@/components/dashboard/WishlistTab";
 
 export default function UnifiedDashboard() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
