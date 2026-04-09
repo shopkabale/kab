@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       const productData = productSnap.data();
       const actualPrice = Number(productData.price) || 0;
       const itemQuantity = Number(item.quantity) || 1;
-      
+
       actualTotalAmount += (actualPrice * itemQuantity);
 
       validatedItems.push({
@@ -103,6 +103,9 @@ export async function POST(request: Request) {
     const transactionId = livePayData.data?.transaction_id;
 
     // 5. SAVE THE MASTER ORDER
+    // 🔥 Extract flat array of seller IDs for Firestore Rules Security!
+    const uniqueSellerIds = Array.from(new Set(validatedItems.map(item => item.sellerId).filter(Boolean)));
+
     const orderRef = doc(db, "orders", orderNumber);
     await setDoc(orderRef, {
       orderId: orderNumber,
@@ -115,6 +118,7 @@ export async function POST(request: Request) {
       status: "new",
       cartItems: validatedItems,
       sellerOrders: sellerOrders,
+      sellerIds: uniqueSellerIds, // 🔥 Added flat array here
       totalAmount: actualTotalAmount,
       transactionId: transactionId,
       referenceId: referenceId,
