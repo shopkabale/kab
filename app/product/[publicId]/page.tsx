@@ -9,12 +9,11 @@ import { notFound } from "next/navigation";
 import { getProductByPublicId, getProducts } from "@/lib/firebase/firestore";
 import ImageGallery from "@/components/ImageGallery";
 import ProductActions from "@/components/ProductActions";
-import FastBuy from "@/components/FastBuy"; 
 import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
 import SaveProductButton from "@/components/SaveProductButton";
 import InlineOfferLink from "@/components/InlineOfferLink";
-import ProductReviews from "@/components/ProductReviews"; // 🔥 INJECTED REVIEWS
+import ProductReviews from "@/components/ProductReviews"; 
 import { optimizeImage, calculateDepositAmount } from "@/lib/utils"; 
 import { FaCheck, FaTruck } from "react-icons/fa";
 import { MdVerifiedUser } from "react-icons/md";
@@ -79,7 +78,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const safeCondition = product.condition || "used";
   const safeCategory = product.category || "general";
 
-  // TypeScript Bypass: We cast product to 'any' here so TS ignores missing properties
+  // TypeScript Bypass
   const pAny = product as any;
 
   // Product States
@@ -98,7 +97,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
     }
   }
 
-  // Logic for Authentic Scarcity
   const isLowStock = safeStock > 0 && safeStock <= 5;
   const isSoldOut = safeStock <= 0 || product.status === "sold";
 
@@ -108,7 +106,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const sellerNameStr = String(product.sellerName || "").toLowerCase();
   const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
   
-  // 🔥 CALCULATE DEPOSIT FOR UI (Strictly enforce the 20k minimum rule)
+  // CALCULATE DEPOSIT FOR UI
   const depositRequired = safePrice >= 20000 ? calculateDepositAmount(safePrice, false) : 0;
 
   // ==========================================
@@ -172,7 +170,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
       {/* MODERN E-COMMERCE LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-16">  
 
-        {/* LEFT COLUMN: Image Gallery (Sticky on Desktop) */}  
+        {/* LEFT COLUMN: Image Gallery */}  
         <div className="w-full flex flex-col lg:sticky lg:top-24 h-fit">  
           <ImageGallery images={optimizedImages} title={safeName} />  
           <p className="text-[11px] text-slate-400 mt-4 text-center italic">  
@@ -183,22 +181,21 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         {/* RIGHT COLUMN: Product Details */}  
         <div className="flex flex-col">  
 
-          {/* 🔥 1. E-COMMERCE TRUST BANNER */}
+          {/* E-COMMERCE TRUST BANNER */}
           <div className="flex items-center gap-3 bg-orange-50 text-[#D97706] text-xs md:text-sm font-bold py-2 px-3 rounded-md w-max mb-5 border border-orange-100 shadow-sm">
             <span className="flex items-center gap-1.5"><FaCheck className="text-green-600 text-sm" /> Cash on Delivery</span>
             <span className="text-orange-200">|</span>
             <span className="flex items-center gap-1.5"><FaTruck className="text-slate-800 text-sm" /> Same Day Delivery</span>
           </div>
 
-          {/* 🔥 2. TITLE */}
           <h1 className="text-2xl sm:text-3xl font-medium text-slate-900 leading-tight mb-3">  
             {safeName}
           </h1>  
 
-          {/* 🔥 3. BRAND & BADGES */}
+          {/* BRAND & BADGES */}
           <div className="flex flex-wrap items-center gap-2 mb-4">  
             <span className="font-extrabold text-sm uppercase tracking-wider text-slate-800 mr-2">
-              {product.brand || "KABALE ONLINE"}
+              {pAny.brand || "KABALE ONLINE"}
             </span>
 
             {isMainProductNew && (
@@ -219,7 +216,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </span>
           </div>  
 
-          {/* 🔥 4. PRICE & REVIEWS */}
+          {/* PRICE & REVIEWS */}
           <div className="mb-2 flex items-end gap-3">  
             <span className="text-3xl sm:text-4xl font-extrabold text-[#D97706]">  
               UGX {safePrice.toLocaleString()}  
@@ -278,15 +275,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </div>
           )}
 
-          {/* 🔥 5. MAIN CALL TO ACTIONS (HYBRID) */}
+          {/* 🔥 MAIN CALL TO ACTIONS (HYBRID) */}
           <div className={`mb-8 ${isSoldOut ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
-            
-            {/* If you still want FastBuy above the Hybrid Cart Actions, keep this. Otherwise comment it out! */}
-            <div className="mb-3">
-              <FastBuy product={{...product, images: optimizedImages}} />
-            </div>
-
-            {/* This pulls in the new Add to Cart, WhatsApp Button, and Shipping Card */}
+            {/* FASTBUY REMOVED. Relies 100% on ProductActions */}
             <ProductActions product={{...product, images: optimizedImages}}>
                 <div className="flex flex-col gap-3 mt-2 w-full">
                   <SaveProductButton product={product} />
@@ -294,10 +285,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </ProductActions>
           </div> 
 
-          {/* 🔥 6. NATIVE HTML ACCORDIONS (SEO FRIENDLY) */}
+          {/* NATIVE HTML ACCORDIONS (SEO FRIENDLY) */}
           <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-10 bg-white shadow-sm divide-y divide-slate-200">
             
-            {/* DESCRIPTION ACCORDION */}
             <details className="group" open>
               <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-green-700 bg-slate-50 hover:bg-slate-100 transition-colors text-sm">
                 Description
@@ -310,7 +300,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </div>
             </details>
 
-            {/* SPECIFICATIONS ACCORDION */}
             <details className="group" open>
               <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-slate-800 hover:bg-slate-50 transition-colors text-sm">
                 Additional Information
@@ -341,7 +330,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </div>
             </details>
 
-            {/* REVIEWS ACCORDION */}
             <details className="group" id="reviews">
               <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-slate-800 hover:bg-slate-50 transition-colors text-sm">
                 Customer Reviews
@@ -350,7 +338,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                 </span>
               </summary>
               <div className="p-4 bg-white">
-                {/* INJECTED FIREBASE REVIEWS CLIENT COMPONENT */}
                 <ProductReviews productId={product.id} />
               </div>
             </details>
@@ -369,10 +356,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">You Might Also Like</h2>  
           </div>  
 
-          {/* Scrollable Container */}
           <div className="flex overflow-x-auto gap-4 pb-6 snap-x snap-mandatory scrollbar-hide">  
             {relatedProducts.map((relProduct) => {
-              const relAny = relProduct as any; // TypeScript Bypass
+              const relAny = relProduct as any; 
               const isRelSold = relProduct.status === "sold" || Number(relProduct.stock) <= 0;
               const isRelNew = checkIsNew(relProduct);
               const isRelApproved = relAny.isApprovedQuality;
@@ -384,7 +370,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                   href={`/product/${relProduct.publicId || relProduct.id}`}   
                   className={`flex-none w-[150px] sm:w-[190px] snap-start bg-white rounded-md border border-slate-200 overflow-hidden flex flex-col hover:shadow-md transition-all relative ${isRelSold ? 'opacity-80 grayscale-[20%]' : ''}`}  
                 >  
-                  {/* Image Area with Integrated Tags */}  
                   <div className="aspect-square relative bg-slate-50 overflow-hidden border-b border-slate-100">  
                     {relProduct.images?.[0] ? (  
                       <Image   
@@ -398,7 +383,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                       <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">No Image</div>  
                     )}  
 
-                    {/* OVERLAYS IMPORTED FROM HORIZONTAL SCROLLER */}
                     {isRelSold && (
                       <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 backdrop-blur-[2px]">
                          <span className="bg-slate-900 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-lg transform -rotate-6">
@@ -421,7 +405,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                     )}
                   </div>  
 
-                  {/* Details */}  
                   <div className="p-3 flex flex-col flex-grow">  
                     <h3 className="text-xs sm:text-sm font-medium text-slate-600 line-clamp-2 leading-snug mb-1">  
                       {relProduct.name}  
@@ -436,7 +419,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               )
             })}  
 
-            {/* View More Card */}
             <Link 
               href={`/category/${safeCategory}`} 
               className="flex-none w-[150px] sm:w-[190px] snap-start bg-slate-50 rounded-md border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-500 p-4 hover:border-[#D97706] hover:text-[#D97706] transition-colors group"
@@ -452,7 +434,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         </div>  
       )}  
 
-      {/* SELLER ACQUISITION PROMPT */}
       <div className="mt-8 mb-12 border-t border-slate-200 pt-8 text-center px-4">
         <p className="text-slate-600 text-sm font-medium">
           Got something to sell?{' '}
