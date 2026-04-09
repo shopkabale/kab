@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 import { useCart } from "@/context/CartContext"; 
 import { Product } from "@/types";
-import { FaCheck, FaWhatsapp, FaShieldAlt } from "react-icons/fa";
+import { FaCheck, FaWhatsapp, FaShieldAlt, FaBolt } from "react-icons/fa";
 import { MdOutlineLocalShipping, MdOutlineLocationOn } from "react-icons/md";
 
 export default function ProductActions({ product, children }: { product: Product, children?: React.ReactNode }) {
@@ -22,7 +22,7 @@ export default function ProductActions({ product, children }: { product: Product
   const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
 
   // ==========================================
-  // 🛒 CART LOGIC (Unlocked & Type-Safe)
+  // 🛒 CART LOGIC
   // ==========================================
   const handleAddToCart = () => {
     addToCart({
@@ -34,7 +34,7 @@ export default function ProductActions({ product, children }: { product: Product
       sellerId: product.sellerId || "SYSTEM", 
       sellerPhone: product.sellerPhone || ""
     });
-    
+
     alert("✅ Added to cart successfully!");
   };
 
@@ -66,7 +66,7 @@ export default function ProductActions({ product, children }: { product: Product
 
       const rawMessage = `Hi! I want to order or ask about this item on Kabale Online:\n\n*${product.name}*\n\nRef: [${referenceCode}]`;
       const encodedMessage = encodeURIComponent(rawMessage);
-      
+
       window.open(`https://wa.me/${botPhoneNumber}?text=${encodedMessage}`, "_blank");
 
     } catch (error) {
@@ -106,10 +106,28 @@ export default function ProductActions({ product, children }: { product: Product
   };
 
   return (
-    <div className="mt-6 flex flex-col gap-5">
+    <div className="mt-6 flex flex-col gap-4">
+
+      {/* 💡 BUYER GUIDANCE BANNER (Pushing Mobile Money) */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3.5 shadow-sm">
+        <h4 className="text-xs font-black text-amber-900 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+          <FaBolt className="text-amber-500 text-sm" /> How to Buy
+        </h4>
+        <div className="space-y-2">
+          <p className="text-[12px] text-amber-900 leading-tight">
+            💳 <strong className="font-black">Have Mobile Money?</strong><br/>
+            Use <span className="font-bold">Add to Cart</span> for an instant secure checkout and priority delivery routing.
+          </p>
+          <div className="h-[1px] bg-amber-200/60 my-1"></div>
+          <p className="text-[12px] text-amber-800 leading-tight opacity-90">
+            🤝 <strong className="font-bold">Want to pay Cash on Delivery?</strong><br/>
+            Use <span className="font-bold">WhatsApp</span> to order or ask the seller questions.
+          </p>
+        </div>
+      </div>
 
       {/* 1. QUANTITY & ADD TO CART */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 mt-1">
         <div className="flex items-center border border-slate-300 rounded-md overflow-hidden h-12 bg-white shadow-sm">
           <button 
             onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -147,7 +165,7 @@ export default function ProductActions({ product, children }: { product: Product
       </button>
 
       {/* 3. KABALE SHIPPING & DELIVERY CARD */}
-      <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
+      <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white mt-1">
         <div className="bg-slate-50 p-3.5 font-bold text-slate-800 border-b border-slate-200 text-sm">
           Shipping & Delivery
         </div>
