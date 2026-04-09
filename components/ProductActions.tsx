@@ -76,21 +76,36 @@ export default function ProductActions({ product, children }: { product: Product
   return (
     <div className="mt-6 flex flex-col gap-5">
       
-      {/* 1. QUANTITY & ADD TO CART (From Screenshot) */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center border border-slate-300 rounded-md overflow-hidden h-12 bg-white">
-          <button onClick={() => setQuantity(q => Math.max(1, q - 1))} className="px-4 hover:bg-slate-100 h-full text-lg font-bold text-slate-600 transition-colors">-</button>
-          <span className="px-4 font-semibold text-lg border-x border-slate-300 h-full flex items-center justify-center min-w-[45px] text-slate-900 bg-slate-50">{quantity}</span>
-          <button onClick={() => setQuantity(q => q + 1)} className="px-4 hover:bg-slate-100 h-full text-lg font-bold text-slate-600 transition-colors">+</button>
-        </div>
-        
-        <button 
-          onClick={handleAddToCart} 
-          className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 rounded-md shadow-sm transition-all text-sm uppercase tracking-wider"
-        >
-          Add to Cart
-        </button>
-      </div>
+      {/* 1. QUANTITY & ADD TO CART (Under Maintenance Overlay) */}
+<div className="relative group">
+  {/* The Overlay */}
+  <div className="absolute inset-0 z-10 bg-white/40 backdrop-blur-[2px] flex items-center justify-center rounded-lg border border-slate-200/50">
+    <div className="bg-slate-900/90 text-white text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+      </span>
+      Cart Under Maintenance
+    </div>
+  </div>
+
+  {/* The Original Content (Blurred/Disabled visually) */}
+  <div className="flex items-center gap-3 opacity-50 grayscale-[0.3]">
+    <div className="flex items-center border border-slate-300 rounded-md overflow-hidden h-12 bg-white">
+      <button disabled className="px-4 h-full text-lg font-bold text-slate-400">-</button>
+      <span className="px-4 font-semibold text-lg border-x border-slate-300 h-full flex items-center justify-center min-w-[45px] text-slate-400 bg-slate-50">{quantity}</span>
+      <button disabled className="px-4 h-full text-lg font-bold text-slate-400">+</button>
+    </div>
+    
+    <button 
+      disabled
+      className="flex-1 bg-slate-400 text-white font-bold h-12 rounded-md text-sm uppercase tracking-wider"
+    >
+      Add to Cart
+    </button>
+  </div>
+</div>
+
 
       {/* 2. ASK OR ORDER ON WHATSAPP (Green Button) */}
       <button 
