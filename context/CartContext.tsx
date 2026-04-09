@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Product } from "@/types"; // Adjust import if your type is elsewhere
 
 export interface CartItem {
   id: string;
@@ -10,6 +9,7 @@ export interface CartItem {
   image: string;
   quantity: number;
   sellerPhone: string;
+  sellerId?: string; // 🔥 Added this so TypeScript allows our payload!
 }
 
 interface CartContextType {
