@@ -181,20 +181,16 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         {/* RIGHT COLUMN: Product Details */}  
         <div className="flex flex-col">  
 
-          {/* E-COMMERCE TRUST BANNER */}
-          <div className="flex items-center gap-3 bg-orange-50 text-[#D97706] text-xs md:text-sm font-bold py-2 px-3 rounded-md w-max mb-5 border border-orange-100 shadow-sm">
-            <span className="flex items-center gap-1.5"><FaCheck className="text-green-600 text-sm" /> Cash on Delivery</span>
+          {/* 🔥 1. E-COMMERCE TRUST BANNER (Full width, black text) */}
+          <div className="flex items-center justify-center sm:justify-start gap-3 md:gap-5 bg-orange-50 text-black text-xs md:text-sm font-extrabold py-3 px-4 rounded-md w-full mb-6 border border-orange-100 shadow-sm">
+            <span className="flex items-center gap-1.5"><FaCheck className="text-green-600 text-base" /> Cash on Delivery</span>
             <span className="text-orange-200">|</span>
-            <span className="flex items-center gap-1.5"><FaTruck className="text-slate-800 text-sm" /> Same Day Delivery</span>
+            <span className="flex items-center gap-1.5"><FaTruck className="text-black text-base" /> Same Day Delivery</span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-medium text-slate-900 leading-tight mb-3">  
-            {safeName}
-          </h1>  
-
-          {/* BRAND & BADGES */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">  
-            <span className="font-extrabold text-sm uppercase tracking-wider text-slate-800 mr-2">
+          {/* 🔥 2. BRAND & BADGES (Kabale Online in normal black) */}
+          <div className="flex flex-wrap items-center gap-2 mb-3">  
+            <span className="font-medium text-sm uppercase tracking-wider text-black mr-2">
               {pAny.brand || "KABALE ONLINE"}
             </span>
 
@@ -216,9 +212,14 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </span>
           </div>  
 
-          {/* PRICE & REVIEWS */}
+          {/* 🔥 3. TITLE (Big and light gray) */}
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-400 leading-tight mb-4">  
+            {safeName}
+          </h1>  
+
+          {/* 🔥 4. PRICE (Strong black) & REVIEWS */}
           <div className="mb-2 flex items-end gap-3">  
-            <span className="text-3xl sm:text-4xl font-extrabold text-[#D97706]">  
+            <span className="text-4xl sm:text-5xl font-black text-black">  
               UGX {safePrice.toLocaleString()}  
             </span>  
           </div>  
@@ -236,26 +237,33 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </p>
           </div>
 
-          {/* AUTHENTIC SCARCITY INDICATOR */}
-          <div className="mb-4 flex items-center gap-2 text-sm font-bold text-slate-900">
+          {/* 🔥 5. AUTHENTIC SCARCITY INDICATOR (Dynamic Colors) */}
+          <div className="mb-4 flex items-center gap-2 text-sm font-bold">
             {isSoldOut ? (
                <>
                 <span className="text-lg">ℹ️</span>
                 <span className="text-red-600">This item is currently sold out. Check similar items below!</span>
                </>
-            ) : isLowStock ? (
+            ) : safeStock <= 2 ? (
               <>
-                <svg className="w-5 h-5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 shrink-0 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-amber-600">High Demand: Only {safeStock} left in stock!</span>
+                <span className="text-red-600">High Demand: Only {safeStock} left in stock!</span>
+              </>
+            ) : safeStock <= 5 ? (
+              <>
+                <svg className="w-5 h-5 shrink-0 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-orange-500">Hurry: Only {safeStock} left!</span>
               </>
             ) : (
               <>
                 <svg className="w-5 h-5 shrink-0 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                 </svg>
-                <span className="text-green-700">In Stock & Ready to Deliver</span>
+                <span className="text-green-600">In Stock & Ready to Deliver</span>
               </>
             )}
           </div>
@@ -275,9 +283,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </div>
           )}
 
-          {/* 🔥 MAIN CALL TO ACTIONS (HYBRID) */}
+          {/* MAIN CALL TO ACTIONS (HYBRID) */}
           <div className={`mb-8 ${isSoldOut ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
-            {/* FASTBUY REMOVED. Relies 100% on ProductActions */}
             <ProductActions product={{...product, images: optimizedImages}}>
                 <div className="flex flex-col gap-3 mt-2 w-full">
                   <SaveProductButton product={product} />
