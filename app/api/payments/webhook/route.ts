@@ -1,18 +1,20 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebase/config"; 
 import { collection, query, where, getDocs, updateDoc, doc, serverTimestamp } from "firebase/firestore";
+import { NotificationService } from "@/lib/notifications"; 
+import { sendAdminAlert } from "@/lib/brevo"; 
 
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
     const { transaction_id } = payload; 
 
-    // 1. EXTRACT ID (Ignore everything else in the payload)
+    // 1. EXTRACT ID
     if (!transaction_id) {
       return NextResponse.json({ error: "Missing transaction ID" }, { status: 400 });
     }
 
-    // 2. THE DOUBLE PROTECTION: Call LivePay's Transaction Status API
+    // 2. VERIFY TRANSACTION WITH LIVEPAY (Double Protection)
     const livePayResponse = await fetch("https://livepay.me/api/v1/transaction-status.php", {
       method: "POST",
       headers: {
@@ -27,53 +29,99 @@ export async function POST(request: Request) {
 
     const statusData = await livePayResponse.json();
 
-    // 3. VERIFY SUCCESS STATUS
+    // 3. FIND THE MASTER ORDER IN FIRESTORE
+    const ordersRef = collection(db, "orders");
+    const q = query(ordersRef, where("transactionId", "==", transaction_id));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return NextResponse.json({ error: "Order not found for this transaction" }, { status: 404 });
+    }
+
+    const orderDoc = querySnapshot.docs[0];
+    const orderData = orderDoc.data();
+    const orderRef = doc(db, "orders", orderDoc.id);
+
+    // 4. PROCESS SUCCESSFUL PAYMENT
     if (statusData.status === "success" && statusData.transaction.status === "Success") {
-      
-      // Find the pending order in Firestore using the transaction_id
-      const ordersRef = collection(db, "orders");
-      const q = query(ordersRef, where("transactionId", "==", transaction_id));
-      const querySnapshot = await getDocs(q);
-      
-      if (!querySnapshot.empty) {
-        // We found the order, now update it!
-        const orderDoc = querySnapshot.docs[0];
-        const orderRef = doc(db, "orders", orderDoc.id);
 
-        await updateDoc(orderRef, {
-          status: "confirmed_processing",
-          depositPaid: true,
-          amountPaid: Number(statusData.transaction.amount), 
-          paymentCompletedAt: statusData.transaction.completed_at || serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
+      // Update the Master Order schema for 100% Full Payment
+      await updateDoc(orderRef, {
+        status: "processing", 
+        paymentStatus: "paid", // 🔥 Skipped deposit, fully paid!
+        amountPaid: Number(statusData.transaction.amount), 
+        paymentCompletedAt: statusData.transaction.completed_at || serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
 
-        // Return a 200 OK so LivePay knows we received it
-        return NextResponse.json({ message: "Webhook verified and order updated" }, { status: 200 });
-      } else {
-        // Order not found in DB
-        return NextResponse.json({ error: "Order not found for this transaction" }, { status: 404 });
+      console.log(`✅ Order ${orderData.orderId} fully paid. Triggering multi-seller routing...`);
+
+      // ==========================================
+      // 🚀 MULTI-SELLER NOTIFICATION ROUTING
+      // ==========================================
+      const notificationPromises: Promise<any>[] = [];
+
+      // A. Build a consolidated product string for the Buyer & Admin summaries
+      const allProductsString = orderData.cartItems.map((item: any) => `${item.quantity}x ${item.name}`).join(", ");
+
+      // B. Notify the Buyer (One clean summary message)
+      notificationPromises.push(
+        NotificationService.orderCreated(
+          "", // No single seller phone
+          orderData.buyerPhone, 
+          allProductsString, 
+          orderData.buyerName, 
+          orderData.orderId
+        ).catch(err => console.error("❌ Buyer WhatsApp Error:", err))
+      );
+
+      // C. Notify the Admin via Brevo
+      notificationPromises.push(
+        sendAdminAlert(
+          orderData.orderId, 
+          allProductsString, 
+          orderData.totalAmount, 
+          orderData.buyerPhone, 
+          "Multi-Seller Order" // Updated for the unified schema
+        ).catch(err => console.error("❌ Admin Email Error:", err))
+      );
+
+      // D. Notify EACH Seller with strictly their own items
+      if (orderData.sellerOrders && Array.isArray(orderData.sellerOrders)) {
+        for (const sellerCut of orderData.sellerOrders) {
+          // Format just the items this specific seller is responsible for
+          const sellerItemsString = sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
+          
+          notificationPromises.push(
+            NotificationService.orderCreated(
+              sellerCut.sellerPhone, 
+              orderData.buyerPhone, // To allow them to contact the buyer if needed
+              sellerItemsString, 
+              orderData.buyerName, 
+              orderData.orderId
+            ).catch(err => console.error(`❌ Seller (${sellerCut.sellerPhone}) WhatsApp Error:`, err))
+          );
+        }
       }
-      
+
+      // E. Execute all notifications concurrently and wait for them to finish
+      await Promise.allSettled(notificationPromises);
+      console.log("✅ All notifications successfully dispatched.");
+
+      return NextResponse.json({ message: "Webhook verified, order marked Paid, and routed." }, { status: 200 });
+
+    // 5. PROCESS FAILED PAYMENT
     } else if (statusData.status === "success" && statusData.transaction.status === "Failed") {
-      
-      // Optional: Handle explicitly failed transactions
-      const ordersRef = collection(db, "orders");
-      const q = query(ordersRef, where("transactionId", "==", transaction_id));
-      const querySnapshot = await getDocs(q);
-
-      if (!querySnapshot.empty) {
-        const orderDoc = querySnapshot.docs[0];
-        await updateDoc(doc(db, "orders", orderDoc.id), {
-          status: "payment_failed",
-          updatedAt: serverTimestamp()
-        });
-      }
+      await updateDoc(orderRef, {
+        status: "cancelled",
+        paymentStatus: "payment_failed",
+        updatedAt: serverTimestamp()
+      });
 
       return NextResponse.json({ message: "Transaction marked as failed" }, { status: 200 });
 
+    // 6. PENDING/INVALID
     } else {
-      // Transaction is pending or invalid
       return NextResponse.json({ message: "Transaction pending or invalid status" }, { status: 400 });
     }
 
