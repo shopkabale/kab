@@ -1,4 +1,3 @@
-// app/api/orders/route.ts
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
@@ -30,7 +29,7 @@ export async function POST(request: Request) {
       // Step B: Validate Stock & Price
       productDocs.forEach((productSnap, index) => {
         if (!productSnap.exists) throw new Error(`Item ${cartItems[index].name} is not found.`);
-        
+
         const product = productSnap.data()!;
         const requestedQty = Number(cartItems[index].quantity) || 1;
 
@@ -78,6 +77,10 @@ export async function POST(request: Request) {
 
       // Step C: Save Master Order
       const sellerOrders = Object.values(sellerOrdersMap);
+      
+      // 🔥 NEW: Extract flat array of seller IDs for Firestore Rules Security!
+      const uniqueSellerIds = Array.from(new Set(validatedItems.map(item => item.sellerId).filter(Boolean)));
+
       const orderRef = adminDb.collection("orders").doc(orderNumber);
 
       transaction.set(orderRef, {
@@ -87,11 +90,12 @@ export async function POST(request: Request) {
         buyerPhone: contactPhone,
         buyerLocation: location || "Kabale",
         source: source || "whatsapp", 
-        paymentMode: "COD",           // 🔥 Forced for this route
-        paymentStatus: "pending",     // Pay on delivery
-        status: "processing",         // Ready for fulfillment
+        paymentMode: "COD",           
+        paymentStatus: "pending",     
+        status: "processing",         
         cartItems: validatedItems,
         sellerOrders: sellerOrders,
+        sellerIds: uniqueSellerIds,   // 🔥 Added flat array here
         totalAmount: actualTotalAmount,
         createdAt: Date.now(),
         updatedAt: Date.now()
@@ -120,11 +124,11 @@ export async function POST(request: Request) {
     const sellerOrdersList = Object.values(sellerOrdersMap);
     for (const sellerCut of sellerOrdersList) {
       const sellerItemsString = sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
-      
+
       notificationPromises.push(
         NotificationService.notifySeller(
           sellerCut.sellerPhone, 
-          "Partner", // You can pull actual seller name if you have it in your DB
+          "Partner", 
           orderNumber, 
           sellerItemsString, 
           sellerCut.subtotal, 
