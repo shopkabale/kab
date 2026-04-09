@@ -1,240 +1,148 @@
+// app/api/orders/route.ts
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { NotificationService } from "@/lib/notifications"; // 🔥 Triggers WhatsApp Templates
-import { sendAdminAlert } from "@/lib/brevo"; // 🔥 Triggers Admin Email
+import { NotificationService } from "@/lib/notifications"; 
+import { sendAdminAlert } from "@/lib/brevo"; 
 
-// ==========================================
-// POST: Create a new order (Called by FastBuy)
-// ==========================================
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, buyerName, productId, sellerId, total, contactPhone } = body;
+    const { source, userId, buyerName, contactPhone, location, cartItems } = body;
 
-    // 1. Basic Validation
-    if (!productId || !contactPhone || !buyerName) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    // 1. BASIC VALIDATION
+    if (!cartItems || cartItems.length === 0 || !contactPhone || !buyerName) {
+      return NextResponse.json({ error: "Missing required fields or empty cart" }, { status: 400 });
     }
 
-    const productRef = adminDb.collection("products").doc(productId);
+    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
+    let actualTotalAmount = 0;
+    const validatedItems: any[] = [];
+    const sellerOrdersMap: Record<string, any> = {};
 
-    let orderNumber = "";
-    let sellerPhone = "";
-    let productName = "";
-
-    // 2. Perform database transaction to prevent double-booking
+    // 2. MULTI-ITEM ATOMIC TRANSACTION
     await adminDb.runTransaction(async (transaction) => {
-      const productSnap = await transaction.get(productRef);
-      if (!productSnap.exists) throw new Error("Product not found");
+      // Step A: Read all products first (Firestore rule: all reads must come before writes)
+      const productDocs = await Promise.all(
+        cartItems.map((item: any) => transaction.get(adminDb.collection("products").doc(item.productId || item.id)))
+      );
 
-      const product = productSnap.data()!;
+      // Step B: Validate Stock & Price
+      productDocs.forEach((productSnap, index) => {
+        if (!productSnap.exists) throw new Error(`Item ${cartItems[index].name} is not found.`);
+        
+        const product = productSnap.data()!;
+        const requestedQty = Number(cartItems[index].quantity) || 1;
 
-      // Check if someone else just bought it
-      if (product.stock <= 0 || product.status === "sold_out") {
-        throw new Error("Sorry, this item is sold out!");
-      }
-      if (product.locked) {
-        throw new Error("Sorry, someone else just reserved this item!");
-      }
+        if (product.stock < requestedQty || product.status === "sold_out") {
+          throw new Error(`Sorry, ${product.title || product.name} is out of stock!`);
+        }
+        if (product.locked) {
+          throw new Error(`Sorry, someone else is currently checking out with ${product.title || product.name}.`);
+        }
 
-      productName = product.title || product.name || "Unknown Item";
-      sellerPhone = product.sellerPhone;
+        const actualPrice = Number(product.price) || 0;
+        actualTotalAmount += (actualPrice * requestedQty);
 
-      // Lock the product and reduce stock
-      transaction.update(productRef, {
-        stock: FieldValue.increment(-1),
-        locked: true,
-        updatedAt: Date.now()
+        // Build validated item
+        const finalItem = {
+          productId: productSnap.id,
+          name: product.title || product.name || "Unknown Item",
+          price: actualPrice,
+          quantity: requestedQty,
+          sellerId: product.sellerId || "SYSTEM",
+          sellerPhone: product.sellerPhone || "",
+          image: product.images?.[0] || ""
+        };
+        validatedItems.push(finalItem);
+
+        // Group by Seller
+        if (!sellerOrdersMap[finalItem.sellerPhone]) {
+          sellerOrdersMap[finalItem.sellerPhone] = {
+            sellerId: finalItem.sellerId,
+            sellerPhone: finalItem.sellerPhone,
+            items: [],
+            subtotal: 0
+          };
+        }
+        sellerOrdersMap[finalItem.sellerPhone].items.push(finalItem);
+        sellerOrdersMap[finalItem.sellerPhone].subtotal += (actualPrice * requestedQty);
+
+        // Deduct Stock
+        transaction.update(productSnap.ref, {
+          stock: FieldValue.increment(-requestedQty),
+          locked: true, // Optional: You might want to remove 'locked' if you rely purely on stock
+          updatedAt: Date.now()
+        });
       });
 
-      // Create the official Order Document
-      orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
+      // Step C: Save Master Order
+      const sellerOrders = Object.values(sellerOrdersMap);
       const orderRef = adminDb.collection("orders").doc(orderNumber);
 
       transaction.set(orderRef, {
-        id: orderNumber,
         orderId: orderNumber,
-        orderNumber: orderNumber,
-        productId,
-        buyerId: userId || "GUEST",
+        userId: userId || "GUEST",
         buyerName,
         buyerPhone: contactPhone,
-        sellerId: product.sellerId || sellerId || "SYSTEM",
-        sellerPhone: sellerPhone,
-        status: "pending",
-        total: Number(total),
-        items: [{
-          productId,
-          title: productName,
-          price: Number(total),
-          quantity: 1
-        }],
+        buyerLocation: location || "Kabale",
+        source: source || "whatsapp", 
+        paymentMode: "COD",           // 🔥 Forced for this route
+        paymentStatus: "pending",     // Pay on delivery
+        status: "processing",         // Ready for fulfillment
+        cartItems: validatedItems,
+        sellerOrders: sellerOrders,
+        totalAmount: actualTotalAmount,
         createdAt: Date.now(),
         updatedAt: Date.now()
       });
     });
 
     // ==========================================
-    // 3. BACKGROUND TRIGGERS (Awaited for Vercel)
+    // 3. BACKGROUND NOTIFICATION ROUTING
     // ==========================================
-    if (sellerPhone) {
-       console.log("-> Executing Notification Promises...");
+    console.log("-> Executing Notification Promises for COD Order...");
 
-       // Force Vercel to wait for both to finish before returning the response.
-       await Promise.allSettled([
-         NotificationService.orderCreated(
-           sellerPhone, 
-           contactPhone, 
-           productName, 
-           buyerName, 
-           orderNumber
-         ).catch(err => console.error("❌ WhatsApp Notification Error:", err)),
+    const notificationPromises: Promise<any>[] = [];
+    const allProductsString = validatedItems.map(i => `${i.quantity}x ${i.name}`).join(", ");
 
-         sendAdminAlert(
-           orderNumber, 
-           productName, 
-           Number(total), 
-           contactPhone, 
-           sellerPhone
-         ).catch(err => console.error("❌ Admin Email Error:", err))
-       ]);
+    // A. Notify Buyer
+    notificationPromises.push(
+      NotificationService.notifyBuyer(contactPhone, orderNumber, allProductsString, actualTotalAmount)
+    );
 
-       console.log("✅ All notifications dispatched successfully.");
+    // B. Notify Admin
+    notificationPromises.push(
+      sendAdminAlert(orderNumber, allProductsString, actualTotalAmount, contactPhone, "Multi-Seller COD Order")
+    );
+
+    // C. Notify Each Seller
+    const sellerOrdersList = Object.values(sellerOrdersMap);
+    for (const sellerCut of sellerOrdersList) {
+      const sellerItemsString = sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
+      
+      notificationPromises.push(
+        NotificationService.notifySeller(
+          sellerCut.sellerPhone, 
+          "Partner", // You can pull actual seller name if you have it in your DB
+          orderNumber, 
+          sellerItemsString, 
+          sellerCut.subtotal, 
+          buyerName,
+          location || "Kabale",
+          contactPhone
+        )
+      );
     }
 
-    // Now it is safe to return the response and let Vercel freeze the container
+    // Freeze container until notifications fire
+    await Promise.allSettled(notificationPromises);
+    console.log("✅ All COD notifications dispatched successfully.");
+
     return NextResponse.json({ success: true, orderId: orderNumber });
 
-  // 👇 THIS IS WHAT WAS MISSING 👇
   } catch (error: any) {
     console.error("❌ Order creation error:", error.message);
     return NextResponse.json({ error: error.message || "Failed to create order" }, { status: 500 });
-  }
-}
-  // 👆 THIS IS WHAT WAS MISSING 👆
-
-
-// ==========================================
-// PATCH: Admin updates order status
-// ==========================================
-export async function PATCH(request: Request) {
-  try {
-    const { adminId, orderId, newStatus } = await request.json();
-
-    if (!adminId || !orderId || !newStatus) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    // 1. Verify the user is actually an admin
-    const adminSnap = await adminDb.collection("users").doc(adminId).get();
-    if (!adminSnap.exists || adminSnap.data()?.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
-    }
-
-    // 2. Perform the stock, lock, and status updates atomically
-    await adminDb.runTransaction(async (transaction) => {
-      const orderRef = adminDb.collection("orders").doc(orderId);
-      const orderSnap = await transaction.get(orderRef);
-
-      if (!orderSnap.exists) {
-        throw new Error("Order not found");
-      }
-
-      const orderData = orderSnap.data()!;
-
-      // Ensure items array exists and has at least one product
-      if (!orderData.items || orderData.items.length === 0) {
-        throw new Error("Order has no items");
-      }
-
-      const productId = orderData.items[0].productId; 
-      const productRef = adminDb.collection("products").doc(productId);
-      const productSnap = await transaction.get(productRef);
-
-      // 3. Status Behavior Rules
-      if (newStatus === "cancelled") {
-        transaction.update(productRef, {
-          stock: FieldValue.increment(1),
-          locked: false,
-          status: "available",
-          updatedAt: Date.now()
-        });
-      } 
-      else if (newStatus === "delivered" && productSnap.exists) {
-        const productData = productSnap.data()!;
-        if (productData.stock <= 0) {
-          transaction.update(productRef, { 
-            status: "sold_out", 
-            updatedAt: Date.now() 
-          });
-        }
-      }
-
-      // 4. Update the order itself
-      transaction.update(orderRef, {
-        status: newStatus,
-        updatedAt: Date.now()
-      });
-    });
-
-    return NextResponse.json({ success: true }, { status: 200 });
-
-  } catch (error: any) {
-    console.error("Status update error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to update status" }, 
-      { status: 500 }
-    );
-  }
-}
-
-// ==========================================
-// GET: Admin fetches all orders
-// ==========================================
-export async function GET(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const adminId = searchParams.get("adminId");
-
-    if (!adminId) {
-      return NextResponse.json({ error: "Missing admin ID" }, { status: 400 });
-    }
-
-    const adminSnap = await adminDb.collection("users").doc(adminId).get();
-    if (!adminSnap.exists || adminSnap.data()?.role !== "admin") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
-
-    const ordersSnap = await adminDb.collection("orders")
-      .orderBy("createdAt", "desc")
-      .get();
-
-    const orders = await Promise.all(ordersSnap.docs.map(async (doc) => {
-      const data = doc.data();
-      let totalAmount = Number(data.total) || 0;
-
-      if (totalAmount === 0 && data.productId) {
-        try {
-          const productDoc = await adminDb.collection("products").doc(data.productId).get();
-          if (productDoc.exists) {
-            totalAmount = Number(productDoc.data()?.price) || 0;
-          }
-        } catch (err) {
-          console.error(`Could not fetch fallback price for product ${data.productId}`);
-        }
-      }
-
-      return {
-        id: doc.id,
-        ...data,
-        total: totalAmount 
-      };
-    }));
-
-    return NextResponse.json({ orders }, { status: 200 });
-  } catch (error) {
-    console.error("Failed to fetch admin orders:", error);
-    return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
   }
 }
