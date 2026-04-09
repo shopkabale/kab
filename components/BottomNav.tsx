@@ -4,16 +4,18 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
+import { useCart } from "@/context/CartContext"; // 🔥 IMPORTED CART BRAIN
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth(); 
+  const { cartCount } = useCart(); // 🔥 PULL CART COUNT
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
   // Track if the mobile menu drawer is open
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
+
   // Track if the Categories Modal is open
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
@@ -54,11 +56,11 @@ export default function BottomNav() {
     return () => window.removeEventListener("mobileMenuState", handleMenuState);
   }, []);
 
-  // 3. Base navigation items (Added Categories as a trigger)
+  // 🔥 3. Base navigation items (REPLACED DEALS WITH CART)
   const baseNavItems = [
     { label: "Home", href: "/" },
-    { label: "Categories", isTrigger: true }, // Not a link, opens modal
-    { label: "Deals", href: "/products" },
+    { label: "Categories", isTrigger: true }, 
+    { label: "Cart", href: "/cart" }, // <-- New Cart Tab
     { label: "Profile", href: "/profile" },
   ];
 
@@ -80,13 +82,20 @@ export default function BottomNav() {
               <div className="flex flex-col items-center justify-center h-full relative w-full">
                 {/* Text Label */}
                 <span 
-                  className={`text-xs uppercase tracking-widest transition-all duration-300 ${
+                  className={`text-xs uppercase tracking-widest transition-all duration-300 relative ${
                     isActive 
                       ? "font-black text-[#D97706]" 
                       : "font-bold text-slate-500 dark:text-slate-400"
                   }`}
                 >
                   {item.label}
+                  
+                  {/* 🔥 RED BADGE FOR CART ITEM */}
+                  {item.label === "Cart" && cartCount > 0 && (
+                    <span className="absolute -top-2.5 -right-4 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-white dark:border-slate-900 shadow-sm">
+                      {cartCount}
+                    </span>
+                  )}
                 </span>
 
                 {/* Animated Underline Indicator */}
