@@ -60,6 +60,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { name: "Official Store", href: "/admin/official", icon: "🏪" },
     { name: "Upload Official Item", href: "/admin/upload", icon: "✨" }, 
     { name: "Users", href: "/admin/users", icon: "👥" },
+{ name: "Email Broadcast", href: "/admin/broadcast", icon: "📢" },
     { name: "Blogs Center", href: "/admin/blog", icon: "✍️" }, // Fixed duplicate icon
     { name: "Search Logs", href: "/admin/searches", icon: "🔍" },
   ];
