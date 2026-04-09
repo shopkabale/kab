@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { AuthProvider } from "@/components/AuthProvider";
+import { CartProvider } from "@/context/CartContext"; // 🔥 IMPORTED CART PROVIDER
 import WebsiteBanner from "@/components/WebsiteBanner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -60,33 +61,36 @@ export default function LayoutClient({
       {GTM_ID && <GoogleTagManager gtmId={GTM_ID} />}
 
       <AuthProvider>
-        {/* 🔥 The Suspense boundary fixes the useSearchParams build crash */}
-        <Suspense fallback={null}>
-          <GlobalLoader />
-        </Suspense>
+        {/* 🔥 3. WRAPPED THE APP IN THE CART PROVIDER */}
+        <CartProvider>
+          {/* The Suspense boundary fixes the useSearchParams build crash */}
+          <Suspense fallback={null}>
+            <GlobalLoader />
+          </Suspense>
 
-        {/* FIXED WEBSITE BANNER */}
-        {isBannerVisible && (
-          <WebsiteBanner onClose={() => setIsClosedManually(true)} />
-        )}
+          {/* FIXED WEBSITE BANNER */}
+          {isBannerVisible && (
+            <WebsiteBanner onClose={() => setIsClosedManually(true)} />
+          )}
 
-        {/* NAVBAR (moves up and down smoothly depending on banner visibility) */}
-        <Navbar bannerVisible={isBannerVisible} />
+          {/* NAVBAR (moves up and down smoothly depending on banner visibility) */}
+          <Navbar bannerVisible={isBannerVisible} />
 
-        {/* MAIN CONTENT */}
-        {/* 🔥 REMOVED: pb-8 from this tag to eliminate the extra bottom space */}
-        <main className="flex-grow pt-[140px] lg:pt-[90px] w-full transition-all">
-          {children}
-        </main>
+          {/* MAIN CONTENT */}
+          {/* REMOVED: pb-8 from this tag to eliminate the extra bottom space */}
+          <main className="flex-grow pt-[140px] lg:pt-[90px] w-full transition-all">
+            {children}
+          </main>
 
-        {/* FOOTER */}
-        <Footer />
+          {/* FOOTER */}
+          <Footer />
 
-        {/* MOBILE BOTTOM NAV */}
-        <BottomNav />
+          {/* MOBILE BOTTOM NAV */}
+          <BottomNav />
 
-        {/* FLOATING HELP BUTTON */}
-        <FloatingHelpButton />
+          {/* FLOATING HELP BUTTON */}
+          <FloatingHelpButton />
+        </CartProvider>
       </AuthProvider>
     </>
   );
