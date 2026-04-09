@@ -17,7 +17,7 @@ export const optimizeImage = (url: string): string => {
 // ==========================================
 export const calculateDepositAmount = (price: number, isAdminRestricted: boolean = false): number => {
   // If it's under 20k AND the admin hasn't forced a deposit, charge 0 (Pure COD)
-  if (price < 20000 && !isAdminRestricted) {
+  if (price < 50001 && !isAdminRestricted) {
     return 0;
   }
 
