@@ -1,6 +1,5 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { FaChevronDown, FaChevronUp, FaWhatsapp, FaGlobe } from "react-icons/fa";
 
