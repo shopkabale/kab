@@ -1,3 +1,4 @@
+// app/api/payments/webhook/route.ts
 import { NextResponse } from "next/server";
 import { db } from "@/lib/firebase/config"; 
 import { collection, query, where, getDocs, updateDoc, doc, serverTimestamp } from "firebase/firestore";
@@ -48,7 +49,7 @@ export async function POST(request: Request) {
       // Update the Master Order schema for 100% Full Payment
       await updateDoc(orderRef, {
         status: "processing", 
-        paymentStatus: "paid", // 🔥 Skipped deposit, fully paid!
+        paymentStatus: "paid", 
         amountPaid: Number(statusData.transaction.amount), 
         paymentCompletedAt: statusData.transaction.completed_at || serverTimestamp(),
         updatedAt: serverTimestamp()
@@ -64,14 +65,13 @@ export async function POST(request: Request) {
       // A. Build a consolidated product string for the Buyer & Admin summaries
       const allProductsString = orderData.cartItems.map((item: any) => `${item.quantity}x ${item.name}`).join(", ");
 
-      // B. Notify the Buyer (One clean summary message)
+      // B. Notify the Buyer (One clean summary message matching notify_buyer_02)
       notificationPromises.push(
-        NotificationService.orderCreated(
-          "", // No single seller phone
+        NotificationService.notifyBuyer(
           orderData.buyerPhone, 
+          orderData.orderId, 
           allProductsString, 
-          orderData.buyerName, 
-          orderData.orderId
+          orderData.totalAmount
         ).catch(err => console.error("❌ Buyer WhatsApp Error:", err))
       );
 
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
           allProductsString, 
           orderData.totalAmount, 
           orderData.buyerPhone, 
-          "Multi-Seller Order" // Updated for the unified schema
+          "Multi-Seller Paid Order" 
         ).catch(err => console.error("❌ Admin Email Error:", err))
       );
 
@@ -93,18 +93,21 @@ export async function POST(request: Request) {
           const sellerItemsString = sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
           
           notificationPromises.push(
-            NotificationService.orderCreated(
+            NotificationService.notifySeller(
               sellerCut.sellerPhone, 
-              orderData.buyerPhone, // To allow them to contact the buyer if needed
+              "Partner", // Or sellerCut.sellerName if you store it
+              orderData.orderId, 
               sellerItemsString, 
-              orderData.buyerName, 
-              orderData.orderId
+              sellerCut.subtotal, 
+              orderData.buyerName,
+              orderData.buyerLocation || "Kabale Town", // Fallback if location isn't provided
+              orderData.buyerPhone
             ).catch(err => console.error(`❌ Seller (${sellerCut.sellerPhone}) WhatsApp Error:`, err))
           );
         }
       }
 
-      // E. Execute all notifications concurrently and wait for them to finish
+      // E. Execute all notifications concurrently
       await Promise.allSettled(notificationPromises);
       console.log("✅ All notifications successfully dispatched.");
 
