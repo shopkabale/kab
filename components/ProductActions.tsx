@@ -15,6 +15,7 @@ export default function ProductActions({ product, children }: { product: Product
 
   const [quantity, setQuantity] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [loadingWhatsApp, setLoadingWhatsApp] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -33,17 +34,48 @@ export default function ProductActions({ product, children }: { product: Product
     alert("✅ Added to cart successfully!");
   };
 
-  // --- BOT ROUTING LOGIC ---
-  const handleBotInquiry = () => {
-    fetch("/api/products/inquiry", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ productId: product.id }),
-    }).catch(console.error);
+  // ==========================================
+  // 🚀 UPGRADED WHATSAPP LEAD CAPTURE
+  // ==========================================
+  const handleBotInquiry = async () => {
+    setLoadingWhatsApp(true);
 
-    const rawMessage = `Hi! I want to order or ask about this item on Kabale Online: *${product.name}*\n\nProduct ID: [${product.id}]`;
-    const encodedMessage = encodeURIComponent(rawMessage);
-    window.open(`https://wa.me/${botPhoneNumber}?text=${encodedMessage}`, "_blank");
+    try {
+      // 1. Generate the Lead in Firestore before they leave the site
+      const res = await fetch("/api/orders/lead", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          productId: product.id,
+          productName: product.name,
+          sellerId: product.sellerId,
+          sellerPhone: product.sellerPhone,
+          price: product.price
+        }),
+      });
+
+      let referenceCode = product.id; // Fallback to raw ID if fetch fails
+
+      if (res.ok) {
+        const data = await res.json();
+        referenceCode = data.leadId; // Use the shiny new LEAD-XXXXX code
+      }
+
+      // 2. Construct the smart message with the Lead ID embedded
+      const rawMessage = `Hi! I want to order or ask about this item on Kabale Online:\n\n*${product.name}*\n\nRef: [${referenceCode}]`;
+      const encodedMessage = encodeURIComponent(rawMessage);
+      
+      // 3. Send them to WhatsApp
+      window.open(`https://wa.me/${botPhoneNumber}?text=${encodedMessage}`, "_blank");
+
+    } catch (error) {
+      console.error("Failed to generate lead:", error);
+      // Fallback redirect so the user isn't stuck if the DB is slow
+      const rawMessage = `Hi! I want to ask about: *${product.name}*\n\nProduct ID: [${product.id}]`;
+      window.open(`https://wa.me/${botPhoneNumber}?text=${encodeURIComponent(rawMessage)}`, "_blank");
+    } finally {
+      setLoadingWhatsApp(false);
+    }
   };
 
   const handleCopyLink = () => {
@@ -75,46 +107,45 @@ export default function ProductActions({ product, children }: { product: Product
 
   return (
     <div className="mt-6 flex flex-col gap-5">
-      
+
       {/* 1. QUANTITY & ADD TO CART (Under Maintenance Overlay) */}
-<div className="relative group">
-  {/* The Overlay */}
-  <div className="absolute inset-0 z-10 bg-white/40 backdrop-blur-[2px] flex items-center justify-center rounded-lg border border-slate-200/50">
-    <div className="bg-slate-900/90 text-white text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2">
-      <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-      </span>
-      Cart Under Maintenance
-    </div>
-  </div>
+      <div className="relative group">
+        {/* The Overlay */}
+        <div className="absolute inset-0 z-10 bg-white/40 backdrop-blur-[2px] flex items-center justify-center rounded-lg border border-slate-200/50">
+          <div className="bg-slate-900/90 text-white text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+            Cart Under Maintenance
+          </div>
+        </div>
 
-  {/* The Original Content (Blurred/Disabled visually) */}
-  <div className="flex items-center gap-3 opacity-50 grayscale-[0.3]">
-    <div className="flex items-center border border-slate-300 rounded-md overflow-hidden h-12 bg-white">
-      <button disabled className="px-4 h-full text-lg font-bold text-slate-400">-</button>
-      <span className="px-4 font-semibold text-lg border-x border-slate-300 h-full flex items-center justify-center min-w-[45px] text-slate-400 bg-slate-50">{quantity}</span>
-      <button disabled className="px-4 h-full text-lg font-bold text-slate-400">+</button>
-    </div>
-    
-    <button 
-      disabled
-      className="flex-1 bg-slate-400 text-white font-bold h-12 rounded-md text-sm uppercase tracking-wider"
-    >
-      Add to Cart
-    </button>
-  </div>
-</div>
+        {/* The Original Content (Blurred/Disabled visually) */}
+        <div className="flex items-center gap-3 opacity-50 grayscale-[0.3]">
+          <div className="flex items-center border border-slate-300 rounded-md overflow-hidden h-12 bg-white">
+            <button disabled className="px-4 h-full text-lg font-bold text-slate-400">-</button>
+            <span className="px-4 font-semibold text-lg border-x border-slate-300 h-full flex items-center justify-center min-w-[45px] text-slate-400 bg-slate-50">{quantity}</span>
+            <button disabled className="px-4 h-full text-lg font-bold text-slate-400">+</button>
+          </div>
 
+          <button 
+            disabled
+            className="flex-1 bg-slate-400 text-white font-bold h-12 rounded-md text-sm uppercase tracking-wider"
+          >
+            Add to Cart
+          </button>
+        </div>
+      </div>
 
       {/* 2. ASK OR ORDER ON WHATSAPP (Green Button) */}
       <button 
         onClick={handleBotInquiry}
-        disabled={loading}
-        className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3.5 rounded-md shadow-sm transition-all flex items-center justify-center gap-2 text-[15px]"
+        disabled={loadingWhatsApp}
+        className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3.5 rounded-md shadow-sm transition-all flex items-center justify-center gap-2 text-[15px] disabled:opacity-70"
       >
         <FaWhatsapp className="text-xl" /> 
-        Ask or Order on WhatsApp
+        {loadingWhatsApp ? "Connecting..." : "Ask or Order on WhatsApp"}
       </button>
 
       {/* 3. KABALE SHIPPING & DELIVERY CARD (Hybrid) */}
@@ -122,7 +153,7 @@ export default function ProductActions({ product, children }: { product: Product
         <div className="bg-slate-50 p-3.5 font-bold text-slate-800 border-b border-slate-200 text-sm">
           Shipping & Delivery
         </div>
-        
+
         <div className="grid grid-cols-2 p-4 gap-4">
           <div className="flex gap-2.5">
             <MdOutlineLocalShipping className="text-xl text-green-600 flex-shrink-0" />
@@ -131,7 +162,7 @@ export default function ProductActions({ product, children }: { product: Product
               <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">Campus & Kabale Town</p>
             </div>
           </div>
-          
+
           <div className="flex gap-2.5">
             <MdOutlineLocationOn className="text-xl text-green-600 flex-shrink-0" />
             <div>
@@ -147,7 +178,7 @@ export default function ProductActions({ product, children }: { product: Product
               <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">Inspect before you pay</p>
             </div>
           </div>
-          
+
           <div className="flex gap-2.5">
             <FaCheck className="text-xl text-amber-500 flex-shrink-0" />
             <div>
@@ -158,7 +189,7 @@ export default function ProductActions({ product, children }: { product: Product
         </div>
       </div>
 
-      {/* 4. MORE OPTIONS & ADMIN CONTROLS (Your Original Logic) */}
+      {/* 4. MORE OPTIONS & ADMIN CONTROLS */}
       <div className="mt-1">
         <button 
           onClick={() => setShowMore(!showMore)}
