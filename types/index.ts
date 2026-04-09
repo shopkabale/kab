@@ -1,12 +1,12 @@
 export type Role = "customer" | "vendor" | "admin";
-// Added "general" and string to safely handle your older database items
+
 export type ProductCategory = "electronics" | "agriculture" | "student_item" | "general" | string;
 
-// 🔥 ADDED "cancelled" to fix the status comparison error!
-export type OrderStatus = "pending" | "confirmed" | "out_for_delivery" | "delivered" | "cancelled";
+// 🔥 ADDED new statuses for LivePay and Unified Orders
+export type OrderStatus = "new" | "pending" | "processing" | "confirmed" | "out_for_delivery" | "delivered" | "cancelled";
 
 export interface User {
-  id: string; // Matches Firebase Auth UID
+  id: string; 
   email: string;
   displayName: string;
   photoURL?: string;
@@ -15,18 +15,17 @@ export interface User {
 }
 
 export interface Product {
-  id: string; // Firestore auto-generated ID
-  publicId: string; // e.g., ELC-0001
+  id: string; 
+  publicId: string; 
   name: string;
   slug: string;
   category: ProductCategory;
-  storeId?: string; // Made optional since we are transitioning to sellerId
+  storeId?: string; 
   price: number;
   stock: number;
-  images: string[]; // Cloudinary URLs
+  images: string[]; 
   createdAt: number;
 
-  // --- NEW FIELDS FOR MVP ---
   condition?: string;
   description?: string;
   sellerId?: string;
@@ -35,8 +34,14 @@ export interface Product {
   sellerPhone?: string;
   status?: string;
   views?: number;
+  inquiries?: number;
+  aiScore?: number;
+  
+  isBoosted?: boolean;
+  boostExpiresAt?: number;
+  isFeatured?: boolean;
+  featureExpiresAt?: number;
 
-  // 🔥 ADDED FOR MARKETPLACE STOCK CONTROL & URGENCY
   locked?: boolean;
   isUrgent?: boolean;
   urgentExpiresAt?: number | null;
@@ -45,25 +50,50 @@ export interface Product {
 
 export interface Order {
   id: string;
-  orderNumber: string;
+  orderId?: string;       // Master Order ID (KAB-XXXX)
+  orderNumber?: string;   // Legacy ID
   userId: string;
-  
-  // 🔥 ADDED NEW CHECKOUT FIELDS
+
   buyerName?: string;
   buyerEmail?: string | null;
+  buyerPhone?: string;
   contactPhone?: string;
-  sellerId?: string;
+  buyerLocation?: string;
+
+  // 🔥 UNIFIED MASTER SCHEMA
+  source?: string;
+  paymentMode?: "COD" | "FULL" | string;
+  paymentStatus?: "pending" | "paid" | "failed" | "payment_failed" | string;
+  transactionId?: string;
+  referenceId?: string;
+
+  totalAmount?: number;   // New Master Total
+  total?: number;         // Legacy Total
+
+  cartItems?: Array<{
+    productId: string;
+    name: string;
+    price: number;
+    quantity: number;
+    sellerId?: string;
+    sellerPhone?: string;
+    image?: string;
+  }>;
+
+  sellerOrders?: Array<{
+    sellerId: string;
+    sellerPhone: string;
+    subtotal: number;
+    items: Array<any>;
+  }>;
+
+  sellerIds?: string[];   // Flat array for dashboard rules
+  
+  items?: Array<any>;     // Legacy items array
+
+  status: OrderStatus;
   cancelReason?: string;
   updatedAt?: number;
-
-  items: Array<{
-    productId: string;
-    quantity: number;
-    price: number;
-  }>;
-  total: number;
-  paymentMethod: "cash_on_delivery";
-  status: OrderStatus;
   createdAt: number;
 }
 
@@ -73,7 +103,7 @@ export interface Store {
   name: string;
   slug: string;
   description: string;
-  phone?: string; // Added to match the Vendor Application form
+  phone?: string; 
   isApproved: boolean;
   createdAt: number;
 }
