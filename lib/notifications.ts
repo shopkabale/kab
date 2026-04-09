@@ -2,95 +2,92 @@
 import { sendWhatsAppTemplate } from "./whatsapp";
 
 export const NotificationService = {
+  
   // ==========================================
-  // 1. ORDER CREATED (Cart Checkout / Immediate Buy)
+  // 1. MULTI-SELLER: NOTIFY SELLER 
+  // Template: order_confirmation_seller_01
   // ==========================================
-  async orderCreated(
+  async notifySeller(
     sellerPhone: string, 
-    buyerPhone: string, 
-    productName: string, 
-    buyerName: string, 
-    orderNumber: string
+    sellerName: string, 
+    orderId: string, 
+    itemsString: string, 
+    subtotal: number, 
+    buyerName: string,
+    buyerLocation: string,
+    buyerContact: string
   ) {
-    console.log(`[WhatsApp Trigger] New Order: ${orderNumber}`);
-
-    // Notify Seller
+    console.log(`[WhatsApp] Routing seller sub-order to ${sellerPhone}...`);
     try {
-      console.log(`-> Attempting to notify SELLER at ${sellerPhone}...`);
-      await sendWhatsAppTemplate(sellerPhone, "new_order_notification", [productName], "en_US");
-      console.log("✅ SELLER notification sent successfully!");
+      const variables = [
+        sellerName || "Partner",                  // {{1}} Hello [Name]
+        orderId,                                  // {{2}} Order ID
+        itemsString,                              // {{3}} Items for you
+        subtotal.toLocaleString(),                // {{4}} Total Value
+        buyerName || "Customer",                  // {{5}} Name
+        buyerLocation || "Kabale Town",           // {{6}} Location
+        buyerContact                              // {{7}} Contact
+      ];
+      
+      await sendWhatsAppTemplate(sellerPhone, "order_confirmation_seller_01", variables, "en_US");
+      console.log(`✅ SELLER (${sellerPhone}) notification sent successfully!`);
     } catch (error: any) {
-      console.error("❌ SELLER NOTIFICATION FAILED:", error.message || error);
-    }
-
-    // Notify Buyer
-    try {
-      console.log(`-> Attempting to notify BUYER at ${buyerPhone}...`);
-      await sendWhatsAppTemplate(
-        buyerPhone, 
-        "order_confirmation_clean", 
-        [buyerName || "Customer", orderNumber], 
-        "en_US"
-      );
-      console.log("✅ BUYER notification sent successfully!");
-    } catch (error: any) {
-      console.error("❌ BUYER NOTIFICATION FAILED:", error.message || error);
+      console.error(`❌ SELLER NOTIFICATION FAILED [${sellerPhone}]:`, error.message || error);
     }
   },
 
   // ==========================================
-  // 2. NEW BUYER INQUIRY (Website "Buy via WhatsApp" Button)
+  // 2. CONSOLIDATED: NOTIFY BUYER
+  // Template: notify_buyer_02
+  // ==========================================
+  async notifyBuyer(
+    buyerPhone: string, 
+    orderId: string, 
+    itemsString: string, 
+    totalAmount: number
+  ) {
+    console.log(`[WhatsApp] Sending consolidated receipt to buyer ${buyerPhone}...`);
+    try {
+      const variables = [
+        orderId,                                  // {{1}} Order Number
+        itemsString,                              // {{2}} Order Details
+        totalAmount.toLocaleString()              // {{3}} Cart Total
+      ];
+
+      await sendWhatsAppTemplate(buyerPhone, "notify_buyer_02", variables, "en_US");
+      console.log(`✅ BUYER (${buyerPhone}) notification sent successfully!`);
+    } catch (error: any) {
+      console.error(`❌ BUYER NOTIFICATION FAILED [${buyerPhone}]:`, error.message || error);
+    }
+  },
+
+  // ==========================================
+  // 3. NEW BUYER INQUIRY (Pre-Cart WhatsApp Click)
   // ==========================================
   async buyerInquiry(sellerPhone: string, productName: string) {
     try {
-      // ⚠️ Uses the newly approved "new_buyer_inquiry" template
       await sendWhatsAppTemplate(sellerPhone, "new_buyer_inquiry", [productName], "en_US");
-      console.log("✅ BUYER INQUIRY sent successfully!");
     } catch (error: any) {
       console.error("❌ BUYER INQUIRY FAILED:", error.message || error);
     }
   },
 
   // ==========================================
-  // 3. CONVERSATION TIMEOUTS & UPDATES (New Templates)
+  // 4. CONVERSATION TIMEOUTS & UPDATES
   // ==========================================
-  
-  // Ping when the 24-hour window is about to close or the seller hasn't replied
   async awaitingResponse(targetPhone: string, productName: string) {
     try {
       await sendWhatsAppTemplate(targetPhone, "conversation_awaiting_response", [productName], "en_US");
-      console.log(`✅ Awaiting response ping sent to ${targetPhone}`);
     } catch (error: any) {
       console.error("❌ AWAITING RESPONSE PING FAILED:", error.message || error);
     }
   },
 
-  // Ping if an admin or the system needs to force an update into a closed chat
   async updateNotice(targetPhone: string, productName: string) {
     try {
       await sendWhatsAppTemplate(targetPhone, "conversation_update_notice", [productName], "en_US");
-      console.log(`✅ Update notice sent to ${targetPhone}`);
     } catch (error: any) {
       console.error("❌ UPDATE NOTICE FAILED:", error.message || error);
     }
-  },
-
-  // ==========================================
-  // 4. FUTURE STATUS UPDATES (Placeholders)
-  // ==========================================
-  async orderAccepted(buyerPhone: string, productName: string) {
-    console.log("Order Accepted triggered");
-  },
-
-  async orderReady(buyerPhone: string, agentPhone: string | null, productName: string) {
-    console.log("Order Ready triggered");
-  },
-
-  async orderDelivered(buyerPhone: string, sellerPhone: string, productName: string) {
-    console.log("Order Delivered triggered");
-  },
-
-  async orderCancelled(buyerPhone: string, sellerPhone: string, productName: string) {
-    console.log("Order Cancelled triggered");
   }
 };
