@@ -14,7 +14,10 @@ import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
 import SaveProductButton from "@/components/SaveProductButton";
 import InlineOfferLink from "@/components/InlineOfferLink";
+import ProductReviews from "@/components/ProductReviews"; // 🔥 INJECTED REVIEWS
 import { optimizeImage, calculateDepositAmount } from "@/lib/utils"; 
+import { FaCheck, FaTruck } from "react-icons/fa";
+import { MdVerifiedUser } from "react-icons/md";
 
 export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
   const product = await getProductByPublicId(params.publicId);
@@ -104,6 +107,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // ==========================================
   const sellerNameStr = String(product.sellerName || "").toLowerCase();
   const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
+  
   // 🔥 CALCULATE DEPOSIT FOR UI (Strictly enforce the 20k minimum rule)
   const depositRequired = safePrice >= 20000 ? calculateDepositAmount(safePrice, false) : 0;
 
@@ -130,7 +134,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // 5. HELPER: RENDER DESCRIPTION AS BULLETS
   // ==========================================
   const renderDescription = (desc?: string) => {
-    if (!desc) return <p className="text-slate-700 text-sm">No description provided by the seller.</p>;
+    if (!desc) return <p className="text-slate-600 text-sm">No description provided by the seller.</p>;
 
     const lines = desc.split('\n').filter(line => line.trim() !== '');
 
@@ -139,7 +143,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         {lines.map((line, idx) => {
           const cleanLine = line.replace(/^[-*•]\s*/, '').trim();
           return (
-            <li key={idx} className="text-slate-700 text-sm leading-relaxed flex items-start gap-2">
+            <li key={idx} className="text-slate-600 text-sm leading-relaxed flex items-start gap-2">
               <span className="text-slate-400 mt-[2px]">•</span>
               <span>{cleanLine}</span>
             </li>
@@ -150,7 +154,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   };
 
   return (
-    <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6">
+    <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6 bg-white min-h-screen">
       <ProductTracker product={product} />
       <RecentlyViewedTracker product={product} />   
 
@@ -179,77 +183,87 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         {/* RIGHT COLUMN: Product Details */}  
         <div className="flex flex-col">  
 
-          {/* INTEGRATED BADGES AREA */}
-          <div className="flex flex-wrap items-center gap-2 mb-4">  
-            <span className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${  
-              safeCondition === 'new' ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'  
-            }`}>  
-              {safeCondition === 'new' ? 'Brand New' : 'Used'}  
-            </span>  
+          {/* 🔥 1. E-COMMERCE TRUST BANNER */}
+          <div className="flex items-center gap-3 bg-orange-50 text-[#D97706] text-xs md:text-sm font-bold py-2 px-3 rounded-md w-max mb-5 border border-orange-100 shadow-sm">
+            <span className="flex items-center gap-1.5"><FaCheck className="text-green-600 text-sm" /> Cash on Delivery</span>
+            <span className="text-orange-200">|</span>
+            <span className="flex items-center gap-1.5"><FaTruck className="text-slate-800 text-sm" /> Same Day Delivery</span>
+          </div>
 
-            {isMainProductNew && (
-              <span className="bg-slate-900 text-white text-[10px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5 uppercase tracking-wider">
-                 <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
-                 Just Added
-              </span>
-            )}
-
-            {isMainApproved ? (
-              <span className="bg-emerald-600 text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                 Approved Quality
-              </span>
-            ) : isMainOfficial ? (
-              <span className="bg-[#D97706] text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider shadow-sm">
-                 Official Product
-              </span>
-            ) : null}
-          </div>  
-
-          {/* 🔥 TITLE: Big and Light Gray */}
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-400 leading-tight mb-3">  
+          {/* 🔥 2. TITLE */}
+          <h1 className="text-2xl sm:text-3xl font-medium text-slate-900 leading-tight mb-3">  
             {safeName}
           </h1>  
 
-          {/* 🔥 PRICE: Bold and Black */}
-          <div className="mb-1.5 flex flex-wrap items-center gap-4">  
-            <span className="text-4xl font-black text-slate-900">  
+          {/* 🔥 3. BRAND & BADGES */}
+          <div className="flex flex-wrap items-center gap-2 mb-4">  
+            <span className="font-extrabold text-sm uppercase tracking-wider text-slate-800 mr-2">
+              {product.brand || "KABALE ONLINE"}
+            </span>
+
+            {isMainProductNew && (
+              <span className="bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-wider">
+                 <span className="w-1 h-1 rounded-full bg-green-400 animate-pulse"></span>
+                 New
+              </span>
+            )}
+
+            {(isMainApproved || isMainOfficial) && (
+              <span className="bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-wide">
+                 Original Brand <MdVerifiedUser />
+              </span>
+            )}
+
+            <span className="text-green-600 text-[11px] font-bold flex items-center gap-1 uppercase">
+              <FaCheck /> Certified
+            </span>
+          </div>  
+
+          {/* 🔥 4. PRICE & REVIEWS */}
+          <div className="mb-2 flex items-end gap-3">  
+            <span className="text-3xl sm:text-4xl font-extrabold text-[#D97706]">  
               UGX {safePrice.toLocaleString()}  
             </span>  
           </div>  
 
+          <div className="flex items-center gap-2 mb-6 text-sm text-slate-500">
+            <div className="flex text-green-500 text-xs">⭐⭐⭐⭐⭐</div>
+            <a href="#reviews" className="hover:text-[#D97706] cursor-pointer transition-colors">(View customer reviews)</a>
+          </div>
+
           {/* INLINE MAKE OFFER LINK */}
-          <div className="mb-6">
+          <div className="mb-6 border-t border-slate-100 pt-4">
             <p className="text-sm text-slate-500 font-medium">
               Do you think the price is high? {' '}
               <InlineOfferLink product={product} safeName={safeName} />
             </p>
           </div>
 
-          {/* 🔥 AUTHENTIC SCARCITY INDICATOR: Plain Black Text */}
-          <div className="mb-6 flex items-center gap-2 text-sm font-bold text-slate-900">
+          {/* AUTHENTIC SCARCITY INDICATOR */}
+          <div className="mb-4 flex items-center gap-2 text-sm font-bold text-slate-900">
             {isSoldOut ? (
                <>
                 <span className="text-lg">ℹ️</span>
-                <span>This item is currently sold out. Check similar items below!</span>
+                <span className="text-red-600">This item is currently sold out. Check similar items below!</span>
                </>
             ) : isLowStock ? (
               <>
-                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>High Demand: Only {safeStock} left in stock!</span>
+                <span className="text-amber-600">High Demand: Only {safeStock} left in stock!</span>
               </>
             ) : (
               <>
-                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 shrink-0 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                 </svg>
-                <span>In Stock & Ready to Deliver</span>
+                <span className="text-green-700">In Stock & Ready to Deliver</span>
               </>
             )}
           </div>
 
-          {/* 🔥 NEW DEPOSIT REQUIREMENT BOX (Exactly above FastBuy) */}
+          {/* DEPOSIT REQUIREMENT BOX */}
           {!isSoldOut && depositRequired > 0 && (
             <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-4 shadow-sm">
               <h4 className="text-sm sm:text-base font-bold text-green-800 flex items-center gap-2 mb-2">
@@ -264,12 +278,15 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </div>
           )}
 
-          {/* MAIN CALL TO ACTIONS */}
-          <div className={`mb-6 ${isSoldOut ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
-            <FastBuy product={{...product, images: optimizedImages}} />
-          </div>
+          {/* 🔥 5. MAIN CALL TO ACTIONS (HYBRID) */}
+          <div className={`mb-8 ${isSoldOut ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
+            
+            {/* If you still want FastBuy above the Hybrid Cart Actions, keep this. Otherwise comment it out! */}
+            <div className="mb-3">
+              <FastBuy product={{...product, images: optimizedImages}} />
+            </div>
 
-          <div className="mb-10 border-b border-slate-200 pb-8">
+            {/* This pulls in the new Add to Cart, WhatsApp Button, and Shipping Card */}
             <ProductActions product={{...product, images: optimizedImages}}>
                 <div className="flex flex-col gap-3 mt-2 w-full">
                   <SaveProductButton product={product} />
@@ -277,87 +294,67 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </ProductActions>
           </div> 
 
-          {/* INLINE TRUST BOX */}
-          <div className="mb-10 bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-5 space-y-4 shadow-sm">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+          {/* 🔥 6. NATIVE HTML ACCORDIONS (SEO FRIENDLY) */}
+          <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-10 bg-white shadow-sm divide-y divide-slate-200">
+            
+            {/* DESCRIPTION ACCORDION */}
+            <details className="group" open>
+              <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-green-700 bg-slate-50 hover:bg-slate-100 transition-colors text-sm">
+                Description
+                <span className="transition group-open:rotate-180">
+                  <svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
+                </span>
+              </summary>
+              <div className="p-4 text-slate-600 bg-white">
+                {renderDescription(product.description)}
               </div>
-              <div>
-                {/* 🔥 DYNAMIC TRUST MESSAGING */}
-                <h4 className="text-sm font-black text-slate-900 mb-0.5 tracking-tight">
-                  {depositRequired > 0 
-                    ? "Secure with a Deposit, Balance on Delivery" 
-                    : "Payment is after you receive the product"}
-                </h4>
-                <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                  {depositRequired > 0 
-                    ? `Pay a small UGX ${depositRequired.toLocaleString()} deposit to confirm your order. Pay the balance only after you inspect the item and are 100% satisfied.`
-                    : "Inspect the item first. If it is not exactly as described, simply hand it back. You only pay when you are 100% satisfied. Zero risk."}
-                </p>
-              </div>
-            </div>
+            </details>
 
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-[#D97706]/10 text-[#D97706] flex items-center justify-center shrink-0 mt-0.5">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
+            {/* SPECIFICATIONS ACCORDION */}
+            <details className="group" open>
+              <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-slate-800 hover:bg-slate-50 transition-colors text-sm">
+                Additional Information
+                <span className="transition group-open:rotate-180">
+                  <svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
+                </span>
+              </summary>
+              <div className="p-0 bg-white">
+                <table className="w-full text-sm text-left">
+                  <tbody className="divide-y divide-slate-100">
+                    <tr>
+                      <th className="w-1/3 px-4 py-3 font-semibold text-slate-700 bg-slate-50/50">Condition</th>
+                      <td className="px-4 py-3 text-slate-900 capitalize">{safeCondition}</td>
+                    </tr>
+                    <tr>
+                      <th className="w-1/3 px-4 py-3 font-semibold text-slate-700 bg-slate-50/50">Location</th>
+                      <td className="px-4 py-3 text-slate-900">Available locally in Kabale</td>
+                    </tr>
+                    <tr>
+                      <th className="w-1/3 px-4 py-3 font-semibold text-slate-700 bg-slate-50/50">Sold By</th>
+                      <td className="px-4 py-3 text-slate-900 font-bold flex items-center gap-2">
+                        {product.sellerName || "Verified Seller"} 
+                        {isAdmin && <span className="text-blue-600"><MdVerifiedUser /></span>}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-              <div>
-                <h4 className="text-sm font-black text-slate-900 mb-0.5 tracking-tight">
-                  Fast Delivery in Kabale & Kigezi
-                </h4>
-                <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                  Direct delivery to your doorstep, shop, or hostel. No waiting days for packages from Kampala.
-                </p>
+            </details>
+
+            {/* REVIEWS ACCORDION */}
+            <details className="group" id="reviews">
+              <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-slate-800 hover:bg-slate-50 transition-colors text-sm">
+                Customer Reviews
+                <span className="transition group-open:rotate-180">
+                  <svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
+                </span>
+              </summary>
+              <div className="p-4 bg-white">
+                {/* INJECTED FIREBASE REVIEWS CLIENT COMPONENT */}
+                <ProductReviews productId={product.id} />
               </div>
-            </div>
-          </div>
+            </details>
 
-          {/* DESCRIPTION */}  
-          <div className="mb-8">  
-            <h3 className="text-sm font-bold text-slate-900 mb-4 uppercase tracking-wider">Description</h3>  
-            {renderDescription(product.description)}
-          </div>  
-
-          {/* 2-COLUMN SPECS TABLE */}
-          <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-10 bg-white">
-            <table className="w-full text-sm text-left">
-              <tbody className="divide-y divide-slate-200">
-                <tr className="divide-x divide-slate-200">
-                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700 whitespace-nowrap">Stock Status</th>
-                  <td className="px-4 py-3 text-slate-900 font-medium flex items-center bg-white">
-                    <span className={safeStock > 0 && !isSoldOut ? "text-green-700" : "text-red-600"}>
-                      {safeStock > 0 && !isSoldOut ? 'In Stock' : 'Out of Stock'}
-                    </span>
-                  </td>
-                </tr>
-                <tr className="divide-x divide-slate-200">
-                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Location</th>
-                  <td className="px-4 py-3 text-slate-900 bg-white">Available in Kabale</td>
-                </tr>
-                <tr className="divide-x divide-slate-200">
-                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Delivery</th>
-                  <td className="px-4 py-3 text-slate-900 bg-white">Same day (if ordered 7 AM - 3 PM)</td>
-                </tr>
-                <tr className="divide-x divide-slate-200">
-                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Sold By</th>
-                  <td className="px-4 py-3 text-slate-900 font-bold uppercase bg-white flex items-center gap-2">
-                    {product.sellerName || "Verified Seller"} 
-                    {isAdmin && (
-                      <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded-full font-bold">Verified ✓</span>
-                    )}
-                  </td>
-                </tr>
-                <tr className="divide-x divide-slate-200">
-                  <th className="w-1/3 bg-slate-50 px-4 py-3 font-semibold text-slate-700">Returns</th>
-                  <td className="px-4 py-3 text-slate-900 bg-white">Reject on delivery if unsatisfied</td>
-                </tr>
-              </tbody>
-            </table>
           </div>
 
         </div>  
