@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
-import * as admin from "firebase-admin"; // 🔥 Added for CRM Timestamp
+import * as admin from "firebase-admin";
 
 import { sendWhatsAppMessage } from "@/lib/whatsapp"; 
 import { checkIsBotFlow } from "@/lib/bot/handlers"; 
 import { logChat } from "@/lib/bot/chatLogger"; 
+import { NotificationService } from "@/lib/notifications"; // 🔥 Added
+import { sendAdminAlert } from "@/lib/brevo"; // 🔥 Added
 
 // ==========================================
 // 1. Handle Webhook Verification (GET)
@@ -23,7 +25,7 @@ export async function GET(request: Request) {
       return new NextResponse(challenge, { status: 200 });
     }
 
-    console.warn("⚠️ Webhook verification failed. Invalid token or mode.");
+    console.warn("⚠️ Webhook verification failed.");
     return new NextResponse("Forbidden", { status: 403 });
   } catch (error) {
     console.error("🚨 Webhook Verification Error:", error);
@@ -50,15 +52,8 @@ export async function POST(request: Request) {
       for (const change of changes) {
         const value = change.value;
 
-        if (value?.statuses) {
-          for (const status of value.statuses) {
-            console.log(`ℹ️ Status update: Message ${status.id} is ${status.status}`);
-          }
-        }
-
         if (value?.messages && value.messages.length > 0) {
           for (const message of value.messages) {
-            // Pass the contact info (Name) along with the message for the CRM
             const contactName = value.contacts?.[0]?.profile?.name || "WhatsApp User";
             messagePromises.push(processWhatsAppMessage(message, contactName));
           }
@@ -85,8 +80,7 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
   try {
     console.log(`💬 Processing incoming payload from ${fromPhone}...`);
 
-    // 🔥 PHASE 1 UPGRADE: SILENT CRM DATA CAPTURE
-    // Automatically save or update this user in the database every time they message
+    // CRM DATA CAPTURE
     adminDb.collection("customers").doc(fromPhone).set({
       phone: fromPhone,
       name: contactName,
@@ -94,9 +88,6 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
       tags: admin.firestore.FieldValue.arrayUnion("active_user") 
     }, { merge: true }).catch(console.error);
 
-    // ==========================================
-    // 3. Determine text content & Filter Media
-    // ==========================================
     let incomingText = "";
     let isUnsupportedMedia = false;
 
@@ -114,9 +105,7 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
       isUnsupportedMedia = true;
     }
 
-    // 🚨 THE GRACEFUL BOUNCE
     if (isUnsupportedMedia) {
-      console.log(`🚫 Blocked unsupported media type (${message.type}) from ${fromPhone}`);
       const bounceText = "⚠️ *Media Not Supported:* For your security, this private chat only supports text messages. Please type out your message.";
       await sendWhatsAppMessage(fromPhone, bounceText);
       return; 
@@ -125,16 +114,18 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     logChat(fromPhone, "incoming", message.type, incomingText).catch(console.error);
 
     // ==========================================
-    // 4. Let the Bot try to handle it first (This triggers handlers.ts)
+    // 🚀 NEW: THE LEAD CONVERTER INTERCEPTOR
     // ==========================================
-    const isBotHandled = await checkIsBotFlow(fromPhone, message);
-    if (isBotHandled) {
-      return; // Handlers.ts successfully handled it!
+    const isLeadConverted = await handleLeadConversion(fromPhone, contactName, incomingText);
+    if (isLeadConverted) {
+      return; // Order was processed! Stop further routing.
     }
 
-    // ==========================================
-    // 5. ESCAPE HATCH (Manual Close)
-    // ==========================================
+    // Let the Bot try to handle it first
+    const isBotHandled = await checkIsBotFlow(fromPhone, message);
+    if (isBotHandled) return; 
+
+    // ESCAPE HATCH (Manual Close)
     if (incomingText.trim().toUpperCase() === "END CHAT") {
       const activeSession = await getActiveChatPartner(fromPhone);
       if (activeSession) {
@@ -149,44 +140,33 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
       }
     }
 
-    // ==========================================
-    // 6. PROXY RELAY LOGIC (With 5-Message Rule)
-    // ==========================================
+    // PROXY RELAY LOGIC
     const activeSession = await getActiveChatPartner(fromPhone);
 
     if (activeSession) {
       const targetPhone = activeSession.phone;
       const forwardedText = `*New Message:*\n${incomingText}`;
 
-      // A. Relay the message
       await sendWhatsAppMessage(targetPhone, forwardedText);
       logChat(targetPhone, "outgoing", "text", incomingText).catch(console.error);
 
-      // B. Fetch and increment the message count
       const sessionDoc = await adminDb.collection("orders").doc(activeSession.orderId).get();
       const currentCount = sessionDoc.data()?.messageCount || 0;
       const newCount = currentCount + 1;
 
-      // C. Update DB with new count and restart the clock
       adminDb.collection("orders").doc(activeSession.orderId).update({ 
         updatedAt: Date.now(),
         messageCount: newCount
       }).catch(console.error);
 
-      // D. THE 5-MESSAGE REMINDER
       if (newCount === 5) {
         const reminderText = "ℹ️ *System Tip:* You are chatting securely through Kabale Online. When you have finished negotiating, simply type *END CHAT* to close this connection.";
         await sendWhatsAppMessage(fromPhone, reminderText);
         await sendWhatsAppMessage(targetPhone, reminderText);
       }
-
-      console.log(`✅ Relayed message from ${fromPhone} to ${targetPhone}. Count: ${newCount}`);
     } else {
-      // THE FALLBACK: No active chat, not a bot command.
       console.log(`ℹ️ No active transaction found for ${fromPhone}. Sending fallback reply.`);
-
       const fallbackText = `Hi there! 👋 Welcome to *Kabale Online*.\n\nI am your campus marketplace bot. I can help you safely buy or sell laptops, phones, and more right here at uni.\n\n👉 Type *MENU* to see options.\n👉 Or visit kabaleonline.com to find an item!`;
-
       await sendWhatsAppMessage(fromPhone, fallbackText);
       logChat(fromPhone, "outgoing", "text", fallbackText).catch(console.error);
     }
@@ -197,29 +177,123 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
 }
 
 // ==========================================
-// HELPER FUNCTION: Format Phone for Meta API
+// 🚀 THE LEAD CONVERTER FUNCTION
+// ==========================================
+async function handleLeadConversion(fromPhone: string, contactName: string, text: string): Promise<boolean> {
+  const match = text.match(/Ref:\s*\[(LEAD-\d+)\]/i);
+  if (!match) return false;
+
+  const leadId = match[1];
+  console.log(`🚀 Lead detected! Converting ${leadId} for ${fromPhone}...`);
+
+  try {
+    let orderData: any = null;
+    let sellerOrdersMap: any = {};
+
+    // 1. Atomic Transaction to lock stock & activate lead
+    await adminDb.runTransaction(async (t) => {
+      const leadRef = adminDb.collection("orders").doc(leadId);
+      const leadSnap = await t.get(leadRef);
+
+      if (!leadSnap.exists) throw new Error("Order reference not found.");
+      if (leadSnap.data()?.status !== "lead") throw new Error("This order has already been processed.");
+
+      orderData = leadSnap.data();
+      const items = orderData.cartItems || [];
+
+      // Check stock & Map Sellers
+      for (const item of items) {
+        const prodRef = adminDb.collection("products").doc(item.productId);
+        const prodSnap = await t.get(prodRef);
+        
+        if (!prodSnap.exists || prodSnap.data()?.stock < item.quantity) {
+          throw new Error(`Sorry, ${item.name} is currently out of stock.`);
+        }
+
+        if (!sellerOrdersMap[item.sellerPhone]) {
+          sellerOrdersMap[item.sellerPhone] = {
+            sellerId: item.sellerId,
+            sellerPhone: item.sellerPhone,
+            items: [],
+            subtotal: 0
+          };
+        }
+        sellerOrdersMap[item.sellerPhone].items.push(item);
+        sellerOrdersMap[item.sellerPhone].subtotal += (item.price * item.quantity);
+
+        t.update(prodRef, {
+          stock: admin.firestore.FieldValue.increment(-item.quantity),
+          locked: true,
+          updatedAt: Date.now()
+        });
+      }
+
+      // Activate Order
+      const sellerOrders = Object.values(sellerOrdersMap);
+      t.update(leadRef, {
+        buyerPhone: fromPhone,
+        buyerName: contactName,
+        status: "processing", // 🔥 Converts lead to active order
+        sellerOrders: sellerOrders,
+        updatedAt: Date.now()
+      });
+    });
+
+    // 2. Trigger Notifications
+    const allProductsString = orderData.cartItems.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
+    const notificationPromises: Promise<any>[] = [];
+
+    // Notify Buyer
+    notificationPromises.push(NotificationService.notifyBuyer(fromPhone, leadId, allProductsString, orderData.totalAmount));
+    
+    // Notify Admin
+    notificationPromises.push(sendAdminAlert(leadId, allProductsString, orderData.totalAmount, fromPhone, "WhatsApp COD Lead Converted"));
+
+    // Notify Sellers
+    for (const sellerCut of Object.values(sellerOrdersMap) as any[]) {
+      const sellerItemsString = sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
+      notificationPromises.push(
+        NotificationService.notifySeller(
+          sellerCut.sellerPhone,
+          "Partner",
+          leadId,
+          sellerItemsString,
+          sellerCut.subtotal,
+          contactName,
+          "Kabale (Confirm in Chat)",
+          fromPhone
+        )
+      );
+    }
+
+    await Promise.allSettled(notificationPromises);
+    console.log(`✅ Lead ${leadId} successfully converted into active COD order.`);
+    return true;
+
+  } catch (error: any) {
+    console.error("Lead conversion failed:", error);
+    await sendWhatsAppMessage(fromPhone, `⚠️ *Order Update:*\n${error.message}\n\nPlease type *MENU* to browse other items.`);
+    return true; // Still return true so the normal bot fallback doesn't trigger
+  }
+}
+
+// ==========================================
+// HELPER FUNCTIONS (Kept Intact)
 // ==========================================
 function normalizeForMeta(phone: string): string {
   if (!phone) return "";
   let cleanPhone = phone.replace(/\D/g, ""); 
-  if (cleanPhone.startsWith("0")) {
-    cleanPhone = "256" + cleanPhone.substring(1); 
-  }
+  if (cleanPhone.startsWith("0")) cleanPhone = "256" + cleanPhone.substring(1); 
   return cleanPhone;
 }
 
-// ==========================================
-// HELPER FUNCTION: Find who to send it to (WITH GHOST SWEEPER)
-// ==========================================
 async function getActiveChatPartner(senderPhone: string): Promise<{ phone: string, orderId: string } | null> {
   try {
     const ordersRef = adminDb.collection("orders"); 
     const activeStatuses = ["pending", "confirmed", "out for delivery", "out_for_delivery"];
 
     const phoneVariations = [senderPhone, `+${senderPhone}`];
-    if (senderPhone.startsWith("256")) {
-      phoneVariations.push(`0${senderPhone.substring(3)}`); 
-    }
+    if (senderPhone.startsWith("256")) phoneVariations.push(`0${senderPhone.substring(3)}`); 
 
     const [buyerSnap, sellerSnap] = await Promise.all([
       ordersRef.where("buyerPhone", "in", phoneVariations).where("status", "in", activeStatuses).get(),
@@ -230,7 +304,6 @@ async function getActiveChatPartner(senderPhone: string): Promise<{ phone: strin
     buyerSnap.forEach(doc => allActiveOrders.push(doc.data()));
     sellerSnap.forEach(doc => allActiveOrders.push(doc.data()));
 
-    // Sort by newest first
     allActiveOrders.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
     const normalizedSender = normalizeForMeta(senderPhone);
@@ -240,9 +313,7 @@ async function getActiveChatPartner(senderPhone: string): Promise<{ phone: strin
     for (const order of allActiveOrders) {
       const lastActive = order.updatedAt || order.createdAt || 0;
 
-      // 🚨 THE GHOST SWEEPER
       if (now - lastActive > TWENTY_FOUR_HOURS) {
-        console.log(`⏱️ Auto-closing expired proxy session: ${order.id}`);
         ordersRef.doc(order.id).update({ status: "closed", updatedAt: now }).catch(console.error);
         continue; 
       }
@@ -253,15 +324,12 @@ async function getActiveChatPartner(senderPhone: string): Promise<{ phone: strin
       if (normalizedSender === normalizedBuyer && normalizedSeller !== normalizedSender) {
         return { phone: normalizedSeller, orderId: order.id }; 
       }
-
       if (normalizedSender === normalizedSeller && normalizedBuyer !== normalizedSender) {
         return { phone: normalizedBuyer, orderId: order.id }; 
       }
     }
-
     return null; 
   } catch (error) {
-    console.error("❌ Error looking up chat partner:", error);
     return null;
   }
 }
