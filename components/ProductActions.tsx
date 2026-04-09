@@ -22,20 +22,19 @@ export default function ProductActions({ product, children }: { product: Product
   const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
 
   // ==========================================
-  // 🛒 CART LOGIC (Now Unlocked!)
+  // 🛒 CART LOGIC (Unlocked & Type-Safe!)
   // ==========================================
   const handleAddToCart = () => {
     addToCart({
       id: product.id,
-      title: product.name || product.title || "Unknown Item",
+      title: product.name || "Unknown Item", // 🔥 Fixed: Removed product.title
       price: Number(product.price),
       image: product.images?.[0] || "",
       quantity: quantity,
-      sellerId: product.sellerId || "SYSTEM", // Critical for multi-seller routing
+      sellerId: product.sellerId || "SYSTEM", 
       sellerPhone: product.sellerPhone || ""
     });
     
-    // Optional: You could replace this alert with a nice toast notification later!
     alert("✅ Added to cart successfully!");
   };
 
@@ -51,7 +50,7 @@ export default function ProductActions({ product, children }: { product: Product
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           productId: product.id,
-          productName: product.name || product.title,
+          productName: product.name, // 🔥 Fixed: Removed product.title
           sellerId: product.sellerId,
           sellerPhone: product.sellerPhone,
           price: product.price
@@ -65,14 +64,16 @@ export default function ProductActions({ product, children }: { product: Product
         referenceCode = data.leadId; 
       }
 
-      const rawMessage = `Hi! I want to order or ask about this item on Kabale Online:\n\n*${product.name || product.title}*\n\nRef: [${referenceCode}]`;
+      // 🔥 Fixed: Removed product.title
+      const rawMessage = `Hi! I want to order or ask about this item on Kabale Online:\n\n*${product.name}*\n\nRef: [${referenceCode}]`;
       const encodedMessage = encodeURIComponent(rawMessage);
       
       window.open(`https://wa.me/${botPhoneNumber}?text=${encodedMessage}`, "_blank");
 
     } catch (error) {
       console.error("Failed to generate lead:", error);
-      const rawMessage = `Hi! I want to ask about: *${product.name || product.title}*\n\nProduct ID: [${product.id}]`;
+      // 🔥 Fixed: Removed product.title
+      const rawMessage = `Hi! I want to ask about: *${product.name}*\n\nProduct ID: [${product.id}]`;
       window.open(`https://wa.me/${botPhoneNumber}?text=${encodeURIComponent(rawMessage)}`, "_blank");
     } finally {
       setLoadingWhatsApp(false);
