@@ -48,18 +48,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
+  // 🔥 REORDERED BY DAILY ADMIN PRIORITY WITH UNIQUE ICONS
   const navItems = [
     { name: "Dashboard", href: "/admin", icon: "📊" },
-    { name: "Official Store", href: "/admin/official", icon: "🏪" },
-{ name: "WhatsApp Inbox", href: "/admin/inbox", icon: "💬" },
-{ name: "Verifications", href: "/admin/verify", icon: "🛡️" },
-    { name: "Premium Requests", href: "/admin/premium", icon: "💎" },
-
-    { name: "Upload Official Item", href: "/admin/upload", icon: "✨" }, 
-    { name: "All Products", href: "/admin/products", icon: "📦" },
-    { name: "Blogs Center", href: "/admin/blog", icon: "💬" },
     { name: "Orders", href: "/admin/orders", icon: "🛒" },
+    { name: "Payout Requests", href: "/admin/payouts", icon: "💰" }, // Added Wallet/Payouts here!
+    { name: "WhatsApp Inbox", href: "/admin/inbox", icon: "💬" },
+    { name: "Verifications", href: "/admin/verify", icon: "🛡️" },
+    { name: "Premium Requests", href: "/admin/premium", icon: "💎" },
+    { name: "All Products", href: "/admin/products", icon: "📦" },
+    { name: "Official Store", href: "/admin/official", icon: "🏪" },
+    { name: "Upload Official Item", href: "/admin/upload", icon: "✨" }, 
     { name: "Users", href: "/admin/users", icon: "👥" },
+    { name: "Blogs Center", href: "/admin/blog", icon: "✍️" }, // Fixed duplicate icon
     { name: "Search Logs", href: "/admin/searches", icon: "🔍" },
   ];
 
@@ -77,7 +78,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div>Kabale<span className="text-[#D97706]">Admin</span></div>
           </Link>
         </div>
-        <nav className="flex-1 overflow-y-auto py-8 px-4 space-y-2 relative z-10">
+        <nav className="flex-1 overflow-y-auto py-8 px-4 space-y-2 relative z-10 custom-scrollbar">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (
@@ -148,6 +149,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           </div>
         </div>
       </main>
+
+      {/* Added tiny style to make scrollbar look nice on sidebar if it gets too long */}
+      <style dangerouslySetInnerHTML={{__html: `
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+      `}} />
     </div>
   );
 }
