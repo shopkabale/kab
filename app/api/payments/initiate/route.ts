@@ -1,29 +1,23 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase/config"; // Ensure this matches your exact config path
-import { collection, addDoc, doc, getDoc, serverTimestamp } from "firebase/firestore";
-import { calculateDepositAmount } from "@/lib/utils";
+import { db } from "@/lib/firebase/config"; 
+import { collection, doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
-// ==========================================
-// HELPER: DETECT NETWORK FROM PHONE PREFIX
-// ==========================================
+// Helper: Detect network
 function getNetwork(phone: string): "MTN" | "AIRTEL" | null {
-  // Assuming standard Uganda 10-digit format (e.g., 0770000000)
   const prefix = phone.substring(0, 3);
-  
   if (["077", "078", "076", "039"].includes(prefix)) return "MTN";
   if (["075", "070", "074"].includes(prefix)) return "AIRTEL";
-  
   return null;
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { userId, buyerName, productId, contactPhone } = body;
+    // 📦 Ingest the Unified Master Payload
+    const { buyerName, contactPhone, userId, cartItems } = body;
 
-    // 1. VALIDATE INPUTS
-    if (!productId || !contactPhone || !buyerName) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!cartItems || cartItems.length === 0 || !contactPhone || !buyerName) {
+      return NextResponse.json({ error: "Missing required fields or empty cart" }, { status: 400 });
     }
 
     const network = getNetwork(contactPhone);
@@ -31,30 +25,58 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid network. Only MTN and Airtel are supported." }, { status: 400 });
     }
 
-    // 2. FETCH PRODUCT SECURELY FROM DB (Prevent Price Tampering)
-    // Adjust 'products' to match your actual collection name if different
-    const productRef = doc(db, "products", productId);
-    const productSnap = await getDoc(productRef);
+    // 1. SECURE CART VERIFICATION (100% FULL PAYMENT CALCULATION)
+    let actualTotalAmount = 0;
+    const validatedItems = [];
 
-    if (!productSnap.exists()) {
-      return NextResponse.json({ error: "Product not found" }, { status: 404 });
+    for (const item of cartItems) {
+      // Use productId (FastBuy) or id (CartContext)
+      const targetId = item.productId || item.id; 
+      const productRef = doc(db, "products", targetId);
+      const productSnap = await getDoc(productRef);
+
+      if (!productSnap.exists()) {
+        return NextResponse.json({ error: `Item ${item.title || item.name} is unavailable.` }, { status: 404 });
+      }
+
+      const productData = productSnap.data();
+      const actualPrice = Number(productData.price) || 0;
+      const itemQuantity = Number(item.quantity) || 1;
+      
+      actualTotalAmount += (actualPrice * itemQuantity);
+
+      validatedItems.push({
+        productId: targetId,
+        name: item.title || item.name || productData.title || "Unknown Item",
+        price: actualPrice, // Strict DB Price
+        quantity: itemQuantity,
+        sellerId: item.sellerId || productData.sellerId || "SYSTEM",
+        sellerPhone: item.sellerPhone || productData.sellerPhone || "",
+        image: item.image || productData.images?.[0] || ""
+      });
     }
 
-    const productData = productSnap.data();
-    const actualPrice = Number(productData.price) || 0;
-    const isRestricted = productData.isAdminUpload || false;
-
-    // 3. CALCULATE DEPOSIT SERVER-SIDE
-    const depositAmount = calculateDepositAmount(actualPrice, isRestricted);
-
-    if (depositAmount === 0) {
-      return NextResponse.json({ error: "This item does not require a deposit." }, { status: 400 });
+    // 2. MULTI-SELLER ROUTING LOGIC (Group by sellerPhone)
+    const sellerOrdersMap: Record<string, any> = {};
+    for (const item of validatedItems) {
+      if (!sellerOrdersMap[item.sellerPhone]) {
+        sellerOrdersMap[item.sellerPhone] = {
+          sellerId: item.sellerId,
+          sellerPhone: item.sellerPhone,
+          items: [],
+          subtotal: 0
+        };
+      }
+      sellerOrdersMap[item.sellerPhone].items.push(item);
+      sellerOrdersMap[item.sellerPhone].subtotal += (item.price * item.quantity);
     }
+    const sellerOrders = Object.values(sellerOrdersMap);
 
-    // 4. GENERATE UNIQUE REFERENCE ID
+    // 3. GENERATE IDs
     const referenceId = crypto.randomUUID();
+    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // 5. CALL LIVEPAY COLLECTION API
+    // 4. CALL LIVEPAY API (Charging 100% actualTotalAmount)
     const livePayResponse = await fetch("https://livepay.me/api/v1/collect-money", {
       method: "POST",
       headers: {
@@ -63,7 +85,7 @@ export async function POST(request: Request) {
       },
       body: JSON.stringify({
         apikey: process.env.LIVEPAY_PUBLIC_KEY,
-        amount: depositAmount,
+        amount: actualTotalAmount, 
         phone_number: contactPhone,
         currency: "UGX",
         network: network,
@@ -78,28 +100,31 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: livePayData.message || "Payment provider error" }, { status: 400 });
     }
 
-    // Extract LivePay's unique transaction ID from the successful response
     const transactionId = livePayData.data?.transaction_id;
 
-    // 6. SAVE PENDING ORDER TO FIRESTORE
-    const orderRef = await addDoc(collection(db, "orders"), {
+    // 5. SAVE THE MASTER ORDER
+    const orderRef = doc(db, "orders", orderNumber);
+    await setDoc(orderRef, {
+      orderId: orderNumber,
       userId: userId || "GUEST",
       buyerName,
-      productId,
-      totalPrice: actualPrice,
-      depositRequired: depositAmount,
-      contactPhone,
-      status: "pending_deposit",
+      buyerPhone: contactPhone,
+      source: "cart",            // 🔥 Hardcoded for web orders
+      paymentMode: "FULL",       // 🔥 Hardcoded business rule
+      paymentStatus: "pending",  // Waiting for webhook
+      status: "new",
+      cartItems: validatedItems,
+      sellerOrders: sellerOrders,
+      totalAmount: actualTotalAmount,
       transactionId: transactionId,
       referenceId: referenceId,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
 
-    // 7. RETURN SUCCESS & ORDER ID TO FRONTEND
     return NextResponse.json({ 
       success: true, 
-      orderId: orderRef.id,
+      orderId: orderNumber,
       transactionId: transactionId
     }, { status: 201 });
 
