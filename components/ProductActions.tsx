@@ -109,22 +109,23 @@ export default function ProductActions({ product, children }: { product: Product
     <div className="mt-6 flex flex-col gap-4">
 
       {/* 💡 BUYER GUIDANCE BANNER (Pushing Mobile Money) */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3.5 shadow-sm">
-        <h4 className="text-xs font-black text-amber-900 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-          <FaBolt className="text-amber-500 text-sm" /> How to Buy
-        </h4>
-        <div className="space-y-2">
-          <p className="text-[12px] text-amber-900 leading-tight">
-            💳 <strong className="font-black">Have Mobile Money?</strong><br/>
-            Use <span className="font-bold">Add to Cart</span> for an instant secure checkout and priority delivery routing.
-          </p>
-          <div className="h-[1px] bg-amber-200/60 my-1"></div>
-          <p className="text-[12px] text-amber-800 leading-tight opacity-90">
-            🤝 <strong className="font-bold">Want to pay Cash on Delivery?</strong><br/>
-            Use <span className="font-bold">WhatsApp</span> to order or ask the seller questions.
-          </p>
-        </div>
-      </div>
+<div className="bg-amber-50 border border-amber-200 rounded-lg p-3.5 shadow-sm">
+  <h4 className="text-xs font-black text-amber-900 mb-2 flex items-center gap-1.5 uppercase tracking-wide">
+    <FaBolt className="text-amber-500 text-sm" /> How to Buy
+  </h4>
+  <div className="space-y-3">
+    <p className="text-[12px] text-amber-900 leading-tight">
+      If you’re paying with <strong className="font-black">Mobile Money</strong>, just tap <span className="font-bold">Add to Cart</span> and checkout quickly. It’s faster and your order gets processed immediately.
+    </p>
+    
+    <div className="h-[1px] bg-amber-200/60 my-1"></div>
+    
+    <p className="text-[12px] text-amber-800 leading-tight opacity-90">
+      If you prefer <strong className="font-bold">Cash on Delivery</strong>, use <span className="font-bold">WhatsApp</span> to place your order or chat with the seller first.
+    </p>
+  </div>
+</div>
+
 
       {/* 1. QUANTITY & ADD TO CART */}
       <div className="flex items-center gap-3 mt-1">
