@@ -22,12 +22,12 @@ export default function ProductActions({ product, children }: { product: Product
   const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
 
   // ==========================================
-  // 🛒 CART LOGIC (Unlocked & Type-Safe!)
+  // 🛒 CART LOGIC (Unlocked & Type-Safe)
   // ==========================================
   const handleAddToCart = () => {
     addToCart({
       id: product.id,
-      title: product.name || "Unknown Item", // 🔥 Fixed: Removed product.title
+      title: product.name || "Unknown Item", 
       price: Number(product.price),
       image: product.images?.[0] || "",
       quantity: quantity,
@@ -50,7 +50,7 @@ export default function ProductActions({ product, children }: { product: Product
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           productId: product.id,
-          productName: product.name, // 🔥 Fixed: Removed product.title
+          productName: product.name, 
           sellerId: product.sellerId,
           sellerPhone: product.sellerPhone,
           price: product.price
@@ -64,7 +64,6 @@ export default function ProductActions({ product, children }: { product: Product
         referenceCode = data.leadId; 
       }
 
-      // 🔥 Fixed: Removed product.title
       const rawMessage = `Hi! I want to order or ask about this item on Kabale Online:\n\n*${product.name}*\n\nRef: [${referenceCode}]`;
       const encodedMessage = encodeURIComponent(rawMessage);
       
@@ -72,7 +71,6 @@ export default function ProductActions({ product, children }: { product: Product
 
     } catch (error) {
       console.error("Failed to generate lead:", error);
-      // 🔥 Fixed: Removed product.title
       const rawMessage = `Hi! I want to ask about: *${product.name}*\n\nProduct ID: [${product.id}]`;
       window.open(`https://wa.me/${botPhoneNumber}?text=${encodeURIComponent(rawMessage)}`, "_blank");
     } finally {
@@ -110,7 +108,7 @@ export default function ProductActions({ product, children }: { product: Product
   return (
     <div className="mt-6 flex flex-col gap-5">
 
-      {/* 1. QUANTITY & ADD TO CART (Unlocked & Active) */}
+      {/* 1. QUANTITY & ADD TO CART */}
       <div className="flex items-center gap-3">
         <div className="flex items-center border border-slate-300 rounded-md overflow-hidden h-12 bg-white shadow-sm">
           <button 
@@ -138,7 +136,7 @@ export default function ProductActions({ product, children }: { product: Product
         </button>
       </div>
 
-      {/* 2. ASK OR ORDER ON WHATSAPP (Green Button) */}
+      {/* 2. ASK OR ORDER ON WHATSAPP */}
       <button 
         onClick={handleBotInquiry}
         disabled={loadingWhatsApp}
@@ -148,7 +146,7 @@ export default function ProductActions({ product, children }: { product: Product
         {loadingWhatsApp ? "Connecting..." : "Ask or Order on WhatsApp"}
       </button>
 
-      {/* 3. KABALE SHIPPING & DELIVERY CARD (Hybrid) */}
+      {/* 3. KABALE SHIPPING & DELIVERY CARD */}
       <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white mt-2">
         <div className="bg-slate-50 p-3.5 font-bold text-slate-800 border-b border-slate-200 text-sm">
           Shipping & Delivery
