@@ -94,3 +94,40 @@ export async function sendAdminAlert(
     htmlContent: emailWrapper(content) 
   });
 }
+
+
+// --- ADMIN PAYOUT LEDGER ALERT ---
+export async function sendAdminPayoutAlert(
+  requestId: string,
+  sellerId: string,
+  amount: number,
+  newStatus: string
+) {
+  const masterEmail = "shopkabale@gmail.com"; 
+  
+  const statusColor = newStatus === 'paid' ? '#16a34a' : newStatus === 'rejected' ? '#dc2626' : '#D97706';
+  const statusText = newStatus.toUpperCase();
+
+  const content = `
+    <h2 style="margin-top: 0; color: #0f172a; font-size: 24px;">💰 Payout Request Updated</h2>
+    <p style="font-size: 16px; line-height: 1.6;">A seller payout request has been processed and logged in the ledger.</p>
+    
+    <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 24px 0;">
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #475569; font-weight: 600;">TRANSACTION LEDGER</p>
+      <p style="margin: 0 0 4px 0;"><strong>Request ID:</strong> ${requestId}</p>
+      <p style="margin: 0 0 4px 0;"><strong>Seller ID:</strong> ${sellerId}</p>
+      <p style="margin: 0 0 16px 0;"><strong>Disbursement Amount:</strong> UGX ${amount.toLocaleString()}</p>
+      
+      <p style="margin: 0 0 8px 0; font-size: 14px; color: #475569; font-weight: 600;">NEW STATUS</p>
+      <p style="margin: 0; font-weight: 900; color: ${statusColor};">${statusText}</p>
+    </div>
+    
+    <p style="font-size: 14px; line-height: 1.6; color: #64748b;">If this status is "PAID", the funds have been successfully deducted from the seller's Available Balance in Firestore.</p>
+  `;
+
+  await sendEmail({ 
+    to: [{ email: masterEmail, name: "Kabale Admin" }], 
+    subject: `💳 PAYOUT ${statusText}: UGX ${amount.toLocaleString()}`, 
+    htmlContent: emailWrapper(content) 
+  });
+}
