@@ -68,6 +68,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages = [
     { url: baseUrl, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 1.0 },
     { url: `${baseUrl}/officialStore`, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 0.9 },
+{ url: `${baseUrl}/policies`, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 0.9 },
     { url: `${baseUrl}/ladies`, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 0.9 }, // <-- Added the new Ladies landing page here
     { url: `${baseUrl}/blog`, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 0.9 },
     { url: `${baseUrl}/products`, lastModified: new Date(), changeFrequency: 'daily' as const, priority: 0.9 },
