@@ -21,57 +21,58 @@ export default function ProductActions({ product, children }: { product: Product
 
   const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
 
-  // --- CART LOGIC ---
+  // ==========================================
+  // 🛒 CART LOGIC (Now Unlocked!)
+  // ==========================================
   const handleAddToCart = () => {
     addToCart({
       id: product.id,
-      title: product.name,
+      title: product.name || product.title || "Unknown Item",
       price: Number(product.price),
       image: product.images?.[0] || "",
       quantity: quantity,
-      sellerPhone: product.sellerPhone || botPhoneNumber
+      sellerId: product.sellerId || "SYSTEM", // Critical for multi-seller routing
+      sellerPhone: product.sellerPhone || ""
     });
+    
+    // Optional: You could replace this alert with a nice toast notification later!
     alert("✅ Added to cart successfully!");
   };
 
   // ==========================================
-  // 🚀 UPGRADED WHATSAPP LEAD CAPTURE
+  // 🚀 WHATSAPP LEAD CAPTURE
   // ==========================================
   const handleBotInquiry = async () => {
     setLoadingWhatsApp(true);
 
     try {
-      // 1. Generate the Lead in Firestore before they leave the site
       const res = await fetch("/api/orders/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           productId: product.id,
-          productName: product.name,
+          productName: product.name || product.title,
           sellerId: product.sellerId,
           sellerPhone: product.sellerPhone,
           price: product.price
         }),
       });
 
-      let referenceCode = product.id; // Fallback to raw ID if fetch fails
+      let referenceCode = product.id; 
 
       if (res.ok) {
         const data = await res.json();
-        referenceCode = data.leadId; // Use the shiny new LEAD-XXXXX code
+        referenceCode = data.leadId; 
       }
 
-      // 2. Construct the smart message with the Lead ID embedded
-      const rawMessage = `Hi! I want to order or ask about this item on Kabale Online:\n\n*${product.name}*\n\nRef: [${referenceCode}]`;
+      const rawMessage = `Hi! I want to order or ask about this item on Kabale Online:\n\n*${product.name || product.title}*\n\nRef: [${referenceCode}]`;
       const encodedMessage = encodeURIComponent(rawMessage);
       
-      // 3. Send them to WhatsApp
       window.open(`https://wa.me/${botPhoneNumber}?text=${encodedMessage}`, "_blank");
 
     } catch (error) {
       console.error("Failed to generate lead:", error);
-      // Fallback redirect so the user isn't stuck if the DB is slow
-      const rawMessage = `Hi! I want to ask about: *${product.name}*\n\nProduct ID: [${product.id}]`;
+      const rawMessage = `Hi! I want to ask about: *${product.name || product.title}*\n\nProduct ID: [${product.id}]`;
       window.open(`https://wa.me/${botPhoneNumber}?text=${encodeURIComponent(rawMessage)}`, "_blank");
     } finally {
       setLoadingWhatsApp(false);
@@ -108,34 +109,32 @@ export default function ProductActions({ product, children }: { product: Product
   return (
     <div className="mt-6 flex flex-col gap-5">
 
-      {/* 1. QUANTITY & ADD TO CART (Under Maintenance Overlay) */}
-      <div className="relative group">
-        {/* The Overlay */}
-        <div className="absolute inset-0 z-10 bg-white/40 backdrop-blur-[2px] flex items-center justify-center rounded-lg border border-slate-200/50">
-          <div className="bg-slate-900/90 text-white text-[10px] uppercase tracking-widest font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-2">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-            </span>
-            Cart Under Maintenance
-          </div>
-        </div>
-
-        {/* The Original Content (Blurred/Disabled visually) */}
-        <div className="flex items-center gap-3 opacity-50 grayscale-[0.3]">
-          <div className="flex items-center border border-slate-300 rounded-md overflow-hidden h-12 bg-white">
-            <button disabled className="px-4 h-full text-lg font-bold text-slate-400">-</button>
-            <span className="px-4 font-semibold text-lg border-x border-slate-300 h-full flex items-center justify-center min-w-[45px] text-slate-400 bg-slate-50">{quantity}</span>
-            <button disabled className="px-4 h-full text-lg font-bold text-slate-400">+</button>
-          </div>
-
+      {/* 1. QUANTITY & ADD TO CART (Unlocked & Active) */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center border border-slate-300 rounded-md overflow-hidden h-12 bg-white shadow-sm">
           <button 
-            disabled
-            className="flex-1 bg-slate-400 text-white font-bold h-12 rounded-md text-sm uppercase tracking-wider"
+            onClick={() => setQuantity(Math.max(1, quantity - 1))}
+            className="px-4 h-full text-lg font-bold text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors"
           >
-            Add to Cart
+            -
+          </button>
+          <span className="px-4 font-semibold text-lg border-x border-slate-300 h-full flex items-center justify-center min-w-[45px] text-slate-800 bg-slate-50">
+            {quantity}
+          </span>
+          <button 
+            onClick={() => setQuantity(quantity + 1)}
+            className="px-4 h-full text-lg font-bold text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+          >
+            +
           </button>
         </div>
+
+        <button 
+          onClick={handleAddToCart}
+          className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 rounded-md text-sm uppercase tracking-wider shadow-sm transition-all active:scale-[0.98]"
+        >
+          Add to Cart
+        </button>
       </div>
 
       {/* 2. ASK OR ORDER ON WHATSAPP (Green Button) */}
