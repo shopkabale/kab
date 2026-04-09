@@ -64,7 +64,6 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     const now = Date.now();
     const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000; 
 
-    // SCENARIO A: 24 Hours have passed. Admin is busy. Auto-cancel!
     if (now - lastInteraction > TWENTY_FOUR_HOURS) {
       await sendWhatsAppMessage(
         senderPhone, 
@@ -73,15 +72,10 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
       await supportRef.delete(); 
       return true; 
     } 
-    
-    // SCENARIO B: User explicitly wants to leave support mode early
+
     if (upperText === "MENU" || upperText === "CANCEL" || upperText === "STOP") {
       await supportRef.delete(); 
-      // Do not return true here, allow the Menu logic below to trigger
-    } 
-    
-    // SCENARIO C: User is following up within 24 hours
-    else {
+    } else {
       await sendWhatsAppMessage(
         HUMAN_AGENT_PHONE, 
         `💬 *Follow-up from +${senderPhone}:*\n"${text}"`
@@ -181,41 +175,33 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     return true;
   }
 
-    // ==========================================
-  // BULLETPROOF GREETINGS (Catches hidden URL characters)
+  // ==========================================
+  // BULLETPROOF GREETINGS
   // ==========================================
   const greetings = ["HI", "HELLO", "HEY", "MENU", "START"];
-  
-  // This strips out EVERY invisible character, space, and punctuation mark
   const pureText = text.replace(/[^a-zA-Z]/g, "").toUpperCase();
 
   if (message.type === "text" && greetings.includes(pureText)) {
-    // If they were locked in a support session, silently unlock them so they can see the menu!
     await adminDb.collection("support_sessions").doc(senderPhone).delete().catch(() => {});
-    
     await sendWelcomeMenu(senderPhone);
     return true; 
   }
-
 
   // ==========================================
   // 🧠 AI NLP ROUTING & SEARCH (GEMINI)
   // ==========================================
   if (message.type === "text" && text.split(" ").length >= 2) {
     console.log(`🤖 AI Processing NLP: "${text}"`);
-    
     const aiIntent = await getCustomerIntent(text);
 
-    // 🟢 SCENARIO 1: AI wants to reply to a general question/greeting
     if (aiIntent.action === "chat" && aiIntent.reply) {
       await sendWhatsAppMessage(senderPhone, `🤖 ${aiIntent.reply}`);
-      return true; // Stop here, AI handled the conversation!
+      return true;
     }
 
-    // 🔵 SCENARIO 2: AI detected a product search
     if (aiIntent.action === "search" && aiIntent.query) {
       const { hits } = await index.search(aiIntent.query, { hitsPerPage: 8 });
-      
+
       if (hits.length > 0) {
         const rows = hits.map((hit: any) => ({
           id: `item_${hit.objectID}`, 
@@ -236,9 +222,8 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
       }
     }
 
-    // 🔴 SCENARIO 3: AI detected they need support.
     if (aiIntent.action === "support") {
-        upperText = "HELP"; // This forces it to trigger your Human Handover code below!
+        upperText = "HELP"; 
     }
   }
 
@@ -246,7 +231,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   // 🚨 FALLBACK & HUMAN HANDOVER
   // ==========================================
   console.log(`⚠️ Bot & AI Escalating: "${text}" from ${senderPhone}. Forwarding to Human Agent.`);
-  
+
   await adminDb.collection("support_sessions").doc(senderPhone).set({
     status: "open",
     updatedAt: Date.now()
@@ -256,7 +241,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     senderPhone, 
     "🤖 I'm not quite sure how to help with that, or you've asked for an agent.\n\nI have forwarded your message to our human team. They will reply to you shortly! 🕒\n\n_If you want to stop waiting, just type MENU._"
   );
-  
+
   const handoverMessage = `🚨 *BOT ESCALATION*\n\n*User:* +${senderPhone}\n*Message:* "${text}"\n\n_Please reply to them directly._`;
   await sendWhatsAppMessage(HUMAN_AGENT_PHONE, handoverMessage);
 
@@ -268,13 +253,11 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
 // ==========================================
 async function sendWelcomeMenu(phone: string) {
   const bodyText = "Welcome to *Kabale Online*! 🛒\n\nThe safest marketplace in town. What would you like to do today?";
-
   const buttons = [
     { id: "btn_shop", title: "🛍️ Shop Products" },
     { id: "btn_sell", title: "🏪 Sell an Item" },
     { id: "btn_help", title: "📞 Support" }
   ];
-
   await sendWhatsAppInteractiveButtons(phone, bodyText, buttons);
 }
 
@@ -379,7 +362,6 @@ async function handleProductSelection(phone: string, productId: string) {
     const safePrice = Number(productData.price || 0).toLocaleString();
     const safeCondition = productData.condition || "Used";
     const safeDesc = productData.description || "No description provided.";
-
     const safeImage = (productData.images && productData.images.length > 0) ? productData.images[0] : undefined;
 
     const messageText = `*${safeTitle}*\n\n💰 Price: *UGX ${safePrice}*\n📝 Condition: ${safeCondition}\n\n${safeDesc}\n\nTo buy this item, tap the button below!`;
@@ -397,7 +379,7 @@ async function handleProductSelection(phone: string, productId: string) {
 }
 
 // ==========================================
-// HELPER: NATIVE WHATSAPP CHECKOUT (LIVEPAY ENFORCED)
+// 🚀 NATIVE WHATSAPP CHECKOUT (UNIFIED COD ENGINE)
 // ==========================================
 async function handleNativeCheckout(buyerPhone: string, productId: string) {
   try {
@@ -410,45 +392,58 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
 
     const product = productDoc.data()!;
     const productPrice = Number(product.price) || 0;
-
-    // 🔥 LIVEPAY 20K DEPOSIT RULE
-    const depositRequired = productPrice >= 20000 ? Math.max(10000, productPrice * 0.25) : 0;
-
-    if (depositRequired > 0) {
-      const checkoutUrl = `https://www.kabaleonline.com/product/${product.publicId || productId}`;
-      
-      const depositMessage = `🔒 *Commitment Deposit Required*\n\nBecause this item is in high demand, a deposit of *UGX ${depositRequired.toLocaleString()}* is required to secure it.\n\nPlease complete your secure MTN/Airtel payment here:\n👉 ${checkoutUrl}\n\n_Once paid, your order is instantly confirmed and the seller will be notified!_`;
-      
-      await sendWhatsAppMessage(buyerPhone, depositMessage);
-      return; 
-    }
-
-    // 🟢 IF UNDER 20K -> PROCEED NORMALLY
+    const safeTitle = product.title || product.name || "Unknown Item";
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    // 🔥 SAVE MASTER COD ORDER SCHEMA
     await adminDb.collection("orders").doc(orderNumber).set({
       orderId: orderNumber,
-      productId: productId,
       buyerPhone: buyerPhone,
-      sellerPhone: product.sellerPhone,
-      status: "pending",
-      total: productPrice, 
-      items: [{            
+      buyerName: "WhatsApp User", 
+      source: "whatsapp",
+      paymentMode: "COD",
+      paymentStatus: "pending",
+      status: "processing", 
+      totalAmount: productPrice, 
+      cartItems: [{            
         productId: productId,
-        title: product.title || product.name || "Unknown Item",
+        name: safeTitle,
         price: productPrice,
-        quantity: 1
+        quantity: 1,
+        sellerId: product.sellerId || "SYSTEM",
+        sellerPhone: product.sellerPhone || ""
+      }],
+      sellerOrders: [{
+        sellerId: product.sellerId || "SYSTEM",
+        sellerPhone: product.sellerPhone || "",
+        subtotal: productPrice,
+        items: [{
+          productId: productId,
+          name: safeTitle,
+          price: productPrice,
+          quantity: 1
+        }]
       }],
       createdAt: Date.now(),
       updatedAt: Date.now(), 
       messageCount: 0        
     });
 
-    sendAdminAlert(orderNumber, product.title || "Unknown Item", productPrice, buyerPhone, product.sellerPhone).catch(console.error);
-    await NotificationService.orderCreated(product.sellerPhone, buyerPhone, product.title || "Unknown Item", "Valued Customer", orderNumber);
+    // Fire correct notifications
+    sendAdminAlert(orderNumber, `1x ${safeTitle}`, productPrice, buyerPhone, product.sellerPhone || "SYSTEM").catch(console.error);
+    await NotificationService.notifyBuyer(buyerPhone, orderNumber, `1x ${safeTitle}`, productPrice);
+    await NotificationService.notifySeller(
+      product.sellerPhone, 
+      "Partner", 
+      orderNumber, 
+      `1x ${safeTitle}`, 
+      productPrice, 
+      "WhatsApp User", 
+      "Kabale", 
+      buyerPhone
+    );
 
-    const followUpText = `✅ *Order Placed!*\n\nThe seller has been notified. They will reply to you right here in this chat to arrange delivery and payment! 🤝`;
-    await sendWhatsAppMessage(buyerPhone, followUpText);
+    // No need for followUpText because notifyBuyer sends the beautiful template!
 
   } catch (error) {
     console.error("❌ Error handling native checkout:", error);
@@ -457,7 +452,8 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
 }
 
 // ==========================================
-// HELPER: PROCESS NEW WEBSITE INQUIRY
+// 🚨 LEGACY WEBSITE INQUIRY FALLBACK 
+// (For users clicking old Product ID: [xxx] links)
 // ==========================================
 async function handleNewWebsiteInquiry(buyerPhone: string, productId: string, originalMessage: string) {
   try {
@@ -469,34 +465,59 @@ async function handleNewWebsiteInquiry(buyerPhone: string, productId: string, or
     }
 
     const product = productDoc.data()!;
-    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
     const productPrice = Number(product.price) || 0;
+    const safeTitle = product.title || product.name || "Unknown Item";
+    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
+    // 🔥 SAVE MASTER COD ORDER SCHEMA
     await adminDb.collection("orders").doc(orderNumber).set({
       orderId: orderNumber,
-      productId: productId,
       buyerPhone: buyerPhone,
-      sellerPhone: product.sellerPhone,
-      status: "pending",
-      total: productPrice, 
-      items: [{            
+      buyerName: "Website User",
+      source: "whatsapp",
+      paymentMode: "COD",
+      paymentStatus: "pending",
+      status: "processing", 
+      totalAmount: productPrice, 
+      cartItems: [{            
         productId: productId,
-        title: product.title || product.name || "Unknown Item",
+        name: safeTitle,
         price: productPrice,
-        quantity: 1
+        quantity: 1,
+        sellerId: product.sellerId || "SYSTEM",
+        sellerPhone: product.sellerPhone || ""
+      }],
+      sellerOrders: [{
+        sellerId: product.sellerId || "SYSTEM",
+        sellerPhone: product.sellerPhone || "",
+        subtotal: productPrice,
+        items: [{
+          productId: productId,
+          name: safeTitle,
+          price: productPrice,
+          quantity: 1
+        }]
       }],
       createdAt: Date.now(),
       updatedAt: Date.now(), 
       messageCount: 0        
     });
 
-    sendAdminAlert(orderNumber, product.title || "Unknown Item", productPrice, buyerPhone, product.sellerPhone).catch(console.error);
+    sendAdminAlert(orderNumber, `1x ${safeTitle}`, productPrice, buyerPhone, product.sellerPhone || "SYSTEM").catch(console.error);
+    await NotificationService.notifyBuyer(buyerPhone, orderNumber, `1x ${safeTitle}`, productPrice);
+    await NotificationService.notifySeller(
+      product.sellerPhone, 
+      "Partner", 
+      orderNumber, 
+      `1x ${safeTitle}`, 
+      productPrice, 
+      "Website User", 
+      "Kabale", 
+      buyerPhone
+    );
 
-    const sellerNotification = `🛍️ *New Order Inquiry!*\n\nSomeone is interested in your item: *${product.title || product.name || "Unknown Item"}*\n\n*Buyer says:*\n"${originalMessage}"\n\n_Reply directly to this message to chat with the buyer._`;
-    await sendWhatsAppMessage(product.sellerPhone, sellerNotification);
-
-    const buyerConfirmation = `✅ *Inquiry Sent!*\n\nWe have alerted the seller about your interest in *${product.title || product.name || "Unknown Item"}*.\n\nPlease wait for their reply right here in this chat.`;
-    await sendWhatsAppMessage(buyerPhone, buyerConfirmation);
+    // Send the custom context to the seller so they know what the buyer asked
+    await sendWhatsAppMessage(product.sellerPhone, `*Buyer added a note via website:*\n"${originalMessage}"`);
 
   } catch (error) {
     console.error("❌ Error handling website inquiry:", error);
