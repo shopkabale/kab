@@ -24,7 +24,7 @@ const shuffleArray = (array: any[]) => {
 export default async function Home() {
   const now = Date.now();
 
-  // ==========================================
+    // ==========================================
   // 🔥 FETCH DATA INSTANTLY FROM CACHE 🔥
   // ==========================================
   const data = await getCachedHomepageData();
@@ -36,11 +36,8 @@ export default async function Home() {
   // ALGORITHM 1: True AI Trending
   const trendingProducts = data.trendingProducts;
 
-  // 🔥 EXTRACT DYNAMIC HERO PRODUCTS
-  const heroProducts = [...data.officialProducts, ...data.approvedProducts, ...data.basePool]
-    .filter((p: any) => p.isHero)
-    .filter((v, i, a) => a.findIndex(v2 => (v2.id === v.id)) === i) // Remove duplicates
-    .slice(0, 5); // Max 5 for speed & UX
+  // 🔥 DIRECT IMPORT: Pulls the guaranteed 5 items directly from our new query
+  const heroProducts = data.heroProducts || [];
 
   // ALGORITHM 2: Best Deals Math 
   const dealsProducts = [...data.basePool]
@@ -51,6 +48,7 @@ export default async function Home() {
       return scoreB - scoreA;
     })
     .slice(0, 10);
+
 
   // Map and Shuffle Standard Categories
   const officialProducts = shuffleArray(data.officialProducts);
