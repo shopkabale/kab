@@ -3,8 +3,13 @@ import UrgentStories from "@/components/UrgentStories";
 import HorizontalScroller from "@/components/HorizontalScroller";
 import ContinueBrowsing from "@/components/ContinueBrowsing";
 import Link from "next/link";
-// 🔥 NEW: Import our custom cache fetcher instead of raw Firebase
 import { getCachedHomepageData } from "@/lib/firebase/fetchers";
+
+// 🔥 NEW VIP UI COMPONENTS
+import HeroCarousel from "@/components/HeroCarousel";
+import FilterPills from "@/components/FilterPills";
+import WhatsAppPopup from "@/components/WhatsAppPopup";
+import ProductSection from "@/components/ProductSection";
 
 // --- SHUFFLE HELPER FUNCTION ---
 const shuffleArray = (array: any[]) => {
@@ -27,7 +32,7 @@ export default async function Home() {
   // ==========================================
   // DATA PROCESSING & MATH (In-Memory, Lightning Fast)
   // ==========================================
-  
+
   // ALGORITHM 1: True AI Trending
   const trendingProducts = data.trendingProducts;
 
@@ -49,7 +54,7 @@ export default async function Home() {
   const electronicsProducts = shuffleArray(data.electronicsProducts);
   const studentProducts = shuffleArray(data.studentProducts);
   const agriProducts = shuffleArray(data.agriProducts);
-  
+
   // Map Latest (No shuffle, keep chronological)
   const latestProducts = data.latestProducts;
 
@@ -66,9 +71,12 @@ export default async function Home() {
   // RENDER UI
   // ==========================================
   return (
-    <div className="min-h-screen bg-slate-50 pb-8 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#111] pb-8 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
 
-      {/* TOP MESSAGE - BUYER PROTECTION & REPORTING */}
+      {/* 0. RETENTION TOOL (Only shows if not dismissed) */}
+      <WhatsAppPopup />
+
+      {/* 1. TOP MESSAGE - BUYER PROTECTION & REPORTING */}
       <section className="bg-amber-50 dark:bg-[#1a1309] border-b border-amber-200 dark:border-amber-900/50 shadow-sm px-4 py-4 flex flex-col items-center gap-3">
         <div className="text-center max-w-lg">
           <h1 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-wide mb-1">
@@ -87,106 +95,16 @@ export default async function Home() {
       </section>
 
       {/* MAIN CONTENT WRAPPER */}
-      <div className="w-full space-y-2 mt-2">
+      <div className="w-full mt-2">
 
-        {/* ========================================== */}
-        {/* 🔥 BEHAVIORAL SECTIONS */}
-        {/* ========================================== */}
+        {/* 2. THE HOOK: VIP Hero Carousel */}
+        <HeroCarousel />
 
-        {/* 1. 🔥 TRENDING (Powered by AI Score) */}
-        {trendingProducts.length > 0 && (
-          <section className="w-full">
-            <div className="px-4 pt-2 -mb-2 z-10 relative">
-              <p className="text-xs text-slate-500 font-bold tracking-wide italic">Most viewed items in Kabale right now</p>
-            </div>
-            <HorizontalScroller title="🔥 Trending" products={trendingProducts} />
-          </section>
-        )}
+        {/* 3. THE UTILITY: Quick Filter Pills */}
+        <FilterPills />
 
-        {/* 2. 💸 BEST DEALS */}
-        {dealsProducts.length > 0 && (
-          <section className="w-full">
-            <div className="px-4 pt-2 -mb-2 z-10 relative">
-              <p className="text-xs text-slate-500 font-bold tracking-wide italic">Affordable & popular items people love</p>
-            </div>
-            <HorizontalScroller title="💸 Best Deals in Kabale" products={dealsProducts} />
-          </section>
-        )}
-
-        {/* 3. 🔁 CONTINUE BROWSING */}
-        <ContinueBrowsing fallbackProducts={trendingProducts} />
-
-        {/* ========================================== */}
-        {/* 🛍 CATEGORY & STANDARD SECTIONS */}
-        {/* ========================================== */}
-
-        {/* TRENDING FOR HER */}
-        {ladiesProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Trending for her" 
-              products={ladiesProducts} 
-              viewAllLink="/ladies" 
-            />
-          </section>
-        )}
-
-        {/* DISCOVER YOUR WATCH STYLE */}
-        {watchProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Discover your watch style" 
-              products={watchProducts} 
-              viewAllLink="/officialStore" 
-            />
-          </section>
-        )}
-
-        {/* OFFICIAL COLLECTION */}
-        {officialProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Official collection" 
-              products={officialProducts} 
-              viewAllLink="/officialStore" 
-            />
-          </section>
-        )}
-
-        {/* VERIFIED & TRUSTED */}
-        {approvedProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Verified & trusted" 
-              products={approvedProducts} 
-              viewAllLink="/officialStore" 
-            />
-          </section>
-        )}
-
-        {/* URGENT STORIES */}
-        <UrgentStories />
-
-        {/* NEW ARRIVALS */}
-        {latestProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="New arrivals" 
-              products={latestProducts} 
-              viewAllLink="/products" 
-            />
-          </section>
-        )}
-
-        {/* SPONSORED PICKS */}
-        {boostedProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller title="Sponsored picks" products={boostedProducts} />
-          </section>
-        )}
-
-        {/* BROWSE MORE COLLECTIONS - Centered Title, 3x2 Grid */}
-        <section className="bg-slate-100 dark:bg-[#1a1a1a] border-y border-slate-200 dark:border-slate-800 py-4 px-3 sm:px-4">
+        {/* 4. NAVIGATION: Browse more collections (Moved up for immediate user access) */}
+        <section className="bg-slate-100 dark:bg-[#1a1a1a] border-y border-slate-200 dark:border-slate-800 py-4 px-3 sm:px-4 mb-2">
           <div className="w-full text-center py-2 mb-1">
             <h2 className="text-base md:text-lg font-black text-slate-900 dark:text-white capitalize tracking-tight">
               Browse more collections
@@ -242,47 +160,140 @@ export default async function Home() {
           </div>
         </section>
 
-        {/* TECH ESSENTIALS */}
-        {electronicsProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Tech essentials" 
-              products={electronicsProducts} 
-              viewAllLink="/category/electronics" 
-            />
-          </section>
-        )}
+        {/* 5. VISUAL BREAK: Urgent Stories */}
+        <UrgentStories />
 
-        {/* TOP PICKS (Powered by Admin Conversions) */}
-        {featuredProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller title="Top picks" products={featuredProducts} />
-          </section>
-        )}
+        <div className="w-full space-y-2 mt-2">
 
-        {/* CAMPUS DEALS */}
-        {studentProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Campus deals" 
-              products={studentProducts} 
-              viewAllLink="/category/student_item" 
-            />
-          </section>
-        )}
+          {/* 6. GRID FORMAT: 🔥 TRENDING NOW (Top 8) */}
+          {trendingProducts.length > 0 && (
+            <section className="bg-white dark:bg-[#1a1a1a] px-2 sm:px-4 py-2 border-y border-slate-200 dark:border-slate-800">
+              <div className="px-2 pt-2 pb-1 z-10 relative">
+                <p className="text-xs text-slate-500 font-bold tracking-wide italic">Most viewed items in Kabale right now</p>
+              </div>
+              <ProductSection 
+                title="🔥 Trending Now" 
+                products={trendingProducts.slice(0, 8)} // Limits to 8
+              />
+            </section>
+          )}
 
-        {/* FRESH MARKET */}
-        {agriProducts.length > 0 && (
-          <section className="w-full">
-            <HorizontalScroller 
-              title="Fresh market" 
-              products={agriProducts} 
-              viewAllLink="/category/agriculture" 
-            />
-          </section>
-        )}
+          {/* 7. 🔁 CONTINUE BROWSING */}
+          <ContinueBrowsing fallbackProducts={trendingProducts} />
 
-        {/* SELL CTA */}
+          {/* 8. GRID FORMAT: 🛡️ VERIFIED & TRUSTED (Top 8) */}
+          {approvedProducts.length > 0 && (
+            <section className="bg-white dark:bg-[#1a1a1a] px-2 sm:px-4 py-2 border-y border-slate-200 dark:border-slate-800">
+              <ProductSection 
+                title="🛡️ Verified & Trusted" 
+                products={approvedProducts.slice(0, 8)} // Limits to 8
+              />
+            </section>
+          )}
+
+          {/* 9. SCROLLER: 💸 BEST DEALS */}
+          {dealsProducts.length > 0 && (
+            <section className="w-full">
+              <div className="px-4 pt-2 -mb-2 z-10 relative">
+                <p className="text-xs text-slate-500 font-bold tracking-wide italic">Affordable & popular items people love</p>
+              </div>
+              <HorizontalScroller title="💸 Best Deals in Kabale" products={dealsProducts} />
+            </section>
+          )}
+
+          {/* 10. SCROLLER: TRENDING FOR HER */}
+          {ladiesProducts.length > 0 && (
+            <section className="w-full">
+              <HorizontalScroller 
+                title="Trending for her" 
+                products={ladiesProducts} 
+                viewAllLink="/ladies" 
+              />
+            </section>
+          )}
+
+          {/* 11. SCROLLER: DISCOVER YOUR WATCH STYLE */}
+          {watchProducts.length > 0 && (
+            <section className="w-full">
+              <HorizontalScroller 
+                title="Discover your watch style" 
+                products={watchProducts} 
+                viewAllLink="/officialStore" 
+              />
+            </section>
+          )}
+
+          {/* 12. SCROLLER: OFFICIAL COLLECTION */}
+          {officialProducts.length > 0 && (
+            <section className="w-full">
+              <HorizontalScroller 
+                title="Official collection" 
+                products={officialProducts} 
+                viewAllLink="/officialStore" 
+              />
+            </section>
+          )}
+
+          {/* 13. SCROLLER: NEW ARRIVALS */}
+          {latestProducts.length > 0 && (
+            <section className="w-full">
+              <HorizontalScroller 
+                title="New arrivals" 
+                products={latestProducts} 
+                viewAllLink="/products" 
+              />
+            </section>
+          )}
+
+          {/* 14. SCROLLER: SPONSORED PICKS */}
+          {boostedProducts.length > 0 && (
+            <section className="w-full">
+              <HorizontalScroller title="Sponsored picks" products={boostedProducts} />
+            </section>
+          )}
+
+          {/* 15. SCROLLER: TECH ESSENTIALS */}
+          {electronicsProducts.length > 0 && (
+            <section className="w-full">
+              <HorizontalScroller 
+                title="Tech essentials" 
+                products={electronicsProducts} 
+                viewAllLink="/category/electronics" 
+              />
+            </section>
+          )}
+
+          {/* 16. SCROLLER: TOP PICKS */}
+          {featuredProducts.length > 0 && (
+            <section className="w-full">
+              <HorizontalScroller title="Top picks" products={featuredProducts} />
+            </section>
+          )}
+
+          {/* 17. SCROLLER: CAMPUS DEALS */}
+          {studentProducts.length > 0 && (
+            <section className="w-full">
+              <HorizontalScroller 
+                title="Campus deals" 
+                products={studentProducts} 
+                viewAllLink="/category/student_item" 
+              />
+            </section>
+          )}
+
+          {/* 18. SCROLLER: FRESH MARKET */}
+          {agriProducts.length > 0 && (
+            <section className="w-full">
+              <HorizontalScroller 
+                title="Fresh market" 
+                products={agriProducts} 
+                viewAllLink="/category/agriculture" 
+              />
+            </section>
+          )}
+        </div>
+
+        {/* 19. SELL CTA BANNER */}
         <section className="relative py-8 md:py-10 overflow-hidden w-full bg-white dark:bg-[#111] border-y border-slate-200 dark:border-slate-800 shadow-sm mt-4">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#D97706]/10 blur-[100px] rounded-full pointer-events-none" />
 
