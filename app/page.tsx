@@ -11,7 +11,7 @@ import WhatsAppPopup from "@/components/WhatsAppPopup";
 import ProductSection from "@/components/ProductSection";
 import AboutKabaleOnline from "@/components/AboutKabaleOnline";
 import ThemedCategoryGrid from "@/components/ThemedCategoryGrid"; // 🔥 IMPORT NEW GRID
-import { ThemeProvider } from "@/components/ThemeProvider"; // 🔥 IMPORT THEME PROVIDER
+import { ThemeProvider } from "@/components/ThemeProvider"; // 🔥 IMPORT THEME ENGINE
 
 // --- SHUFFLE HELPER FUNCTION ---
 const shuffleArray = (array: any[]) => {
@@ -26,22 +26,11 @@ const shuffleArray = (array: any[]) => {
 export default async function Home() {
   const now = Date.now();
 
-  // ==========================================
-  // 🔥 FETCH DATA INSTANTLY FROM CACHE 🔥
-  // ==========================================
   const data = await getCachedHomepageData();
 
-  // ==========================================
-  // DATA PROCESSING & MATH (In-Memory, Lightning Fast)
-  // ==========================================
-
-  // ALGORITHM 1: True AI Trending
   const trendingProducts = data.trendingProducts;
-
-  // 🔥 DIRECT IMPORT: Pulls the guaranteed 5 items directly from our new query
   const heroProducts = data.heroProducts || [];
 
-  // ALGORITHM 2: Best Deals Math 
   const dealsProducts = [...data.basePool]
     .filter(p => Number(p.price) > 0)
     .sort((a, b) => {
@@ -51,7 +40,6 @@ export default async function Home() {
     })
     .slice(0, 10);
 
-  // Map and Shuffle Standard Categories
   const officialProducts = shuffleArray(data.officialProducts);
   const approvedProducts = shuffleArray(data.approvedProducts);
   const ladiesProducts = shuffleArray(data.ladiesProducts);
@@ -59,11 +47,8 @@ export default async function Home() {
   const electronicsProducts = shuffleArray(data.electronicsProducts);
   const studentProducts = shuffleArray(data.studentProducts);
   const agriProducts = shuffleArray(data.agriProducts);
-
-  // Map Latest (No shuffle, keep chronological)
   const latestProducts = data.latestProducts;
 
-  // Filter Expired Boosts/Features
   const boostedProducts = data.boostedProducts
     .filter((p: any) => p.boostExpiresAt && p.boostExpiresAt > now)
     .sort((a: any, b: any) => b.boostedAt - a.boostedAt);
@@ -72,48 +57,34 @@ export default async function Home() {
     .filter((p: any) => p.featureExpiresAt && p.featureExpiresAt > now)
     .sort((a: any, b: any) => b.featuredAt - a.featuredAt);
 
-  // ==========================================
-  // RENDER UI
-  // ==========================================
   return (
-    // 🔥 WRAP ENTIRE PAGE IN THEME PROVIDER
+    // 🔥 WRAP ENTIRE PAGE IN THE THEME PROVIDER
     <ThemeProvider>
       <div className="min-h-screen bg-slate-50 dark:bg-[#111] pb-8 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
 
-        {/* 0. RETENTION TOOL (Only shows if not dismissed) */}
         <WhatsAppPopup />
 
-        {/* MAIN CONTENT WRAPPER */}
         <div className="w-full mt-2">
-
-          {/* 1. THE HOOK: VIP Hero Carousel */}
           <HeroCarousel products={heroProducts} />
-
-          {/* 2. THE UTILITY: Quick Filter Pills */}
           <FilterPills />
 
-          {/* 3. NAVIGATION: Dynamic Themed Category Grid */}
+          {/* 🔥 DYNAMIC THEMED CATEGORY GRID HERE */}
           <ThemedCategoryGrid />
 
-          {/* 4. VISUAL BREAK: Urgent Stories */}
           <UrgentStories />
 
           <div className="w-full space-y-2 mt-2">
 
-            {/* 5. GRID FORMAT: 🔥 TRENDING NOW (Top 8) */}
             {trendingProducts.length > 0 && (
               <section className="bg-white dark:bg-[#1a1a1a] px-2 sm:px-4 py-2 border-y border-slate-200 dark:border-slate-800">
                 <div className="px-2 pt-2 pb-1 z-10 relative">
                   <p className="text-xs text-slate-500 font-bold tracking-wide italic">Most viewed items in Kabale right now</p>
                 </div>
-                <ProductSection 
-                  title="🔥 Trending Now" 
-                  products={trendingProducts.slice(0, 8)} 
-                />
+                <ProductSection title="🔥 Trending Now" products={trendingProducts.slice(0, 8)} />
               </section>
             )}
 
-            {/* 6. MOVED: SHOP WITH CONFIDENCE BANNER (Forced Green/Emerald for Trust) */}
+            {/* SHOP WITH CONFIDENCE BANNER (Forced Green/Emerald for Trust) */}
             <section className="bg-emerald-50 dark:bg-emerald-950/20 border-y border-emerald-200 dark:border-emerald-900/50 shadow-sm px-4 py-4 flex flex-col items-center gap-3">
               <div className="text-center max-w-lg">
                 <h1 className="text-sm sm:text-base font-black text-emerald-900 dark:text-emerald-400 tracking-wide mb-1">
@@ -131,10 +102,8 @@ export default async function Home() {
               </a>
             </section>
 
-            {/* 7. 🔁 CONTINUE BROWSING */}
             <ContinueBrowsing fallbackProducts={trendingProducts} />
 
-            {/* 8. GRID FORMAT: ✨ NEW ARRIVALS */}
             {latestProducts.length > 0 && (
               <section className="bg-white dark:bg-[#1a1a1a] px-2 sm:px-4 py-2 border-y border-slate-200 dark:border-slate-800 mb-2">
                 <div className="px-2 pt-2 pb-1 z-10 relative flex justify-between items-end">
@@ -143,64 +112,49 @@ export default async function Home() {
                     View All →
                   </Link>
                 </div>
-                <ProductSection 
-                  title="New Arrivals" 
-                  products={latestProducts.slice(0, 8)} 
-                />
+                <ProductSection title="New Arrivals" products={latestProducts.slice(0, 8)} />
               </section>
             )}
 
-            {/* 9. GRID FORMAT: 🛡️ VERIFIED & TRUSTED */}
             {approvedProducts.length > 0 && (
               <section className="bg-white dark:bg-[#1a1a1a] px-2 sm:px-4 py-2 border-y border-slate-200 dark:border-slate-800">
-                <ProductSection 
-                  title="🛡️ Verified & Trusted" 
-                  products={approvedProducts.slice(0, 8)} 
-                />
+                <ProductSection title="🛡️ Verified & Trusted" products={approvedProducts.slice(0, 8)} />
               </section>
             )}
 
-            {/* 10. SCROLLER: TRENDING FOR HER */}
+            {dealsProducts.length > 0 && (
+              <section className="w-full">
+                <div className="px-4 pt-2 -mb-2 z-10 relative">
+                  <p className="text-xs text-slate-500 font-bold tracking-wide italic">Affordable & popular items people love</p>
+                </div>
+                <HorizontalScroller title="💸 Best Deals in Kabale" products={dealsProducts} />
+              </section>
+            )}
+
             {ladiesProducts.length > 0 && (
               <section className="w-full">
-                <HorizontalScroller 
-                  title="Trending for her" 
-                  products={ladiesProducts} 
-                  viewAllLink="/ladies" 
-                />
+                <HorizontalScroller title="Trending for her" products={ladiesProducts} viewAllLink="/ladies" />
               </section>
             )}
 
-            {/* 11. SCROLLER: DISCOVER YOUR WATCH STYLE */}
             {watchProducts.length > 0 && (
               <section className="w-full">
-                <HorizontalScroller 
-                  title="Discover your watch style" 
-                  products={watchProducts} 
-                  viewAllLink="/officialStore" 
-                />
+                <HorizontalScroller title="Discover your watch style" products={watchProducts} viewAllLink="/officialStore" />
               </section>
             )}
 
-            {/* 12. SCROLLER: OFFICIAL COLLECTION */}
             {officialProducts.length > 0 && (
               <section className="w-full">
-                <HorizontalScroller 
-                  title="Official collection" 
-                  products={officialProducts} 
-                  viewAllLink="/officialStore" 
-                />
+                <HorizontalScroller title="Official collection" products={officialProducts} viewAllLink="/officialStore" />
               </section>
             )}
 
-            {/* 14. SCROLLER: SPONSORED PICKS */}
             {boostedProducts.length > 0 && (
               <section className="w-full">
                 <HorizontalScroller title="Sponsored picks" products={boostedProducts} />
               </section>
             )}
 
-            {/* 15. SELL CTA BANNER */}
             <section className="relative py-8 md:py-10 overflow-hidden w-full bg-white dark:bg-[#111] border-y border-slate-200 dark:border-slate-800 shadow-sm mt-4">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#D97706]/10 blur-[100px] rounded-full pointer-events-none" />
 
@@ -222,73 +176,49 @@ export default async function Home() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto justify-center">
-                  <Link
-                    href="/sell"
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-[#D97706] hover:bg-amber-600 text-white font-bold text-sm md:text-base rounded-xl transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 w-full sm:w-auto"
-                  >
+                  <Link href="/sell" className="flex items-center justify-center gap-2 px-6 py-3 bg-[#D97706] hover:bg-amber-600 text-white font-bold text-sm md:text-base rounded-xl transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 w-full sm:w-auto">
                     <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
                       <path d="M12 4.5v15m7.5-7.5h-15" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                     Post an Item to Sell
                   </Link>
-                  <a
-                    href="https://wa.me/256759997376?text=Hello,%20I%20need%20support%20with%20Kabale%20Online"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-sm md:text-base rounded-xl transition-all w-full sm:w-auto"
-                  >
+                  <a href="https://wa.me/256759997376?text=Hello,%20I%20need%20support%20with%20Kabale%20Online" target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-sm md:text-base rounded-xl transition-all w-full sm:w-auto">
                     <svg className="w-4 h-4 text-[#25D366]" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 00-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                  </svg>
-                  WhatsApp Support: 0759997376
-                </a>
+                    </svg>
+                    WhatsApp Support: 0759997376
+                  </a>
+                </div>
               </div>
-            </div>
-          </section>
-
-          {/* 16. SCROLLER: TECH ESSENTIALS */}
-          {electronicsProducts.length > 0 && (
-            <section className="w-full">
-              <HorizontalScroller 
-                title="Tech essentials" 
-                products={electronicsProducts} 
-                viewAllLink="/category/electronics" 
-              />
             </section>
-          )}
 
-          {/* 17. SCROLLER: TOP PICKS */}
-          {featuredProducts.length > 0 && (
-            <section className="w-full">
-              <HorizontalScroller title="Top picks" products={featuredProducts} />
-            </section>
-          )}
+            {electronicsProducts.length > 0 && (
+              <section className="w-full">
+                <HorizontalScroller title="Tech essentials" products={electronicsProducts} viewAllLink="/category/electronics" />
+              </section>
+            )}
 
-          {/* 18. SCROLLER: CAMPUS DEALS */}
-          {studentProducts.length > 0 && (
-            <section className="w-full">
-              <HorizontalScroller 
-                title="Campus deals" 
-                products={studentProducts} 
-                viewAllLink="/category/student_item" 
-              />
-            </section>
-          )}
+            {featuredProducts.length > 0 && (
+              <section className="w-full">
+                <HorizontalScroller title="Top picks" products={featuredProducts} />
+              </section>
+            )}
 
-          {/* 19. SCROLLER: FRESH MARKET */}
-          {agriProducts.length > 0 && (
-            <section className="w-full">
-              <HorizontalScroller 
-                title="Fresh market" 
-                products={agriProducts} 
-                viewAllLink="/category/agriculture" 
-              />
-            </section>
-          )}
+            {studentProducts.length > 0 && (
+              <section className="w-full">
+                <HorizontalScroller title="Campus deals" products={studentProducts} viewAllLink="/category/student_item" />
+              </section>
+            )}
 
-          {/* 20. JUMIA-STYLE SEO & ABOUT SECTION */}
-          <AboutKabaleOnline />
+            {agriProducts.length > 0 && (
+              <section className="w-full">
+                <HorizontalScroller title="Fresh market" products={agriProducts} viewAllLink="/category/agriculture" />
+              </section>
+            )}
 
+            <AboutKabaleOnline />
+
+          </div>
         </div>
       </div>
     </ThemeProvider>
