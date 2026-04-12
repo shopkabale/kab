@@ -182,28 +182,36 @@ export default async function Home() {
             </a>
           </section>
 
-          {/* 7. 🔁 CONTINUE BROWSING */}
+                    {/* 7. 🔁 CONTINUE BROWSING */}
           <ContinueBrowsing fallbackProducts={trendingProducts} />
 
-          {/* 8. GRID FORMAT: 🛡️ VERIFIED & TRUSTED (Top 8) */}
-          {approvedProducts.length > 0 && (
-            <section className="bg-white dark:bg-[#1a1a1a] px-2 sm:px-4 py-2 border-y border-slate-200 dark:border-slate-800">
+          {/* 8. GRID FORMAT: ✨ NEW ARRIVALS (Moved way up!) */}
+          {latestProducts.length > 0 && (
+            <section className="bg-white dark:bg-[#1a1a1a] px-2 sm:px-4 py-2 border-y border-slate-200 dark:border-slate-800 mb-2">
+              <div className="px-2 pt-2 pb-1 z-10 relative flex justify-between items-end">
+                <p className="text-xs text-slate-500 font-bold tracking-wide italic">Fresh drops added to the market</p>
+                <Link href="/products" className="text-xs font-black text-[#D97706] hover:underline uppercase tracking-wider">
+                  View All →
+                </Link>
+              </div>
               <ProductSection 
-                title="🛡️ Verified & Trusted" 
-                products={approvedProducts.slice(0, 8)} // Limits to 8
+                title="✨ New Arrivals" 
+                products={latestProducts.slice(0, 8)} 
+                hideTitle={true} // Optional: Hides the default gray title bar so your custom one above shines
               />
             </section>
           )}
 
-          {/* 9. SCROLLER: 💸 BEST DEALS */}
-          {dealsProducts.length > 0 && (
-            <section className="w-full">
-              <div className="px-4 pt-2 -mb-2 z-10 relative">
-                <p className="text-xs text-slate-500 font-bold tracking-wide italic">Affordable & popular items people love</p>
-              </div>
-              <HorizontalScroller title="💸 Best Deals in Kabale" products={dealsProducts} />
+          {/* 9. GRID FORMAT: 🛡️ VERIFIED & TRUSTED (Top 8) */}
+          {approvedProducts.length > 0 && (
+            <section className="bg-white dark:bg-[#1a1a1a] px-2 sm:px-4 py-2 border-y border-slate-200 dark:border-slate-800">
+              <ProductSection 
+                title="🛡️ Verified & Trusted" 
+                products={approvedProducts.slice(0, 8)} 
+              />
             </section>
           )}
+
 
           {/* 10. SCROLLER: TRENDING FOR HER */}
           {ladiesProducts.length > 0 && (
