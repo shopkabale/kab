@@ -95,7 +95,7 @@ export default async function Home() {
         <section className="bg-slate-100 dark:bg-[#1a1a1a] border-y border-slate-200 dark:border-slate-800 py-4 px-3 sm:px-4 mb-2">
           <div className="w-full text-center py-2 mb-1">
             <h2 className="text-base md:text-lg font-black text-slate-900 dark:text-white capitalize tracking-tight">
-              Browse more collections
+              Browse Our Top Collections
             </h2>
           </div>
 
