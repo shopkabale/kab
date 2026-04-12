@@ -195,9 +195,9 @@ export default async function Home() {
                 </Link>
               </div>
               <ProductSection 
-                title="✨ New Arrivals" 
+                title="New Arrivals" 
                 products={latestProducts.slice(0, 8)} 
-                hideTitle={true} // Optional: Hides the default gray title bar so your custom one above shines
+                
               />
             </section>
           )}
@@ -246,16 +246,7 @@ export default async function Home() {
             </section>
           )}
 
-          {/* 13. SCROLLER: NEW ARRIVALS */}
-          {latestProducts.length > 0 && (
-            <section className="w-full">
-              <HorizontalScroller 
-                title="New arrivals" 
-                products={latestProducts} 
-                viewAllLink="/products" 
-              />
-            </section>
-          )}
+          
 
           {/* 14. SCROLLER: SPONSORED PICKS */}
           {boostedProducts.length > 0 && (
