@@ -6,8 +6,15 @@ import Link from "next/link";
 import { optimizeImage } from "@/lib/utils"; 
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
-// 🔥 IMPORT HOMEPAGE PRODUCT SECTION
 import ProductSection from "@/components/ProductSection";
+import algoliasearch from "algoliasearch/lite"; // 🔥 IMPORT ALGOLIA
+
+// 🔥 INITIALIZE ALGOLIA OUTSIDE THE COMPONENT
+const searchClient = algoliasearch(
+  process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "",
+  process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY || ""
+);
+const index = searchClient.initIndex(process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "products");
 
 function SearchResults() {
   const searchParams = useSearchParams();
@@ -16,50 +23,50 @@ function SearchResults() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔥 NEW STATE FOR THE "NOTIFY ME" FEATURE
+  // NOTIFY ME STATE
   const [contactInfo, setContactInfo] = useState("");
   const [isSubmittingAlert, setIsSubmittingAlert] = useState(false);
   const [alertSuccess, setAlertSuccess] = useState(false);
 
   useEffect(() => {
-    const fetchAndFilterProducts = async () => {
+    const performAlgoliaSearch = async () => {
       setLoading(true);
-      setAlertSuccess(false); // Reset success state on new search
+      setAlertSuccess(false);
       setContactInfo("");
+      
       try {
-        const res = await fetch("/api/products");
-        const data = await res.json();
+        // 🔥 USE ALGOLIA TO SEARCH THE ENTIRE DATABASE
+        const { hits } = await index.search(query, {
+          hitsPerPage: 50, // Pull up to 50 relevant results from the entire DB
+        });
 
-        if (data.products) {
-          const searchTerm = query.toLowerCase();
-          const filtered = data.products.filter((product: any) => {
-            const titleMatch = (product.title || product.name || "").toLowerCase().includes(searchTerm);
-            const categoryMatch = (product.category || "").toLowerCase().includes(searchTerm);
-            const descMatch = (product.description || "").toLowerCase().includes(searchTerm);
+        // 🔥 MAP ALGOLIA HITS TO MATCH YOUR PRODUCTSECTION EXPECTATIONS
+        const mappedProducts = hits.map((hit: any) => ({
+          id: hit.objectID,
+          publicId: hit.objectID,
+          name: hit.name || hit.title,
+          title: hit.title || hit.name,
+          price: hit.price,
+          category: hit.category,
+          // ProductSection expects an array of images. Algolia usually stores 'image' as a string.
+          images: hit.image ? [optimizeImage(hit.image)] : [],
+          status: hit.status || "active",
+          isApprovedQuality: hit.isApprovedQuality || false,
+          isOfficialStore: hit.isOfficialStore || false,
+          createdAt: hit.createdAt || Date.now(), // Fallback for new badge logic
+        }));
 
-            return titleMatch || categoryMatch || descMatch;
-          });
+        setProducts(mappedProducts);
 
-          // 🔥 OPTIMIZE IMAGES BEFORE SETTING STATE
-          const optimizedFilteredProducts = filtered.map((product: any) => {
-            if (!product.images || product.images.length === 0) return product;
-            return {
-              ...product,
-              images: product.images.map((img: string) => optimizeImage(img))
-            };
-          });
-
-          setProducts(optimizedFilteredProducts);
-        }
       } catch (error) {
-        console.error("Search failed:", error);
+        console.error("Algolia Search failed:", error);
       } finally {
         setLoading(false);
       }
     };
 
     if (query) {
-      fetchAndFilterProducts();
+      performAlgoliaSearch();
     } else {
       setProducts([]);
       setLoading(false);
@@ -77,7 +84,7 @@ function SearchResults() {
         query: query.toLowerCase(),
         contact: contactInfo,
         createdAt: serverTimestamp(),
-        status: "active", // Can be used later to mark as "fulfilled"
+        status: "active",
       });
       setAlertSuccess(true);
     } catch (error) {
@@ -91,7 +98,6 @@ function SearchResults() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-start pt-32 bg-slate-50 dark:bg-[#0a0a0a] min-h-screen">
-        {/* THE KINETIC SPINNER INJECTED HERE */}
         <style>{`
           @keyframes kineticSpin {
             0% { transform: scale(0.6) rotate(0deg); opacity: 0.7; }
@@ -102,17 +108,10 @@ function SearchResults() {
             animation: kineticSpin 1.4s infinite ease-in-out;
           }
         `}</style>
-
-        <svg 
-          className="animate-kinetic-spin w-16 h-16 text-[#D97706] drop-shadow-md mb-6" 
-          viewBox="0 0 100 100" 
-          fill="none" 
-          xmlns="http://www.w3.org/2000/svg"
-        >
+        <svg className="animate-kinetic-spin w-16 h-16 text-[#D97706] drop-shadow-md mb-6" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
           <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="7" className="opacity-90" />
           <path d="M38 28v44m0-22l20-22m-20 22l20 22" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
-
         <p className="font-bold text-slate-500 animate-pulse">Searching Kabale Online for "{query}"...</p>
       </div>
     );
@@ -120,7 +119,6 @@ function SearchResults() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a]">
-      {/* 🔥 THE FIX: Applied the global 1200px max-width and px-3/px-4 standard */}
       <div className="w-full max-w-[1200px] mx-auto py-8 px-3 sm:px-4">
 
         {/* HEADER SECTION */}
@@ -134,7 +132,7 @@ function SearchResults() {
         </div>
 
         {products.length === 0 ? (
-          // 🔥 THE INTENT-CATCHER UI 🔥
+          // INTENT-CATCHER UI
           <div className="bg-white dark:bg-[#111] rounded-3xl p-6 sm:p-12 text-center border border-slate-200 dark:border-slate-800 shadow-sm max-w-2xl mx-auto">
             <span className="text-6xl mb-4 block">🕵️‍♂️</span>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">We couldn't find "{query}"</h2>
@@ -188,8 +186,6 @@ function SearchResults() {
             </Link>
           </div>
         ) : (
-          // 🔥 REPLACED HARDCODED GRID WITH PRODUCTSECTION 🔥
-          // Stripped out the extra px-2 wrapper since the parent div handles padding now
           <div className="pb-12 w-full">
             <ProductSection products={products} />
           </div>
