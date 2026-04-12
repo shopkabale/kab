@@ -5,43 +5,39 @@ import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { collection, query, onSnapshot, doc, getDoc, where } from "firebase/firestore"; 
 import { db } from "@/lib/firebase/config";
-import { FaChartLine, FaWallet, FaBoxOpen, FaLock, FaUserTag } from "react-icons/fa";
+import { FaWhatsapp } from "react-icons/fa";
+import { 
+  PackageSearch, 
+  ShoppingBag, 
+  Heart, 
+  LogOut, 
+  Store, 
+  Wallet, 
+  TrendingUp, 
+  MessageCircle,
+  ChevronRight
+} from "lucide-react";
 
-// --- IMPORT OUR NEW ISOLATED COMPONENTS ---
-import ListingsTab from "@/components/dashboard/ListingsTab";
-import OrdersTab from "@/components/dashboard/OrdersTab";
-import PurchasesTab from "@/components/dashboard/PurchasesTab";
-import WishlistTab from "@/components/dashboard/WishlistTab";
-import WalletTab from "@/components/dashboard/WalletTab"; // 🔥 Added Wallet Tab
-
-export default function UnifiedDashboard() {
+export default function ProfilePage() {
   const { user, loading: authLoading, signIn, signOut } = useAuth();
-
-  // 🔥 Added "wallet" to the state types
-  const [activeTab, setActiveTab] = useState<"listings" | "sales" | "purchases" | "saved" | "wallet">("listings");
   const [verificationStatus, setVerificationStatus] = useState<"unverified" | "pending" | "verified">("unverified");
-
   const [metrics, setMetrics] = useState({ views: 0, chats: 0, avgScore: 0, totalItems: -1, isLoaded: false });
+  const [wallet, setWallet] = useState({ available: 0, pending: 0, withdrawn: 0, isLoaded: false });
 
-  // ==========================================
-  // TOP-LEVEL DATA LISTENER (Profile & Metrics)
-  // ==========================================
   useEffect(() => {
     if (!user?.id) return;
 
+    // 1. Fetch Verification Status
     getDoc(doc(db, "users", user.id)).then(userDoc => {
       if (userDoc.exists() && userDoc.data().verificationStatus) {
         setVerificationStatus(userDoc.data().verificationStatus);
       }
     });
 
+    // 2. Fetch Real-time Metrics (Products)
     const metricsQuery = query(collection(db, "products"), where("sellerId", "==", user.id));
     const unsubscribeMetrics = onSnapshot(metricsQuery, (snapshot) => {
-      let totalViews = 0;
-      let totalChats = 0;
-      let totalScore = 0;
-      let itemCount = 0;
-
+      let totalViews = 0, totalChats = 0, totalScore = 0, itemCount = 0;
       snapshot.forEach((doc) => {
         const data = doc.data();
         totalViews += data.views || 0;
@@ -49,7 +45,6 @@ export default function UnifiedDashboard() {
         totalScore += data.aiScore || 0;
         itemCount++;
       });
-
       setMetrics({
         views: totalViews,
         chats: totalChats,
@@ -59,12 +54,28 @@ export default function UnifiedDashboard() {
       });
     });
 
-    return () => unsubscribeMetrics(); 
-  }, [user?.id]); 
+    // 3. Fetch Real-time Wallet Data
+    const walletRef = doc(db, "wallets", user.id);
+    const unsubscribeWallet = onSnapshot(walletRef, (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setWallet({
+          available: Number(data.availableBalance) || 0,
+          pending: Number(data.pendingBalance) || 0,
+          withdrawn: Number(data.totalWithdrawn) || 0,
+          isLoaded: true
+        });
+      } else {
+        setWallet(prev => ({ ...prev, isLoaded: true }));
+      }
+    });
 
-  // ==========================================
-  // RENDER UN-AUTHENTICATED STATE
-  // ==========================================
+    return () => {
+      unsubscribeMetrics();
+      unsubscribeWallet();
+    };
+  }, [user?.id]);
+
   if (authLoading) return <div className="py-20 text-center text-slate-500 font-bold animate-pulse">Loading dashboard...</div>;
 
   if (!user) {
@@ -82,144 +93,151 @@ export default function UnifiedDashboard() {
 
   const hasInventory = metrics.totalItems > 0;
 
-  // ==========================================
-  // RENDER MAIN DASHBOARD
-  // ==========================================
   return (
-    <div className="pb-24 max-w-md mx-auto bg-slate-50 min-h-screen sm:border-x sm:border-slate-200 shadow-sm relative">
-
-      {/* 1. TOP SECTION (User Overview) */}
-      <div className="bg-white px-4 pt-6 pb-5 border-b border-slate-200">
-        <div className="flex justify-between items-start mb-4">
-          <div className="flex-1 pr-4">
-            <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2 mb-1">
-              Hello, {user.displayName?.split(" ")[0] || "User"}
-              {verificationStatus === "verified" && (
-                <span className="text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wide border bg-blue-50 text-blue-600 border-blue-200">✓ Verified</span>
-              )}
-            </h1>
-            <p className="text-slate-500 text-xs leading-relaxed">
-              {hasInventory 
-                ? "Welcome to your Seller Dashboard. Manage your items, orders, and wallet."
-                : "Welcome to your Buyer Account. Manage your purchases and saved items."
-              }
-            </p>
+    <div className="min-h-screen bg-slate-50 pb-24 font-sans">
+      <div className="max-w-md mx-auto">
+        
+        {/* HEADER SECTION */}
+        <div className="bg-white px-4 pt-8 pb-6 border-b border-slate-200">
+          <div className="flex items-center gap-4">
+            <div className="w-16 h-16 bg-gradient-to-tr from-[#D97706] to-amber-400 rounded-full flex items-center justify-center text-white text-2xl font-black shadow-md border-2 border-white">
+              {user.displayName?.charAt(0).toUpperCase() || "U"}
+            </div>
+            <div>
+              <h1 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+                {user.displayName || "Kabale User"}
+                {verificationStatus === "verified" && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wide border bg-blue-50 text-blue-600 border-blue-200">✓ Verified</span>
+                )}
+              </h1>
+              <p className="text-slate-500 text-sm">{user.email}</p>
+            </div>
           </div>
-          <button onClick={signOut} className="text-[10px] text-slate-500 font-bold hover:text-red-600 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 shrink-0 shadow-sm active:bg-slate-100">
-            Log Out
-          </button>
         </div>
 
-        {/* Real-time Aggregate Stats (SELLER ONLY) */}
-        {hasInventory && metrics.isLoaded && (
-          <>
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
-                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Total Views</span>
-                <span className="block text-lg font-black text-slate-700">{metrics.views}</span>
+        <div className="p-4 space-y-5">
+          {/* 📊 SELLER METRICS & WALLET WIDGET */}
+          {hasInventory && (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 className="font-bold text-slate-900 flex items-center gap-2">
+                  <Wallet size={18} className="text-[#D97706]" /> 
+                  Wallet & Stats
+                </h2>
+                <span className="text-xs font-bold text-slate-400 uppercase">Seller Hub</span>
               </div>
-              <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
-                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Total Chats</span>
-                <span className="block text-lg font-black text-slate-700">{metrics.chats}</span>
-              </div>
-              <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 text-center">
-                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Avg Score</span>
-                <span className="block text-lg font-black text-[#D97706]">{metrics.avgScore}</span>
-              </div>
-            </div>
-
-            {/* DYNAMIC AI ALERTS */}
-            <div className="mt-3">
-              {metrics.avgScore < 50 && (
-                <div className="bg-red-50 border border-red-200 p-3 rounded-lg flex items-start gap-3">
-                  <span className="relative flex h-3 w-3 mt-1 shrink-0">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                  </span>
-                  <p className="text-xs text-red-800 font-medium leading-relaxed">
-                    <span className="font-bold block mb-0.5">Low Engagement Alert</span>
-                    Share your product links on WhatsApp to boost your AI score and rank highly!
-                  </p>
+              
+              <div className="p-4 bg-slate-900 text-white">
+                <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Available to Withdraw</p>
+                <h2 className="text-3xl font-black mb-3">
+                  <span className="text-lg text-slate-400 mr-1">UGX</span>
+                  {wallet.available.toLocaleString()}
+                </h2>
+                <div className="flex gap-4 border-t border-slate-700 pt-3">
+                  <div>
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">Pending Escrow</p>
+                    <p className="font-bold text-sm">UGX {wallet.pending.toLocaleString()}</p>
+                  </div>
+                  <div className="pl-4 border-l border-slate-700">
+                    <p className="text-[10px] text-slate-400 uppercase font-bold">Total Withdrawn</p>
+                    <p className="font-bold text-sm">UGX {wallet.withdrawn.toLocaleString()}</p>
+                  </div>
                 </div>
-              )}
+              </div>
+
+              <div className="grid grid-cols-3 divide-x divide-slate-100 bg-white">
+                <div className="p-3 text-center">
+                  <TrendingUp size={16} className="mx-auto text-slate-400 mb-1" />
+                  <span className="block text-lg font-black text-slate-700">{metrics.views}</span>
+                  <span className="block text-[10px] text-slate-400 font-bold uppercase">Views</span>
+                </div>
+                <div className="p-3 text-center">
+                  <MessageCircle size={16} className="mx-auto text-slate-400 mb-1" />
+                  <span className="block text-lg font-black text-slate-700">{metrics.chats}</span>
+                  <span className="block text-[10px] text-slate-400 font-bold uppercase">Chats</span>
+                </div>
+                <div className="p-3 text-center">
+                  <span className="block text-lg font-black text-[#D97706] mt-1">{metrics.avgScore}</span>
+                  <span className="block text-[10px] text-slate-400 font-bold uppercase">AI Score</span>
+                </div>
+              </div>
             </div>
-          </>
-        )}
-      </div>
+          )}
 
-      {/* 2. TABS NAVIGATION */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-10 flex overflow-x-auto no-scrollbar">
-        {hasInventory || !metrics.isLoaded ? (
-          <>
-            <button onClick={() => setActiveTab("listings")} className={`flex-1 min-w-[90px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "listings" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>Ads</button>
-            <button onClick={() => setActiveTab("sales")} className={`flex-1 min-w-[90px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "sales" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>Orders</button>
-            <button onClick={() => setActiveTab("wallet")} className={`flex-1 min-w-[90px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "wallet" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>Wallet</button>
-          </>
-        ) : (
-          <button onClick={() => setActiveTab("listings")} className={`flex-1 min-w-[140px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "listings" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>
-            <FaLock className="inline mb-0.5 mr-1 text-[10px]" /> Seller Tools
-          </button>
-        )}
-        <button onClick={() => setActiveTab("purchases")} className={`flex-1 min-w-[90px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "purchases" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>Purchases</button>
-        <button onClick={() => setActiveTab("saved")} className={`flex-1 min-w-[90px] py-3 text-xs font-bold text-center border-b-2 transition-colors ${activeTab === "saved" ? "border-[#D97706] text-[#D97706]" : "border-transparent text-slate-500"}`}>Saved</button>
-      </div>
+          {/* 🗂️ NAVIGATION MENU */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="flex flex-col divide-y divide-slate-100">
+              
+              <Link href="/profile/products" className="flex items-center justify-between p-4 hover:bg-slate-50 active:bg-slate-100 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform"><Store size={20} /></div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">My Products</h3>
+                    <p className="text-xs text-slate-500">Manage your active ads</p>
+                  </div>
+                </div>
+                <ChevronRight size={20} className="text-slate-300" />
+              </Link>
 
-      {/* 3. TAB CONTENT ROUTING */}
-      <div className="p-4">
-        
-        {/* BUYER-ONLY PROMO OVERLAY */}
-        {activeTab === "listings" && !hasInventory && metrics.isLoaded && (
-          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm mt-2 animate-in fade-in zoom-in-95 duration-500">
-             <div className="flex justify-center mb-4">
-               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 text-2xl">
-                 <FaUserTag />
-               </div>
-             </div>
-             <div className="text-center mb-6">
-               <span className="inline-block bg-slate-100 text-slate-600 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full mb-3">Buyer Account</span>
-               <h2 className="text-xl font-black text-slate-900 mb-2 leading-tight">Unlock your Seller Dashboard</h2>
-               <p className="text-slate-500 text-sm leading-relaxed">
-                 You are currently viewing a standard buyer account. Upload your first product to instantly unlock premium seller features:
-               </p>
-             </div>
+              <Link href="/profile/orders" className="flex items-center justify-between p-4 hover:bg-slate-50 active:bg-slate-100 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform"><PackageSearch size={20} /></div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">Sales & Orders</h3>
+                    <p className="text-xs text-slate-500">Track items you are selling</p>
+                  </div>
+                </div>
+                <ChevronRight size={20} className="text-slate-300" />
+              </Link>
 
-             <ul className="space-y-4 mb-8">
-               <li className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                 <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center"><FaChartLine /></div>
-                 Real-time AI Analytics
-               </li>
-               <li className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                 <div className="w-8 h-8 rounded-lg bg-green-50 text-green-500 flex items-center justify-center"><FaBoxOpen /></div>
-                 Order Management System
-               </li>
-               <li className="flex items-center gap-3 text-sm font-bold text-slate-700">
-                 <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center"><FaWallet /></div>
-                 Digital Escrow Wallet
-               </li>
-             </ul>
+              <Link href="/profile/purchases" className="flex items-center justify-between p-4 hover:bg-slate-50 active:bg-slate-100 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform"><ShoppingBag size={20} /></div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">My Purchases</h3>
+                    <p className="text-xs text-slate-500">View your buying history</p>
+                  </div>
+                </div>
+                <ChevronRight size={20} className="text-slate-300" />
+              </Link>
 
-             <Link href="/sell" className="w-full flex items-center justify-center py-4 bg-[#D97706] text-white font-black text-md rounded-xl shadow-md hover:bg-amber-600 active:scale-95 transition-all">
-               Post a Product to Unlock
-             </Link>
+              <Link href="/profile/wishlist" className="flex items-center justify-between p-4 hover:bg-slate-50 active:bg-slate-100 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center group-hover:scale-110 transition-transform"><Heart size={20} /></div>
+                  <div>
+                    <h3 className="font-bold text-slate-900">Saved Items</h3>
+                    <p className="text-xs text-slate-500">Your wishlist</p>
+                  </div>
+                </div>
+                <ChevronRight size={20} className="text-slate-300" />
+              </Link>
+
+            </div>
           </div>
-        )}
 
-        {/* ACTUAL TABS */}
-        {activeTab === "listings" && hasInventory && <ListingsTab userId={user.id} hasInventory={hasInventory} />}
-        {activeTab === "sales" && hasInventory && <OrdersTab userId={user.id} />}
-        {activeTab === "wallet" && hasInventory && <WalletTab userId={user.id} />}
-        {activeTab === "purchases" && <PurchasesTab userId={user.id} />}
-        {activeTab === "saved" && <WishlistTab userId={user.id} />}
+          {/* 📢 COMMUNITY & ACTIONS */}
+          <div className="flex flex-col gap-3">
+            <a 
+              href="https://whatsapp.com/channel/0029Vb7mKqmKGGGKqH0bvq2D" 
+              target="_blank" 
+              rel="noreferrer"
+              className="w-full bg-[#25D366] text-white p-4 rounded-xl font-bold flex items-center justify-center gap-3 shadow-md hover:bg-[#20bd5a] active:scale-[0.98] transition-all"
+            >
+              <FaWhatsapp className="text-2xl" />
+              Join Our WhatsApp Channel
+            </a>
+
+            <button 
+              onClick={signOut} 
+              className="w-full bg-white border border-slate-200 text-slate-700 p-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+            >
+              <LogOut size={18} className="text-slate-400" />
+              Log Out
+            </button>
+          </div>
+
+        </div>
       </div>
-
-      {/* FLOATING ACTION BUTTON */}
-      <Link 
-        href="/sell" 
-        className="fixed bottom-6 right-6 absolute sm:bottom-10 sm:-right-6 bg-[#D97706] text-white w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-3xl pb-1 hover:bg-amber-600 active:scale-95 transition-transform z-50 border-2 border-white"
-      >
-        +
-      </Link>
-
     </div>
   );
 }
