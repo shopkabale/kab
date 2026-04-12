@@ -4,90 +4,86 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
-import Link from "next/link";
 import Image from "next/image";
 
 export default function HeroCarousel() {
-  const slides = [
+  const promos = [
     {
-      title: "The better way to buy and sell in Kabale",
-      subtitle: "Join the fastest growing marketplace.",
-      btnText: "EXPLORE",
-      href: "/products",
-      image: "/hero-main.png" // MAKE SURE THESE ARE TRANSPARENT PNGs
+      id: 1,
+      tag: "Limited time!",
+      title: "Get Special Offer",
+      discountNum: "40",
+      terms: "All Items Available | T&C Applied",
+      image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&q=80", // Replace with a transparent PNG of a model later
+      color: "bg-[#1A1A1A]",
+      btnColor: "bg-[#FF4A5A]",
     },
     {
-      title: "Students Shopping Made Easy",
-      subtitle: "Textbooks, hostel gear, and campus essentials.",
-      btnText: "STUDENT MARKET",
-      href: "/category/student_item",
-      image: "/hero-student.png"
-    },
-    {
-      title: "Quality Gadgets & Electronics",
-      subtitle: "Phones, laptops, and accessories delivered.",
-      btnText: "SHOP ELECTRONICS",
-      href: "/category/electronics",
-      image: "/hero-electronics.png"
-    },
-    {
-      title: "Fresh Local Produce",
-      subtitle: "Farm to table. Support Kabale agriculture.",
-      btnText: "SHOP FOOD",
-      href: "/category/agriculture",
-      image: "/hero-agric.png"
+      id: 2,
+      tag: "Weekend Drop!",
+      title: "Flash Sale Alert",
+      discountNum: "25",
+      terms: "Electronics & Tech | T&C Applied",
+      image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&q=80",
+      color: "bg-slate-900",
+      btnColor: "bg-[#D97706]",
     }
   ];
 
   return (
-    // FULL WIDTH ON MOBILE: -mx-4 pulls it to the edges of the screen
-    <div className="-mx-4 sm:-mx-6 lg:-mx-8 sm:rounded-2xl overflow-hidden shadow-sm mb-6">
+    <div className="px-4 pt-3 pb-5 bg-white dark:bg-[#111]">
+      <div className="flex justify-between items-end mb-3">
+        <h2 className="text-lg font-black text-slate-900 dark:text-white tracking-tight">#SpecialForYou</h2>
+        <span className="text-xs font-bold text-red-500">See All</span>
+      </div>
+
       <Swiper
         modules={[Autoplay, Pagination]}
-        autoplay={{ delay: 5000, disableOnInteraction: false }}
-        pagination={{ clickable: true }}
-        // Set the background color here so it's the SAME background for text and image
-        className="h-[220px] md:h-[400px] w-full bg-[#fbbf24] transition-colors duration-500" 
+        spaceBetween={15}
+        slidesPerView={1.05}
+        autoplay={{ delay: 4000, disableOnInteraction: false }}
+        pagination={{ clickable: true, dynamicBullets: true }}
+        className="pb-8 drop-shadow-xl"
       >
-        {slides.map((slide, i) => (
-          // We removed 'justify-between' so elements don't push apart
-          <SwiperSlide key={i} className="flex relative items-center p-8 md:p-16 overflow-hidden">
+        {promos.map((promo) => (
+          <SwiperSlide key={promo.id}>
+            <div className={`${promo.color} rounded-[24px] p-5 h-[180px] sm:h-[200px] relative overflow-hidden flex flex-col justify-center`}>
+              
+              {/* Content Left Side */}
+              <div className="relative z-20 w-[60%]">
+                <span className="inline-block bg-white text-slate-900 text-[10px] font-black px-3 py-1 rounded-full mb-2">
+                  {promo.tag}
+                </span>
+                <h3 className="text-white text-base sm:text-lg font-bold leading-tight mb-1">
+                  {promo.title}
+                </h3>
+                <div className="text-white flex items-baseline mb-2">
+                  <span className="text-lg font-medium mr-1">Up to</span>
+                  <span className="text-5xl sm:text-6xl font-black leading-none">{promo.discountNum}</span>
+                  <span className="text-red-500 text-xl font-black">%</span>
+                </div>
+                <p className="text-[8px] sm:text-[10px] text-slate-300 font-medium">
+                  {promo.terms}
+                </p>
+              </div>
 
-            {/* TEXT CONTENT (Top layer, left side) */}
-            <div className="relative z-20 max-w-[60%] md:max-w-xl text-slate-900 drop-shadow-sm">
-              <h2 className="text-2xl md:text-5xl lg:text-6xl font-black mb-2 md:mb-4 leading-[1.1] tracking-tight">
-                {slide.title}
-              </h2>
-              <p className="text-[11px] md:text-lg mb-5 font-medium opacity-90 hidden sm:block max-w-md">
-                {slide.subtitle}
-              </p>
-              <Link href={slide.href} className="inline-block bg-slate-900 text-white px-6 py-2.5 md:px-10 md:py-4 rounded-full font-bold text-[10px] md:text-sm uppercase shadow-xl hover:bg-slate-800 hover:scale-105 transition-all duration-300">
-                {slide.btnText}
-              </Link>
+              {/* Image Right Side (Faded gradient to blend non-transparent images for now) */}
+              <div className="absolute right-0 top-0 w-[50%] h-full z-0">
+                <div className="absolute inset-0 bg-gradient-to-r from-[#1A1A1A] via-transparent to-transparent z-10" />
+                <Image 
+                  src={promo.image} 
+                  alt="Promo" 
+                  fill 
+                  className="object-cover opacity-80"
+                />
+              </div>
+
+              {/* Claim CTA */}
+              <button className={`absolute bottom-4 right-4 ${promo.btnColor} text-white text-sm font-bold px-5 py-2 rounded-xl z-20 shadow-lg active:scale-95 transition-transform`}>
+                Claim
+              </button>
+              
             </div>
-
-            {/* IMAGE CONTENT (Middle layer, right side) */}
-            {/* The 'right-0' and 'bottom-0' make it sit perfectly in the corner */}
-            <div className="absolute right-0 bottom-0 h-[100%] md:h-[110%] w-[60%] md:w-[50%] flex items-end justify-center z-10 pointer-events-none">
-               {/* We added scale to zoom it in slightly, and origin-bottom-right to keep it pinned to the corner */}
-               <div className="w-full h-full relative transform scale-105 md:scale-115 origin-bottom-right">
-                  <Image 
-                    src={slide.image} 
-                    alt={slide.title} 
-                    fill 
-                    // object-bottom pins it, and object-contain ensures it doesn't stretch
-                    className="object-contain object-bottom drop-shadow-2xl" 
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-               </div>
-            </div>
-
-            {/* SUBTLE GRADIENT OVERLAY (Bottom layer, only on left side) */}
-            {/* This ensures text is readable if the image background is complex, without splitting the image away */}
-            <div className="absolute top-0 left-0 bottom-0 w-[60%] bg-gradient-to-r from-[#fbbf24] via-[#fbbf24]/90 to-transparent z-0 pointer-events-none"></div>
-            
           </SwiperSlide>
         ))}
       </Swiper>
