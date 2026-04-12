@@ -4,7 +4,8 @@ import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { optimizeImage } from "@/lib/utils";
-import { trackSelectItem } from "@/lib/analytics"; // 🔥 Added Analytics Import
+import { trackSelectItem } from "@/lib/analytics";
+import { useTheme } from "@/components/ThemeProvider"; // 🔥 IMPORT THEME PROVIDER
 
 export default function HorizontalScroller({ title, products, viewAllLink }: { title: string, products: any[], viewAllLink?: string }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -12,6 +13,8 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
 
   const [scrollRatio, setScrollRatio] = useState(0);
   const [isScrolling, setIsScrolling] = useState(false);
+  
+  const theme = useTheme(); // 🔥 GET CURRENT DAY THEME
 
   const handleScroll = () => {
     if (!scrollRef.current) return;
@@ -23,10 +26,7 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
       return;
     }
 
-    // Calculate position ratio from 0 to 1
     setScrollRatio(scrollLeft / maxScroll);
-
-    // Show the indicator
     setIsScrolling(true);
 
     if (scrollTimeoutRef.current) clearTimeout(scrollTimeoutRef.current);
@@ -51,13 +51,14 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
 
   return (
     <div className="w-full overflow-hidden relative select-none">
-      {/* HEADER WITH GRAY BACKGROUND */}
-      <div className="w-full max-w-[1200px] mx-auto bg-gray-100 dark:bg-gray-800 px-3 sm:px-4 py-2 sm:py-3 mb-2 flex justify-between items-center">
-        <h2 className="text-base md:text-lg font-black text-slate-900 dark:text-white capitalize tracking-tight">
+      
+      {/* 🔥 DYNAMIC THEMED HEADER */}
+      <div className={`w-full max-w-[1200px] mx-auto ${theme.bg} ${theme.border} px-3 sm:px-4 py-2 sm:py-3 mb-2 flex justify-between items-center transition-colors duration-500`}>
+        <h2 className={`text-base md:text-lg font-black ${theme.text} capitalize tracking-tight transition-colors duration-500`}>
           {title}
         </h2>
         {viewAllLink && (
-          <Link href={viewAllLink} className="text-[#D97706] hover:text-amber-600 text-xs sm:text-sm font-bold uppercase tracking-widest flex items-center gap-1 transition-colors outline-none">
+          <Link href={viewAllLink} className={`${theme.highlight} hover:opacity-70 text-xs sm:text-sm font-bold uppercase tracking-widest flex items-center gap-1 transition-all outline-none`}>
             View All
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
           </Link>
@@ -79,7 +80,6 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
             const isApproved = p.isApprovedQuality;
             const isOfficial = p.isOfficialStore || p.isAdminUpload;
 
-            // The subtle "Ready for delivery" psychological append
             const titleStr = p.title || p.name || 'Product';
             const isShortTitle = titleStr.length <= 24;
             const displayTitle = (!isSold && isShortTitle) ? `${titleStr} (Ready for delivery)` : titleStr;
@@ -89,11 +89,10 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
                 <Link 
                   href={`/product/${p.publicId || p.id}`} 
                   className="flex flex-col flex-grow relative outline-none"
-                  // 🔥 ADDED CLICK TRACKING HERE
                   onClick={() => {
                     trackSelectItem({
                       id: p.id,
-                      name: titleStr, // using the raw title string, not the appended one
+                      name: titleStr, 
                       price: Number(p.price) || 0,
                       category: p.category || "general",
                     });
@@ -135,7 +134,6 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
                   </div>
 
                   <div className="p-2 sm:p-3 flex flex-col flex-grow">
-                    {/* TITLE AREA */}
                     <div className="h-[36px] sm:h-[42px] mb-1 flex flex-col justify-start">
                       <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 line-clamp-2 leading-snug transition-colors duration-200 group-hover:text-[#D97706] dark:group-hover:text-[#D97706]">
                         {displayTitle}
@@ -143,7 +141,6 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
                     </div>
 
                     <div className="mt-auto pt-1 flex flex-col">
-                      {/* BOLD BLACK PRICE */}
                       <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-500' : 'text-black dark:text-white group-hover:text-[#D97706] dark:group-hover:text-[#D97706]'}`}>
                         UGX {Number(p.price).toLocaleString()}
                       </span>
@@ -167,7 +164,6 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
         </div>
       </div>
 
-      {/* FIXED PROGRESS INDICATOR */}
       <div className={`w-full mt-1 transition-opacity duration-300 ${isScrolling ? 'opacity-100' : 'opacity-0'}`}>
         <div className="w-full h-1 bg-slate-200 dark:bg-slate-800 relative overflow-hidden">
           <div 
