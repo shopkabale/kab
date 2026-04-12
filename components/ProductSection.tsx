@@ -3,9 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { optimizeImage } from "@/lib/utils";
-import { trackSelectItem } from "@/lib/analytics"; // 🔥 Added Analytics Import
+import { trackSelectItem } from "@/lib/analytics"; 
+import { useTheme } from "@/components/ThemeProvider"; // 🔥 IMPORT THEME PROVIDER
 
 export default function ProductSection({ title, products, hideTitle }: { title?: string, products: any[], hideTitle?: boolean }) {
+  const theme = useTheme(); // 🔥 GET CURRENT DAY THEME
+
   if (!products || products.length === 0) return null;
 
   // Helper to dynamically check if an item is less than 7 days old
@@ -15,13 +18,13 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
   };
 
   return (
-    // ✅ Let parent control spacing (this is key)
+    // ✅ Let parent control spacing
     <div className="w-full">
 
-      {/* HEADER WITH GRAY BACKGROUND */}
+      {/* 🔥 DYNAMIC THEMED HEADER */}
       {!hideTitle && title && (
-        <div className="w-full bg-gray-100 dark:bg-gray-800 px-3 sm:px-4 py-2 sm:py-3 mb-2 flex items-center justify-between">
-          <h2 className="text-base md:text-lg font-black text-slate-900 dark:text-white capitalize tracking-tight">
+        <div className={`w-full ${theme.bg} ${theme.border} px-3 sm:px-4 py-2 sm:py-3 mb-2 flex items-center justify-between transition-colors duration-500`}>
+          <h2 className={`text-base md:text-lg font-black ${theme.text} capitalize tracking-tight transition-colors duration-500`}>
             {title}
           </h2>
         </div>
@@ -50,11 +53,10 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
               <Link 
                 href={`/product/${p.publicId || p.id}`} 
                 className="flex flex-col flex-grow relative pointer-events-auto outline-none"
-                // 🔥 ADDED CLICK TRACKING HERE
                 onClick={() => {
                   trackSelectItem({
                     id: p.id,
-                    name: titleStr, // using the raw title string
+                    name: titleStr, 
                     price: Number(p.price) || 0,
                     category: p.category || "general",
                   });
@@ -74,7 +76,7 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
                     <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">No Image</div>
                   )}
 
-                  {/* 🚫 SOLD OUT OVERLAY (Takes priority over other badges visually) */}
+                  {/* 🚫 SOLD OUT OVERLAY */}
                   {isSold && (
                     <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-[2px]">
                        <span className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-lg transform -rotate-6">
@@ -91,7 +93,7 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
                     </div>
                   )}
 
-                  {/* Trust Badges Overlay (Sitting EXACTLY at the bottom left edge of the image container) */}
+                  {/* Trust Badges Overlay */}
                   {!isSold && isApproved ? (
                     <div className="absolute bottom-0 left-0 bg-emerald-600/95 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 leading-none rounded-tr-sm flex items-center shadow-sm z-10 tracking-widest uppercase">
                        Approved Quality
@@ -105,7 +107,6 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
 
                 {/* Details Area */}
                 <div className="p-2 sm:p-3 flex flex-col flex-grow bg-white dark:bg-[#151515]">
-                  {/* TITLE AREA (Fixed height to maintain uniformity) */}
                   <div className="h-[36px] sm:h-[42px] mb-1 flex flex-col justify-start">
                     <h3 className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 line-clamp-2 leading-snug transition-colors duration-200 group-hover:text-[#D97706] dark:group-hover:text-[#D97706]">
                       {displayTitle}
@@ -113,7 +114,6 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
                   </div>
 
                   <div className="mt-auto pt-1 flex flex-col">
-                    {/* BOLD BLACK PRICE (Turns Orange on hover) */}
                     <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-500' : 'text-black dark:text-white group-hover:text-[#D97706] dark:group-hover:text-[#D97706]'}`}>
                       UGX {Number(p.price).toLocaleString()}
                     </span>
