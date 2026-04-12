@@ -80,7 +80,7 @@ export default function OfficialProductsManager() {
   // ------------------------------------------------------------------
   const toggleBadge = async (
     productId: string, 
-    field: "isOfficialStore" | "isApprovedQuality" | "ladies_home" | "watch_home", 
+    field: "isOfficialStore" | "isApprovedQuality" | "ladies_home" | "watch_home" | "isHero", 
     currentValue: boolean
   ) => {
     const newValue = !currentValue;
@@ -111,7 +111,7 @@ export default function OfficialProductsManager() {
 
   return (
     <div className="max-w-7xl mx-auto pb-20 md:pb-0 px-4">
-      
+
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-200 pb-6">
         <div>
@@ -126,12 +126,13 @@ export default function OfficialProductsManager() {
       {/* PRODUCTS TABLE */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1100px]">
+          <table className="w-full text-left border-collapse min-w-[1250px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
                 <th className="p-4 px-6">Product</th>
                 <th className="p-4 px-6">Price</th>
                 <th className="p-4 px-6">Stock</th>
+                <th className="p-4 px-6 text-center">Hero Promo</th>
                 <th className="p-4 px-6 text-center">Official Store</th>
                 <th className="p-4 px-6 text-center">Approved Quality</th>
                 <th className="p-4 px-6 text-center">Ladies Home</th>
@@ -142,11 +143,11 @@ export default function OfficialProductsManager() {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                  <tr>
-                   <td colSpan={8} className="px-6 py-12 text-center text-slate-500">Loading official inventory...</td>
+                   <td colSpan={9} className="px-6 py-12 text-center text-slate-500">Loading official inventory...</td>
                  </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-slate-500 font-medium">No official products found.</td>
+                  <td colSpan={9} className="px-6 py-12 text-center text-slate-500 font-medium">No official products found.</td>
                 </tr>
               ) : (
                 products.map((product) => (
@@ -173,6 +174,17 @@ export default function OfficialProductsManager() {
                       <span className={`px-3 py-1 rounded-full text-xs font-bold ${Number(product.stock) > 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {product.stock || 0} left
                       </span>
+                    </td>
+
+                    {/* HERO PROMO TOGGLE (NEW) */}
+                    <td className="p-4 px-6 text-center">
+                      <button
+                        onClick={() => toggleBadge(product.id, "isHero", !!product.isHero)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.isHero ? 'bg-red-500' : 'bg-slate-300'}`}
+                        title="Toggle Hero Promo Status"
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.isHero ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
                     </td>
 
                     {/* OFFICIAL STORE TOGGLE */}
@@ -208,7 +220,7 @@ export default function OfficialProductsManager() {
                       </button>
                     </td>
 
-                    {/* WATCH HOME TOGGLE (NEW) */}
+                    {/* WATCH HOME TOGGLE */}
                     <td className="p-4 px-6 text-center">
                       <button
                         onClick={() => toggleBadge(product.id, "watch_home", !!product.watch_home)}
