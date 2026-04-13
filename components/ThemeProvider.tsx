@@ -2,15 +2,21 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 
-// Define our daily themes using Tailwind classes
+// 🔥 JUMIA-STYLE SOLID COLORS (Vibrant backgrounds with dark, contrasting text)
 const THEMES = {
-  0: { bg: "bg-blue-50 dark:bg-blue-950/20", border: "border-blue-200 dark:border-blue-900/50", text: "text-blue-900 dark:text-blue-400", highlight: "text-blue-600" }, // Sunday (Trust/Calm)
-  1: { bg: "bg-orange-50 dark:bg-orange-950/20", border: "border-orange-200 dark:border-orange-900/50", text: "text-orange-900 dark:text-orange-400", highlight: "text-orange-600" }, // Monday (Energy/Urgency)
-  2: { bg: "bg-lime-50 dark:bg-lime-950/20", border: "border-lime-200 dark:border-lime-900/50", text: "text-lime-900 dark:text-lime-400", highlight: "text-lime-600" }, // Tuesday (Fresh/Natural)
-  3: { bg: "bg-purple-50 dark:bg-purple-950/20", border: "border-purple-200 dark:border-purple-900/50", text: "text-purple-900 dark:text-purple-400", highlight: "text-purple-600" }, // Wednesday (Premium)
-  4: { bg: "bg-amber-50 dark:bg-amber-950/20", border: "border-amber-200 dark:border-amber-900/50", text: "text-amber-900 dark:text-amber-400", highlight: "text-amber-600" }, // Thursday (Warmth)
-  5: { bg: "bg-red-50 dark:bg-red-950/20", border: "border-red-200 dark:border-red-900/50", text: "text-red-900 dark:text-red-400", highlight: "text-red-600" }, // Friday (Sale/Excitement)
-  6: { bg: "bg-slate-50 dark:bg-slate-900/50", border: "border-slate-200 dark:border-slate-800", text: "text-slate-900 dark:text-slate-300", highlight: "text-slate-700" }, // Saturday (Clean/Modern)
+  0: { bg: "bg-sky-400 dark:bg-sky-800", border: "border-sky-500 dark:border-sky-900", text: "text-slate-900 dark:text-white", highlight: "text-slate-800 dark:text-sky-100" }, // Sunday (Light Blue like "Curated for You")
+  
+  1: { bg: "bg-[#F68B1E] dark:bg-orange-700", border: "border-orange-500 dark:border-orange-900", text: "text-slate-900 dark:text-white", highlight: "text-slate-900 dark:text-orange-100" }, // Monday (Exact Jumia Orange)
+  
+  2: { bg: "bg-emerald-400 dark:bg-emerald-800", border: "border-emerald-500 dark:border-emerald-900", text: "text-slate-900 dark:text-white", highlight: "text-slate-900 dark:text-emerald-100" }, // Tuesday (Fresh Green)
+  
+  3: { bg: "bg-purple-400 dark:bg-purple-800", border: "border-purple-500 dark:border-purple-900", text: "text-slate-900 dark:text-white", highlight: "text-slate-900 dark:text-purple-100" }, // Wednesday (Premium Purple)
+  
+  4: { bg: "bg-yellow-400 dark:bg-yellow-700", border: "border-yellow-500 dark:border-yellow-900", text: "text-slate-900 dark:text-white", highlight: "text-slate-900 dark:text-yellow-100" }, // Thursday (Flash Yellow)
+  
+  5: { bg: "bg-red-600 dark:bg-red-800", border: "border-red-700 dark:border-red-900", text: "text-white", highlight: "text-red-100 hover:text-white" }, // Friday (Mega Sale Red - uses white text for contrast)
+  
+  6: { bg: "bg-slate-200 dark:bg-slate-800", border: "border-slate-300 dark:border-slate-700", text: "text-slate-900 dark:text-white", highlight: "text-slate-700 dark:text-slate-300" }, // Saturday (Clean Slate)
 };
 
 const ThemeContext = createContext(THEMES[6]); // Default to Saturday/Neutral
