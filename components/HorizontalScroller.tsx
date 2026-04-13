@@ -7,13 +7,23 @@ import { optimizeImage } from "@/lib/utils";
 import { trackSelectItem } from "@/lib/analytics";
 import { useTheme } from "@/components/ThemeProvider"; // 🔥 IMPORT THEME PROVIDER
 
-export default function HorizontalScroller({ title, products, viewAllLink }: { title: string, products: any[], viewAllLink?: string }) {
+export default function HorizontalScroller({ 
+  title, 
+  subtitle, 
+  products, 
+  viewAllLink 
+}: { 
+  title: string, 
+  subtitle?: string, 
+  products: any[], 
+  viewAllLink?: string 
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [scrollRatio, setScrollRatio] = useState(0);
   const [isScrolling, setIsScrolling] = useState(false);
-  
+
   const theme = useTheme(); // 🔥 GET CURRENT DAY THEME
 
   const handleScroll = () => {
@@ -51,16 +61,23 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
 
   return (
     <div className="w-full overflow-hidden relative select-none">
-      
-      {/* 🔥 DYNAMIC THEMED HEADER */}
+
+      {/* 🔥 FIXED DYNAMIC HEADER: Title/Subtitle Left, View All Right */}
       <div className={`w-full max-w-[1200px] mx-auto ${theme.bg} ${theme.border} px-3 sm:px-4 py-2 sm:py-3 mb-2 flex justify-between items-center transition-colors duration-500`}>
-        <h2 className={`text-base md:text-lg font-black ${theme.text} capitalize tracking-tight transition-colors duration-500`}>
-          {title}
-        </h2>
+        <div className="flex flex-col">
+          <h2 className={`text-base md:text-lg font-black ${theme.text} capitalize tracking-tight transition-colors duration-500`}>
+            {title}
+          </h2>
+          {subtitle && (
+            <p className={`text-[10px] sm:text-xs ${theme.text} opacity-80 font-bold tracking-wide mt-0.5`}>
+              {subtitle}
+            </p>
+          )}
+        </div>
         {viewAllLink && (
-          <Link href={viewAllLink} className={`${theme.highlight} hover:opacity-70 text-xs sm:text-sm font-bold uppercase tracking-widest flex items-center gap-1 transition-all outline-none`}>
+          <Link href={viewAllLink} className={`${theme.highlight} hover:opacity-70 text-[10px] sm:text-xs font-bold uppercase tracking-widest flex items-center gap-1 transition-all outline-none whitespace-nowrap`}>
             View All
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+            <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
           </Link>
         )}
       </div>
@@ -166,8 +183,9 @@ export default function HorizontalScroller({ title, products, viewAllLink }: { t
 
       <div className={`w-full mt-1 transition-opacity duration-300 ${isScrolling ? 'opacity-100' : 'opacity-0'}`}>
         <div className="w-full h-1 bg-slate-200 dark:bg-slate-800 relative overflow-hidden">
+          {/* 🔥 DYNAMIC THEMED PROGRESS DASH */}
           <div 
-            className="absolute top-0 h-full w-[15%] sm:w-[10%] bg-[#D97706] rounded-full transition-all duration-75 ease-out" 
+            className={`absolute top-0 h-full w-[15%] sm:w-[10%] ${theme.bg} rounded-full transition-all duration-75 ease-out`} 
             style={{ 
               left: `calc(${scrollRatio} * (100% - var(--dash-width)))`,
               '--dash-width': '15%'
