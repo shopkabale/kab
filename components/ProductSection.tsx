@@ -6,7 +6,17 @@ import { optimizeImage } from "@/lib/utils";
 import { trackSelectItem } from "@/lib/analytics"; 
 import { useTheme } from "@/components/ThemeProvider"; // 🔥 IMPORT THEME PROVIDER
 
-export default function ProductSection({ title, products, hideTitle }: { title?: string, products: any[], hideTitle?: boolean }) {
+export default function ProductSection({ 
+  title, 
+  subtitle, // 🔥 ADDED SUBTITLE PROP
+  products, 
+  hideTitle 
+}: { 
+  title?: string, 
+  subtitle?: string, 
+  products: any[], 
+  hideTitle?: boolean 
+}) {
   const theme = useTheme(); // 🔥 GET CURRENT DAY THEME
 
   if (!products || products.length === 0) return null;
@@ -21,12 +31,19 @@ export default function ProductSection({ title, products, hideTitle }: { title?:
     // ✅ Let parent control spacing
     <div className="w-full">
 
-      {/* 🔥 DYNAMIC THEMED HEADER */}
+      {/* 🔥 DYNAMIC THEMED HEADER WITH SUBTITLE */}
       {!hideTitle && title && (
         <div className={`w-full ${theme.bg} ${theme.border} px-3 sm:px-4 py-2 sm:py-3 mb-2 flex items-center justify-between transition-colors duration-500`}>
-          <h2 className={`text-base md:text-lg font-black ${theme.text} capitalize tracking-tight transition-colors duration-500`}>
-            {title}
-          </h2>
+          <div className="flex flex-col">
+            <h2 className={`text-base md:text-lg font-black ${theme.text} capitalize tracking-tight transition-colors duration-500`}>
+              {title}
+            </h2>
+            {subtitle && (
+              <p className={`text-[10px] sm:text-xs ${theme.text} opacity-90 font-bold tracking-wide mt-0.5`}>
+                {subtitle}
+              </p>
+            )}
+          </div>
         </div>
       )}
 
