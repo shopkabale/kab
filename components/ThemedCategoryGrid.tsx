@@ -16,7 +16,7 @@ export default function ThemedCategoryGrid() {
   ];
 
   return (
-    // 🔥 DYNAMIC THEMED BACKGROUND & BORDER
+    // DYNAMIC THEMED BACKGROUND & BORDER
     <section className={`${theme.bg} ${theme.border} border-y py-4 px-3 sm:px-4 mb-2 transition-colors duration-500`}>
       <div className="w-full text-center py-2 mb-1">
         <h2 className={`text-base md:text-lg font-black ${theme.text} capitalize tracking-tight transition-colors duration-500`}>
@@ -24,10 +24,11 @@ export default function ThemedCategoryGrid() {
         </h2>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-4xl mx-auto mt-2">
+      {/* Grid updated: 3 columns on mobile, expanding to 6 columns on large screens */}
+      <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 max-w-6xl mx-auto mt-2">
         {categories.map((cat) => (
           <Link key={cat.name} href={cat.href} className="group flex flex-col outline-none">
-            <div className="w-full aspect-square bg-white dark:bg-slate-800 rounded-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-1 relative shadow-sm group-hover:shadow-md transition-all duration-300">
+            <div className="w-full aspect-square bg-white dark:bg-slate-800 rounded-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-1.5 relative shadow-sm group-hover:shadow-md transition-all duration-300">
               <img 
                 src={cat.image} 
                 alt={cat.name}
@@ -35,7 +36,7 @@ export default function ThemedCategoryGrid() {
               />
             </div>
             {/* Base text uses the theme text, hovers to your brand orange */}
-            <span className={`text-[10px] sm:text-sm font-bold ${theme.text} group-hover:text-[#D97706] transition-colors leading-snug text-center`}>
+            <span className={`text-[10px] sm:text-xs md:text-sm font-bold ${theme.text} group-hover:text-[#D97706] transition-colors leading-snug text-center`}>
               {cat.name}
             </span>
           </Link>
