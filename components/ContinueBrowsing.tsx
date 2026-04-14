@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import HorizontalScroller from "./HorizontalScroller";
 
-// 1. Define the interface to include the missing string props
 interface ContinueBrowsingProps {
   title: string;
   subtitle: string;
@@ -32,29 +31,28 @@ export default function ContinueBrowsing({ title, subtitle, fallbackProducts }: 
   // Prevent hydration mismatch errors in Next.js
   if (!mounted) return null; 
 
-  // THE FALLBACK: If they haven't viewed anything, show Trending again under a different title
+  // THE FALLBACK: If they haven't viewed anything, show Trending again
   if (viewedItems.length === 0) {
     if (!fallbackProducts || fallbackProducts.length === 0) return null;
     return (
       <section className="w-full">
-        <div className="px-4 pt-2 -mb-2 z-10 relative">
-          <p className="text-xs text-slate-500 font-bold tracking-wide italic">You haven't viewed anything yet. Check these out!</p>
-        </div>
-        {/* 2. Emojis removed for a more serious, professional UI */}
-        <HorizontalScroller title="Discover Trending" products={fallbackProducts} />
+        <HorizontalScroller 
+          title="Discover Trending" 
+          subtitle="You haven't viewed anything yet. Check these out!"
+          products={fallbackProducts} 
+        />
       </section>
     );
   }
 
-  // NORMAL RENDER: Show their recently viewed items
+  // NORMAL RENDER: Show their recently viewed items using the unified Scroller layout
   return (
     <section className="w-full">
-      <div className="px-4 pt-2 -mb-2 z-10 relative">
-        {/* 3. Replaced hardcoded text with the subtitle prop */}
-        <p className="text-xs text-slate-500 font-bold tracking-wide italic">{subtitle}</p>
-      </div>
-      {/* 4. Replaced hardcoded text with the title prop */}
-      <HorizontalScroller title={title} products={viewedItems} />
+      <HorizontalScroller 
+        title={title} 
+        subtitle={subtitle}
+        products={viewedItems} 
+      />
     </section>
   );
 }
