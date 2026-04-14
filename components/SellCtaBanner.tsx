@@ -7,17 +7,17 @@ export default function SellCtaBanner() {
   const theme = useTheme();
 
   return (
-    <div className="px-2 sm:px-4 py-4 w-full max-w-[1200px] mx-auto">
-      {/* 🔥 MODERN UI CARD 
-        Instead of a solid wall of color, we use a premium dark card with rounded corners.
+    <div className="w-full">
+      {/* MODERN UI CARD 
+        Instead of a solid wall of color, we use a premium dark card spanning full width.
       */}
-      <section className="relative py-12 md:py-16 overflow-hidden w-full bg-slate-900 rounded-[32px] shadow-2xl">
-        
-        {/* 🔥 THE AMBIENT GLOW: This takes the day's color and turns it into a soft light behind the text */}
+      <section className="relative py-12 md:py-16 overflow-hidden w-full bg-slate-900 shadow-2xl">
+
+        {/* THE AMBIENT GLOW: This takes the day's color and turns it into a soft light behind the text */}
         <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] sm:w-[600px] h-[600px] rounded-full blur-[100px] opacity-40 ${theme.bg} pointer-events-none transition-colors duration-700`} />
 
         <div className="relative z-10 w-full max-w-[900px] mx-auto px-4 flex flex-col items-center text-center">
-          
+
           {/* Top Pill - Glass effect */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/10 text-white text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-6 shadow-sm">
             <span className="relative flex h-2 w-2">
@@ -40,8 +40,8 @@ export default function SellCtaBanner() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-3 sm:gap-4 w-full sm:w-auto justify-center">
-            
-            {/* 🔥 PRIMARY BUTTON: Uses the exact day's color for maximum clickability */}
+
+            {/* PRIMARY BUTTON: Uses the exact day's color for maximum clickability */}
             <Link 
               href="/sell" 
               className={`flex items-center justify-center gap-2 px-8 py-3.5 ${theme.bg} ${theme.text} font-black text-sm md:text-base rounded-xl transition-all shadow-lg hover:scale-105 hover:shadow-xl w-full sm:w-auto`}
@@ -51,7 +51,7 @@ export default function SellCtaBanner() {
               </svg>
               Start Selling Now
             </Link>
-            
+
             {/* Secondary Button - Frosted Glass effect */}
             <a 
               href="https://wa.me/256759997376?text=Hello,%20I%20need%20support%20with%20Kabale%20Online" 
