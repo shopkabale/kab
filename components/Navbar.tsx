@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { useCart } from "@/context/CartContext"; // 🔥 IMPORTED CART BRAIN
+import { useCart } from "@/context/CartContext"; // IMPORTED CART BRAIN
 import SearchBar from "@/components/SearchBar";
 import { 
   FaWhatsapp, 
@@ -17,7 +17,7 @@ import {
 export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const pathname = usePathname();
   const { user, loading, signIn, signOut } = useAuth();
-  const { cartCount } = useCart(); // 🔥 PULLED LIVE CART COUNT
+  const { cartCount } = useCart(); // PULLED LIVE CART COUNT
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Lock body scroll AND broadcast state to hide other UI elements
@@ -71,12 +71,34 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
           <div className="flex items-center space-x-6">
             <Link href="/category/student_item" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/student_item') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Student Market</Link>
 
-            <Link href="/ai" className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors ${isActive('/ai') ? 'text-[#D97706] bg-amber-50' : 'text-slate-700 hover:text-[#D97706] hover:bg-slate-50'}`}>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
-              <span className="text-sm font-bold uppercase tracking-wide">AI Guide</span>
-            </Link>
+            {/* VIEW MORE DROPDOWN REPLACING AI GUIDE */}
+            <div className="relative group">
+              <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors text-slate-700 hover:text-[#D97706] hover:bg-slate-50 cursor-pointer">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" /></svg>
+                <span className="text-sm font-bold uppercase tracking-wide">View More</span>
+                <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+              </button>
 
-            {/* 🔥 NEW: DESKTOP CART ICON */}
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+                <div className="px-5 pb-2 border-b border-slate-100">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Categories</p>
+                  <Link href="/officialStore" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Official Store</Link>
+                  <Link href="/ladies" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Ladies' Picks</Link>
+                  <Link href="/category/electronics" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Electronics</Link>
+                  <Link href="/category/agriculture" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Agriculture</Link>
+                  <Link href="/products" className="block py-1.5 text-[14px] font-bold text-[#D97706] mt-1">View All Products &rarr;</Link>
+                </div>
+                <div className="px-5 pt-3">
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Explore</p>
+                  <Link href="/requests" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Buyer Requests</Link>
+                  <Link href="/ai" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">AI Shopping Guide</Link>
+                  <Link href="/blog" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Journal & Updates</Link>
+                  <Link href="/guide" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Documentation</Link>
+                </div>
+              </div>
+            </div>
+
+            {/* DESKTOP CART ICON */}
             <Link href="/cart" className="relative p-1 text-slate-700 hover:text-[#D97706] transition-colors">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
               {cartCount > 0 && (
@@ -131,8 +153,8 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             </div>
 
             <div className="flex items-center gap-4 text-slate-800">
-              
-              {/* 🔥 NEW: MOBILE CART ICON */}
+
+              {/* MOBILE CART ICON */}
               <Link href="/cart" className="relative p-1 text-slate-700 hover:text-[#D97706] transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                 {cartCount > 0 && (
@@ -212,7 +234,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             )}
 
             <div className="flex flex-col">
-              {/* 🔥 NEW: CART IN MOBILE MENU */}
+              {/* CART IN MOBILE MENU */}
               <Link href="/cart" onClick={closeMenu} className="flex justify-between items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
                 <div className="flex items-center">
                   <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
