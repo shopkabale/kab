@@ -6,11 +6,11 @@ export default function ShopWithConfidenceBanner() {
   const theme = useTheme();
 
   return (
-    <div className="px-2 sm:px-4 py-2 w-full max-w-[1200px] mx-auto">
-      {/* 🔥 MODERN UI CARD: Deep premium background with rounded corners */}
-      <section className="relative py-8 sm:py-10 px-4 overflow-hidden w-full bg-slate-900 rounded-[24px] shadow-xl flex flex-col items-center gap-4">
-        
-        {/* 🔥 AMBIENT GLOW: The color of the day glowing softly from the top */}
+    <div className="w-full">
+      {/* MODERN UI CARD: Deep premium background, full width, sharp corners */}
+      <section className="relative py-8 sm:py-10 px-4 overflow-hidden w-full bg-slate-900 shadow-xl flex flex-col items-center gap-4">
+
+        {/* AMBIENT GLOW: The color of the day glowing softly from the top */}
         <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[80%] sm:w-[400px] h-[300px] rounded-full blur-[80px] opacity-30 ${theme.bg} pointer-events-none transition-colors duration-700 -translate-y-1/2`} />
 
         {/* Themed Security/Trust Icon */}
