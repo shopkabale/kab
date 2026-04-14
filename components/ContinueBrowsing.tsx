@@ -3,14 +3,21 @@
 import { useEffect, useState } from "react";
 import HorizontalScroller from "./HorizontalScroller";
 
-export default function ContinueBrowsing({ fallbackProducts }: { fallbackProducts: any[] }) {
+// 1. Define the interface to include the missing string props
+interface ContinueBrowsingProps {
+  title: string;
+  subtitle: string;
+  fallbackProducts: any[];
+}
+
+export default function ContinueBrowsing({ title, subtitle, fallbackProducts }: ContinueBrowsingProps) {
   const [viewedItems, setViewedItems] = useState<any[]>([]);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const savedJSON = localStorage.getItem("recentlyViewed");
-    
+
     if (savedJSON) {
       try {
         const parsed = JSON.parse(savedJSON);
@@ -33,7 +40,8 @@ export default function ContinueBrowsing({ fallbackProducts }: { fallbackProduct
         <div className="px-4 pt-2 -mb-2 z-10 relative">
           <p className="text-xs text-slate-500 font-bold tracking-wide italic">You haven't viewed anything yet. Check these out!</p>
         </div>
-        <HorizontalScroller title="🔥 Discover Trending" products={fallbackProducts} />
+        {/* 2. Emojis removed for a more serious, professional UI */}
+        <HorizontalScroller title="Discover Trending" products={fallbackProducts} />
       </section>
     );
   }
@@ -42,9 +50,11 @@ export default function ContinueBrowsing({ fallbackProducts }: { fallbackProduct
   return (
     <section className="w-full">
       <div className="px-4 pt-2 -mb-2 z-10 relative">
-        <p className="text-xs text-slate-500 font-bold tracking-wide italic">Pick up where you left off</p>
+        {/* 3. Replaced hardcoded text with the subtitle prop */}
+        <p className="text-xs text-slate-500 font-bold tracking-wide italic">{subtitle}</p>
       </div>
-      <HorizontalScroller title="🔁 Continue Browsing" products={viewedItems} />
+      {/* 4. Replaced hardcoded text with the title prop */}
+      <HorizontalScroller title={title} products={viewedItems} />
     </section>
   );
 }
