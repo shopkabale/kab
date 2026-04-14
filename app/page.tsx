@@ -4,15 +4,15 @@ import ContinueBrowsing from "@/components/ContinueBrowsing";
 import Link from "next/link";
 import { getCachedHomepageData } from "@/lib/firebase/fetchers";
 
-// 🔥 VIP UI COMPONENTS
+// VIP UI COMPONENTS
 import HeroCarousel from "@/components/HeroCarousel";
 import FilterPills from "@/components/FilterPills";
 import WhatsAppPopup from "@/components/WhatsAppPopup";
 import ProductSection from "@/components/ProductSection";
 import AboutKabaleOnline from "@/components/AboutKabaleOnline";
 import ThemedCategoryGrid from "@/components/ThemedCategoryGrid";
-import ShopWithConfidenceBanner from "@/components/ShopWithConfidenceBanner"; // 🔥 NEW
-import SellCtaBanner from "@/components/SellCtaBanner"; // 🔥 NEW
+import ShopWithConfidenceBanner from "@/components/ShopWithConfidenceBanner"; 
+import SellCtaBanner from "@/components/SellCtaBanner"; 
 import { ThemeProvider } from "@/components/ThemeProvider";
 
 // --- SHUFFLE HELPER FUNCTION ---
@@ -29,7 +29,7 @@ export default async function Home() {
   const now = Date.now();
 
   // ==========================================
-  // 🔥 FETCH DATA INSTANTLY FROM CACHE 🔥
+  // FETCH DATA INSTANTLY FROM CACHE
   // ==========================================
   const data = await getCachedHomepageData();
 
@@ -78,45 +78,64 @@ export default async function Home() {
         <div className="w-full mt-2">
 
           <HeroCarousel products={heroProducts} />
-          
           <FilterPills />
-
-          {/* DYNAMIC THEMED CATEGORY GRID */}
           <ThemedCategoryGrid />
-
           <UrgentStories />
 
           <div className="w-full space-y-2 mt-2">
 
-            {/* 🔥 TRENDING NOW (Cleaned up overlapping subtitle) */}
-            {trendingProducts.length > 0 && (
-              <section className="bg-white dark:bg-[#1a1a1a] px-2 sm:px-4 py-2 border-y border-slate-200 dark:border-slate-800">
-                <ProductSection 
-                  title="🔥 Trending Now" 
-                  subtitle="Most viewed items in Kabale right now"
-                  products={trendingProducts.slice(0, 8)} 
+            {/* 1. CONTINUE BROWSING (High Intent) */}
+            <ContinueBrowsing 
+              title="Continue Browsing"
+              subtitle="Pick up exactly where you left off"
+              fallbackProducts={trendingProducts} 
+            />
+
+            {/* 2. BEST DEALS (High Conversion) */}
+            {dealsProducts.length > 0 && (
+              <section className="w-full bg-white dark:bg-[#1a1a1a] border-y border-slate-200 dark:border-slate-800">
+                <HorizontalScroller 
+                  title="Best Deals in Kabale" 
+                  subtitle="Affordable & popular items people love"
+                  products={dealsProducts} 
                 />
               </section>
             )}
 
-            {/* 🔥 DYNAMIC COLOR BANNER */}
+            {/* TRUST BANNER BREAK */}
             <ShopWithConfidenceBanner />
 
-            <ContinueBrowsing 
-  title="🔁 Continue Browsing" 
-  subtitle="Pick up where you left off" 
-  fallbackProducts={trendingProducts} 
-/>
+            {/* 3. VERIFIED & TRUSTED */}
+            {approvedProducts.length > 0 && (
+              <section className="bg-white dark:bg-[#1a1a1a] px-2 sm:px-4 py-2 border-y border-slate-200 dark:border-slate-800">
+                <ProductSection 
+                  title="Verified & Trusted" 
+                  subtitle="Shop safely from top-rated sellers"
+                  products={approvedProducts.slice(0, 8)} 
+                />
+              </section>
+            )}
 
-            {/* ✨ NEW ARRIVALS */}
+            {/* 4. TRENDING FOR HER */}
+            {ladiesProducts.length > 0 && (
+              <section className="w-full">
+                <HorizontalScroller 
+                  title="Trending for Her" 
+                  subtitle="The latest fashion, beauty & accessories"
+                  products={ladiesProducts} 
+                  viewAllLink="/ladies" 
+                />
+              </section>
+            )}
+
+            {/* 5. NEW ARRIVALS */}
             {latestProducts.length > 0 && (
               <section className="bg-white dark:bg-[#1a1a1a] px-2 sm:px-4 py-2 border-y border-slate-200 dark:border-slate-800 mb-2 relative">
                 <ProductSection 
-                  title="✨ New Arrivals" 
-                  subtitle="Fresh drops added to the market"
+                  title="New Arrivals" 
+                  subtitle="Fresh drops just added to the market"
                   products={latestProducts.slice(0, 8)} 
                 />
-                {/* Floating "View All" link positioned perfectly on the right side of the header */}
                 <div className="absolute top-[18px] sm:top-[22px] right-6 sm:right-8 z-10">
                   <Link href="/products" className="text-slate-900 dark:text-white hover:opacity-70 text-[10px] sm:text-xs font-bold uppercase tracking-widest flex items-center gap-1 transition-all outline-none whitespace-nowrap">
                     View All
@@ -126,76 +145,99 @@ export default async function Home() {
               </section>
             )}
 
-            {/* 🛡️ VERIFIED & TRUSTED */}
-            {approvedProducts.length > 0 && (
+            {/* TRENDING NOW */}
+            {trendingProducts.length > 0 && (
               <section className="bg-white dark:bg-[#1a1a1a] px-2 sm:px-4 py-2 border-y border-slate-200 dark:border-slate-800">
                 <ProductSection 
-                  title="🛡️ Verified & Trusted" 
-                  products={approvedProducts.slice(0, 8)} 
+                  title="Trending Now" 
+                  subtitle="Most viewed items right now"
+                  products={trendingProducts.slice(0, 8)} 
                 />
               </section>
             )}
 
-            {/* 💸 BEST DEALS (Cleaned up overlapping subtitle) */}
-            {dealsProducts.length > 0 && (
-              <section className="w-full">
-                <HorizontalScroller 
-                  title="💸 Best Deals in Kabale" 
-                  subtitle="Affordable & popular items people love"
-                  products={dealsProducts} 
-                />
-              </section>
-            )}
-
-            {/* OTHER SCROLLERS */}
-            {ladiesProducts.length > 0 && (
-              <section className="w-full">
-                <HorizontalScroller title="Trending for her" products={ladiesProducts} viewAllLink="/ladies" />
-              </section>
-            )}
-
+            {/* WATCHES */}
             {watchProducts.length > 0 && (
               <section className="w-full">
-                <HorizontalScroller title="Discover your watch style" products={watchProducts} viewAllLink="/officialStore" />
+                <HorizontalScroller 
+                  title="Discover Your Style" 
+                  subtitle="Premium timepieces just for you"
+                  products={watchProducts} 
+                  viewAllLink="/officialStore" 
+                />
               </section>
             )}
 
+            {/* OFFICIAL COLLECTION */}
             {officialProducts.length > 0 && (
               <section className="w-full">
-                <HorizontalScroller title="Official collection" products={officialProducts} viewAllLink="/officialStore" />
+                <HorizontalScroller 
+                  title="Official Collection" 
+                  subtitle="Curated picks from verified official stores"
+                  products={officialProducts} 
+                  viewAllLink="/officialStore" 
+                />
               </section>
             )}
 
+            {/* SPONSORED */}
             {boostedProducts.length > 0 && (
               <section className="w-full">
-                <HorizontalScroller title="Sponsored picks" products={boostedProducts} />
+                <HorizontalScroller 
+                  title="Sponsored Picks" 
+                  subtitle="Promoted products you might like"
+                  products={boostedProducts} 
+                />
               </section>
             )}
 
-            {/* 🔥 DYNAMIC COLOR SELL BANNER */}
+            {/* SELL BANNER BREAK */}
             <SellCtaBanner />
 
+            {/* TECH ESSENTIALS */}
             {electronicsProducts.length > 0 && (
               <section className="w-full">
-                <HorizontalScroller title="Tech essentials" products={electronicsProducts} viewAllLink="/category/electronics" />
+                <HorizontalScroller 
+                  title="Tech Essentials" 
+                  subtitle="Gadgets, phones, and computing"
+                  products={electronicsProducts} 
+                  viewAllLink="/category/electronics" 
+                />
               </section>
             )}
 
+            {/* TOP PICKS */}
             {featuredProducts.length > 0 && (
               <section className="w-full">
-                <HorizontalScroller title="Top picks" products={featuredProducts} />
+                <HorizontalScroller 
+                  title="Top Picks" 
+                  subtitle="Highly recommended for you"
+                  products={featuredProducts} 
+                />
               </section>
             )}
 
+            {/* CAMPUS DEALS */}
             {studentProducts.length > 0 && (
               <section className="w-full">
-                <HorizontalScroller title="Campus deals" products={studentProducts} viewAllLink="/category/student_item" />
+                <HorizontalScroller 
+                  title="Campus Deals" 
+                  subtitle="Student-friendly prices and essentials"
+                  products={studentProducts} 
+                  viewAllLink="/category/student_item" 
+                />
               </section>
             )}
 
+            {/* FRESH MARKET */}
             {agriProducts.length > 0 && (
               <section className="w-full">
-                <HorizontalScroller title="Fresh market" products={agriProducts} viewAllLink="/category/agriculture" />
+                <HorizontalScroller 
+                  title="Fresh Market" 
+                  subtitle="Farm produce & agricultural gear"
+                  products={agriProducts} 
+                  viewAllLink="/category/agriculture" 
+                />
               </section>
             )}
 
