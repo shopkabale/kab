@@ -62,7 +62,7 @@ export default function HorizontalScroller({
   return (
     <div className="w-full overflow-hidden relative select-none">
 
-      {/* FIXED DYNAMIC HEADER: Removed max-w to let it span full width, matched padding with other components */}
+      {/* FIXED DYNAMIC HEADER */}
       <div className={`w-full ${theme.bg} ${theme.border} px-4 md:px-8 py-2 sm:py-3 mb-2 flex justify-between items-center transition-colors duration-500`}>
         <div className="flex flex-col">
           <h2 className={`text-base md:text-lg lg:text-xl font-black ${theme.text} capitalize tracking-tight transition-colors duration-500`}>
@@ -74,6 +74,7 @@ export default function HorizontalScroller({
             </p>
           )}
         </div>
+        {/* Desktop View All Link in Header */}
         {viewAllLink && (
           <Link href={viewAllLink} className={`${theme.highlight} hover:opacity-70 text-[10px] sm:text-xs md:text-sm font-bold uppercase tracking-widest flex items-center gap-1 transition-all outline-none whitespace-nowrap`}>
             View All
@@ -82,12 +83,11 @@ export default function HorizontalScroller({
         )}
       </div>
 
-      {/* SCROLL/GRID CONTAINER: Removed max-w, added responsive padding */}
+      {/* SCROLL/GRID CONTAINER */}
       <div className="w-full px-4 md:px-8">
         <div 
           ref={scrollRef}
           onScroll={handleScroll}
-          // Flex on mobile for scrolling, Grid on desktop (md and up) for full display
           className="flex md:grid gap-3 md:gap-4 lg:gap-5 overflow-x-auto md:overflow-visible snap-x md:snap-none no-scrollbar pb-2 md:pb-0 w-full md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 items-stretch outline-none"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
@@ -103,7 +103,6 @@ export default function HorizontalScroller({
             const displayTitle = (!isSold && isShortTitle) ? `${titleStr} (Ready for delivery)` : titleStr;
 
             return (
-              // Fixed width on mobile, full width of grid cell on desktop
               <div key={p.id} className={`snap-start md:snap-align-none shrink-0 md:shrink w-[150px] sm:w-[190px] md:w-full group flex flex-col bg-white dark:bg-[#151515] rounded-sm overflow-hidden shadow-sm dark:border dark:border-slate-800 transition-all hover:shadow-md relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
                 <Link 
                   href={`/product/${p.publicId || p.id}`} 
@@ -170,9 +169,9 @@ export default function HorizontalScroller({
             );
           })}
 
+          {/* md:hidden added here to hide the extra view all card on desktop layouts */}
           {viewAllLink && (
-            // Flex logic updated here to match product cards
-            <div className="snap-start md:snap-align-none shrink-0 md:shrink w-[150px] sm:w-[190px] md:w-full flex flex-col bg-slate-50 dark:bg-[#111] rounded-sm border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-[#D97706] transition-colors group">
+            <div className="snap-start shrink-0 w-[150px] sm:w-[190px] md:hidden flex flex-col bg-slate-50 dark:bg-[#111] rounded-sm border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-[#D97706] transition-colors group">
               <Link href={viewAllLink} className="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-[#D97706] p-4 min-h-[220px] outline-none">
                 <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform mb-3">
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
@@ -184,7 +183,6 @@ export default function HorizontalScroller({
         </div>
       </div>
 
-      {/* md:hidden added here to remove the scroll progress bar entirely on desktop grids */}
       <div className={`w-full mt-1 md:hidden transition-opacity duration-300 ${isScrolling ? 'opacity-100' : 'opacity-0'}`}>
         <div className="w-full h-1 bg-slate-200 dark:bg-slate-800 relative overflow-hidden">
           {/* DYNAMIC THEMED PROGRESS DASH */}
