@@ -102,8 +102,11 @@ export default async function Home() {
             {/* 🔥 DYNAMIC COLOR BANNER */}
             <ShopWithConfidenceBanner />
 
-            {/* 🔁 CONTINUE BROWSING */}
-            <ContinueBrowsing fallbackProducts={trendingProducts} />
+            <ContinueBrowsing 
+  title="🔁 Continue Browsing" 
+  subtitle="Pick up where you left off" 
+  fallbackProducts={trendingProducts} 
+/>
 
             {/* ✨ NEW ARRIVALS */}
             {latestProducts.length > 0 && (
