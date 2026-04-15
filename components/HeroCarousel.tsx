@@ -10,104 +10,112 @@ import Link from "next/link";
 export default function HeroCarousel({ products }: { products: any[] }) {
   if (!products || products.length === 0) return null;
 
+  // Premium, solid gradients for a highly professional e-commerce feel
+  const slideBackgrounds = [
+    "bg-gradient-to-r from-[#0ea5e9] to-[#38bdf8]", // Sky Blue
+    "bg-gradient-to-r from-[#8b5cf6] to-[#a855f7]", // Royal Purple
+    "bg-gradient-to-r from-[#f97316] to-[#fb923c]", // Brand Orange
+    "bg-gradient-to-r from-[#10b981] to-[#34d399]", // Emerald
+  ];
+
   return (
-    // Completely transparent outer wrapper to let the root CSS gradient show through
-    <div className="w-full bg-transparent mb-4 select-none">
+    <div className="w-full bg-transparent select-none">
       <Swiper
         modules={[Autoplay, Pagination]}
         autoplay={{ delay: 5000, disableOnInteraction: false }}
         pagination={{ 
           clickable: true, 
-          // Customizing pagination to sit inside the banner like major e-commerce sites
-          bulletActiveClass: 'swiper-pagination-bullet-active bg-[#D97706]',
-          bulletClass: 'swiper-pagination-bullet bg-white/50 w-2.5 h-2.5 inline-block rounded-full mx-1 cursor-pointer transition-all'
+          bulletActiveClass: 'swiper-pagination-bullet-active bg-white w-6 rounded-full',
+          bulletClass: 'swiper-pagination-bullet bg-white/50 w-2 h-2 inline-block rounded-full mx-1 cursor-pointer transition-all duration-300'
         }}
         slidesPerView={1}
         spaceBetween={0}
         className="w-full rounded-md shadow-sm overflow-hidden"
       >
-        {products.map((product) => {
-          const title = product.name || product.title || "Special Item";
+        {products.map((product, index) => {
+          const bgClass = slideBackgrounds[index % slideBackgrounds.length];
+          const title = product.name || product.title || "Exclusive Deal";
           const price = Number(product.price).toLocaleString();
+          
+          // Fallbacks for missing data
+          const description = product.description || "Grab this amazing deal before stock runs out. Fast and secure delivery guaranteed.";
           const image = product.images?.[0] ? product.images[0] : "";
+          
+          // Simulated original price for the strikethrough effect
+          const originalPrice = (Number(product.price) * 1.2).toLocaleString();
 
           return (
             <SwiperSlide key={product.id}>
-              <Link href={`/product/${product.publicId || product.id}`} className="block w-full outline-none">
+              <Link href={`/product/${product.publicId || product.id}`} className="block w-full outline-none group">
                 
-                {/* The Billboard Canvas:
-                  Uses a deep premium slate background. 
-                  Heights scale aggressively from mobile up to desktop.
-                */}
-                <div className="relative w-full h-[220px] sm:h-[280px] md:h-[350px] lg:h-[400px] xl:h-[420px] bg-slate-900 group overflow-hidden">
+                {/* Main Banner Canvas */}
+                <div className={`relative w-full h-[220px] sm:h-[280px] md:h-[350px] lg:h-[400px] ${bgClass} overflow-hidden flex`}>
                   
-                  {/* Subtle Background Blur Effect using the product's own image */}
-                  {image && (
-                    <div className="absolute inset-0 z-0">
-                      <Image 
-                        src={image} 
-                        alt="Background blur" 
-                        fill 
-                        className="object-cover opacity-20 blur-2xl scale-110"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/90 to-transparent"></div>
-                    </div>
-                  )}
-
-                  <div className="absolute inset-0 flex items-center z-10 w-full h-full">
+                  {/* LEFT: Content Area */}
+                  <div className="w-[55%] md:w-[50%] h-full flex flex-col justify-center px-4 sm:px-8 md:px-10 relative z-20 text-white">
                     
-                    {/* LEFT COLUMN: Text & Call to Action */}
-                    <div className="w-[55%] md:w-1/2 h-full flex flex-col justify-center px-4 sm:px-8 md:px-12 lg:px-16 relative z-20">
-                      
-                      <span className="inline-block w-max bg-white/10 backdrop-blur-sm text-white text-[9px] sm:text-[10px] md:text-xs font-bold uppercase tracking-widest px-2 sm:px-3 py-1 rounded-sm mb-2 sm:mb-4 border border-white/20">
-                        Top Pick
+                    {/* Hot Deal Badge */}
+                    <div className="mb-2 sm:mb-4">
+                      <span className="bg-white text-slate-900 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest px-2 sm:px-3 py-1 rounded-sm shadow-sm inline-block">
+                        Hot Deal
                       </span>
+                    </div>
 
-                      <h3 className="text-white text-sm sm:text-lg md:text-3xl lg:text-4xl xl:text-5xl font-black leading-tight sm:leading-snug mb-2 sm:mb-4 md:mb-6 line-clamp-2 md:line-clamp-3">
-                        {title}
-                      </h3>
+                    <h3 className="text-lg sm:text-2xl md:text-3xl lg:text-5xl font-black leading-tight mb-2 line-clamp-2 drop-shadow-md">
+                      {title}
+                    </h3>
 
-                      <div className="flex flex-col mb-4 sm:mb-6 md:mb-8">
-                        <span className="text-[9px] sm:text-[10px] md:text-sm text-slate-400 font-bold uppercase tracking-wider mb-0.5">
-                          Now Available
+                    <p className="hidden md:block text-white/90 text-sm mb-4 line-clamp-2 max-w-[90%]">
+                      {description}
+                    </p>
+
+                    <div className="flex flex-col mb-6 md:mb-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-[10px] sm:text-xs text-white/70 line-through font-medium">
+                          UGX {originalPrice}
                         </span>
-                        <div className="text-[#D97706] flex items-start">
-                          <span className="text-[10px] sm:text-xs md:text-sm lg:text-lg font-bold mr-1 mt-0.5 sm:mt-1 md:mt-1.5">
-                            UGX
-                          </span>
-                          <span className="text-xl sm:text-2xl md:text-4xl lg:text-5xl xl:text-6xl font-black leading-none tracking-tight">
-                            {price}
-                          </span>
-                        </div>
                       </div>
-
-                      <button className="bg-[#D97706] text-white w-max px-4 py-2 sm:px-6 sm:py-2.5 md:px-8 md:py-3.5 rounded-sm text-[10px] sm:text-xs md:text-sm font-black uppercase tracking-widest hover:bg-amber-600 transition-colors shadow-lg">
-                        Shop Now
-                      </button>
-
+                      <div className="flex items-baseline gap-1 bg-white text-slate-900 w-max px-3 py-1 md:px-4 md:py-2 rounded-sm shadow-lg">
+                        <span className="text-xs font-bold">UGX</span>
+                        <span className="text-lg sm:text-xl md:text-3xl font-black tracking-tight">{price}</span>
+                      </div>
                     </div>
 
-                    {/* RIGHT COLUMN: The Product Image */}
-                    <div className="w-[45%] md:w-1/2 h-full relative z-10 p-4 sm:p-6 md:p-8 flex items-center justify-center">
-                      {image ? (
-                        <div className="relative w-full h-full max-h-[85%] group-hover:scale-105 transition-transform duration-700 ease-out">
-                          <Image 
-                            src={image} 
-                            alt={title} 
-                            fill 
-                            className="object-contain drop-shadow-2xl"
-                            sizes="(max-width: 768px) 50vw, 50vw"
-                            priority
-                          />
-                        </div>
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-700 font-bold uppercase text-xs">
-                          Image Pending
-                        </div>
-                      )}
+                    {/* Limited Time Offer */}
+                    <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-8 md:left-10 flex flex-col pb-4 md:pb-0">
+                      <span className="text-[9px] sm:text-[10px] md:text-xs font-semibold text-white/90">
+                        Limited time offer
+                      </span>
+                      <span className="text-[8px] sm:text-[9px] text-white/60">
+                        T&Cs Apply
+                      </span>
                     </div>
-
                   </div>
+
+                  {/* RIGHT: Zoomed Image Area */}
+                  <div className="w-[45%] md:w-[50%] h-full relative z-10 flex items-end justify-end">
+                    {image && (
+                      <div className="relative w-full h-[95%] transition-transform duration-700 ease-out group-hover:scale-105 origin-bottom-right">
+                        <Image 
+                          src={image} 
+                          alt={title} 
+                          fill 
+                          className="object-contain object-bottom md:object-right-bottom drop-shadow-2xl pr-2 md:pr-8"
+                          sizes="(max-width: 768px) 50vw, 50vw"
+                          priority
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* SHOP NOW BUTTON */}
+                  <div className="absolute bottom-0 right-0 z-30">
+                     <button className="bg-slate-900 text-white text-[10px] sm:text-xs md:text-sm font-black uppercase tracking-wider px-4 py-3 sm:px-6 sm:py-4 rounded-tl-xl hover:bg-black transition-colors shadow-2xl flex items-center gap-2">
+                       Shop Now
+                       <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+                     </button>
+                  </div>
+
                 </div>
               </Link>
             </SwiperSlide>
@@ -115,16 +123,22 @@ export default function HeroCarousel({ products }: { products: any[] }) {
         })}
       </Swiper>
       
-      {/* Custom CSS injection to override Swiper's default pagination position 
-        so the dots sit nicely inside the bottom of the image banner.
-      */}
       <style jsx global>{`
         .swiper-pagination {
           bottom: 12px !important;
+          left: 50% !important;
+          transform: translateX(-50%);
+          text-align: center;
+          width: 100%;
+          z-index: 25;
         }
         @media (min-width: 768px) {
           .swiper-pagination {
             bottom: 20px !important;
+            text-align: left;
+            padding-left: 2.5rem;
+            left: 0 !important;
+            transform: none;
           }
         }
       `}</style>
