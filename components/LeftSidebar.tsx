@@ -6,7 +6,6 @@ import { useCart } from "@/context/CartContext";
 import { 
   Trash2, 
   ShieldCheck, 
-  Banknote, 
   ChevronRight, 
   ShoppingBag,
   PlusCircle
@@ -57,25 +56,18 @@ export default function LeftSidebar() {
         </nav>
       </div>
 
-      {/* 2. MINI CART CARD */}
-      <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-md shadow-sm overflow-hidden">
-         <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center">
-          <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em]">
-            Shopping Cart
-          </h3>
-          {cart.length > 0 && (
+      {/* 2. MINI CART CARD (Only renders if items are in the cart) */}
+      {cart.length > 0 && (
+        <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-md shadow-sm overflow-hidden transition-all">
+           <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center">
+            <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em]">
+              Shopping Cart
+            </h3>
             <span className="bg-[#D97706] text-white text-[10px] font-black px-2 py-0.5 rounded-sm">
               {cart.length}
             </span>
-          )}
-        </div>
-        <div className="p-4">
-          {cart.length === 0 ? (
-            <div className="text-center py-6 flex flex-col items-center">
-              <ShoppingBag className="w-8 h-8 text-slate-200 dark:text-slate-700 mb-2" />
-              <p className="text-[11px] text-slate-400 font-bold uppercase tracking-tight">Empty</p>
-            </div>
-          ) : (
+          </div>
+          <div className="p-4">
             <div className="flex flex-col">
               <div className="flex flex-col gap-3 max-h-[200px] overflow-y-auto no-scrollbar mb-4">
                 {cart.map((item) => (
@@ -113,9 +105,9 @@ export default function LeftSidebar() {
                 </Link>
               </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* 3. MERCHANT CTA CARD */}
       <Link href="/sell" className="group bg-slate-900 dark:bg-black border border-slate-800 rounded-md shadow-lg overflow-hidden relative p-5 flex flex-col hover:border-[#D97706] transition-all outline-none">
