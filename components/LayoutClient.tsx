@@ -3,17 +3,17 @@
 import { useState, useEffect, Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { AuthProvider } from "@/components/AuthProvider";
-import { CartProvider } from "@/context/CartContext"; // IMPORTED CART PROVIDER
+import { CartProvider } from "@/context/CartContext"; 
 import WebsiteBanner from "@/components/WebsiteBanner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import FloatingHelpButton from "@/components/FloatingHelpButton";
 import BottomNav from "@/components/BottomNav";
 import GlobalLoader from "@/components/GlobalLoader";
-import LeftSidebar from "@/components/LeftSidebar"; // IMPORT NEW SIDEBAR
-import RightSidebar from "@/components/RightSidebar"; // IMPORT NEW SIDEBAR
+import LeftSidebar from "@/components/LeftSidebar"; 
+import RightSidebar from "@/components/RightSidebar"; 
 
-// 1. IMPORT GTM NEXT.JS LIBRARY AND YOUR ID
+// IMPORT GTM NEXT.JS LIBRARY AND YOUR ID
 import { GoogleTagManager } from '@next/third-parties/google';
 import { GTM_ID } from "@/lib/analytics";
 
@@ -24,8 +24,7 @@ export default function LayoutClient({
 }) {
   const pathname = usePathname();
 
-  // Define which routes should get the sidebar layout
-  // Added the homepage ("/") here so it gets the sidebars too
+  // Define which routes should get the 3-column shop layout
   const isShopRoute = 
     pathname === "/" ||
     pathname === "/products" || 
@@ -33,10 +32,10 @@ export default function LayoutClient({
     pathname === "/officialStore" ||
     pathname === "/ladies";
 
-  // 1. Track if the user explicitly clicked the "X" to close it forever
+  // Track if the user explicitly clicked the "X" to close the banner forever
   const [isClosedManually, setIsClosedManually] = useState(false);
 
-  // 2. Track scroll visibility state
+  // Track scroll visibility state for the banner
   const [showBannerOnScroll, setShowBannerOnScroll] = useState(true);
 
   useEffect(() => {
@@ -71,11 +70,11 @@ export default function LayoutClient({
 
   return (
     <>
-      {/* 2. INJECT GTM GLOBALLY ONLY IF ID EXISTS */}
+      {/* INJECT GTM GLOBALLY ONLY IF ID EXISTS */}
       {GTM_ID && <GoogleTagManager gtmId={GTM_ID} />}
 
       <AuthProvider>
-        {/* 3. WRAPPED THE APP IN THE CART PROVIDER */}
+        {/* WRAPPED THE APP IN THE CART PROVIDER */}
         <CartProvider>
           {/* The Suspense boundary fixes the useSearchParams build crash */}
           <Suspense fallback={null}>
@@ -91,20 +90,20 @@ export default function LayoutClient({
           <Navbar bannerVisible={isBannerVisible} />
 
           {/* CONTENT WRAPPER */}
-          <div className="flex-grow pt-[140px] lg:pt-[90px] w-full transition-all flex flex-col min-h-screen">
+          {/* Completely transparent background to let globals.css gradient show through */}
+          <div className="flex-grow pt-[140px] lg:pt-[90px] w-full transition-all flex flex-col min-h-screen bg-transparent dark:bg-transparent">
 
             {isShopRoute ? (
               /* === THE RESPONSIVE SHOP LAYOUT === */
-              // Expanded max-w to 1800px to allow the 15% fluid grid to breathe properly
-              <div className="w-full max-w-[1800px] mx-auto px-4 md:px-6 lg:px-8 pb-10 flex-grow">
-                
+              /* True full-width container with no horizontal padding or max-width constraints */
+              <div className="w-full pb-10 flex-grow">
+
                 {/* Mobile/Tablet/Small PCs: 1 column (flex-col) 
                   Big Screens (xl): Fluid 3-column grid (15% Left | 1fr Center | 15% Right)
                 */}
                 <div className="flex flex-col xl:grid xl:grid-cols-[15%_1fr_15%] gap-6 xl:gap-8">
 
                   {/* LEFT COLUMN (Filters & Categories) */}
-                  {/* Hidden completely until the screen is extra-large */}
                   <aside className="hidden xl:block w-full">
                     {/* sticky top handles the navbar height + padding */}
                     <div className="sticky top-[110px]">
@@ -113,13 +112,12 @@ export default function LayoutClient({
                   </aside>
 
                   {/* CENTER COLUMN (Main Content) */}
-                  {/* min-w-0 prevents child elements like sliders from breaking the grid */}
+                  {/* min-w-0 prevents child elements like sliders from breaking the CSS grid */}
                   <main className="w-full flex flex-col gap-6 min-w-0">
                     {children}
                   </main>
 
                   {/* RIGHT COLUMN (Cart Summary & Ads) */}
-                  {/* Hidden completely until the screen is extra-large */}
                   <aside className="hidden xl:block w-full">
                     <div className="sticky top-[110px]">
                       <RightSidebar />
@@ -130,6 +128,7 @@ export default function LayoutClient({
               </div>
             ) : (
               /* === THE STANDARD FULL-WIDTH LAYOUT === */
+              /* Used for checkout, login, profile, and other non-browsing pages */
               <main className="w-full flex-grow">
                 {children}
               </main>
