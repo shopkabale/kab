@@ -1,11 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useTheme } from "@/components/ThemeProvider";
 
 export default function ThemedCategoryGrid() {
-  const theme = useTheme();
-
   const categories = [
     { name: "Verified Premium", href: "/officialStore", image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500&q=80" },
     { name: "Her Glow Up", href: "/ladies", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500&q=80" },
@@ -16,28 +13,22 @@ export default function ThemedCategoryGrid() {
   ];
 
   return (
-    // DYNAMIC THEMED BACKGROUND & BORDER
-    // Increased horizontal padding on medium/large screens (md:px-8) for better edge spacing
-    <section className={`${theme.bg} ${theme.border} border-y py-4 px-3 sm:px-4 md:px-8 mb-2 transition-colors duration-500`}>
-      <div className="w-full text-center py-2 mb-2">
-        <h2 className={`text-base md:text-xl font-black ${theme.text} capitalize tracking-tight transition-colors duration-500`}>
-          Browse Our Top Collections
-        </h2>
-      </div>
-
-      {/* Grid updated: Removed max-width to allow full horizontal stretch, increased gaps for larger screens */}
-      <div className="grid grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-5 md:gap-8 w-full mt-2">
+    // Clean white container, subtle shadow, no heavy theme colors
+    <section className="bg-white dark:bg-[#151515] rounded-md shadow-sm border border-slate-200 dark:border-slate-800 p-4 mb-2">
+      
+      <div className="grid grid-cols-3 lg:grid-cols-6 gap-4 w-full">
         {categories.map((cat) => (
-          <Link key={cat.name} href={cat.href} className="group flex flex-col outline-none">
-            <div className="w-full aspect-square bg-white dark:bg-slate-800 rounded-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-2 relative shadow-sm group-hover:shadow-md transition-all duration-300">
+          <Link key={cat.name} href={cat.href} className="group flex flex-col items-center outline-none">
+            {/* Circular or soft-rounded images are better for categories than sharp squares */}
+            <div className="w-[70px] h-[70px] md:w-[90px] md:h-[90px] bg-slate-50 dark:bg-slate-800 rounded-full overflow-hidden mb-3 relative shadow-sm group-hover:shadow-md transition-all duration-300 border border-slate-100 dark:border-slate-700">
               <img 
                 src={cat.image} 
                 alt={cat.name}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
               />
             </div>
-            {/* Base text uses the theme text, hovers to your brand orange */}
-            <span className={`text-[10px] sm:text-xs md:text-sm lg:text-base font-bold ${theme.text} group-hover:text-[#D97706] transition-colors leading-snug text-center`}>
+            
+            <span className="text-[11px] sm:text-xs md:text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-[#D97706] transition-colors text-center leading-tight">
               {cat.name}
             </span>
           </Link>
