@@ -5,15 +5,18 @@
 @tailwind utilities;
 
 body {
-  @apply text-slate-900;
-  /* Fades from a solid "real blue" to white over the top 600px, then stays white */
-  background: linear-gradient(to bottom, #3b82f6 0%, #ffffff 600px);
-  background-repeat: no-repeat;
-  background-attachment: fixed;
+  @apply text-slate-900 bg-white; /* Default solid background for normal mobile view */
   min-height: 100vh;
 }
 
-
+/* Apply the blue gradient ONLY on tablets, laptops, desktops, and desktop-mode phones */
+@media (min-width: 768px) {
+  body {
+    background: linear-gradient(to bottom, #3b82f6 0%, #ffffff 600px);
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+}
 
 /* --- KABALE ONLINE BLOG STYLES (Namespaced) --- */
 
