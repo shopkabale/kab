@@ -50,8 +50,8 @@ export default function HeroCarousel({ products }: { products: any[] }) {
                 {/* Fixed Heights for all screens */}
                 <div className={`relative w-full h-[220px] sm:h-[280px] md:h-[350px] lg:h-[400px] xl:h-[420px] ${theme.bg} overflow-hidden flex`}>
                   
-                  {/* LEFT CONTENT: Text & Info */}
-                  <div className="w-[60%] md:w-[50%] h-full flex flex-col justify-center px-4 sm:px-8 md:px-12 relative z-20 text-white">
+                  {/* LEFT CONTENT: Strictly contained to 50% (55% on mobile) */}
+                  <div className="w-[55%] md:w-[50%] h-full flex flex-col justify-center pl-4 sm:pl-8 md:pl-12 pr-2 sm:pr-6 relative z-20 text-white shrink-0">
                     
                     {/* Hot Deal Label */}
                     <div className="mb-2 sm:mb-3 transform transition-transform duration-500 group-hover:translate-x-1">
@@ -66,7 +66,7 @@ export default function HeroCarousel({ products }: { products: any[] }) {
                     </h3>
 
                     {/* Description - Strictly One Line */}
-                    <p className="text-white/70 text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-6 line-clamp-1 max-w-[90%] font-medium tracking-wide">
+                    <p className="text-white/70 text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-6 line-clamp-1 max-w-full font-medium tracking-wide">
                       {description}
                     </p>
 
@@ -81,21 +81,21 @@ export default function HeroCarousel({ products }: { products: any[] }) {
                     </div>
                   </div>
 
-                  {/* RIGHT IMAGE: Mapped to exact edges with Zoom logic */}
-                  <div className="absolute inset-0 w-full h-full z-0 overflow-hidden flex justify-end">
+                  {/* RIGHT IMAGE: Strictly contained to the remaining 50% (45% on mobile) */}
+                  <div className="w-[45%] md:w-[50%] h-full relative z-10 overflow-hidden shrink-0">
                     
-                    {/* Seamless Gradient Blend */}
-                    <div className={`absolute inset-0 bg-gradient-to-r ${theme.fade} via-${theme.bg}/80 md:via-${theme.bg}/40 to-transparent z-10 w-[70%]`} />
+                    {/* Seamless Gradient Blend on the seam where the image meets the text */}
+                    <div className={`absolute inset-y-0 left-0 bg-gradient-to-r ${theme.fade} to-transparent z-10 w-[30%] md:w-[25%]`} />
                     
-                    <div className="relative w-[60%] md:w-[65%] h-full transition-transform duration-[1500ms] ease-out group-hover:scale-110 group-hover:rotate-1 origin-center">
+                    <div className="relative w-full h-full transition-transform duration-[1500ms] ease-out group-hover:scale-105 group-hover:rotate-1 origin-center">
                       {image && (
                         <Image 
                           src={image} 
                           alt={title} 
                           fill 
-                          // object-cover forces the image to fill its bounding box edge-to-edge
+                          // object-cover forces the image to perfectly fill this strict 50% block, zooming as needed
                           className="object-cover object-center"
-                          sizes="(max-width: 768px) 60vw, 65vw"
+                          sizes="(max-width: 768px) 45vw, 50vw"
                           priority
                         />
                       )}
