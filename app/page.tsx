@@ -72,167 +72,159 @@ export default async function Home() {
   // ==========================================
   return (
     <ThemeProvider>
-      {/* ROOT CONTAINER: Fully transparent so the globals.css gradient shines through */}
+      {/* ROOT CONTAINER */}
       <div className="min-h-screen bg-transparent pb-10 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
 
         <WhatsAppPopup />
 
-        {/* MAIN LAYOUT WRAPPER: Limits ultra-wide screens to a readable width */}
+        {/* MAIN LAYOUT WRAPPER */}
         <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
 
-          {/* TOP SECTION: Jumia-style Split Grid for Desktop */}
-          <div className="flex flex-col md:flex-row gap-4 mb-2 w-full">
+          {/* MASTER SPLIT GRID: This single flexbox now holds the ENTIRE PAGE layout */}
+          <div className="flex flex-col md:flex-row gap-4 w-full">
 
-            {/* LEFT SIDEBAR AREA */}
-            {/* Transparent wrapper; the LeftSidebar handles its own white cards */}
+            {/* ========================================== */}
+            {/* COLUMN 1: LEFT SIDEBAR (Sticky)            */}
+            {/* ========================================== */}
             <div className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky top-[110px] h-max z-10">
               <LeftSidebar />
             </div>
 
-            {/* CENTER CONTENT: Hero Banner, Pills, and Categories */}
+            {/* ========================================== */}
+            {/* COLUMN 2: EVERYTHING ELSE (Hero + Feed)    */}
+            {/* ========================================== */}
             <div className="flex-grow min-w-0 flex flex-col w-full">
+              
+              {/* TOP UI PIECES */}
               <HeroCarousel products={heroProducts} />
               <FilterPills />
               <ThemedCategoryGrid />
               <UrgentStories />
+
+              {/* MAIN FEED SECTION - Now safely inside the right column! */}
+              <div className="w-full flex flex-col gap-2 sm:gap-4 mt-2">
+
+                <ContinueBrowsing 
+                  title="Continue Browsing"
+                  subtitle="Pick up exactly where you left off"
+                  fallbackProducts={trendingProducts} 
+                />
+
+                {dealsProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Best Deals in Kabale" 
+                    subtitle="Affordable & popular items people love"
+                    products={dealsProducts} 
+                  />
+                )}
+
+                <ShopWithConfidenceBanner />
+
+                {approvedProducts.length > 0 && (
+                  <ProductSection 
+                    title="Verified & Trusted" 
+                    subtitle="Shop safely from top-rated sellers"
+                    products={approvedProducts.slice(0, 8)} 
+                  />
+                )}
+
+                {ladiesProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Trending for Her" 
+                    subtitle="The latest fashion, beauty & accessories"
+                    products={ladiesProducts} 
+                    viewAllLink="/ladies" 
+                  />
+                )}
+
+                {latestProducts.length > 0 && (
+                  <ProductSection 
+                    title="New Arrivals" 
+                    subtitle="Fresh drops just added to the market"
+                    products={latestProducts.slice(0, 8)} 
+                  />
+                )}
+
+                {trendingProducts.length > 0 && (
+                  <ProductSection 
+                    title="Trending Now" 
+                    subtitle="Most viewed items right now"
+                    products={trendingProducts.slice(0, 8)} 
+                  />
+                )}
+
+                {watchProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Discover Your Style" 
+                    subtitle="Premium timepieces just for you"
+                    products={watchProducts} 
+                    viewAllLink="/officialStore" 
+                  />
+                )}
+
+                {officialProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Official Collection" 
+                    subtitle="Curated picks from verified official stores"
+                    products={officialProducts} 
+                    viewAllLink="/officialStore" 
+                  />
+                )}
+
+                {boostedProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Sponsored Picks" 
+                    subtitle="Promoted products you might like"
+                    products={boostedProducts} 
+                  />
+                )}
+
+                <SellCtaBanner />
+
+                {electronicsProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Tech Essentials" 
+                    subtitle="Gadgets, phones, and computing"
+                    products={electronicsProducts} 
+                    viewAllLink="/category/electronics" 
+                  />
+                )}
+
+                {featuredProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Top Picks" 
+                    subtitle="Highly recommended for you"
+                    products={featuredProducts} 
+                  />
+                )}
+
+                {studentProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Campus Deals" 
+                    subtitle="Student-friendly prices and essentials"
+                    products={studentProducts} 
+                    viewAllLink="/category/student_item" 
+                  />
+                )}
+
+                {agriProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Fresh Market" 
+                    subtitle="Farm produce & agricultural gear"
+                    products={agriProducts} 
+                    viewAllLink="/category/agriculture" 
+                  />
+                )}
+
+                <AboutKabaleOnline />
+
+              </div>
             </div>
+            {/* END COLUMN 2 */}
 
           </div>
+          {/* END MASTER SPLIT GRID */}
 
-          {/* MAIN FEED SECTION: All wrappers removed. Components sit directly on the gradient as "White Islands". */}
-          <div className="w-full flex flex-col gap-2 sm:gap-4 mt-2">
-
-            {/* 1. CONTINUE BROWSING */}
-            <ContinueBrowsing 
-              title="Continue Browsing"
-              subtitle="Pick up exactly where you left off"
-              fallbackProducts={trendingProducts} 
-            />
-
-            {/* 2. BEST DEALS */}
-            {dealsProducts.length > 0 && (
-              <HorizontalScroller 
-                title="Best Deals in Kabale" 
-                subtitle="Affordable & popular items people love"
-                products={dealsProducts} 
-              />
-            )}
-
-            {/* TRUST BANNER BREAK */}
-            <ShopWithConfidenceBanner />
-
-            {/* 3. VERIFIED & TRUSTED */}
-            {approvedProducts.length > 0 && (
-              <ProductSection 
-                title="Verified & Trusted" 
-                subtitle="Shop safely from top-rated sellers"
-                products={approvedProducts.slice(0, 8)} 
-              />
-            )}
-
-            {/* 4. TRENDING FOR HER */}
-            {ladiesProducts.length > 0 && (
-              <HorizontalScroller 
-                title="Trending for Her" 
-                subtitle="The latest fashion, beauty & accessories"
-                products={ladiesProducts} 
-                viewAllLink="/ladies" 
-              />
-            )}
-
-            {/* 5. NEW ARRIVALS */}
-            {latestProducts.length > 0 && (
-              <ProductSection 
-                title="New Arrivals" 
-                subtitle="Fresh drops just added to the market"
-                products={latestProducts.slice(0, 8)} 
-              />
-            )}
-
-            {/* TRENDING NOW */}
-            {trendingProducts.length > 0 && (
-              <ProductSection 
-                title="Trending Now" 
-                subtitle="Most viewed items right now"
-                products={trendingProducts.slice(0, 8)} 
-              />
-            )}
-
-            {/* WATCHES */}
-            {watchProducts.length > 0 && (
-              <HorizontalScroller 
-                title="Discover Your Style" 
-                subtitle="Premium timepieces just for you"
-                products={watchProducts} 
-                viewAllLink="/officialStore" 
-              />
-            )}
-
-            {/* OFFICIAL COLLECTION */}
-            {officialProducts.length > 0 && (
-              <HorizontalScroller 
-                title="Official Collection" 
-                subtitle="Curated picks from verified official stores"
-                products={officialProducts} 
-                viewAllLink="/officialStore" 
-              />
-            )}
-
-            {/* SPONSORED */}
-            {boostedProducts.length > 0 && (
-              <HorizontalScroller 
-                title="Sponsored Picks" 
-                subtitle="Promoted products you might like"
-                products={boostedProducts} 
-              />
-            )}
-
-            {/* SELL BANNER BREAK */}
-            <SellCtaBanner />
-
-            {/* TECH ESSENTIALS */}
-            {electronicsProducts.length > 0 && (
-              <HorizontalScroller 
-                title="Tech Essentials" 
-                subtitle="Gadgets, phones, and computing"
-                products={electronicsProducts} 
-                viewAllLink="/category/electronics" 
-              />
-            )}
-
-            {/* TOP PICKS */}
-            {featuredProducts.length > 0 && (
-              <HorizontalScroller 
-                title="Top Picks" 
-                subtitle="Highly recommended for you"
-                products={featuredProducts} 
-              />
-            )}
-
-            {/* CAMPUS DEALS */}
-            {studentProducts.length > 0 && (
-              <HorizontalScroller 
-                title="Campus Deals" 
-                subtitle="Student-friendly prices and essentials"
-                products={studentProducts} 
-                viewAllLink="/category/student_item" 
-              />
-            )}
-
-            {/* FRESH MARKET */}
-            {agriProducts.length > 0 && (
-              <HorizontalScroller 
-                title="Fresh Market" 
-                subtitle="Farm produce & agricultural gear"
-                products={agriProducts} 
-                viewAllLink="/category/agriculture" 
-              />
-            )}
-
-            {/* JUMIA-STYLE SEO & ABOUT SECTION */}
-            <AboutKabaleOnline />
-
-          </div>
         </div>
       </div>
     </ThemeProvider>
