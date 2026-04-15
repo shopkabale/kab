@@ -14,7 +14,7 @@ import ThemedCategoryGrid from "@/components/ThemedCategoryGrid";
 import ShopWithConfidenceBanner from "@/components/ShopWithConfidenceBanner"; 
 import SellCtaBanner from "@/components/SellCtaBanner"; 
 import { ThemeProvider } from "@/components/ThemeProvider";
-import LeftSidebar from "@/components/LeftSidebar"; // IMPORTED SIDEBAR
+import LeftSidebar from "@/components/LeftSidebar"; 
 
 // --- SHUFFLE HELPER FUNCTION ---
 const shuffleArray = (array: any[]) => {
@@ -82,12 +82,11 @@ export default async function Home() {
 
           {/* TOP SECTION: Jumia-style Split Grid for Desktop */}
           <div className="flex flex-col md:flex-row gap-4 mb-2 w-full">
-            
-            {/* LEFT SIDEBAR: Hidden on mobile, fixed width on desktop */}
-            <div className="hidden md:block w-[220px] lg:w-[240px] shrink-0">
-              <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-md shadow-sm h-full overflow-hidden sticky top-[110px]">
-                <LeftSidebar />
-              </div>
+
+            {/* LEFT SIDEBAR AREA */}
+            {/* Transparent wrapper; the LeftSidebar handles its own white cards */}
+            <div className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky top-[110px] h-max z-10">
+              <LeftSidebar />
             </div>
 
             {/* CENTER CONTENT: Hero Banner, Pills, and Categories */}
@@ -100,7 +99,7 @@ export default async function Home() {
 
           </div>
 
-          {/* MAIN FEED SECTION: All wrapper backgrounds removed. Components sit directly on the gradient. */}
+          {/* MAIN FEED SECTION: All wrappers removed. Components sit directly on the gradient as "White Islands". */}
           <div className="w-full flex flex-col gap-2 sm:gap-4 mt-2">
 
             {/* 1. CONTINUE BROWSING */}
