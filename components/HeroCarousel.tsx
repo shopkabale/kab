@@ -1,10 +1,9 @@
 "use client";
 
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay, Pagination, EffectFade } from "swiper/modules";
+import { Autoplay, Pagination } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
-import "swiper/css/effect-fade";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -22,9 +21,8 @@ export default function HeroCarousel({ products }: { products: any[] }) {
   return (
     <div className="w-full bg-transparent mb-4 select-none">
       <Swiper
-        modules={[Autoplay, Pagination, EffectFade]}
-        effect="fade"
-        fadeEffect={{ crossFade: true }}
+        modules={[Autoplay, Pagination]}
+        speed={800}
         autoplay={{ delay: 5000, disableOnInteraction: false }}
         loop={products.length > 1}
         pagination={{ 
@@ -46,13 +44,13 @@ export default function HeroCarousel({ products }: { products: any[] }) {
           return (
             <SwiperSlide key={product.id}>
               <Link href={`/product/${product.publicId || product.id}`} className="block w-full outline-none group">
-                
+
                 {/* Fixed Heights for all screens */}
                 <div className={`relative w-full h-[220px] sm:h-[280px] md:h-[350px] lg:h-[400px] xl:h-[420px] ${theme.bg} overflow-hidden flex`}>
-                  
+
                   {/* LEFT CONTENT: Strictly contained to 50% (55% on mobile) */}
                   <div className="w-[55%] md:w-[50%] h-full flex flex-col justify-center pl-4 sm:pl-8 md:pl-12 pr-2 sm:pr-6 relative z-20 text-white shrink-0">
-                    
+
                     {/* Hot Deal Label */}
                     <div className="mb-2 sm:mb-3 transform transition-transform duration-500 group-hover:translate-x-1">
                       <span className="bg-[#D97706] text-white text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest px-2 sm:px-3 py-1 rounded-sm shadow-md inline-block">
@@ -89,7 +87,6 @@ export default function HeroCarousel({ products }: { products: any[] }) {
                           src={image} 
                           alt={title} 
                           fill 
-                          // object-cover forces the image to perfectly fill this strict block
                           className="object-cover object-center"
                           sizes="(max-width: 768px) 45vw, 50vw"
                           priority
@@ -112,7 +109,7 @@ export default function HeroCarousel({ products }: { products: any[] }) {
           );
         })}
       </Swiper>
-      
+
       <style jsx global>{`
         .swiper-pagination {
           bottom: 12px !important;
