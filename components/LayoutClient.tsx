@@ -25,7 +25,9 @@ export default function LayoutClient({
   const pathname = usePathname();
 
   // Define which routes should get the sidebar layout
+  // Added the homepage ("/") here so it gets the sidebars too
   const isShopRoute = 
+    pathname === "/" ||
     pathname === "/products" || 
     pathname?.startsWith("/category") || 
     pathname === "/officialStore" ||
@@ -90,14 +92,20 @@ export default function LayoutClient({
 
           {/* CONTENT WRAPPER */}
           <div className="flex-grow pt-[140px] lg:pt-[90px] w-full transition-all flex flex-col min-h-screen">
-            
+
             {isShopRoute ? (
               /* === THE RESPONSIVE SHOP LAYOUT === */
-              <div className="w-full max-w-[1600px] mx-auto px-4 md:px-6 lg:px-8 pb-10 flex-grow">
-                <div className="flex flex-col lg:grid lg:grid-cols-[220px_1fr] xl:grid-cols-[240px_1fr_240px] gap-6 xl:gap-8">
-                  
+              // Expanded max-w to 1800px to allow the 15% fluid grid to breathe properly
+              <div className="w-full max-w-[1800px] mx-auto px-4 md:px-6 lg:px-8 pb-10 flex-grow">
+                
+                {/* Mobile/Tablet/Small PCs: 1 column (flex-col) 
+                  Big Screens (xl): Fluid 3-column grid (15% Left | 1fr Center | 15% Right)
+                */}
+                <div className="flex flex-col xl:grid xl:grid-cols-[15%_1fr_15%] gap-6 xl:gap-8">
+
                   {/* LEFT COLUMN (Filters & Categories) */}
-                  <aside className="hidden lg:block w-full">
+                  {/* Hidden completely until the screen is extra-large */}
+                  <aside className="hidden xl:block w-full">
                     {/* sticky top handles the navbar height + padding */}
                     <div className="sticky top-[110px]">
                       <LeftSidebar />
@@ -105,11 +113,13 @@ export default function LayoutClient({
                   </aside>
 
                   {/* CENTER COLUMN (Main Content) */}
+                  {/* min-w-0 prevents child elements like sliders from breaking the grid */}
                   <main className="w-full flex flex-col gap-6 min-w-0">
                     {children}
                   </main>
 
                   {/* RIGHT COLUMN (Cart Summary & Ads) */}
+                  {/* Hidden completely until the screen is extra-large */}
                   <aside className="hidden xl:block w-full">
                     <div className="sticky top-[110px]">
                       <RightSidebar />
