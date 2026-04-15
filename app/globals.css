@@ -5,8 +5,14 @@
 @tailwind utilities;
 
 body {
-  @apply bg-background text-slate-900;
+  @apply text-slate-900;
+  /* Fades from a light blue to white over the top 600px, then stays white */
+  background: linear-gradient(to bottom, #eff6ff 0%, #ffffff 600px);
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  min-height: 100vh;
 }
+
 
 /* --- KABALE ONLINE BLOG STYLES (Namespaced) --- */
 
