@@ -2,13 +2,12 @@ import type { Metadata } from "next";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import OfficialProductFeed from "@/components/OfficialProductFeed";
-import LeftSidebar from "@/components/LeftSidebar"; // IMPORTED SIDEBAR
+import LeftSidebar from "@/components/LeftSidebar";
 
-// Forces the page to always fetch the freshest inventory
 export const dynamic = "force-dynamic";
 
 // ==========================================
-// SEO & OPEN GRAPH METADATA (Emojis Removed)
+// SEO & OPEN GRAPH METADATA
 // ==========================================
 export const metadata: Metadata = {
   title: "Official Store | Kabale Online",
@@ -47,7 +46,6 @@ export const metadata: Metadata = {
 const PAGE_SIZE = 20;
 
 export default async function OfficialStorePage() {
-  // 1. PROFESSIONAL QUERY: Only fetch 20, properly sorted.
   const officialQ = query(
     collection(db, "products"), 
     where("isAdminUpload", "==", true),
@@ -57,22 +55,18 @@ export default async function OfficialStorePage() {
 
   const officialSnap = await getDocs(officialQ);
 
-  // 2. SAFE SERIALIZATION: Clean data so Next.js doesn't crash on Server-to-Client pass
   const initialProducts = officialSnap.docs.map(doc => {
     const data = doc.data();
     return {
       id: doc.id,
       ...data,
-      // Force any timestamps into safe numbers, fallback to 0 if missing
       createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (new Date(data.createdAt || 0).getTime()),
       updatedAt: data.updatedAt?.toMillis ? data.updatedAt.toMillis() : (new Date(data.updatedAt || 0).getTime()),
     };
   });
 
   return (
-    // ROOT CONTAINER: Fully transparent
     <div className="min-h-screen bg-transparent pb-12 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
-
       <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
         
         {/* DESKTOP SPLIT GRID */}
@@ -87,8 +81,7 @@ export default async function OfficialStorePage() {
           <div className="flex-grow min-w-0 flex flex-col w-full gap-4">
             
             {/* PREMIUM STORE BANNER */}
-            <div className="bg-slate-900 dark:bg-black rounded-none md:rounded-md p-6 sm:p-8 md:p-10 relative overflow-hidden flex flex-col justify-center shadow-sm border-b-4 md:border-b md:border-t-4 border-[#D97706]">
-              {/* Subtle accent glow */}
+            <div className="bg-slate-900 dark:bg-black rounded-none md:rounded-md p-6 sm:p-8 md:p-10 relative overflow-hidden flex flex-col justify-center shadow-sm border-b-4 md:border-b border-[#D97706] select-none">
               <div className="absolute top-0 right-0 w-64 h-64 bg-[#D97706]/10 rounded-full blur-3xl pointer-events-none" />
               
               <div className="relative z-10">
@@ -105,12 +98,12 @@ export default async function OfficialStorePage() {
             </div>
 
             {/* PRODUCT GRID FEED */}
-            <div className="w-full mt-2">
+            {/* Wrapper is totally transparent. The component itself forms the White Island. */}
+            <div className="w-full">
               <OfficialProductFeed initialProducts={initialProducts} />
             </div>
 
           </div>
-
         </div>
       </div>
     </div>
