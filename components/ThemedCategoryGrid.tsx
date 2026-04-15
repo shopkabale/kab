@@ -13,22 +13,27 @@ export default function ThemedCategoryGrid() {
   ];
 
   return (
-    // Clean white container, subtle shadow, no heavy theme colors
-    <section className="bg-white dark:bg-[#151515] rounded-md shadow-sm border border-slate-200 dark:border-slate-800 p-4 mb-2">
+    // Clean "White Island" container
+    <section className="bg-white dark:bg-[#151515] rounded-md shadow-sm border border-slate-200 dark:border-slate-800 p-3 sm:p-4 mb-4 select-none">
       
-      <div className="grid grid-cols-3 lg:grid-cols-6 gap-4 w-full">
+      {/* Mobile: 3 columns (creates 2 rows for 6 items). 
+        Desktop (md and up): 6 columns (forces all 6 items into 1 single line).
+      */}
+      <div className="grid grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4 w-full">
         {categories.map((cat) => (
           <Link key={cat.name} href={cat.href} className="group flex flex-col items-center outline-none">
-            {/* Circular or soft-rounded images are better for categories than sharp squares */}
-            <div className="w-[70px] h-[70px] md:w-[90px] md:h-[90px] bg-slate-50 dark:bg-slate-800 rounded-full overflow-hidden mb-3 relative shadow-sm group-hover:shadow-md transition-all duration-300 border border-slate-100 dark:border-slate-700">
+            
+            {/* Rectangular Image Container */}
+            {/* aspect-[4/3] ensures a perfect horizontal rectangle shape regardless of screen size */}
+            <div className="w-full aspect-[4/3] bg-slate-50 dark:bg-slate-800 rounded-md overflow-hidden mb-2 sm:mb-3 relative shadow-sm group-hover:shadow-md transition-all duration-300 border border-slate-100 dark:border-slate-700">
               <img 
                 src={cat.image} 
                 alt={cat.name}
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
             </div>
             
-            <span className="text-[11px] sm:text-xs md:text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-[#D97706] transition-colors text-center leading-tight">
+            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-[#D97706] transition-colors text-center leading-tight px-1">
               {cat.name}
             </span>
           </Link>
