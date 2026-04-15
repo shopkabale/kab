@@ -11,12 +11,12 @@ import Link from "next/link";
 export default function HeroCarousel({ products }: { products: any[] }) {
   if (!products || products.length === 0) return null;
 
-  // Premium themes with pre-defined Tailwind classes to ensure the gradient compiler works perfectly
+  // Premium themes with pre-defined Tailwind classes
   const slideThemes = [
-    { bg: "bg-slate-900", fade: "from-slate-900" },
-    { bg: "bg-indigo-950", fade: "from-indigo-950" },
-    { bg: "bg-zinc-900", fade: "from-zinc-900" },
-    { bg: "bg-stone-950", fade: "from-stone-950" },
+    { bg: "bg-slate-900" },
+    { bg: "bg-indigo-950" },
+    { bg: "bg-zinc-900" },
+    { bg: "bg-stone-950" },
   ];
 
   return (
@@ -81,19 +81,15 @@ export default function HeroCarousel({ products }: { products: any[] }) {
                     </div>
                   </div>
 
-                  {/* RIGHT IMAGE: Strictly contained to the remaining 50% (45% on mobile) */}
-                  <div className="w-[45%] md:w-[50%] h-full relative z-10 overflow-hidden shrink-0">
-                    
-                    {/* Seamless Gradient Blend on the seam where the image meets the text */}
-                    <div className={`absolute inset-y-0 left-0 bg-gradient-to-r ${theme.fade} to-transparent z-10 w-[30%] md:w-[25%]`} />
-                    
-                    <div className="relative w-full h-full transition-transform duration-[1500ms] ease-out group-hover:scale-105 group-hover:rotate-1 origin-center">
+                  {/* RIGHT IMAGE: Strictly contained to the remaining 50% (45% on mobile) with no overlaps */}
+                  <div className="w-[45%] md:w-[50%] h-full relative z-10 overflow-hidden shrink-0 bg-white">
+                    <div className="relative w-full h-full transition-transform duration-[1500ms] ease-out group-hover:scale-105 group-hover:rotate-1 origin-center bg-white">
                       {image && (
                         <Image 
                           src={image} 
                           alt={title} 
                           fill 
-                          // object-cover forces the image to perfectly fill this strict 50% block, zooming as needed
+                          // object-cover forces the image to perfectly fill this strict block
                           className="object-cover object-center"
                           sizes="(max-width: 768px) 45vw, 50vw"
                           priority
@@ -104,7 +100,7 @@ export default function HeroCarousel({ products }: { products: any[] }) {
 
                   {/* SHOP NOW BUTTON - Tucked into bottom right */}
                   <div className="absolute bottom-0 right-0 z-30">
-                     <button className="bg-white text-slate-900 text-[10px] sm:text-xs md:text-sm font-black uppercase tracking-widest px-5 py-3 sm:px-8 sm:py-5 rounded-tl-2xl hover:bg-[#D97706] hover:text-white transition-all duration-300 shadow-2xl flex items-center gap-2 group-hover:pr-6 sm:group-hover:pr-10">
+                     <button className="bg-slate-900 text-white text-[10px] sm:text-xs md:text-sm font-black uppercase tracking-widest px-5 py-3 sm:px-8 sm:py-5 rounded-tl-2xl hover:bg-[#D97706] transition-all duration-300 shadow-2xl flex items-center gap-2 group-hover:pr-6 sm:group-hover:pr-10">
                        Shop Now
                        <svg className="w-3 h-3 md:w-4 md:h-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
                      </button>
