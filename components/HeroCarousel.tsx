@@ -1,118 +1,112 @@
 "use client";
 
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay, Pagination } from "swiper/modules";
+import { Autoplay, Pagination, EffectFade } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/pagination";
+import "swiper/css/effect-fade";
 import Image from "next/image";
 import Link from "next/link";
 
 export default function HeroCarousel({ products }: { products: any[] }) {
   if (!products || products.length === 0) return null;
 
-  // Premium, solid gradients for a highly professional e-commerce feel
-  const slideBackgrounds = [
-    "bg-gradient-to-r from-[#0ea5e9] to-[#38bdf8]", // Sky Blue
-    "bg-gradient-to-r from-[#8b5cf6] to-[#a855f7]", // Royal Purple
-    "bg-gradient-to-r from-[#f97316] to-[#fb923c]", // Brand Orange
-    "bg-gradient-to-r from-[#10b981] to-[#34d399]", // Emerald
+  // Premium themes with pre-defined Tailwind classes to ensure the gradient compiler works perfectly
+  const slideThemes = [
+    { bg: "bg-slate-900", fade: "from-slate-900" },
+    { bg: "bg-indigo-950", fade: "from-indigo-950" },
+    { bg: "bg-zinc-900", fade: "from-zinc-900" },
+    { bg: "bg-stone-950", fade: "from-stone-950" },
   ];
 
   return (
-    <div className="w-full bg-transparent select-none">
+    <div className="w-full bg-transparent mb-4 select-none">
       <Swiper
-        modules={[Autoplay, Pagination]}
+        modules={[Autoplay, Pagination, EffectFade]}
+        effect="fade"
+        fadeEffect={{ crossFade: true }}
         autoplay={{ delay: 5000, disableOnInteraction: false }}
+        loop={products.length > 1}
         pagination={{ 
           clickable: true, 
-          bulletActiveClass: 'swiper-pagination-bullet-active bg-white w-6 rounded-full',
-          bulletClass: 'swiper-pagination-bullet bg-white/50 w-2 h-2 inline-block rounded-full mx-1 cursor-pointer transition-all duration-300'
+          bulletActiveClass: 'swiper-pagination-bullet-active bg-[#D97706] w-6 rounded-full',
+          bulletClass: 'swiper-pagination-bullet bg-white/30 hover:bg-white/60 w-2 h-2 inline-block rounded-full mx-1 cursor-pointer transition-all duration-300'
         }}
         slidesPerView={1}
         spaceBetween={0}
         className="w-full rounded-md shadow-sm overflow-hidden"
       >
         {products.map((product, index) => {
-          const bgClass = slideBackgrounds[index % slideBackgrounds.length];
+          const theme = slideThemes[index % slideThemes.length];
           const title = product.name || product.title || "Exclusive Deal";
           const price = Number(product.price).toLocaleString();
-          
-          // Fallbacks for missing data
-          const description = product.description || "Grab this amazing deal before stock runs out. Fast and secure delivery guaranteed.";
+          const description = product.description || "Premium quality items delivered right to your door.";
           const image = product.images?.[0] ? product.images[0] : "";
-          
-          // Simulated original price for the strikethrough effect
-          const originalPrice = (Number(product.price) * 1.2).toLocaleString();
 
           return (
             <SwiperSlide key={product.id}>
               <Link href={`/product/${product.publicId || product.id}`} className="block w-full outline-none group">
                 
-                {/* Main Banner Canvas */}
-                <div className={`relative w-full h-[220px] sm:h-[280px] md:h-[350px] lg:h-[400px] ${bgClass} overflow-hidden flex`}>
+                {/* Fixed Heights for all screens */}
+                <div className={`relative w-full h-[220px] sm:h-[280px] md:h-[350px] lg:h-[400px] xl:h-[420px] ${theme.bg} overflow-hidden flex`}>
                   
-                  {/* LEFT: Content Area */}
-                  <div className="w-[55%] md:w-[50%] h-full flex flex-col justify-center px-4 sm:px-8 md:px-10 relative z-20 text-white">
+                  {/* LEFT CONTENT: Text & Info */}
+                  <div className="w-[60%] md:w-[50%] h-full flex flex-col justify-center px-4 sm:px-8 md:px-12 relative z-20 text-white">
                     
-                    {/* Hot Deal Badge */}
-                    <div className="mb-2 sm:mb-4">
-                      <span className="bg-white text-slate-900 text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest px-2 sm:px-3 py-1 rounded-sm shadow-sm inline-block">
+                    {/* Hot Deal Label */}
+                    <div className="mb-2 sm:mb-3 transform transition-transform duration-500 group-hover:translate-x-1">
+                      <span className="bg-[#D97706] text-white text-[9px] sm:text-[10px] md:text-xs font-black uppercase tracking-widest px-2 sm:px-3 py-1 rounded-sm shadow-md inline-block">
                         Hot Deal
                       </span>
                     </div>
 
-                    <h3 className="text-lg sm:text-2xl md:text-3xl lg:text-5xl font-black leading-tight mb-2 line-clamp-2 drop-shadow-md">
+                    {/* Title */}
+                    <h3 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black leading-tight sm:leading-none mb-2 line-clamp-1 sm:line-clamp-2 drop-shadow-lg tracking-tight">
                       {title}
                     </h3>
 
-                    <p className="hidden md:block text-white/90 text-sm mb-4 line-clamp-2 max-w-[90%]">
+                    {/* Description - Strictly One Line */}
+                    <p className="text-white/70 text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-6 line-clamp-1 max-w-[90%] font-medium tracking-wide">
                       {description}
                     </p>
 
-                    <div className="flex flex-col mb-6 md:mb-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="text-[10px] sm:text-xs text-white/70 line-through font-medium">
-                          UGX {originalPrice}
+                    {/* Price Block */}
+                    <div className="flex flex-col transform transition-transform duration-500 group-hover:translate-x-1">
+                      <div className="flex items-baseline gap-1 text-[#D97706] drop-shadow-md">
+                        <span className="text-xs sm:text-sm md:text-lg font-bold uppercase tracking-widest">UGX</span>
+                        <span className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tighter">
+                          {price}
                         </span>
                       </div>
-                      <div className="flex items-baseline gap-1 bg-white text-slate-900 w-max px-3 py-1 md:px-4 md:py-2 rounded-sm shadow-lg">
-                        <span className="text-xs font-bold">UGX</span>
-                        <span className="text-lg sm:text-xl md:text-3xl font-black tracking-tight">{price}</span>
-                      </div>
-                    </div>
-
-                    {/* Limited Time Offer */}
-                    <div className="absolute bottom-4 sm:bottom-6 left-4 sm:left-8 md:left-10 flex flex-col pb-4 md:pb-0">
-                      <span className="text-[9px] sm:text-[10px] md:text-xs font-semibold text-white/90">
-                        Limited time offer
-                      </span>
-                      <span className="text-[8px] sm:text-[9px] text-white/60">
-                        T&Cs Apply
-                      </span>
                     </div>
                   </div>
 
-                  {/* RIGHT: Zoomed Image Area */}
-                  <div className="w-[45%] md:w-[50%] h-full relative z-10 flex items-end justify-end">
-                    {image && (
-                      <div className="relative w-full h-[95%] transition-transform duration-700 ease-out group-hover:scale-105 origin-bottom-right">
+                  {/* RIGHT IMAGE: Mapped to exact edges with Zoom logic */}
+                  <div className="absolute inset-0 w-full h-full z-0 overflow-hidden flex justify-end">
+                    
+                    {/* Seamless Gradient Blend */}
+                    <div className={`absolute inset-0 bg-gradient-to-r ${theme.fade} via-${theme.bg}/80 md:via-${theme.bg}/40 to-transparent z-10 w-[70%]`} />
+                    
+                    <div className="relative w-[60%] md:w-[65%] h-full transition-transform duration-[1500ms] ease-out group-hover:scale-110 group-hover:rotate-1 origin-center">
+                      {image && (
                         <Image 
                           src={image} 
                           alt={title} 
                           fill 
-                          className="object-contain object-bottom md:object-right-bottom drop-shadow-2xl pr-2 md:pr-8"
-                          sizes="(max-width: 768px) 50vw, 50vw"
+                          // object-cover forces the image to fill its bounding box edge-to-edge
+                          className="object-cover object-center"
+                          sizes="(max-width: 768px) 60vw, 65vw"
                           priority
                         />
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
 
-                  {/* SHOP NOW BUTTON */}
+                  {/* SHOP NOW BUTTON - Tucked into bottom right */}
                   <div className="absolute bottom-0 right-0 z-30">
-                     <button className="bg-slate-900 text-white text-[10px] sm:text-xs md:text-sm font-black uppercase tracking-wider px-4 py-3 sm:px-6 sm:py-4 rounded-tl-xl hover:bg-black transition-colors shadow-2xl flex items-center gap-2">
+                     <button className="bg-white text-slate-900 text-[10px] sm:text-xs md:text-sm font-black uppercase tracking-widest px-5 py-3 sm:px-8 sm:py-5 rounded-tl-2xl hover:bg-[#D97706] hover:text-white transition-all duration-300 shadow-2xl flex items-center gap-2 group-hover:pr-6 sm:group-hover:pr-10">
                        Shop Now
-                       <svg className="w-3 h-3 md:w-4 md:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+                       <svg className="w-3 h-3 md:w-4 md:h-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
                      </button>
                   </div>
 
@@ -126,19 +120,15 @@ export default function HeroCarousel({ products }: { products: any[] }) {
       <style jsx global>{`
         .swiper-pagination {
           bottom: 12px !important;
-          left: 50% !important;
-          transform: translateX(-50%);
-          text-align: center;
-          width: 100%;
+          left: 4% !important;
+          text-align: left !important;
+          width: auto !important;
           z-index: 25;
         }
         @media (min-width: 768px) {
           .swiper-pagination {
-            bottom: 20px !important;
-            text-align: left;
-            padding-left: 2.5rem;
-            left: 0 !important;
-            transform: none;
+            bottom: 24px !important;
+            padding-left: 2rem;
           }
         }
       `}</style>
