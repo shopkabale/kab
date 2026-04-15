@@ -1,5 +1,5 @@
-// 🔥 1. REMOVE force-dynamic
-// 🔥 2. ADD revalidate to cache this product page for 1 hour
+// 1. REMOVE force-dynamic
+// 2. ADD revalidate to cache this product page for 1 hour
 export const revalidate = 3600;
 
 import { Metadata } from "next";
@@ -105,7 +105,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // ==========================================
   const sellerNameStr = String(product.sellerName || "").toLowerCase();
   const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
-  
+
   // CALCULATE DEPOSIT FOR UI
   const depositRequired = safePrice >= 20000 ? calculateDepositAmount(safePrice, false) : 0;
 
@@ -152,7 +152,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   };
 
   return (
-    <div className="py-8 max-w-6xl mx-auto px-4 sm:px-6 bg-white min-h-screen">
+    // FIX: Added w-full and overflow-x-hidden to lock the layout into mobile view
+    <div className="py-8 w-full max-w-full overflow-x-hidden mx-auto px-4 sm:px-6 bg-white min-h-screen">
       <ProductTracker product={product} />
       <RecentlyViewedTracker product={product} />   
 
@@ -179,16 +180,16 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         </div>  
 
         {/* RIGHT COLUMN: Product Details */}  
-        <div className="flex flex-col">  
+        <div className="flex flex-col overflow-hidden">  
 
-          {/* 🔥 1. E-COMMERCE TRUST BANNER (Full width, black text) */}
+          {/* 1. E-COMMERCE TRUST BANNER (Full width, black text) */}
           <div className="flex items-center justify-center sm:justify-start gap-3 md:gap-5 bg-orange-50 text-black text-xs md:text-sm font-extrabold py-3 px-4 rounded-md w-full mb-6 border border-orange-100 shadow-sm">
             <span className="flex items-center gap-1.5"><FaCheck className="text-green-600 text-base" /> Cash on Delivery</span>
             <span className="text-orange-200">|</span>
             <span className="flex items-center gap-1.5"><FaTruck className="text-black text-base" /> Same Day Delivery</span>
           </div>
 
-          {/* 🔥 2. BRAND & BADGES (Kabale Online in normal black) */}
+          {/* 2. BRAND & BADGES (Kabale Online in normal black) */}
           <div className="flex flex-wrap items-center gap-2 mb-3">  
             <span className="font-medium text-sm uppercase tracking-wider text-black mr-2">
               {pAny.brand || "KABALE ONLINE"}
@@ -212,12 +213,12 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </span>
           </div>  
 
-          {/* 🔥 3. TITLE (Big and light gray) */}
+          {/* 3. TITLE (Big and light gray) */}
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-400 leading-tight mb-4">  
             {safeName}
           </h1>  
 
-          {/* 🔥 4. PRICE (Strong black) & REVIEWS */}
+          {/* 4. PRICE (Strong black) & REVIEWS */}
           <div className="mb-2 flex items-end gap-3">  
             <span className="text-4xl sm:text-5xl font-black text-black">  
               UGX {safePrice.toLocaleString()}  
@@ -225,7 +226,14 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
           </div>  
 
           <div className="flex items-center gap-2 mb-6 text-sm text-slate-500">
-            <div className="flex text-green-500 text-xs">⭐⭐⭐⭐⭐</div>
+            {/* SVG Stars instead of emojis */}
+            <div className="flex text-[#D97706] gap-0.5">
+              {[...Array(5)].map((_, i) => (
+                <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                </svg>
+              ))}
+            </div>
             <a href="#reviews" className="hover:text-[#D97706] cursor-pointer transition-colors">(View customer reviews)</a>
           </div>
 
@@ -237,12 +245,14 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </p>
           </div>
 
-          {/* 🔥 5. AUTHENTIC SCARCITY INDICATOR (Dynamic Colors) */}
+          {/* 5. AUTHENTIC SCARCITY INDICATOR (Dynamic Colors) */}
           <div className="mb-4 flex items-center gap-2 text-sm font-bold">
             {isSoldOut ? (
                <>
-                <span className="text-lg">ℹ️</span>
-                <span className="text-red-600">This item is currently sold out. Check similar items below!</span>
+                <svg className="w-5 h-5 shrink-0 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-red-600">This item is currently sold out. Check similar items below.</span>
                </>
             ) : safeStock <= 2 ? (
               <>
@@ -294,7 +304,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
           {/* NATIVE HTML ACCORDIONS (SEO FRIENDLY) */}
           <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-10 bg-white shadow-sm divide-y divide-slate-200">
-            
+
             <details className="group" open>
               <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-green-700 bg-slate-50 hover:bg-slate-100 transition-colors text-sm">
                 Description
@@ -302,7 +312,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                   <svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
                 </span>
               </summary>
-              <div className="p-4 text-slate-600 bg-white">
+              {/* FIX: Added break-words to prevent long links from breaking the layout */}
+              <div className="p-4 text-slate-600 bg-white break-words overflow-hidden">
                 {renderDescription(product.description)}
               </div>
             </details>
@@ -314,7 +325,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                   <svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
                 </span>
               </summary>
-              <div className="p-0 bg-white">
+              <div className="p-0 bg-white overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <tbody className="divide-y divide-slate-100">
                     <tr>
@@ -344,7 +355,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                   <svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
                 </span>
               </summary>
-              <div className="p-4 bg-white">
+              <div className="p-4 bg-white overflow-hidden">
                 <ProductReviews productId={product.id} />
               </div>
             </details>
