@@ -2,15 +2,16 @@ import type { Metadata } from "next";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import OfficialProductFeed from "@/components/OfficialProductFeed";
+import LeftSidebar from "@/components/LeftSidebar"; // IMPORTED SIDEBAR
 
 // Forces the page to always fetch the freshest inventory
 export const dynamic = "force-dynamic";
 
 // ==========================================
-// SEO & OPEN GRAPH METADATA
+// SEO & OPEN GRAPH METADATA (Emojis Removed)
 // ==========================================
 export const metadata: Metadata = {
-  title: "Official Store ⭐ | Kabale Online",
+  title: "Official Store | Kabale Online",
   description: "Shop premium, verified products sold directly by Kabale Online. Guaranteed quality, secure mobile payments, and fast delivery across Kabale and Kigezi.",
   keywords: [
     "Kabale Online Official Store", 
@@ -20,13 +21,13 @@ export const metadata: Metadata = {
     "buy premium items Kabale"
   ],
   openGraph: {
-    title: "Official Store ⭐ | Kabale Online",
+    title: "Official Store | Kabale Online",
     description: "Shop premium, verified products sold directly by Kabale Online. Guaranteed quality, secure mobile payments, and fast delivery.",
     url: "https://kabaleonline.com/officialStore",
     siteName: "Kabale Online",
     images: [
       {
-        url: "/official-og-image.jpg", // Make sure to add this image to your /public folder!
+        url: "/official-og-image.jpg",
         width: 1200,
         height: 630,
         alt: "Kabale Online Official Store",
@@ -37,7 +38,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Official Store ⭐ | Kabale Online",
+    title: "Official Store | Kabale Online",
     description: "Shop premium, verified products sold directly by Kabale Online. Guaranteed quality and fast delivery.",
     images: ["/official-og-image.jpg"],
   },
@@ -47,7 +48,6 @@ const PAGE_SIZE = 20;
 
 export default async function OfficialStorePage() {
   // 1. PROFESSIONAL QUERY: Only fetch 20, properly sorted.
-  // ⚠️ NOTE: Ensure your Firebase Composite Index is built for this!
   const officialQ = query(
     collection(db, "products"), 
     where("isAdminUpload", "==", true),
@@ -56,7 +56,7 @@ export default async function OfficialStorePage() {
   );
 
   const officialSnap = await getDocs(officialQ);
-  
+
   // 2. SAFE SERIALIZATION: Clean data so Next.js doesn't crash on Server-to-Client pass
   const initialProducts = officialSnap.docs.map(doc => {
     const data = doc.data();
@@ -70,28 +70,49 @@ export default async function OfficialStorePage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-12 font-sans selection:bg-[#D97706] selection:text-white">
+    // ROOT CONTAINER: Fully transparent
+    <div className="min-h-screen bg-transparent pb-12 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
 
-      {/* TRUST & AUTHORITY HEADER */}
-      <section className="bg-slate-900 dark:bg-black text-white py-12 md:py-16 px-4 text-center border-b-4 border-[#D97706]">
-        <div className="max-w-[800px] mx-auto">
-          <div className="inline-block bg-[#D97706]/20 text-[#D97706] px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest mb-4 border border-[#D97706]/50">
-            Verified by Kabale Online
+      <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
+        
+        {/* DESKTOP SPLIT GRID */}
+        <div className="flex flex-col md:flex-row gap-4 w-full">
+
+          {/* LEFT SIDEBAR AREA */}
+          <div className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky top-[110px] h-max z-10">
+            <LeftSidebar />
           </div>
-          <h1 className="text-4xl md:text-6xl font-black mb-4 tracking-tight">
-            Official Store
-          </h1>
-          <p className="text-slate-300 text-sm md:text-base font-medium max-w-2xl mx-auto leading-relaxed">
-            Premium, verified products sold directly by us. Guaranteed quality, secure mobile payments, and fast delivery across Kabale and Kigezi.
-          </p>
+
+          {/* CENTER CONTENT */}
+          <div className="flex-grow min-w-0 flex flex-col w-full gap-4">
+            
+            {/* PREMIUM STORE BANNER */}
+            <div className="bg-slate-900 dark:bg-black rounded-none md:rounded-md p-6 sm:p-8 md:p-10 relative overflow-hidden flex flex-col justify-center shadow-sm border-b-4 md:border-b md:border-t-4 border-[#D97706]">
+              {/* Subtle accent glow */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-[#D97706]/10 rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="relative z-10">
+                <span className="inline-block bg-[#D97706] text-white px-3 py-1.5 rounded-sm text-[9px] sm:text-[10px] font-black uppercase tracking-widest mb-3 sm:mb-4 shadow-md">
+                  Verified by Kabale Online
+                </span>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white mb-2 sm:mb-3 tracking-tight">
+                  Official Store
+                </h1>
+                <p className="text-slate-400 text-xs sm:text-sm md:text-base font-medium max-w-2xl leading-relaxed">
+                  Shop premium, verified products sold directly by us. Guaranteed quality, secure mobile payments, and fast delivery across Kabale and Kigezi.
+                </p>
+              </div>
+            </div>
+
+            {/* PRODUCT GRID FEED */}
+            <div className="w-full mt-2">
+              <OfficialProductFeed initialProducts={initialProducts} />
+            </div>
+
+          </div>
+
         </div>
-      </section>
-
-      {/* PRODUCT GRID USING THE CLIENT FEED */}
-      <section className="w-full max-w-[1200px] mx-auto px-3 sm:px-4 mt-8 md:mt-12">
-        <OfficialProductFeed initialProducts={initialProducts} />
-      </section>
-
+      </div>
     </div>
   );
 }
