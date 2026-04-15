@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { usePathname } from "next/navigation";
 import { AuthProvider } from "@/components/AuthProvider";
 import { CartProvider } from "@/context/CartContext"; 
 import WebsiteBanner from "@/components/WebsiteBanner";
@@ -10,8 +9,6 @@ import Footer from "@/components/Footer";
 import FloatingHelpButton from "@/components/FloatingHelpButton";
 import BottomNav from "@/components/BottomNav";
 import GlobalLoader from "@/components/GlobalLoader";
-import LeftSidebar from "@/components/LeftSidebar"; 
-import RightSidebar from "@/components/RightSidebar"; 
 
 // IMPORT GTM NEXT.JS LIBRARY AND YOUR ID
 import { GoogleTagManager } from '@next/third-parties/google';
@@ -22,16 +19,6 @@ export default function LayoutClient({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-
-  // Define which routes should get the 3-column shop layout
-  const isShopRoute = 
-    pathname === "/" ||
-    pathname === "/products" || 
-    pathname?.startsWith("/category") || 
-    pathname === "/officialStore" ||
-    pathname === "/ladies";
-
   // Track if the user explicitly clicked the "X" to close the banner forever
   const [isClosedManually, setIsClosedManually] = useState(false);
 
@@ -91,49 +78,15 @@ export default function LayoutClient({
 
           {/* CONTENT WRAPPER */}
           {/* Completely transparent background to let globals.css gradient show through */}
-          <div className="flex-grow pt-[140px] lg:pt-[90px] w-full transition-all flex flex-col min-h-screen bg-transparent dark:bg-transparent">
+          <div className="flex-grow pt-[140px] lg:pt-[90px] w-full transition-all flex flex-col min-h-screen bg-transparent dark:bg-transparent pb-10">
 
-            {isShopRoute ? (
-              /* === THE RESPONSIVE SHOP LAYOUT === */
-              /* True full-width container with no horizontal padding or max-width constraints */
-              <div className="w-full pb-10 flex-grow">
-
-                {/* Mobile: 1 column (flex-col) 
-                  Group 1 (Small Laptops/Tablets - md): Fixed 200px sidebars, fluid center
-                  Group 2 (Desktops/Wide - xl): Fluid 15% sidebars, fluid 70% center
-                */}
-                <div className="flex flex-col md:grid md:grid-cols-[200px_1fr_200px] xl:grid-cols-[15%_1fr_15%] gap-6 md:gap-8">
-
-                  {/* LEFT COLUMN (Filters & Categories) */}
-                  <aside className="hidden md:block w-full">
-                    {/* sticky top handles the navbar height + padding */}
-                    <div className="sticky top-[110px]">
-                      <LeftSidebar />
-                    </div>
-                  </aside>
-
-                  {/* CENTER COLUMN (Main Content) */}
-                  {/* min-w-0 prevents child elements like sliders from breaking the CSS grid */}
-                  <main className="w-full flex flex-col gap-6 min-w-0">
-                    {children}
-                  </main>
-
-                  {/* RIGHT COLUMN (Cart Summary & Ads) */}
-                  <aside className="hidden md:block w-full">
-                    <div className="sticky top-[110px]">
-                      <RightSidebar />
-                    </div>
-                  </aside>
-
-                </div>
-              </div>
-            ) : (
-              /* === THE STANDARD FULL-WIDTH LAYOUT === */
-              /* Used for checkout, login, profile, and other non-browsing pages */
-              <main className="w-full flex-grow">
-                {children}
-              </main>
-            )}
+            {/* True full-width container. 
+                Individual pages will handle their own max-widths, grids, and padding. 
+                min-w-0 ensures child sliders do not break layout width.
+            */}
+            <main className="w-full flex-grow flex flex-col min-w-0">
+              {children}
+            </main>
 
           </div>
 
