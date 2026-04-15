@@ -98,13 +98,14 @@ export default function LayoutClient({
               /* True full-width container with no horizontal padding or max-width constraints */
               <div className="w-full pb-10 flex-grow">
 
-                {/* Mobile/Tablet/Small PCs: 1 column (flex-col) 
-                  Big Screens (xl): Fluid 3-column grid (15% Left | 1fr Center | 15% Right)
+                {/* Mobile: 1 column (flex-col) 
+                  Group 1 (Small Laptops/Tablets - md): Fixed 200px sidebars, fluid center
+                  Group 2 (Desktops/Wide - xl): Fluid 15% sidebars, fluid 70% center
                 */}
-                <div className="flex flex-col xl:grid xl:grid-cols-[15%_1fr_15%] gap-6 xl:gap-8">
+                <div className="flex flex-col md:grid md:grid-cols-[200px_1fr_200px] xl:grid-cols-[15%_1fr_15%] gap-6 md:gap-8">
 
                   {/* LEFT COLUMN (Filters & Categories) */}
-                  <aside className="hidden xl:block w-full">
+                  <aside className="hidden md:block w-full">
                     {/* sticky top handles the navbar height + padding */}
                     <div className="sticky top-[110px]">
                       <LeftSidebar />
@@ -118,7 +119,7 @@ export default function LayoutClient({
                   </main>
 
                   {/* RIGHT COLUMN (Cart Summary & Ads) */}
-                  <aside className="hidden xl:block w-full">
+                  <aside className="hidden md:block w-full">
                     <div className="sticky top-[110px]">
                       <RightSidebar />
                     </div>
