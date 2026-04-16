@@ -27,7 +27,7 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-6 py-10 md:py-14">
 
         {/* Main Grid: 4 columns on desktop, 2 columns on mobile */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10 mb-12">
 
           {/* Brand & Contact Info (Spans full width on mobile, 1 col on desktop) */}
           <div className="col-span-2 lg:col-span-1">
@@ -118,10 +118,7 @@ export default function Footer() {
             <ul className="space-y-3">
               <li><Link href="/profile" className="hover:text-[#D97706] transition-colors">My Profile</Link></li>
               <li><Link href="/sell" className="hover:text-amber-600 transition-colors text-[#D97706] font-bold">Sell on Kabale</Link></li>
-              
-              {/* 🔥 NEW POLICIES LINK ADDED HERE */}
               <li><Link href="/policies" className="hover:text-green-600 transition-colors text-green-600 font-bold">Policies & Refunds</Link></li>
-              
               <li><Link href="/about" className="hover:text-[#D97706] transition-colors">About Us</Link></li>
               <li><Link href="/contact" className="hover:text-[#D97706] transition-colors">Contact Us</Link></li>
               <li><Link href="/terms" className="hover:text-[#D97706] transition-colors">Terms & Conditions</Link></li>
@@ -130,66 +127,69 @@ export default function Footer() {
 
         </div>
 
-        {/* Bottom Section */}
-        <div className="border-t border-slate-200 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-6">
+        {/* -------------------------------------------------------- */}
+        {/* BRAND LINEAGE & LOGOS SECTION (Cross-Promotion) */}
+        {/* -------------------------------------------------------- */}
+        <div className="pt-8 border-t border-slate-200/80 flex flex-col space-y-8">
+          
+          <div className="flex flex-col lg:flex-row justify-between items-center space-y-6 lg:space-y-0">
+            {/* The Logos & Links */}
+            <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
+              
+              {/* Kabale Online Logo & Link */}
+              <Link href="/" className="flex items-center space-x-3 group">
+                <div className="w-10 h-10 bg-white rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center shrink-0">
+                  <img src="/icon-512x512.png" alt="Kabale Online Logo" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                </div>
+                <span className="font-bold text-slate-900 group-hover:text-[#D97706] transition-colors">
+                  kabaleonline.com
+                </span>
+              </Link>
 
-          {/* Copyright */}
-          <p className="text-slate-500 text-[11px] md:text-xs text-center md:text-left">
-            © {currentYear} Kabale Online. All rights reserved.
-          </p>
+              <span className="hidden sm:block text-slate-300">|</span>
 
-          {/* Social Icons */}
-          <div className="flex items-center justify-center gap-6 text-slate-400 text-lg">
+              {/* OkayNotice Logo & Link */}
+              <a href="https://okaynotice.com" target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 group">
+                <div className="w-10 h-10 bg-white rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center shrink-0">
+                  <img src="/512.png" alt="OkayNotice Logo" className="w-full h-full object-cover group-hover:scale-110 transition-transform" />
+                </div>
+                <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                  okaynotice.com
+                </span>
+              </a>
+            </div>
 
-            <a
-              href="https://wa.me/256759997376"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#25D366] transition duration-200"
-              aria-label="WhatsApp"
-            >
-              <FaWhatsapp />
-            </a>
+            {/* Company Relationship */}
+            <div className="text-sm font-medium text-slate-500 text-center lg:text-right bg-slate-50 px-4 py-2 rounded-lg border border-slate-200/80">
+              <a href="https://okaynotice.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-bold hover:text-blue-800 transition-colors">OkayNotice</a> is a proud product of Kabale Online.
+            </div>
+          </div>
 
-            <a
-              href="https://www.fb.com/l/6lp1kJRRR"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#1877F2] transition duration-200"
-              aria-label="Facebook"
-            >
-              <FaFacebookF />
-            </a>
+          {/* Copyright & Socials */}
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-6 border-t border-slate-100">
+            
+            <p className="text-slate-500 text-[11px] md:text-xs text-center md:text-left font-medium">
+              © {currentYear} Kabale Online. All rights reserved.
+            </p>
 
-            <a
-              href="https://instagram.com/kabale.online"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-[#E4405F] transition duration-200"
-              aria-label="Instagram"
-            >
-              <FaInstagram />
-            </a>
-
-            <a
-              href="https://x.com/Kabale_Online"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-slate-900 transition duration-200"
-              aria-label="X"
-            >
-              <FaXTwitter />
-            </a>
-
-            <a
-              href="https://tiktok.com/@kabale.online"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-slate-900 transition duration-200"
-              aria-label="TikTok"
-            >
-              <FaTiktok />
-            </a>
+            {/* Social Icons */}
+            <div className="flex items-center justify-center gap-6 text-slate-400 text-lg">
+              <a href="https://wa.me/256759997376" target="_blank" rel="noopener noreferrer" className="hover:text-[#25D366] transition duration-200" aria-label="WhatsApp">
+                <FaWhatsapp />
+              </a>
+              <a href="https://www.fb.com/l/6lp1kJRRR" target="_blank" rel="noopener noreferrer" className="hover:text-[#1877F2] transition duration-200" aria-label="Facebook">
+                <FaFacebookF />
+              </a>
+              <a href="https://instagram.com/kabale.online" target="_blank" rel="noopener noreferrer" className="hover:text-[#E4405F] transition duration-200" aria-label="Instagram">
+                <FaInstagram />
+              </a>
+              <a href="https://x.com/Kabale_Online" target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition duration-200" aria-label="X">
+                <FaXTwitter />
+              </a>
+              <a href="https://tiktok.com/@kabale.online" target="_blank" rel="noopener noreferrer" className="hover:text-slate-900 transition duration-200" aria-label="TikTok">
+                <FaTiktok />
+              </a>
+            </div>
 
           </div>
         </div>
