@@ -9,9 +9,8 @@ import Image from "next/image";
 import { optimizeImage } from "@/lib/utils";
 import { trackSelectItem } from "@/lib/analytics";
 
-// Note: If you changed the limit to 100 on the server page, update this to 100 to match,
-// otherwise the initial 'hasMore' check might instantly return false.
-const PAGE_SIZE = 20;
+// 🔴 FIX 1: MATCHED SERVER LIMIT EXACTLY
+const PAGE_SIZE = 100;
 
 export default function CategoryProductFeed({ 
   initialProducts, 
@@ -25,7 +24,9 @@ export default function CategoryProductFeed({
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<any[]>(initialProducts);
   const [loading, setLoading] = useState(false);
-  const [hasMore, setHasMore] = useState(initialProducts.length === PAGE_SIZE);
+  
+  // 🔴 FIX 2: CHANGED TO >= SO IT DOESN'T INSTANTLY FAIL
+  const [hasMore, setHasMore] = useState(initialProducts.length >= PAGE_SIZE);
 
   // Extract URL Parameters
   const maxPrice = searchParams.get("max");
@@ -74,13 +75,22 @@ export default function CategoryProductFeed({
       }
 
       const productsRef = collection(db, "products");
-      const q = query(
-        productsRef,
-        where("category", "==", categoryName),
-        orderBy("createdAt", "desc"),
-        startAfter(lastDocSnap),
-        limit(PAGE_SIZE)
-      );
+      
+      // 🔴 FIX 3: SAFELY HANDLE THE "ALL PRODUCTS" PAGE QUERY
+      const q = categoryName === "all"
+        ? query(
+            productsRef,
+            orderBy("createdAt", "desc"),
+            startAfter(lastDocSnap),
+            limit(PAGE_SIZE)
+          )
+        : query(
+            productsRef,
+            where("category", "==", categoryName),
+            orderBy("createdAt", "desc"),
+            startAfter(lastDocSnap),
+            limit(PAGE_SIZE)
+          );
 
       const snapshot = await getDocs(q);
       const newProducts = snapshot.docs.map(document => {
@@ -109,10 +119,10 @@ export default function CategoryProductFeed({
 
   return (
     <div className="w-full pb-8">
-      
+
       {/* THE "WHITE ISLAND" CONTAINER */}
       <div className="w-full bg-white dark:bg-[#151515] rounded-md shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden mb-6 select-none">
-        
+
         {/* CLEAN HEADER */}
         <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50 dark:bg-slate-900/50">
            <h2 className="text-xs sm:text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">
