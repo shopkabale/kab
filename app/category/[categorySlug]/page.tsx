@@ -1,12 +1,13 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import CategoryProductFeed from "@/components/CategoryProductFeed";
-import LeftSidebar from "@/components/LeftSidebar"; // IMPORTED SIDEBAR
-import { GraduationCap, Laptop, Leaf, ShoppingBag, ChevronRight } from "lucide-react"; // PROFESSIONAL ICONS
+import LeftSidebar from "@/components/LeftSidebar"; 
+import { GraduationCap, Laptop, Leaf, ShoppingBag, ChevronRight } from "lucide-react"; 
 
-// 🔥 Caches this category page for 1 hour.
+// 🔥 Caches this category page for 1 hour. (1 Read per hour, per category)
 export const revalidate = 3600;
 
 // ==========================================
@@ -80,7 +81,8 @@ export async function generateMetadata({ params }: { params: { categorySlug: str
   };
 }
 
-const PAGE_SIZE = 20;
+// Increased to 100 to ensure the client-side filter has enough data to work with without hitting Firebase again
+const PAGE_SIZE = 100;
 
 // ==========================================
 // MAIN PAGE COMPONENT
@@ -92,7 +94,7 @@ export default async function CategoryPage({
 }) {
   const slug = params.categorySlug;
 
-  // 1. DYNAMIC FIREBASE QUERY
+  // 1. DYNAMIC FIREBASE QUERY (Safe from URL params, perfectly cacheable)
   const categoryQ = query(
     collection(db, "products"),
     where("category", "==", slug),
@@ -148,11 +150,14 @@ export default async function CategoryPage({
             {/* THE PAGINATED FEED */}
             <div className="w-full">
               {initialProducts.length > 0 ? (
-                 <CategoryProductFeed 
-                   initialProducts={initialProducts} 
-                   categoryName={slug} 
-                   title={`Latest ${info.title} Deals`} 
-                 />
+                 // SUSPENSE BOUNDARY: Prevents useSearchParams in CategoryProductFeed from de-opting this layout
+                 <Suspense fallback={<div className="w-full h-[400px] bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-md" />}>
+                   <CategoryProductFeed 
+                     initialProducts={initialProducts} 
+                     categoryName={slug} 
+                     title={`Latest ${info.title} Deals`} 
+                   />
+                 </Suspense>
               ) : (
                 // CLEAN ENTERPRISE EMPTY STATE
                 <div className="bg-white dark:bg-[#151515] rounded-md border border-slate-200 dark:border-slate-800 shadow-sm p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
