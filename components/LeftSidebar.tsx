@@ -52,10 +52,15 @@ function LeftSidebarContent() {
   const sortType = searchParams.get("sort");
   const hasActiveFilters = maxPrice || sortType;
 
-  // Dynamically generate Smart Browse links based on current path
+  // =======================================================
+  // FIX: Route homepage sorting to the /products feed
+  // =======================================================
+  const basePath = pathname === '/' ? '/products' : pathname;
+
+  // Dynamically generate Smart Browse links based on safe path
   const browseSmartLinks = [
-    { name: "Top Rated / Popular", href: `${pathname}?sort=popular`, icon: Flame },
-    { name: "New Arrivals", href: `${pathname}?sort=new`, icon: Sparkles },
+    { name: "Top Rated / Popular", href: `${basePath}?sort=popular`, icon: Flame },
+    { name: "New Arrivals", href: `${basePath}?sort=new`, icon: Sparkles },
   ];
 
   return (
@@ -98,7 +103,7 @@ function LeftSidebarContent() {
               Active Filters
             </h3>
             <Link 
-              href={pathname} 
+              href={pathname || "/"} 
               className="text-slate-400 hover:text-red-500 transition-colors"
               title="Clear all filters"
             >
