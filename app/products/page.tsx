@@ -1,8 +1,9 @@
+import { Suspense } from "react"; // ADDED SUSPENSE IMPORT
 import Link from "next/link";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { db } from "@/lib/firebase/config"; 
 import SearchBar from "@/components/SearchBar"; 
-import ProductFeed from "@/components/ProductFeed"; // Import the new client component
+import ProductFeed from "@/components/ProductFeed";
 
 export const revalidate = 3600;
 
@@ -19,9 +20,9 @@ export default async function AllProductsPage() {
   // ==========================================
   const productsRef = collection(db, "products");
   const q = query(productsRef, orderBy("createdAt", "desc"), limit(PAGE_SIZE));
-  
+
   const snapshot = await getDocs(q);
-  
+
   // Clean the data so it can be passed safely to the Client Component
   const initialProducts = snapshot.docs.map(doc => {
     const data = doc.data();
@@ -48,7 +49,6 @@ export default async function AllProductsPage() {
             Discover everything our local Kabale vendors have to offer. Fast delivery, pay strictly on arrival.
           </p>
 
-          
         </div>
       </section>
 
@@ -57,7 +57,14 @@ export default async function AllProductsPage() {
         {/* ========================================== */}
         {/* INTERACTIVE PRODUCT FEED (Client Component)*/}
         {/* ========================================== */}
-        <ProductFeed initialProducts={initialProducts} />
+        {/* WRAPPED IN SUSPENSE TO FIX VERCEL BUILD ERROR */}
+        <Suspense fallback={
+          <div className="w-full max-w-[1200px] mx-auto px-4">
+            <div className="h-[400px] w-full bg-slate-200 dark:bg-slate-800/50 animate-pulse rounded-xl mt-4"></div>
+          </div>
+        }>
+          <ProductFeed initialProducts={initialProducts} />
+        </Suspense>
 
         {/* ========================================== */}
         {/* CATEGORIES LIST ROW                        */}
