@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { useCart } from "@/context/CartContext"; // IMPORTED CART BRAIN
+import { useCart } from "@/context/CartContext"; 
 import SearchBar from "@/components/SearchBar";
 import { 
   FaWhatsapp, 
@@ -17,8 +17,11 @@ import {
 export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const pathname = usePathname();
   const { user, loading, signIn, signOut } = useAuth();
-  const { cartCount } = useCart(); // PULLED LIVE CART COUNT
+  const { cartCount } = useCart(); 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Determine base path for dynamic Smart Browse filtering
+  const browseBase = pathname === '/' ? '/products' : pathname;
 
   // Lock body scroll AND broadcast state to hide other UI elements
   useEffect(() => {
@@ -63,7 +66,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             </Link>
           </div>
 
-          {/* Desktop Search Bar using your existing component */}
           <div className="flex-1 max-w-2xl w-full">
             <SearchBar />
           </div>
@@ -71,7 +73,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
           <div className="flex items-center space-x-6">
             <Link href="/category/student_item" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/student_item') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Student Market</Link>
 
-            {/* VIEW MORE DROPDOWN REPLACING AI GUIDE */}
+            {/* VIEW MORE DROPDOWN */}
             <div className="relative group">
               <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-colors text-slate-700 hover:text-[#D97706] hover:bg-slate-50 cursor-pointer">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 6h16M4 12h16M4 18h16" /></svg>
@@ -141,7 +143,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
 
         {/* === MOBILE VIEW === */}
         <div className="lg:hidden flex flex-col w-full">
-          {/* Top Row: Hamburger, Logo, Profile, WhatsApp */}
           <div className="flex items-center justify-between h-14 px-4">
             <div className="flex items-center gap-3">
               <button onClick={() => setIsMobileMenuOpen(true)} className="text-slate-900 focus:outline-none" aria-label="Open menu">
@@ -154,7 +155,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
 
             <div className="flex items-center gap-4 text-slate-800">
 
-              {/* MOBILE CART ICON */}
               <Link href="/cart" className="relative p-1 text-slate-700 hover:text-[#D97706] transition-colors">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
                 {cartCount > 0 && (
@@ -186,7 +186,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             </div>
           </div>
 
-          {/* Bottom Row: Search Bar using your existing component */}
           <div className="px-3 pb-3 w-full">
              <SearchBar />
           </div>
@@ -234,7 +233,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             )}
 
             <div className="flex flex-col">
-              {/* CART IN MOBILE MENU */}
               <Link href="/cart" onClick={closeMenu} className="flex justify-between items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
                 <div className="flex items-center">
                   <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
@@ -254,15 +252,43 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4v16m8-8H4" /></svg>
                 <span className="text-[15px]">Sell on Kabale</span>
               </Link>
+            </div>
+          </div>
 
-              <Link href="/profile" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>
-                <span className="text-[15px]">My Listings</span>
+          {/* ============================================== */}
+          {/* QUICK SHOP - MOBILE UI                         */}
+          {/* ============================================== */}
+          <div className="border-b border-slate-100 py-2">
+            <div className="flex justify-between items-center px-5 py-2 mb-1">
+              <span className="text-[13px] font-bold text-slate-600 tracking-wide uppercase">Quick Shop</span>
+            </div>
+            <div className="flex flex-col pb-2">
+              <Link href="/category/electronics?max=50000" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-[#D97706]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                <span className="text-[15px] font-medium">Gadgets &lt; 50k</span>
               </Link>
+              <Link href="/category/student_item?max=100000" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-[#D97706]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14l9-5-9-5-9 5 9 5z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14v7" /></svg>
+                <span className="text-[15px] font-medium">Student Gear &lt; 100k</span>
+              </Link>
+            </div>
+          </div>
 
-              <Link href="/profile" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" /></svg>
-                <span className="text-[15px]">Saved Items</span>
+          {/* ============================================== */}
+          {/* SMART BROWSE - MOBILE UI                       */}
+          {/* ============================================== */}
+          <div className="border-b border-slate-100 py-2 bg-amber-50/30">
+            <div className="flex justify-between items-center px-5 py-2 mb-1">
+              <span className="text-[13px] font-bold text-[#D97706] tracking-wide uppercase">Smart Browse</span>
+            </div>
+            <div className="flex flex-col pb-2">
+              <Link href={`${browseBase}?sort=popular`} onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z" /></svg>
+                <span className="text-[15px] font-medium">Top Rated / Popular</span>
+              </Link>
+              <Link href={`${browseBase}?sort=new`} onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
+                <svg className="w-6 h-6 mr-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
+                <span className="text-[15px] font-medium">New Arrivals</span>
               </Link>
             </div>
           </div>
@@ -298,11 +324,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
                 <span className="text-[15px]">Agriculture</span>
               </Link>
-
-              <Link href="/products" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-                <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-                <span className="text-[15px]">View All Products</span>
-              </Link>
             </div>
           </div>
 
@@ -321,10 +342,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             <Link href="/blog" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
               <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9.5a2.5 2.5 0 00-2.5-2.5H14" /></svg>
               <span className="text-[15px]">Journal & Updates</span>
-            </Link>
-            <Link href="/guide" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
-              <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-              <span className="text-[15px]">Read Documentation</span>
             </Link>
           </div>
 
