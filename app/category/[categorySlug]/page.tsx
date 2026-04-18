@@ -5,7 +5,8 @@ import { collection, query, where, getDocs, orderBy, limit } from "firebase/fire
 import { db } from "@/lib/firebase/config";
 import CategoryProductFeed from "@/components/CategoryProductFeed";
 import LeftSidebar from "@/components/LeftSidebar"; 
-import { GraduationCap, Laptop, Leaf, ShoppingBag, ChevronRight } from "lucide-react"; 
+// Added 'Watch' to the lucide-react imports
+import { GraduationCap, Laptop, Leaf, ShoppingBag, ChevronRight, Watch } from "lucide-react"; 
 
 // 🔥 Caches this category page for 1 hour. (1 Read per hour, per category)
 export const revalidate = 3600;
@@ -25,6 +26,11 @@ const categoryDetails: Record<string, { title: string; description: string }> = 
   "student_item": {
     title: "Campus Essentials",
     description: "Textbooks, furniture, and gear for Kabale University students.",
+  },
+  // Added Watches here
+  "watches": {
+    title: "Watches & Timepieces",
+    description: "Discover classic, smart, and luxury watches from local vendors.",
   }
 };
 
@@ -125,7 +131,7 @@ export default async function CategoryPage({
     <div className="min-h-screen bg-transparent pb-12 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
 
       <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
-        
+
         {/* DESKTOP SPLIT GRID */}
         <div className="flex flex-col md:flex-row gap-4 w-full">
 
@@ -136,7 +142,7 @@ export default async function CategoryPage({
 
           {/* CENTER CONTENT */}
           <div className="flex-grow min-w-0 flex flex-col w-full gap-4">
-            
+
             {/* PREMIUM CATEGORY BANNER (White Island Style) */}
             <div className="bg-white dark:bg-[#151515] rounded-none md:rounded-md p-6 sm:p-8 md:p-10 border border-slate-200 dark:border-slate-800 shadow-sm border-l-4 md:border-l-4 border-l-[#D97706]">
               <h1 className="text-2xl sm:text-3xl md:text-4xl font-black mb-2 text-slate-900 dark:text-white tracking-tight uppercase">
@@ -178,7 +184,7 @@ export default async function CategoryPage({
                 Explore Other Categories
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                   { 
                     name: "Student Market", 
@@ -197,6 +203,13 @@ export default async function CategoryPage({
                     link: "agriculture",
                     desc: "Fresh produce & tools",
                     icon: <Leaf className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-[#D97706] transition-colors" />
+                  },
+                  // Added Watches to the Explore section
+                  { 
+                    name: "Watches", 
+                    link: "watches",
+                    desc: "Smart & classic timepieces",
+                    icon: <Watch className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-[#D97706] transition-colors" />
                   }
                 ].map((cat) => {
                   // Hide the current category
@@ -218,7 +231,7 @@ export default async function CategoryPage({
                           </span>
                         </div>
                       </div>
-                      
+
                       <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-4 line-clamp-2 flex-grow">
                         {cat.desc}
                       </p>
