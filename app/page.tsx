@@ -154,13 +154,14 @@ export default async function Home() {
                 )}
 
                 {watchProducts.length > 0 && (
-                  <HorizontalScroller 
-                    title="Discover Your Style" 
-                    subtitle="Premium timepieces just for you"
-                    products={watchProducts} 
-                    viewAllLink="/officialStore" 
-                  />
-                )}
+  <HorizontalScroller 
+    title="Discover Your Style" 
+    subtitle="Premium timepieces just for you"
+    products={watchProducts} 
+    viewAllLink="/category/watches" 
+  />
+)}
+
 
                 {officialProducts.length > 0 && (
                   <HorizontalScroller 
