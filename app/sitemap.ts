@@ -55,7 +55,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   });
 
   // 3. Category Hubs 
-  const categories = ["electronics", "agriculture", "student_item", "ladies"]; // <-- Added 'ladies' category here
+  const categories = ["electronics", "agriculture", "student_item", "ladies" , "watches"]; // <-- Added 'ladies' category here
 
   const categoryEntries = categories.map(cat => ({
     url: `${baseUrl}/category/${cat}`,
