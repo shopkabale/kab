@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import imageCompression from "browser-image-compression"; // Added client-side compression
+import imageCompression from "browser-image-compression";
 
 function AdminUploadContent() {
   const router = useRouter();
@@ -18,7 +18,7 @@ function AdminUploadContent() {
   const [initialFetchLoading, setInitialFetchLoading] = useState(!!editPublicId);
   const [successMessage, setSuccessMessage] = useState(""); 
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
-  const [isCompressing, setIsCompressing] = useState(false); // Added compression state
+  const [isCompressing, setIsCompressing] = useState(false); 
 
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -332,19 +332,18 @@ function AdminUploadContent() {
               value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
           </div>
 
-          <div>
-  <label className="block text-sm font-semibold text-slate-900 mb-2">Category *</label>
-  <select className="w-full rounded-xl border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
-    value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-    <option value="electronics">Electronics</option>
-    <option value="agriculture">Agriculture</option>
-    <option value="student_item">Student Market</option>
-    <option value="ladies">Ladies' Picks</option>
-    {/* Added Watches option below */}
-    <option value="watches">Watches</option>
-  </select>
-</div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-semibold text-slate-900 mb-2">Category *</label>
+              <select className="w-full rounded-xl border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
+                value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
+                <option value="electronics">Electronics</option>
+                <option value="agriculture">Agriculture</option>
+                <option value="student_item">Student Market</option>
+                <option value="ladies">Ladies' Picks</option>
+                <option value="watches">Watches</option>
+              </select>
+            </div>
             <div>
               <label className="block text-sm font-semibold text-slate-900 mb-2">Price (UGX) *</label>
               <input required type="number" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
