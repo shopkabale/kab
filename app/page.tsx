@@ -155,7 +155,7 @@ export default async function Home() {
 
                 {watchProducts.length > 0 && (
   <HorizontalScroller 
-    title="Discover Your Style" 
+    title="Discover Your Watch Style" 
     subtitle="Premium timepieces just for you"
     products={watchProducts} 
     viewAllLink="/category/watches" 
