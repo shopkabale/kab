@@ -15,7 +15,8 @@ import {
   Sparkles, 
   GraduationCap, 
   Laptop, 
-  Tractor 
+  Tractor,
+Watch
 } from "lucide-react";
 
 export default function BottomNav() {
@@ -166,6 +167,16 @@ export default function BottomNav() {
                 <Store className="text-slate-400" size={20} />
                 Official Store
               </Link>
+
+              {/* Added Watches Option */}
+              <Link 
+                href="/category/watches" 
+                onClick={() => setIsCategoryModalOpen(false)} 
+                className="flex items-center gap-4 hover:text-[#D97706] transition-colors py-3 px-2 rounded-lg hover:bg-slate-800/50"
+              >
+                <Watch className="text-amber-500" size={20} />
+                Watches
+              </Link>
               
               <Link 
                 href="/ladies" 
@@ -216,3 +227,4 @@ export default function BottomNav() {
     </>
   );
 }
+
