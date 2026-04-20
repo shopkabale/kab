@@ -65,7 +65,7 @@ function LeftSidebarContent() {
 
   return (
     <div className="w-full flex flex-col gap-4 select-none">
-      
+
       {/* 1. AUTH / WELCOME CARD */}
       <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-md shadow-sm p-4 flex items-center gap-3 transition-colors">
         <div className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -343,10 +343,13 @@ function LeftSidebarContent() {
 }
 
 // Wrap in Suspense to prevent useSearchParams from de-opting the entire route to client-side rendering
+// NEW: Added the sticky top-4 self-start wrapper to enable sticky scrolling behavior
 export default function LeftSidebar() {
   return (
-    <Suspense fallback={<div className="w-full h-[800px] bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-md" />}>
-      <LeftSidebarContent />
-    </Suspense>
+    <div className="sticky top-4 self-start w-full">
+      <Suspense fallback={<div className="w-full h-[800px] bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-md" />}>
+        <LeftSidebarContent />
+      </Suspense>
+    </div>
   );
 }
