@@ -2,7 +2,7 @@ import { Metadata } from 'next';
 import { adminDb } from '@/lib/firebase/admin';
 import InviteRedirect from './InviteRedirect';
 
-// 🚀 ADDED: Forces Next.js to always fetch fresh data and never cache the fallback
+// 🚀 CRITICAL FIX: Forces Next.js to fetch fresh data on every share, completely bypassing static caching
 export const dynamic = 'force-dynamic';
 
 type Props = {
@@ -15,13 +15,13 @@ export async function generateMetadata(
 ): Promise<Metadata> {
   const code = params.code;
 
-  // Default fallback text if code is invalid or missing
+  // Default fallback text if code is invalid or database fails
   let title = "You've been invited to Kabale Online! 🎁";
   let description = "Join Kabale Online to buy and sell locally with Cash on Delivery.";
   let ogImageUrl = "https://www.kabaleonline.com/api/og";
 
-  // Only query Firebase if it looks like a valid 5-character referral code
-  if (code && code.length === 5) {
+  // 🔥 FIX: Removed the strict length check so it actually runs the database query
+  if (code) {
     try {
       const snapshot = await adminDb.collection("users")
         .where("referralCode", "==", code)
