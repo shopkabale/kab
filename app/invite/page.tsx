@@ -5,7 +5,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { auth } from "@/lib/firebase/config";
 import { 
   FaWhatsapp, FaCopy, FaCheckCircle, FaWallet, 
-  FaShieldAlt, FaInfoCircle, FaBox, FaUserPlus, FaCoins, FaEdit, FaSave, FaLock
+  FaShieldAlt, FaInfoCircle, FaBox, FaUserPlus, FaCoins, FaEdit, FaSave, FaLock, FaExclamationTriangle
 } from "react-icons/fa";
 
 export default function InvitePage() {
@@ -16,7 +16,11 @@ export default function InvitePage() {
   const [editingName, setEditingName] = useState(false);
   const [aliasInput, setAliasInput] = useState("");
   const [isSavingName, setIsSavingName] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false); // 🚀 Added to catch click instantly
+  const [isLoggingIn, setIsLoggingIn] = useState(false); 
+
+  // 🚀 Phone Number States
+  const [phoneInput, setPhoneInput] = useState("");
+  const [isSavingPhone, setIsSavingPhone] = useState(false);
 
   const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
 
@@ -24,15 +28,14 @@ export default function InvitePage() {
     setIsLoggingIn(true);
     try {
       await signIn();
-      // We don't set it to false here because the component will unmount/re-render when user state updates
     } catch (error) {
       console.error(error);
-      setIsLoggingIn(false); // Only reset if they cancel or it fails
+      setIsLoggingIn(false); 
     }
   };
 
   // ==========================================
-  // ENHANCED LOADING STATE (Fills the 2-3s gap)
+  // ENHANCED LOADING STATE
   // ==========================================
   if (loading || isLoggingIn) {
     return (
@@ -48,7 +51,7 @@ export default function InvitePage() {
   }
 
   // ==========================================
-  // LOGGED-OUT VIEW (Mobile-Optimized Landing)
+  // LOGGED-OUT VIEW
   // ==========================================
   if (!user) {
     return (
@@ -118,17 +121,48 @@ export default function InvitePage() {
   }
 
   // ==========================================
-  // LOGGED-IN VIEW (Mobile-Optimized Dashboard)
+  // LOGGED-IN VIEW
   // ==========================================
 
   const referralCode = user.referralCode || "PENDING";
   const referralLink = `https://www.kabaleonline.com/invite/${referralCode}`;
   const balance = user.referralBalance || 0;
   const count = user.referralCount || 0;
-
-  // Has the user permanently locked their custom alias?
+  
   const hasLockedAlias = !!user.referralName;
   const currentDisplayName = user.referralName || user.displayName?.split(' ')[0] || "Kabale User";
+
+  // 🚀 Handle saving the WhatsApp number
+  const handleSavePhone = async () => {
+    if (!phoneInput.trim() || phoneInput.length < 9) {
+      return alert("Please enter a valid WhatsApp number (e.g. 07XXXXXXXX)");
+    }
+
+    setIsSavingPhone(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/users/phone", {
+        method: "PATCH",
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ phone: phoneInput })
+      });
+
+      if (res.ok) {
+        user.phone = phoneInput.trim(); 
+        setPhoneInput(""); // Clear state just in case
+      } else {
+        alert("Failed to save phone number.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Network error.");
+    } finally {
+      setIsSavingPhone(false);
+    }
+  };
 
   const handleSaveAlias = async () => {
     if (!aliasInput.trim() || aliasInput.length > 20) {
@@ -151,7 +185,6 @@ export default function InvitePage() {
       });
 
       if (res.ok) {
-        // Optimistically update the local user object
         user.referralName = aliasInput.trim(); 
         setEditingName(false);
       } else {
@@ -172,7 +205,6 @@ export default function InvitePage() {
     });
   };
 
-  // Pre-formatted WhatsApp Messages
   const rawWithdrawMsg = `*Partner Withdrawal Request* 💰\n\n*Email:* ${user.email}\n*Amount:* ${balance.toLocaleString()} UGX\n\n*Action:* Please send my earnings to my Mobile Money.`;
   const rawDiscountMsg = `*Partner Discount Request* 🛍️\n\n*Email:* ${user.email}\n*Balance to Apply:* ${balance.toLocaleString()} UGX\n\n*Action:* I just placed a COD order and want to apply my partner earnings as a discount.`;
   const rawShareMsg = `Hey! 👋\n\nI buy my student supplies and electronics on *Kabale Online*.\n\nUse my invite link to shop safely on campus with *Cash on Delivery*:\n👉 ${referralLink}`;
@@ -187,6 +219,39 @@ export default function InvitePage() {
           </span>
           <h1 className="text-2xl font-black text-slate-900">Refer & Earn</h1>
         </div>
+
+        {/* ============================== */}
+        {/* 🚀 CRITICAL ACTION: LINK PHONE */}
+        {/* ============================== */}
+        {!user.phone && (
+          <div className="bg-red-50 border border-red-200 p-4 rounded-xl shadow-sm mb-6 w-full animate-pulse-slow">
+            <div className="flex items-start gap-3 mb-3">
+              <FaExclamationTriangle className="text-red-500 text-xl flex-shrink-0 mt-0.5" />
+              <div>
+                <h2 className="font-bold text-red-900 text-[14px]">Action Required</h2>
+                <p className="text-[12px] text-red-700 mt-0.5 leading-tight">
+                  Link your WhatsApp number to receive reward alerts and withdraw Mobile Money.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full">
+              <input 
+                type="tel" 
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                placeholder="e.g. 07XXXXXXXX"
+                className="border border-red-200 rounded-lg px-3 py-2.5 text-[14px] font-bold text-slate-800 outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 w-full min-w-0 bg-white"
+              />
+              <button 
+                onClick={handleSavePhone}
+                disabled={isSavingPhone || phoneInput.length < 9}
+                className="bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex-shrink-0 font-bold text-[13px]"
+              >
+                {isSavingPhone ? "Saving..." : "Link Number"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ============================== */}
         {/* ONE-TIME ALIAS CONFIGURATOR    */}
@@ -275,7 +340,6 @@ export default function InvitePage() {
           <h2 className="font-bold text-slate-900 mb-3 text-[14px]">Your Tracking Link</h2>
 
           <div className="flex flex-col gap-3 w-full min-w-0">
-            {/* break-all securely stops the URL from overflowing the screen width */}
             <div className="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 overflow-hidden min-w-0">
               <p className="text-[13px] font-mono text-slate-700 break-all select-all leading-tight">
                 {referralLink}
