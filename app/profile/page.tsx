@@ -16,7 +16,8 @@ import {
   MessageCircle,
   ChevronRight,
   ShieldCheck,
-  Zap
+  Zap,
+  Gift // 🚀 Added for the Invite link
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -98,7 +99,7 @@ export default function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] pb-28 font-sans selection:bg-amber-100">
-      
+
       {/* 👑 PREMIUM HEADER */}
       <div className="bg-white px-6 pt-12 pb-10 shadow-[0_4px_30px_rgb(0,0,0,0.03)] rounded-b-[40px] relative z-10">
         <div className="max-w-md mx-auto flex items-center gap-5">
@@ -127,9 +128,8 @@ export default function ProfilePage() {
         {hasInventory && (
           <section className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="bg-slate-900 rounded-[32px] p-8 shadow-[0_20px_40px_rgb(0,0,0,0.1)] relative overflow-hidden">
-              {/* Decorative background glow */}
               <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-              
+
               <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
                 Available Earnings
               </p>
@@ -137,7 +137,7 @@ export default function ProfilePage() {
                 <span className="text-xl text-slate-500 font-bold mr-2">UGX</span>
                 {wallet.available.toLocaleString()}
               </h2>
-              
+
               <div className="grid grid-cols-2 gap-6 bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50 backdrop-blur-sm">
                 <div>
                   <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">In Escrow</p>
@@ -149,7 +149,6 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            {/* Contextual Explainer */}
             <p className="text-xs text-slate-500 leading-relaxed px-2 font-medium">
               <strong className="text-slate-700">How earnings work:</strong> Funds from online payments stay in <strong className="text-slate-700">Escrow</strong> until the buyer receives the item. Once delivered, it moves to <strong className="text-slate-700">Available</strong> for withdrawal.
             </p>
@@ -167,7 +166,7 @@ export default function ProfilePage() {
                 <span className="block text-2xl font-black text-slate-900 tracking-tight">{metrics.views}</span>
                 <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Views</span>
               </div>
-              
+
               <div className="bg-white rounded-[24px] p-5 shadow-[0_8px_20px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col items-center justify-center text-center transition-transform hover:-translate-y-1">
                 <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mb-3">
                   <MessageCircle size={18} strokeWidth={2.5} />
@@ -175,7 +174,7 @@ export default function ProfilePage() {
                 <span className="block text-2xl font-black text-slate-900 tracking-tight">{metrics.chats}</span>
                 <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Inquiries</span>
               </div>
-              
+
               <div className="bg-gradient-to-b from-amber-50 to-white rounded-[24px] p-5 shadow-[0_8px_20px_rgb(217,119,6,0.08)] border border-amber-100 flex flex-col items-center justify-center text-center transition-transform hover:-translate-y-1">
                 <div className="w-10 h-10 rounded-full bg-amber-100 text-[#D97706] flex items-center justify-center mb-3">
                   <Zap size={18} strokeWidth={2.5} fill="currentColor" />
@@ -184,7 +183,6 @@ export default function ProfilePage() {
                 <span className="block text-[10px] text-amber-700/70 font-bold uppercase tracking-wider mt-1">AI Score</span>
               </div>
             </div>
-            {/* Contextual Explainer */}
             <p className="text-xs text-slate-500 leading-relaxed px-2 font-medium">
               <strong className="text-slate-700">Boost your AI Score:</strong> High scores mean your items appear at the top of search results. Increase it by sharing your product links directly to WhatsApp statuses and groups.
             </p>
@@ -194,8 +192,22 @@ export default function ProfilePage() {
         {/* 🗂️ SPACED NAVIGATION LINKS */}
         <section className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
           <h3 className="px-2 text-sm font-black text-slate-900 tracking-wide uppercase">Workspace</h3>
-          
+
           <div className="space-y-3">
+            {/* 🚀 NEW: INVITE & EARN CARD */}
+            <Link href="/invite" className="flex items-center justify-between p-5 bg-white rounded-[24px] shadow-[0_10px_30px_rgb(217,119,6,0.08)] border-2 border-amber-100 hover:shadow-[0_15px_35px_rgb(217,119,6,0.12)] active:scale-[0.98] transition-all group">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-[#D97706] flex items-center justify-center group-hover:bg-[#D97706] group-hover:text-white transition-colors duration-300">
+                  <Gift size={22} strokeWidth={2.5} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base">Invite & Earn Cash</h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">Earn up to 3,000 UGX for every friend who buys.</p>
+                </div>
+              </div>
+              <ChevronRight size={20} className="text-[#D97706] group-hover:translate-x-1 transition-transform" />
+            </Link>
+
             <Link href="/profile/products" className="flex items-center justify-between p-5 bg-white rounded-[24px] shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] active:scale-[0.98] transition-all group">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
