@@ -12,12 +12,15 @@ export interface User {
   photoURL?: string;
   role: Role;
   createdAt: number;
-  
+
   // 🚀 ADDED: Referral System Fields
   referralCode?: string;
   referrerId?: string | null;
   referralBalance?: number;
   referralCount?: number;
+  
+  // 🔥 FIXED: Moved referralName here!
+  referralName?: string;
 }
 
 export interface Product {
@@ -75,7 +78,6 @@ export interface Order {
 
   // 🚀 ADDED: Lead Injection Tracking
   referralCodeUsed?: string | null;
-referralName?: string;
 
   totalAmount?: number;   // New Master Total
   total?: number;         // Legacy Total
