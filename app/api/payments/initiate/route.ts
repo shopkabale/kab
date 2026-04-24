@@ -13,8 +13,8 @@ function getNetwork(phone: string): "MTN" | "AIRTEL" | null {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    // 📦 Ingest the Unified Master Payload
-    const { buyerName, contactPhone, userId, cartItems } = body;
+    // 📦 🚀 INJECTED: Destructure referralCodeUsed from the Master Payload
+    const { buyerName, contactPhone, userId, cartItems, referralCodeUsed } = body;
 
     if (!cartItems || cartItems.length === 0 || !contactPhone || !buyerName) {
       return NextResponse.json({ error: "Missing required fields or empty cart" }, { status: 400 });
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
     const transactionId = livePayData.data?.transaction_id;
 
     // 5. SAVE THE MASTER ORDER
-    // 🔥 Extract flat array of seller IDs for Firestore Rules Security!
+    // Extract flat array of seller IDs for Firestore Rules Security!
     const uniqueSellerIds = Array.from(new Set(validatedItems.map(item => item.sellerId).filter(Boolean)));
 
     const orderRef = doc(db, "orders", orderNumber);
@@ -112,16 +112,17 @@ export async function POST(request: Request) {
       userId: userId || "GUEST",
       buyerName,
       buyerPhone: contactPhone,
-      source: "cart",            // 🔥 Hardcoded for web orders
-      paymentMode: "FULL",       // 🔥 Hardcoded business rule
+      source: "cart",            // Hardcoded for web orders
+      paymentMode: "FULL",       // Hardcoded business rule
       paymentStatus: "pending",  // Waiting for webhook
       status: "new",
       cartItems: validatedItems,
       sellerOrders: sellerOrders,
-      sellerIds: uniqueSellerIds, // 🔥 Added flat array here
+      sellerIds: uniqueSellerIds, // Added flat array here
       totalAmount: actualTotalAmount,
       transactionId: transactionId,
       referenceId: referenceId,
+      referralCodeUsed: referralCodeUsed || null, // 🚀 INJECTED: Saves the cookie code into the vault!
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
