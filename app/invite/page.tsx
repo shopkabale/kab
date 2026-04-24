@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/components/AuthProvider";
 import { auth } from "@/lib/firebase/config";
 import { 
   FaWhatsapp, FaCopy, FaCheckCircle, FaWallet, 
-  FaShieldAlt, FaInfoCircle, FaBox, FaUserPlus, FaCoins, FaEdit, FaSave, FaLock, FaExclamationTriangle
+  FaShieldAlt, FaInfoCircle, FaBox, FaUserPlus, FaCoins, FaEdit, FaSave, FaLock, FaExclamationTriangle, FaTimes
 } from "react-icons/fa";
 
 export default function InvitePage() {
@@ -21,8 +21,16 @@ export default function InvitePage() {
   // 🚀 Phone Number States
   const [phoneInput, setPhoneInput] = useState("");
   const [isSavingPhone, setIsSavingPhone] = useState(false);
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
 
   const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
+
+  // 🚀 Trigger the modal if they log in and have no phone number
+  useEffect(() => {
+    if (user && !user.phone) {
+      setShowPhoneModal(true);
+    }
+  }, [user]);
 
   const handleSignIn = async () => {
     setIsLoggingIn(true);
@@ -34,9 +42,6 @@ export default function InvitePage() {
     }
   };
 
-  // ==========================================
-  // ENHANCED LOADING STATE
-  // ==========================================
   if (loading || isLoggingIn) {
     return (
       <div className="min-h-[70vh] w-full flex flex-col items-center justify-center bg-slate-50 px-4">
@@ -50,10 +55,8 @@ export default function InvitePage() {
     );
   }
 
-  // ==========================================
-  // LOGGED-OUT VIEW
-  // ==========================================
   if (!user) {
+    // ... (Keep your exact existing LOGGED-OUT VIEW here) ...
     return (
       <div className="w-full min-h-screen bg-slate-50 overflow-x-hidden">
         <div className="max-w-[480px] md:max-w-2xl mx-auto p-4 pt-8 md:pt-12 flex flex-col w-full">
@@ -132,7 +135,6 @@ export default function InvitePage() {
   const hasLockedAlias = !!user.referralName;
   const currentDisplayName = user.referralName || user.displayName?.split(' ')[0] || "Kabale User";
 
-  // 🚀 Handle saving the WhatsApp number
   const handleSavePhone = async () => {
     if (!phoneInput.trim() || phoneInput.length < 9) {
       return alert("Please enter a valid WhatsApp number (e.g. 07XXXXXXXX)");
@@ -152,7 +154,8 @@ export default function InvitePage() {
 
       if (res.ok) {
         user.phone = phoneInput.trim(); 
-        setPhoneInput(""); // Clear state just in case
+        setPhoneInput(""); 
+        setShowPhoneModal(false); // 🚀 Close modal on success
       } else {
         alert("Failed to save phone number.");
       }
@@ -165,6 +168,7 @@ export default function InvitePage() {
   };
 
   const handleSaveAlias = async () => {
+    // ... (Keep your exact existing handleSaveAlias code here) ...
     if (!aliasInput.trim() || aliasInput.length > 20) {
       return alert("Please enter a valid name (max 20 characters).");
     }
@@ -210,7 +214,57 @@ export default function InvitePage() {
   const rawShareMsg = `Hey! 👋\n\nI buy my student supplies and electronics on *Kabale Online*.\n\nUse my invite link to shop safely on campus with *Cash on Delivery*:\n👉 ${referralLink}`;
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 overflow-x-hidden pb-10">
+    <div className="w-full min-h-screen bg-slate-50 overflow-x-hidden pb-10 relative">
+      
+      {/* ============================== */}
+      {/* 🚀 FIRST-TIME ONBOARDING MODAL */}
+      {/* ============================== */}
+      {showPhoneModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl p-6 flex flex-col relative animate-in fade-in zoom-in duration-200">
+            
+            <button 
+              onClick={() => setShowPhoneModal(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <FaTimes className="text-xl" />
+            </button>
+
+            <div className="bg-amber-100 w-14 h-14 rounded-full flex items-center justify-center mb-4">
+              <FaWhatsapp className="text-[#D97706] text-2xl" />
+            </div>
+            
+            <h2 className="text-2xl font-black text-slate-900 mb-2">Welcome, Partner!</h2>
+            <p className="text-slate-600 text-[14px] leading-relaxed mb-6">
+              Before you start earning, please link your active WhatsApp number. We need this to send your <strong className="text-slate-900">reward notifications</strong> and process your <strong className="text-slate-900">Mobile Money payouts</strong>.
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <input 
+                type="tel" 
+                value={phoneInput}
+                onChange={(e) => setPhoneInput(e.target.value)}
+                placeholder="Enter WhatsApp Number (e.g. 07XXXXXXXX)"
+                className="border border-slate-300 rounded-xl px-4 py-3.5 text-[15px] font-bold text-slate-800 outline-none focus:border-[#D97706] focus:ring-1 focus:ring-[#D97706] w-full"
+              />
+              <button 
+                onClick={handleSavePhone}
+                disabled={isSavingPhone || phoneInput.length < 9}
+                className="w-full bg-[#D97706] text-white font-bold py-3.5 rounded-xl hover:bg-amber-600 transition-colors disabled:opacity-50 text-[15px]"
+              >
+                {isSavingPhone ? "Saving..." : "Save My Number"}
+              </button>
+              <button 
+                onClick={() => setShowPhoneModal(false)}
+                className="w-full text-slate-500 font-bold py-2 text-[13px] hover:text-slate-700 transition-colors"
+              >
+                Skip for now
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-[480px] md:max-w-2xl mx-auto p-4 pt-6 w-full flex flex-col">
 
         <div className="mb-6 border-b border-slate-200 pb-4 w-full">
@@ -221,35 +275,25 @@ export default function InvitePage() {
         </div>
 
         {/* ============================== */}
-        {/* 🚀 CRITICAL ACTION: LINK PHONE */}
+        {/* INLINE WARNING (If they skip)  */}
         {/* ============================== */}
-        {!user.phone && (
-          <div className="bg-red-50 border border-red-200 p-4 rounded-xl shadow-sm mb-6 w-full animate-pulse-slow">
-            <div className="flex items-start gap-3 mb-3">
-              <FaExclamationTriangle className="text-red-500 text-xl flex-shrink-0 mt-0.5" />
+        {!user.phone && !showPhoneModal && (
+          <div className="bg-red-50 border border-red-200 p-4 rounded-xl shadow-sm mb-6 w-full flex items-center justify-between">
+            <div className="flex items-start gap-3">
+              <FaExclamationTriangle className="text-red-500 text-lg flex-shrink-0 mt-0.5" />
               <div>
                 <h2 className="font-bold text-red-900 text-[14px]">Action Required</h2>
                 <p className="text-[12px] text-red-700 mt-0.5 leading-tight">
-                  Link your WhatsApp number to receive reward alerts and withdraw Mobile Money.
+                  You must link your number to receive payouts.
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 w-full">
-              <input 
-                type="tel" 
-                value={phoneInput}
-                onChange={(e) => setPhoneInput(e.target.value)}
-                placeholder="e.g. 07XXXXXXXX"
-                className="border border-red-200 rounded-lg px-3 py-2.5 text-[14px] font-bold text-slate-800 outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400 w-full min-w-0 bg-white"
-              />
-              <button 
-                onClick={handleSavePhone}
-                disabled={isSavingPhone || phoneInput.length < 9}
-                className="bg-red-600 text-white px-4 py-2.5 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex-shrink-0 font-bold text-[13px]"
-              >
-                {isSavingPhone ? "Saving..." : "Link Number"}
-              </button>
-            </div>
+            <button 
+              onClick={() => setShowPhoneModal(true)}
+              className="bg-red-100 text-red-700 px-3 py-1.5 rounded-lg font-bold text-[12px] hover:bg-red-200 transition-colors"
+            >
+              Fix Now
+            </button>
           </div>
         )}
 
@@ -310,9 +354,9 @@ export default function InvitePage() {
           </div>
         </div>
 
-        {/* ============================== */}
-        {/* STATS BOARD                    */}
-        {/* ============================== */}
+        {/* ... (Keep your STATS BOARD, LINK & SHARE, REDEMPTION SECTION, and RULES exactly the same as before) ... */}
+        
+        {/* STATS BOARD */}
         <div className="grid grid-cols-2 gap-3 mb-6 w-full">
           <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm w-full flex flex-col min-w-0">
             <div className="flex items-center gap-1.5 text-slate-500 mb-1 w-full min-w-0">
@@ -333,9 +377,7 @@ export default function InvitePage() {
           </div>
         </div>
 
-        {/* ============================== */}
-        {/* LINK & SHARE                   */}
-        {/* ============================== */}
+        {/* LINK & SHARE */}
         <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm mb-6 w-full">
           <h2 className="font-bold text-slate-900 mb-3 text-[14px]">Your Tracking Link</h2>
 
@@ -367,9 +409,7 @@ export default function InvitePage() {
           </div>
         </div>
 
-        {/* ============================== */}
-        {/* REDEMPTION SECTION             */}
-        {/* ============================== */}
+        {/* REDEMPTION SECTION */}
         <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm mb-6 w-full">
           <h2 className="font-bold text-slate-900 mb-3 text-[14px] border-b border-slate-100 pb-2">Claim Earnings</h2>
 
@@ -402,9 +442,7 @@ export default function InvitePage() {
           )}
         </div>
 
-        {/* ============================== */}
-        {/* RULES                          */}
-        {/* ============================== */}
+        {/* RULES */}
         <div className="bg-slate-100 p-4 rounded-xl border border-slate-200 w-full">
           <p className="font-bold text-slate-800 mb-2 uppercase tracking-wider text-[10px]">Program Guidelines</p>
           <ul className="text-[11px] text-slate-600 space-y-1.5 pl-3 list-disc">
