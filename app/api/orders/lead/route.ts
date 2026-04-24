@@ -1,6 +1,6 @@
-// app/api/orders/lead/route.ts
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
+import { cookies } from "next/headers"; // 🚀 Added to read the referral cookie
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +10,12 @@ export async function POST(request: Request) {
     if (!productId) {
       return NextResponse.json({ error: "Missing product ID" }, { status: 400 });
     }
+
+    // 🚀 READ REFERRAL COOKIE
+    // We grab the kabale_ref cookie to track guest buyers
+    const cookieStore = cookies();
+    const refCookie = cookieStore.get("kabale_ref");
+    const referralCodeUsed = refCookie ? refCookie.value : null;
 
     // Generate a unique Lead Reference
     const leadId = `LEAD-${Math.floor(10000 + Math.random() * 90000)}`;
@@ -22,6 +28,7 @@ export async function POST(request: Request) {
       paymentMode: "COD",
       status: "lead", // 🔥 Special status for pre-chat clicks
       paymentStatus: "pending",
+      referralCodeUsed: referralCodeUsed, // 🚀 INJECTED: Connects guest buyer to referrer
       cartItems: [
         {
           productId,
