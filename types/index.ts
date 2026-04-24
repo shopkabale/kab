@@ -3,7 +3,7 @@ export type Role = "customer" | "vendor" | "admin";
 export type ProductCategory = "electronics" | "agriculture" | "student_item" | "general" | string;
 
 // 🔥 ADDED new statuses for LivePay and Unified Orders
-export type OrderStatus = "new" | "pending" | "processing" | "confirmed" | "out_for_delivery" | "delivered" | "cancelled";
+export type OrderStatus = "new" | "pending" | "processing" | "confirmed" | "out_for_delivery" | "delivered" | "cancelled" | "lead" | "closed";
 
 export interface User {
   id: string; 
@@ -12,6 +12,12 @@ export interface User {
   photoURL?: string;
   role: Role;
   createdAt: number;
+  
+  // 🚀 ADDED: Referral System Fields
+  referralCode?: string;
+  referrerId?: string | null;
+  referralBalance?: number;
+  referralCount?: number;
 }
 
 export interface Product {
@@ -36,7 +42,7 @@ export interface Product {
   views?: number;
   inquiries?: number;
   aiScore?: number;
-  
+
   isBoosted?: boolean;
   boostExpiresAt?: number;
   isFeatured?: boolean;
@@ -67,6 +73,9 @@ export interface Order {
   transactionId?: string;
   referenceId?: string;
 
+  // 🚀 ADDED: Lead Injection Tracking
+  referralCodeUsed?: string | null;
+
   totalAmount?: number;   // New Master Total
   total?: number;         // Legacy Total
 
@@ -88,7 +97,7 @@ export interface Order {
   }>;
 
   sellerIds?: string[];   // Flat array for dashboard rules
-  
+
   items?: Array<any>;     // Legacy items array
 
   status: OrderStatus;
