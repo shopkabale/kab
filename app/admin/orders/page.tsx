@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { FaChevronDown, FaChevronUp, FaWhatsapp, FaGlobe } from "react-icons/fa";
+import { FaChevronDown, FaChevronUp, FaWhatsapp, FaGlobe, FaGift } from "react-icons/fa";
 
 export default function AdminOrdersPage() {
   const { user } = useAuth();
@@ -165,7 +165,15 @@ export default function AdminOrdersPage() {
                           <p className="text-xs text-slate-500 mt-1">{safeDate}</p>
                         </td>
                         <td className="px-6 py-4">
-                          <p className="font-bold text-slate-900 text-sm">{order.buyerName || "Guest User"}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-bold text-slate-900 text-sm">{order.buyerName || "Guest User"}</p>
+                            {/* 🚀 ADDED: Referral Badge */}
+                            {order.referralCodeUsed && (
+                              <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 border border-purple-200 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                <FaGift /> Ref: {order.referralCodeUsed}
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-slate-500 font-mono mt-0.5">{order.buyerPhone || "No Phone"}</p>
                         </td>
                         <td className="px-6 py-4">
@@ -210,7 +218,7 @@ export default function AdminOrdersPage() {
                           <td colSpan={6} className="px-6 py-6 border-l-4 border-l-[#D97706]">
                             <div className="max-w-3xl">
                               <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Master Order Details ({itemCount} items)</h4>
-                              
+
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {order.sellerOrders && order.sellerOrders.length > 0 ? (
                                   order.sellerOrders.map((seller: any, idx: number) => (
