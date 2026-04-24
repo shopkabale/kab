@@ -75,6 +75,7 @@ export interface Order {
 
   // 🚀 ADDED: Lead Injection Tracking
   referralCodeUsed?: string | null;
+referralName?: string;
 
   totalAmount?: number;   // New Master Total
   total?: number;         // Legacy Total
