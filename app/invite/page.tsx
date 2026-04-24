@@ -106,7 +106,8 @@ export default function ReferralPage() {
   // ==========================================
 
   const referralCode = user.referralCode || "PENDING";
-  const referralLink = `https://www.kabaleonline.com/?ref=${referralCode}`;
+  const referralLink = `https://www.kabaleonline.com/invite/${referralCode}`;
+
   const balance = user.referralBalance || 0;
   const count = user.referralCount || 0;
 
