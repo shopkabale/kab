@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
+import { sendWhatsAppMessage } from "@/lib/whatsapp"; // 🚀 Added for referral alerts
 
 export async function PATCH(request: Request) {
   try {
@@ -16,53 +17,112 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
     }
 
-    // 2. Perform the stock, lock, and status updates atomically
+    let referrerId: string | null = null;
+    let referrerPhone: string | null = null;
+    let referrerCode: string | null = null;
+    const rewardAmount = 3000;
+
+    // 🚀 2. PRE-TRANSACTION CHECK: Evaluate Referral Eligibility
+    if (newStatus === "delivered") {
+      const orderSnap = await adminDb.collection("orders").doc(orderId).get();
+      const orderData = orderSnap.data();
+
+      // Ensure it has a code, a phone number, and isn't already marked delivered
+      if (orderData && orderData.referralCodeUsed && orderData.buyerPhone && orderData.status !== "delivered") {
+        const items = orderData.cartItems || orderData.items || [];
+        
+        // RULE 1: Must contain an official product
+        const hasOfficialProduct = items.some((item: any) => item.sellerId === "SYSTEM");
+
+        if (hasOfficialProduct) {
+          // RULE 2: Buyer phone must have NO previous delivered orders (First-time purchase)
+          const prevOrders = await adminDb.collection("orders")
+            .where("buyerPhone", "==", orderData.buyerPhone)
+            .where("status", "==", "delivered")
+            .limit(1)
+            .get();
+
+          if (prevOrders.empty) {
+            // Find the referrer who owns this code
+            const referrerSnap = await adminDb.collection("users")
+              .where("referralCode", "==", orderData.referralCodeUsed)
+              .limit(1)
+              .get();
+
+            if (!referrerSnap.empty) {
+              const referrerData = referrerSnap.docs[0].data();
+              referrerId = referrerSnap.docs[0].id;
+              referrerPhone = referrerData.phone || referrerData.phoneNumber || null;
+              referrerCode = orderData.referralCodeUsed;
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Perform the stock, lock, and status updates atomically
     await adminDb.runTransaction(async (transaction) => {
       const orderRef = adminDb.collection("orders").doc(orderId);
       const orderSnap = await transaction.get(orderRef);
 
-      if (!orderSnap.exists) {
-        throw new Error("Order not found");
-      }
+      if (!orderSnap.exists) throw new Error("Order not found");
 
       const orderData = orderSnap.data()!;
+      const items = orderData.cartItems || orderData.items || [];
 
-      // Ensure items array exists and has at least one product
-      if (!orderData.items || orderData.items.length === 0) {
-        throw new Error("Order has no items");
-      }
+      // Ensure items array exists safely
+      if (items.length > 0) {
+        const productId = items[0].productId; 
+        const productRef = adminDb.collection("products").doc(productId);
+        const productSnap = await transaction.get(productRef);
 
-      const productId = orderData.items[0].productId; 
-      const productRef = adminDb.collection("products").doc(productId);
-      const productSnap = await transaction.get(productRef);
-
-      // 3. Status Behavior Rules
-      if (newStatus === "cancelled") {
-        // Unlock the product and restore the stock
-        transaction.update(productRef, {
-          stock: FieldValue.increment(1),
-          locked: false,
-          status: "available",
-          updatedAt: Date.now()
-        });
-      } 
-      else if (newStatus === "delivered" && productSnap.exists) {
-        // Keep locked. If stock is 0, mark as sold out
-        const productData = productSnap.data()!;
-        if (productData.stock <= 0) {
-          transaction.update(productRef, { 
-            status: "sold_out", 
-            updatedAt: Date.now() 
+        // Status Behavior Rules
+        if (newStatus === "cancelled") {
+          transaction.update(productRef, {
+            stock: FieldValue.increment(1),
+            locked: false,
+            status: "available",
+            updatedAt: Date.now()
           });
+        } 
+        else if (newStatus === "delivered" && productSnap.exists) {
+          const productData = productSnap.data()!;
+          if (productData.stock <= 0) {
+            transaction.update(productRef, { 
+              status: "sold_out", 
+              updatedAt: Date.now() 
+            });
+          }
         }
       }
 
-      // 4. Update the order itself
+      // Update the order itself
       transaction.update(orderRef, {
         status: newStatus,
         updatedAt: Date.now()
       });
+
+      // 🚀 4. APPLY REWARD IN TRANSACTION
+      if (referrerId) {
+        const referrerRef = adminDb.collection("users").doc(referrerId);
+        transaction.update(referrerRef, {
+          referralBalance: FieldValue.increment(rewardAmount),
+          referralCount: FieldValue.increment(1)
+        });
+      }
     });
+
+    // 🚀 5. TRIGGER WHATSAPP NOTIFICATION
+    // We do this outside the transaction so network failures don't roll back the database
+    if (referrerId && referrerPhone && referrerCode) {
+      const freshReferrer = await adminDb.collection("users").doc(referrerId).get();
+      const newBalance = freshReferrer.data()?.referralBalance || rewardAmount;
+
+      const msg = `🎉 *Great news!* You just earned ${rewardAmount.toLocaleString()} UGX!\n\nA friend you referred just completed their first order on Kabale Online.\n\n💰 *Total Balance:* ${newBalance.toLocaleString()} UGX.\n\nKeep sharing your link: https://www.kabaleonline.com/?ref=${referrerCode}`;
+      
+      // Fire and forget (don't await so the admin panel responds instantly)
+      sendWhatsAppMessage(referrerPhone, msg).catch(console.error);
+    }
 
     return NextResponse.json({ success: true }, { status: 200 });
 
