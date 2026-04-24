@@ -10,6 +10,9 @@ import FloatingHelpButton from "@/components/FloatingHelpButton";
 import BottomNav from "@/components/BottomNav";
 import GlobalLoader from "@/components/GlobalLoader";
 
+// 🚀 IMPORT SILENT REFERRAL TRACKER
+import ReferralTracker from "@/components/ReferralTracker";
+
 // IMPORT GTM NEXT.JS LIBRARY AND YOUR ID
 import { GoogleTagManager } from '@next/third-parties/google';
 import { GTM_ID } from "@/lib/analytics";
@@ -66,6 +69,8 @@ export default function LayoutClient({
           {/* The Suspense boundary fixes the useSearchParams build crash */}
           <Suspense fallback={null}>
             <GlobalLoader />
+            {/* 🚀 INJECTED HERE: Safely tracks ?ref=ABCDE in the background */}
+            <ReferralTracker />
           </Suspense>
 
           {/* FIXED WEBSITE BANNER */}
