@@ -15,10 +15,11 @@ export async function GET(request: Request) {
     const title = isInvite 
       ? `${name} invited you to Kabale Online! 🎁`
       : (searchParams.get('title') || 'Kabale Online Marketplace');
-      
+
+    // 🔥 FIXED: Strictly e-commerce focused messaging
     const description = isInvite
       ? 'Accept the invite and shop safely on campus with Cash on Delivery.'
-      : (searchParams.get('desc') || 'The Better Way to Inform Your Community');
+      : (searchParams.get('desc') || 'The Better Way to Buy and Sell Locally');
 
     return new ImageResponse(
       (
