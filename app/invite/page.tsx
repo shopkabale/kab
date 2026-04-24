@@ -18,10 +18,11 @@ export default function InvitePage() {
   const [isSavingName, setIsSavingName] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false); 
 
-  // 🚀 Phone Number States
+  // 🚀 Phone Number & Security States
   const [phoneInput, setPhoneInput] = useState("");
   const [isSavingPhone, setIsSavingPhone] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
 
@@ -42,6 +43,9 @@ export default function InvitePage() {
     }
   };
 
+  // ==========================================
+  // ENHANCED LOADING STATE
+  // ==========================================
   if (loading || isLoggingIn) {
     return (
       <div className="min-h-[70vh] w-full flex flex-col items-center justify-center bg-slate-50 px-4">
@@ -55,8 +59,10 @@ export default function InvitePage() {
     );
   }
 
+  // ==========================================
+  // LOGGED-OUT VIEW
+  // ==========================================
   if (!user) {
-    // ... (Keep your exact existing LOGGED-OUT VIEW here) ...
     return (
       <div className="w-full min-h-screen bg-slate-50 overflow-x-hidden">
         <div className="max-w-[480px] md:max-w-2xl mx-auto p-4 pt-8 md:pt-12 flex flex-col w-full">
@@ -135,6 +141,12 @@ export default function InvitePage() {
   const hasLockedAlias = !!user.referralName;
   const currentDisplayName = user.referralName || user.displayName?.split(' ')[0] || "Kabale User";
 
+  // 🚀 7-DAY CONFIRMATION LOGIC
+  const SEVEN_DAYS_IN_MS = 7 * 24 * 60 * 60 * 1000;
+  const needsPhoneConfirmation = user?.phone && (
+    !user.phoneUpdatedAt || (Date.now() - user.phoneUpdatedAt > SEVEN_DAYS_IN_MS)
+  );
+
   const handleSavePhone = async () => {
     if (!phoneInput.trim() || phoneInput.length < 9) {
       return alert("Please enter a valid WhatsApp number (e.g. 07XXXXXXXX)");
@@ -145,17 +157,15 @@ export default function InvitePage() {
       const token = await auth.currentUser?.getIdToken();
       const res = await fetch("/api/users/phone", {
         method: "PATCH",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ phone: phoneInput })
       });
 
       if (res.ok) {
         user.phone = phoneInput.trim(); 
+        user.phoneUpdatedAt = Date.now();
         setPhoneInput(""); 
-        setShowPhoneModal(false); // 🚀 Close modal on success
+        setShowPhoneModal(false); 
       } else {
         alert("Failed to save phone number.");
       }
@@ -167,8 +177,27 @@ export default function InvitePage() {
     }
   };
 
+  const handleConfirmExistingPhone = async () => {
+    setIsConfirming(true);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      const res = await fetch("/api/users/phone", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+        body: JSON.stringify({ phone: user.phone }) // Refresh timestamp
+      });
+
+      if (res.ok) {
+        user.phoneUpdatedAt = Date.now(); 
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
   const handleSaveAlias = async () => {
-    // ... (Keep your exact existing handleSaveAlias code here) ...
     if (!aliasInput.trim() || aliasInput.length > 20) {
       return alert("Please enter a valid name (max 20 characters).");
     }
@@ -181,10 +210,7 @@ export default function InvitePage() {
       const token = await auth.currentUser?.getIdToken();
       const res = await fetch("/api/users/referral-name", {
         method: "PATCH",
-        headers: { 
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         body: JSON.stringify({ referralName: aliasInput })
       });
 
@@ -298,6 +324,38 @@ export default function InvitePage() {
         )}
 
         {/* ============================== */}
+        {/* 🚀 7-DAY CONFIRMATION BANNER   */}
+        {/* ============================== */}
+        {needsPhoneConfirmation && !showPhoneModal && (
+          <div className="bg-blue-50 border border-blue-200 p-4 rounded-xl shadow-sm mb-6 w-full flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <FaInfoCircle className="text-blue-500 text-lg flex-shrink-0 mt-0.5" />
+              <div>
+                <h2 className="font-bold text-blue-900 text-[14px]">Security Check</h2>
+                <p className="text-[12px] text-blue-700 mt-0.5 leading-tight">
+                  Is <strong className="font-black text-blue-900 tracking-wide">{user.phone}</strong> still your active WhatsApp and Mobile Money number?
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2 w-full md:w-auto flex-shrink-0">
+              <button 
+                onClick={handleConfirmExistingPhone}
+                disabled={isConfirming}
+                className="flex-1 md:flex-none bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {isConfirming ? "..." : "Yes, it's correct"}
+              </button>
+              <button 
+                onClick={() => setShowPhoneModal(true)}
+                className="flex-1 md:flex-none bg-white border border-blue-200 text-blue-700 px-4 py-2 rounded-lg font-bold text-[13px] hover:bg-blue-100 transition-colors"
+              >
+                Edit
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ============================== */}
         {/* ONE-TIME ALIAS CONFIGURATOR    */}
         {/* ============================== */}
         <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm mb-4 w-full">
@@ -353,8 +411,6 @@ export default function InvitePage() {
             </div>
           </div>
         </div>
-
-        {/* ... (Keep your STATS BOARD, LINK & SHARE, REDEMPTION SECTION, and RULES exactly the same as before) ... */}
         
         {/* STATS BOARD */}
         <div className="grid grid-cols-2 gap-3 mb-6 w-full">
