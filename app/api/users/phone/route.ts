@@ -18,12 +18,15 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Invalid phone number" }, { status: 400 });
     }
 
-    // Safely update the user's phone number
+    const now = Date.now();
+
+    // 🚀 Safely update the user's phone number AND the confirmation timestamp
     await adminDb.collection("users").doc(uid).update({
-      phone: phone.trim()
+      phone: phone.trim(),
+      phoneUpdatedAt: now
     });
 
-    return NextResponse.json({ success: true, phone });
+    return NextResponse.json({ success: true, phone, phoneUpdatedAt: now });
   } catch (error) {
     console.error("Failed to update phone number:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
