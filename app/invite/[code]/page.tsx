@@ -2,6 +2,9 @@ import { Metadata } from 'next';
 import { adminDb } from '@/lib/firebase/admin';
 import InviteRedirect from './InviteRedirect';
 
+// 🚀 ADDED: Forces Next.js to always fetch fresh data and never cache the fallback
+export const dynamic = 'force-dynamic';
+
 type Props = {
   params: { code: string }
 }
@@ -11,7 +14,7 @@ export async function generateMetadata(
   { params }: Props
 ): Promise<Metadata> {
   const code = params.code;
-  
+
   // Default fallback text if code is invalid or missing
   let title = "You've been invited to Kabale Online! 🎁";
   let description = "Join Kabale Online to buy and sell locally with Cash on Delivery.";
@@ -27,19 +30,19 @@ export async function generateMetadata(
 
       if (!snapshot.empty) {
         const userData = snapshot.docs[0].data();
-        
+
         // 🚀 SMART NAME LOGIC: Use custom alias first, fallback to Google first name
         let displayAlias = userData.referralName;
-        
+
         if (!displayAlias) {
           const fullName = userData.displayName || "A friend";
           displayAlias = fullName.split(' ')[0]; // Grab just the first name
         }
-        
+
         // Override with the personalized text!
         title = `${displayAlias} invited you to Kabale Online! 🎁`;
         description = `Click here to accept ${displayAlias}'s invite and shop safely on campus with Cash on Delivery.`;
-        
+
         // 🚀 Add the customized name to the image URL so it prints on the graphic
         ogImageUrl = `https://www.kabaleonline.com/api/og?name=${encodeURIComponent(displayAlias)}`;
       }
