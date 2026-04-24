@@ -10,20 +10,39 @@ import {
 
 export default function InvitePage() {
   const { user, signIn, loading } = useAuth();
-  
+
   // States
   const [copied, setCopied] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [aliasInput, setAliasInput] = useState("");
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false); // 🚀 Added to catch click instantly
 
   const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
 
-  // Loading State
-  if (loading) {
+  const handleSignIn = async () => {
+    setIsLoggingIn(true);
+    try {
+      await signIn();
+      // We don't set it to false here because the component will unmount/re-render when user state updates
+    } catch (error) {
+      console.error(error);
+      setIsLoggingIn(false); // Only reset if they cancel or it fails
+    }
+  };
+
+  // ==========================================
+  // ENHANCED LOADING STATE (Fills the 2-3s gap)
+  // ==========================================
+  if (loading || isLoggingIn) {
     return (
-      <div className="min-h-[60vh] w-full flex items-center justify-center bg-slate-50">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#D97706]"></div>
+      <div className="min-h-[70vh] w-full flex flex-col items-center justify-center bg-slate-50 px-4">
+        <div className="relative flex items-center justify-center mb-5">
+          <div className="animate-spin rounded-full h-14 w-14 border-t-2 border-b-2 border-[#D97706]"></div>
+          <FaShieldAlt className="absolute text-[#D97706] text-xl animate-pulse" />
+        </div>
+        <h2 className="text-slate-900 font-black text-lg md:text-xl mb-1">Securing your dashboard...</h2>
+        <p className="text-slate-500 text-sm animate-pulse text-center">Loading your referrals and wallet balance</p>
       </div>
     );
   }
@@ -34,9 +53,8 @@ export default function InvitePage() {
   if (!user) {
     return (
       <div className="w-full min-h-screen bg-slate-50 overflow-x-hidden">
-        {/* Mobile max-w-[480px], expanding to max-w-2xl on md screens */}
         <div className="max-w-[480px] md:max-w-2xl mx-auto p-4 pt-8 md:pt-12 flex flex-col w-full">
-          
+
           <div className="text-center mb-8 w-full">
             <span className="text-[#D97706] font-bold tracking-widest uppercase text-[11px] mb-2 block">
               Partner Program
@@ -45,7 +63,7 @@ export default function InvitePage() {
               Invite Friends.<br/>Earn Real Cash.
             </h1>
             <p className="text-slate-600 text-[15px] px-2 w-full">
-              Get paid <strong className="text-slate-900">3,000 UGX</strong> directly to your Mobile Money for every new customer you bring.
+              Earn up to <strong className="text-slate-900">3,000 UGX</strong> directly to your Mobile Money for every new customer. Even small orders earn you a bonus!
             </p>
           </div>
 
@@ -53,7 +71,7 @@ export default function InvitePage() {
             <h2 className="font-bold text-lg text-slate-900 mb-5 border-b border-slate-100 pb-3">
               How it works
             </h2>
-            
+
             <div className="space-y-6 w-full">
               <div className="flex gap-3 items-start w-full min-w-0">
                 <div className="bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
@@ -64,7 +82,7 @@ export default function InvitePage() {
                   <p className="text-[13px] text-slate-600 mt-1 leading-snug">Share your partner link on WhatsApp or with friends.</p>
                 </div>
               </div>
-              
+
               <div className="flex gap-3 items-start w-full min-w-0">
                 <div className="bg-slate-100 w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
                   <FaBox className="text-slate-600 text-[16px]" />
@@ -81,17 +99,18 @@ export default function InvitePage() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-slate-900 text-[15px]">3. Get Paid</h3>
-                  <p className="text-[13px] text-slate-600 mt-1 leading-snug">Earn 3,000 UGX when it's delivered. Withdraw to MTN/Airtel.</p>
+                  <p className="text-[13px] text-slate-600 mt-1 leading-snug">Earn 10% of their order total (up to 3k). Orders under 5k get a flat 300 UGX reward.</p>
                 </div>
               </div>
             </div>
           </div>
 
           <button 
-            onClick={signIn}
-            className="w-full bg-[#D97706] hover:bg-amber-600 text-white font-bold py-4 rounded-xl shadow-md transition-all text-[16px] flex items-center justify-center"
+            onClick={handleSignIn}
+            disabled={isLoggingIn}
+            className="w-full bg-[#D97706] hover:bg-amber-600 text-white font-bold py-4 rounded-xl shadow-md transition-all text-[16px] flex items-center justify-center disabled:opacity-70"
           >
-            Login to Partner Dashboard
+            {isLoggingIn ? "Securing Login..." : "Login to Partner Dashboard"}
           </button>
         </div>
       </div>
@@ -101,7 +120,7 @@ export default function InvitePage() {
   // ==========================================
   // LOGGED-IN VIEW (Mobile-Optimized Dashboard)
   // ==========================================
-  
+
   const referralCode = user.referralCode || "PENDING";
   const referralLink = `https://www.kabaleonline.com/invite/${referralCode}`;
   const balance = user.referralBalance || 0;
@@ -115,7 +134,7 @@ export default function InvitePage() {
     if (!aliasInput.trim() || aliasInput.length > 20) {
       return alert("Please enter a valid name (max 20 characters).");
     }
-    
+
     const confirmSave = window.confirm(`Are you sure you want to set your name to "${aliasInput.trim()}"?\n\nThis can only be done ONCE and cannot be changed later.`);
     if (!confirmSave) return;
 
@@ -130,7 +149,7 @@ export default function InvitePage() {
         },
         body: JSON.stringify({ referralName: aliasInput })
       });
-      
+
       if (res.ok) {
         // Optimistically update the local user object
         user.referralName = aliasInput.trim(); 
@@ -161,7 +180,7 @@ export default function InvitePage() {
   return (
     <div className="w-full min-h-screen bg-slate-50 overflow-x-hidden pb-10">
       <div className="max-w-[480px] md:max-w-2xl mx-auto p-4 pt-6 w-full flex flex-col">
-        
+
         <div className="mb-6 border-b border-slate-200 pb-4 w-full">
           <span className="text-[#D97706] font-bold tracking-widest uppercase text-[10px] mb-1 block">
             Partner Dashboard
@@ -180,7 +199,7 @@ export default function InvitePage() {
                 This appears on your shared links.
               </p>
             </div>
-            
+
             <div className="w-full md:w-auto flex-shrink-0">
               {hasLockedAlias ? (
                 <div className="flex items-center gap-2 bg-slate-50 px-3 py-2.5 rounded-lg border border-slate-100 w-full justify-center md:justify-start">
@@ -239,7 +258,7 @@ export default function InvitePage() {
               {balance.toLocaleString()} <span className="text-[12px] text-amber-700">UGX</span>
             </p>
           </div>
-          
+
           <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm w-full flex flex-col min-w-0">
             <div className="flex items-center gap-1.5 text-slate-500 mb-1 w-full min-w-0">
               <FaUserPlus className="text-[14px] flex-shrink-0" />
@@ -254,7 +273,7 @@ export default function InvitePage() {
         {/* ============================== */}
         <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm mb-6 w-full">
           <h2 className="font-bold text-slate-900 mb-3 text-[14px]">Your Tracking Link</h2>
-          
+
           <div className="flex flex-col gap-3 w-full min-w-0">
             {/* break-all securely stops the URL from overflowing the screen width */}
             <div className="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 overflow-hidden min-w-0">
@@ -271,7 +290,7 @@ export default function InvitePage() {
                 {copied ? <FaCheckCircle className="text-green-500 text-[16px]" /> : <FaCopy className="text-[16px]" />}
                 {copied ? "Copied!" : "Copy"}
               </button>
-              
+
               <a 
                 href={`https://wa.me/?text=${encodeURIComponent(rawShareMsg)}`}
                 target="_blank"
@@ -327,6 +346,7 @@ export default function InvitePage() {
           <ul className="text-[11px] text-slate-600 space-y-1.5 pl-3 list-disc">
             <li><strong className="text-slate-800">Official Items Only:</strong> Rewards apply only to official Kabale Online stock.</li>
             <li><strong className="text-slate-800">First Order Only:</strong> The friend must be a brand new buyer.</li>
+            <li><strong className="text-slate-800">Dynamic Payouts:</strong> Earn 10% of the cart value (Max 3,000 UGX). Carts under 5k earn 300 UGX.</li>
             <li><strong className="text-slate-800">Completed Orders:</strong> Cash is credited the moment the delivery is marked successful.</li>
           </ul>
         </div>
