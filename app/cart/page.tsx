@@ -42,18 +42,29 @@ export default function CartPage() {
 
     setLoading(true);
 
-    // 🚀 UNIFIED MASTER PAYLOAD (Mapping the cart array)
+    // 🚀 READ THE REFERRAL COOKIE FROM THE BROWSER
+    const getCookie = (name: string) => {
+      if (typeof document === "undefined") return null; // Safety check for SSR
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop()?.split(';').shift();
+      return null;
+    };
+    const referralCode = getCookie("kabale_ref");
+
+    // 🚀 UNIFIED MASTER PAYLOAD (Mapping the cart array + Referral Data)
     const masterOrderPayload = {
       buyerName: buyerName.trim(),
       contactPhone: cleanPhone,
       userId: user ? user.id : "GUEST",
+      referralCodeUsed: referralCode || null, // 🔥 INJECTED HERE
       cartItems: cart.map(item => ({
         productId: item.id,
         name: item.title,
         price: item.price,
         quantity: item.quantity,
         sellerId: (item as any).sellerId || "SYSTEM", 
-        sellerPhone: item.sellerPhone || "", 
+        sellerPhone: (item as any).sellerPhone || "", 
         image: item.image || ""
       }))
     };
@@ -185,7 +196,7 @@ export default function CartPage() {
       {showModal && (  
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">  
           <div className="bg-white rounded-3xl p-6 md:p-8 w-full max-w-md shadow-2xl relative overflow-hidden">  
-            
+
             <div className="absolute top-0 left-0 w-full h-2 bg-[#D97706]"></div>  
             <h2 className="text-2xl font-black text-slate-900 mb-2">Complete Order</h2>  
 
@@ -247,7 +258,7 @@ export default function CartPage() {
                 {loading ? "Processing..." : "Pay Now"}  
               </button>  
             </div>  
-            
+
           </div>  
         </div>  
       )}  
