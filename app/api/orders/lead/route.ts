@@ -1,21 +1,24 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
-import { cookies } from "next/headers"; // 🚀 Added to read the referral cookie
+import { cookies } from "next/headers";
+import { FieldValue } from "firebase-admin/firestore";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { productId, productName, sellerId, sellerPhone, price } = body;
+    // 🚀 UPDATED: Destructure referralCodeUsed from the body (sent by ProductActions)
+    const { productId, productName, sellerId, sellerPhone, price, referralCodeUsed: bodyRef } = body;
 
     if (!productId) {
       return NextResponse.json({ error: "Missing product ID" }, { status: 400 });
     }
 
-    // 🚀 READ REFERRAL COOKIE
-    // We grab the kabale_ref cookie to track guest buyers
+    // 🚀 SMART REFERRAL CAPTURE
+    // 1. Try the code from the body (Direct from ProductActions)
+    // 2. Fallback to the cookie (Backup for guest buyers)
     const cookieStore = cookies();
     const refCookie = cookieStore.get("kabale_ref");
-    const referralCodeUsed = refCookie ? refCookie.value : null;
+    const referralCodeUsed = bodyRef || (refCookie ? refCookie.value : null);
 
     // Generate a unique Lead Reference
     const leadId = `LEAD-${Math.floor(10000 + Math.random() * 90000)}`;
@@ -26,9 +29,9 @@ export async function POST(request: Request) {
       orderId: leadId,
       source: "whatsapp",
       paymentMode: "COD",
-      status: "lead", // 🔥 Special status for pre-chat clicks
+      status: "lead", // Special status for pre-chat clicks
       paymentStatus: "pending",
-      referralCodeUsed: referralCodeUsed, // 🚀 INJECTED: Connects guest buyer to referrer
+      referralCodeUsed: referralCodeUsed, // 🚀 CONNECTED
       cartItems: [
         {
           productId,
@@ -39,8 +42,8 @@ export async function POST(request: Request) {
           sellerPhone: sellerPhone || ""
         }
       ],
-      // We don't know the buyer's name or phone yet! 
-      // The bot will update these fields when they send the message.
+      // NOTE: buyerPhone and buyerName remain empty until the bot 
+      // or admin updates them during the WhatsApp conversation.
       buyerPhone: "", 
       buyerName: "",
       totalAmount: Number(price) || 0,
