@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuth } from "@/components/AuthProvider";
-import { auth } from "@/lib/firebase/client"; 
+import { auth } from "@/lib/firebase/config";
 import { 
   FaWhatsapp, FaCopy, FaCheckCircle, FaWallet, 
   FaShieldAlt, FaInfoCircle, FaBox, FaUserPlus, FaCoins, FaEdit, FaSave, FaLock
