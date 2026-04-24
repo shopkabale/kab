@@ -20,7 +20,7 @@ export async function PATCH(request: Request) {
     let referrerId: string | null = null;
     let referrerPhone: string | null = null;
     let referrerCode: string | null = null;
-    const rewardAmount = 3000;
+    let rewardAmount = 0; // 🚀 Now dynamic based on cart total
 
     // 🚀 2. PRE-TRANSACTION CHECK: Evaluate Referral Eligibility
     if (newStatus === "delivered") {
@@ -30,7 +30,7 @@ export async function PATCH(request: Request) {
       // Ensure it has a code, a phone number, and isn't already marked delivered
       if (orderData && orderData.referralCodeUsed && orderData.buyerPhone && orderData.status !== "delivered") {
         const items = orderData.cartItems || orderData.items || [];
-        
+
         // RULE 1: Must contain an official product
         const hasOfficialProduct = items.some((item: any) => item.sellerId === "SYSTEM");
 
@@ -43,6 +43,16 @@ export async function PATCH(request: Request) {
             .get();
 
           if (prevOrders.empty) {
+            // 🚀 DYNAMIC TIERED MATH
+            const orderTotal = Number(orderData.totalAmount) || Number(orderData.total) || 0;
+            
+            if (orderTotal < 5000) {
+              rewardAmount = 300; // Micro-reward for tiny orders
+            } else {
+              // 10% of cart total, capped at a maximum of 3,000 UGX
+              rewardAmount = Math.min(orderTotal * 0.10, 3000);
+            }
+
             // Find the referrer who owns this code
             const referrerSnap = await adminDb.collection("users")
               .where("referralCode", "==", orderData.referralCodeUsed)
@@ -103,7 +113,7 @@ export async function PATCH(request: Request) {
       });
 
       // 🚀 4. APPLY REWARD IN TRANSACTION
-      if (referrerId) {
+      if (referrerId && rewardAmount > 0) {
         const referrerRef = adminDb.collection("users").doc(referrerId);
         transaction.update(referrerRef, {
           referralBalance: FieldValue.increment(rewardAmount),
@@ -114,12 +124,12 @@ export async function PATCH(request: Request) {
 
     // 🚀 5. TRIGGER WHATSAPP NOTIFICATION
     // We do this outside the transaction so network failures don't roll back the database
-    if (referrerId && referrerPhone && referrerCode) {
+    if (referrerId && referrerPhone && referrerCode && rewardAmount > 0) {
       const freshReferrer = await adminDb.collection("users").doc(referrerId).get();
       const newBalance = freshReferrer.data()?.referralBalance || rewardAmount;
 
-      const msg = `🎉 *Great news!* You just earned ${rewardAmount.toLocaleString()} UGX!\n\nA friend you referred just completed their first order on Kabale Online.\n\n💰 *Total Balance:* ${newBalance.toLocaleString()} UGX.\n\nKeep sharing your link: https://www.kabaleonline.com/?ref=${referrerCode}`;
-      
+      const msg = `🎉 *Great news!* You just earned ${rewardAmount.toLocaleString()} UGX!\n\nA friend you referred just completed their first order on Kabale Online.\n\n💰 *Total Balance:* ${newBalance.toLocaleString()} UGX.\n\nKeep sharing your link: https://www.kabaleonline.com/invite/${referrerCode}`;
+
       // Fire and forget (don't await so the admin panel responds instantly)
       sendWhatsAppMessage(referrerPhone, msg).catch(console.error);
     }
