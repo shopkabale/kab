@@ -19,6 +19,7 @@ export interface User {
   referralBalance?: number;
   referralCount?: number;
 phone?: string;
+phoneUpdatedAt?: number;
   
   // 🔥 FIXED: Moved referralName here!
   referralName?: string;
