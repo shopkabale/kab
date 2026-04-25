@@ -18,14 +18,14 @@ interface SearchBarProps {
   onSearch?: () => void;
 }
 
-// 🔥 JUMIA STYLE: Hardcoded trending searches (you can change these based on what actually trends in Kabale!)
+// 🔥 STRATEGIC TRENDING SEARCHES: High profit margin items
 const TRENDING_SEARCHES = [
-  "laptops", 
-  "iphone phones", 
-  "shoes men", 
-  "jbl speakers", 
-  "speakers",
-  "woofers"
+  "watches", 
+  "cables", 
+  "flash", 
+  "jbl", 
+  "power bank",
+  "earpods"
 ];
 
 function SearchBarContent({ onSearch }: SearchBarProps) {
@@ -75,7 +75,6 @@ function SearchBarContent({ onSearch }: SearchBarProps) {
         // Extract unique product names/categories to simulate keyword suggestions
         const uniqueKeywords = Array.from(
           new Set(hits.map((hit: any) => {
-             // Let's use name or category, converted to lowercase for that "search query" look
              const text = hit.name || hit.title || hit.category;
              return text ? String(text).toLowerCase() : "";
           }).filter(text => text !== ""))
@@ -101,7 +100,7 @@ function SearchBarContent({ onSearch }: SearchBarProps) {
     setIsTyping(true);
   };
 
-  // 🔥 CORE LOGIC: Triggers the actual search (used by form submit AND suggestion clicks)
+  // CORE LOGIC: Triggers the actual search (used by form submit AND suggestion clicks)
   const executeSearch = async (searchStr: string) => {
     const finalQuery = searchStr.trim();
 
@@ -137,7 +136,7 @@ function SearchBarContent({ onSearch }: SearchBarProps) {
   return (
     <div className="relative w-full mx-auto" ref={searchRef}>
       <form onSubmit={handleFormSubmit} className="relative flex items-center">
-        {/* CLEAR BUTTON (X) - Shows when there is text, exactly like Jumia */}
+        {/* CLEAR BUTTON (X) */}
         {query && (
           <button
             type="button"
@@ -209,7 +208,6 @@ function SearchBarContent({ onSearch }: SearchBarProps) {
                 >
                   <span className="text-sm font-bold text-slate-700 truncate">{suggestion}</span>
                   
-                  {/* Jumia's right arrow icon */}
                   <svg className="w-4 h-4 text-slate-400 flex-shrink-0 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
@@ -220,11 +218,28 @@ function SearchBarContent({ onSearch }: SearchBarProps) {
         </div>
       )}
 
-      {/* NAVIGATING LOADER */}
+      {/* 🔥 THE INJECTED CUSTOM LOADER OVERLAY RESTORED */}
       {isNavigating && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-transparent pointer-events-none transition-opacity duration-300">
-          <svg className="animate-spin w-16 h-16 text-[#D97706] drop-shadow-md" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="7" className="opacity-90" strokeDasharray="200" strokeDashoffset="50" />
+          <style>{`
+            @keyframes kineticSpin {
+              0% { transform: scale(0.6) rotate(0deg); opacity: 0.7; }
+              50% { transform: scale(1.2) rotate(90deg); opacity: 1; }
+              100% { transform: scale(0.6) rotate(360deg); opacity: 0.7; }
+            }
+            .animate-kinetic-spin {
+              animation: kineticSpin 1.4s infinite ease-in-out;
+            }
+          `}</style>
+
+          <svg 
+            className="animate-kinetic-spin w-16 h-16 text-[#D97706] drop-shadow-md" 
+            viewBox="0 0 100 100" 
+            fill="none" 
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="7" className="opacity-90" />
+            <path d="M38 28v44m0-22l20-22m-20 22l20 22" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
       )}
