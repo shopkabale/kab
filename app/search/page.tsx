@@ -7,9 +7,8 @@ import { optimizeImage } from "@/lib/utils";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import ProductSection from "@/components/ProductSection";
-import algoliasearch from "algoliasearch/lite"; // 🔥 IMPORT ALGOLIA
+import algoliasearch from "algoliasearch/lite";
 
-// 🔥 INITIALIZE ALGOLIA OUTSIDE THE COMPONENT
 const searchClient = algoliasearch(
   process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "",
   process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY || ""
@@ -22,8 +21,10 @@ function SearchResults() {
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // 🔥 NEW: JUMIA GRADE TYPO TRACKING
+  const [correctedQuery, setCorrectedQuery] = useState<string | null>(null);
 
-  // NOTIFY ME STATE
   const [contactInfo, setContactInfo] = useState("");
   const [isSubmittingAlert, setIsSubmittingAlert] = useState(false);
   const [alertSuccess, setAlertSuccess] = useState(false);
@@ -33,14 +34,23 @@ function SearchResults() {
       setLoading(true);
       setAlertSuccess(false);
       setContactInfo("");
-      
+      setCorrectedQuery(null);
+
       try {
-        // 🔥 USE ALGOLIA TO SEARCH THE ENTIRE DATABASE
-        const { hits } = await index.search(query, {
-          hitsPerPage: 50, // Pull up to 50 relevant results from the entire DB
+        // 🔥 JUMIA GRADE SEARCH PARAMS
+        const { hits, parsedQuery } = await index.search(query, {
+          hitsPerPage: 50,
+          typoTolerance: "min",
+          ignorePlurals: true,
+          removeWordsIfNoResults: "lastWords", // If "blue laptop" fails, it searches "blue" then "laptop"
+          getRankingInfo: true // Pulls deep match info
         });
 
-        // 🔥 MAP ALGOLIA HITS TO MATCH YOUR PRODUCTSECTION EXPECTATIONS
+        // Check if Algolia used its brain to fix a typo
+        if (parsedQuery && parsedQuery.toLowerCase() !== query.toLowerCase() && hits.length > 0) {
+            setCorrectedQuery(parsedQuery);
+        }
+
         const mappedProducts = hits.map((hit: any) => ({
           id: hit.objectID,
           publicId: hit.objectID,
@@ -48,16 +58,14 @@ function SearchResults() {
           title: hit.title || hit.name,
           price: hit.price,
           category: hit.category,
-          // ProductSection expects an array of images. Algolia usually stores 'image' as a string.
           images: hit.image ? [optimizeImage(hit.image)] : [],
           status: hit.status || "active",
           isApprovedQuality: hit.isApprovedQuality || false,
           isOfficialStore: hit.isOfficialStore || false,
-          createdAt: hit.createdAt || Date.now(), // Fallback for new badge logic
+          createdAt: hit.createdAt || Date.now(),
         }));
 
         setProducts(mappedProducts);
-
       } catch (error) {
         console.error("Algolia Search failed:", error);
       } finally {
@@ -73,7 +81,6 @@ function SearchResults() {
     }
   }, [query]);
 
-  // 🔥 HANDLER FOR CREATING THE ALERT
   const handleCreateAlert = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contactInfo.trim() || !query.trim()) return;
@@ -98,19 +105,8 @@ function SearchResults() {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-start pt-32 bg-slate-50 dark:bg-[#0a0a0a] min-h-screen">
-        <style>{`
-          @keyframes kineticSpin {
-            0% { transform: scale(0.6) rotate(0deg); opacity: 0.7; }
-            50% { transform: scale(1.2) rotate(90deg); opacity: 1; }
-            100% { transform: scale(0.6) rotate(360deg); opacity: 0.7; }
-          }
-          .animate-kinetic-spin {
-            animation: kineticSpin 1.4s infinite ease-in-out;
-          }
-        `}</style>
-        <svg className="animate-kinetic-spin w-16 h-16 text-[#D97706] drop-shadow-md mb-6" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="7" className="opacity-90" />
-          <path d="M38 28v44m0-22l20-22m-20 22l20 22" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+        <svg className="animate-spin w-16 h-16 text-[#D97706] drop-shadow-md mb-6" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="7" className="opacity-90" strokeDasharray="200" strokeDashoffset="50" />
         </svg>
         <p className="font-bold text-slate-500 animate-pulse">Searching Kabale Online for "{query}"...</p>
       </div>
@@ -129,10 +125,20 @@ function SearchResults() {
           <p className="text-slate-600 dark:text-slate-400 font-medium text-sm md:text-base">
             Found {products.length} {products.length === 1 ? "result" : "results"} for <span className="text-[#D97706] font-bold">"{query}"</span>
           </p>
+          
+          {/* 🔥 JUMIA GRADE: "DID YOU MEAN" UI */}
+          {correctedQuery && products.length > 0 && (
+            <div className="mt-3 inline-flex items-center gap-2 bg-amber-50 dark:bg-[#D97706]/10 border border-amber-200 dark:border-[#D97706]/30 px-4 py-1.5 rounded-full shadow-sm">
+              <span className="text-lg">💡</span>
+              <p className="text-sm text-slate-700 dark:text-slate-300">
+                Did you mean <span className="font-bold text-[#D97706] italic">"{correctedQuery}"</span>?
+              </p>
+            </div>
+          )}
         </div>
 
         {products.length === 0 ? (
-          // INTENT-CATCHER UI
+          // NO RESULTS INTENT-CATCHER UI (Unchanged)
           <div className="bg-white dark:bg-[#111] rounded-3xl p-6 sm:p-12 text-center border border-slate-200 dark:border-slate-800 shadow-sm max-w-2xl mx-auto">
             <span className="text-6xl mb-4 block">🕵️‍♂️</span>
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">We couldn't find "{query}"</h2>
@@ -141,7 +147,7 @@ function SearchResults() {
             </p>
 
             {alertSuccess ? (
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 rounded-2xl p-6 mb-8 animate-in fade-in zoom-in duration-300">
+              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 rounded-2xl p-6 mb-8">
                 <span className="text-4xl block mb-2">✅</span>
                 <h3 className="font-bold text-lg mb-1">Alert Setup Complete!</h3>
                 <p className="text-sm">We'll message you at <strong>{contactInfo}</strong> the exact moment someone posts this item in Kabale.</p>
@@ -195,30 +201,9 @@ function SearchResults() {
   );
 }
 
-// Main Page Component wrapped in Suspense for Next.js build requirements
 export default function SearchPage() {
   return (
-    <Suspense 
-      fallback={
-        <div className="flex flex-col items-center justify-start pt-32 bg-slate-50 dark:bg-[#0a0a0a] min-h-screen">
-          <style>{`
-            @keyframes kineticSpin {
-              0% { transform: scale(0.6) rotate(0deg); opacity: 0.7; }
-              50% { transform: scale(1.2) rotate(90deg); opacity: 1; }
-              100% { transform: scale(0.6) rotate(360deg); opacity: 0.7; }
-            }
-            .animate-kinetic-spin {
-              animation: kineticSpin 1.4s infinite ease-in-out;
-            }
-          `}</style>
-          <svg className="animate-kinetic-spin w-16 h-16 text-[#D97706] drop-shadow-md mb-6" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="50" cy="50" r="42" stroke="currentColor" strokeWidth="7" className="opacity-90" />
-            <path d="M38 28v44m0-22l20-22m-20 22l20 22" stroke="currentColor" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          <p className="font-bold text-slate-500 animate-pulse">Preparing search...</p>
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a]"></div>}>
       <SearchResults />
     </Suspense>
   );
