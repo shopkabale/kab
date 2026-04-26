@@ -4,8 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import { 
-  FaWhatsapp, FaCopy, FaCheckCircle, FaWallet, 
-  FaShieldAlt, FaBox, FaUserPlus, FaCoins, FaExclamationTriangle, FaArrowRight, FaStore, FaCog, FaChartLine
+  FaWhatsapp, FaCopy, FaCheckCircle, 
+  FaShieldAlt, FaCoins, FaExclamationTriangle, FaArrowRight, FaStore, FaCog, FaChartLine
 } from "react-icons/fa";
 
 export default function InviteHubPage() {
@@ -85,6 +85,7 @@ export default function InviteHubPage() {
   const referralLink = `https://www.kabaleonline.com/invite/${referralCode}`;
   const balance = user.referralBalance || 0;
   const currentDisplayName = user.referralName || user.displayName?.split(' ')[0] || "Kabale User";
+  const currentPhone = user.phone || user.phoneNumber; // The bulletproof check
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink).then(() => {
@@ -105,19 +106,18 @@ export default function InviteHubPage() {
         </div>
 
         {/* SETTINGS ALERT */}
-{!(user.phone || user.phoneNumber) && (
-  <div className="bg-red-50 border border-red-200 p-4 rounded-xl shadow-sm mb-6 flex items-center justify-between">
-    <div className="flex items-start gap-3">
-      <FaExclamationTriangle className="text-red-500 text-lg mt-0.5" />
-      <div>
-        <h2 className="font-black text-red-900 text-[14px]">Setup Required</h2>
-        <p className="text-[12px] text-red-700 mt-0.5 font-medium">Add your phone number to receive payouts.</p>
-      </div>
-    </div>
-    <Link href="/invite/settings" className="bg-red-100 text-red-700 px-3 py-1.5 rounded-lg font-bold text-[12px] hover:bg-red-200 transition-colors">Fix Now</Link>
-  </div>
-)}
-
+        {!currentPhone && (
+          <div className="bg-red-50 border border-red-200 p-4 rounded-xl shadow-sm mb-6 flex items-center justify-between">
+            <div className="flex items-start gap-3">
+              <FaExclamationTriangle className="text-red-500 text-lg mt-0.5" />
+              <div>
+                <h2 className="font-black text-red-900 text-[14px]">Setup Required</h2>
+                <p className="text-[12px] text-red-700 mt-0.5 font-medium">Add your phone number to receive payouts.</p>
+              </div>
+            </div>
+            <Link href="/invite/settings" className="bg-red-100 text-red-700 px-3 py-1.5 rounded-lg font-bold text-[12px] hover:bg-red-200 transition-colors">Fix Now</Link>
+          </div>
+        )}
 
         {/* QUICK BALANCE */}
         <div className="bg-white border border-slate-200 p-5 rounded-xl shadow-sm mb-6 flex justify-between items-center">
