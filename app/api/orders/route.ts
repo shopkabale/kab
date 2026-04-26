@@ -171,11 +171,13 @@ export async function GET(request: Request) {
 }
 
 // ==========================================
-// 3. PATCH: UPDATE STATUS & TRIGGER PAYOUTS
+// 3. PATCH: UPDATE STATUS & TRIGGER PAYOUTS (DEBUG MODE)
 // ==========================================
 export async function PATCH(request: Request) {
   try {
     const { adminId, orderId, newStatus } = await request.json();
+    console.log(`\n--- 🚀 ADMIN UPDATE TRIGGERED ---`);
+    console.log(`1. Target Order: ${orderId} | New Status: ${newStatus}`);
 
     if (!adminId || !orderId || !newStatus) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -185,72 +187,89 @@ export async function PATCH(request: Request) {
     const orderDoc = await orderRef.get();
 
     if (!orderDoc.exists) {
+      console.log("❌ ERROR: Order not found in DB.");
       return NextResponse.json({ error: "Order not found" }, { status: 404 });
     }
 
     const orderData = orderDoc.data()!;
+    console.log(`2. Order Data Loaded. Referral Code Attached: ${orderData.referralCodeUsed || "NONE"}`);
 
     // A. Update the order status
     await orderRef.update({ 
       status: newStatus,
       updatedAt: Date.now() 
     });
+    console.log(`3. Status officially changed to ${newStatus}`);
 
     // ==========================================
     // 🚀 REFERRAL PAYOUT ENGINE
-    // Triggered ONLY when marked "delivered"
     // ==========================================
-    if (newStatus === "delivered" && orderData.referralCodeUsed && !orderData.payoutProcessed) {
-      console.log(`[Referral Engine] Processing payout for order ${orderId} (Ref: ${orderData.referralCodeUsed})`);
+    if (newStatus === "delivered") {
+      console.log(`4. 'Delivered' detected. Checking referral logic...`);
+      
+      if (!orderData.referralCodeUsed) {
+         console.log(`🛑 STOPPING: No referral code attached to this order.`);
+      } else if (orderData.payoutProcessed) {
+         console.log(`🛑 STOPPING: This order was already paid out previously.`);
+      } else {
+         console.log(`5. All checks passed! Searching for Partner with code: ${orderData.referralCodeUsed}`);
+         
+         const usersRef = adminDb.collection("users");
+         const partnerSnap = await usersRef.where("referralCode", "==", orderData.referralCodeUsed).limit(1).get();
 
-      const usersRef = adminDb.collection("users");
-      const partnerSnap = await usersRef.where("referralCode", "==", orderData.referralCodeUsed).limit(1).get();
+         if (partnerSnap.empty) {
+            console.log(`❌ FATAL: Nobody in the 'users' database owns the code ${orderData.referralCodeUsed}!`);
+         } else {
+            console.log(`6. Partner Found! Calculating payout...`);
+            const partnerDoc = partnerSnap.docs[0];
+            const partnerRef = partnerDoc.ref;
+            const partnerData = partnerDoc.data();
 
-      if (!partnerSnap.empty) {
-        const partnerDoc = partnerSnap.docs[0];
-        const partnerRef = partnerDoc.ref;
-        const partnerData = partnerDoc.data();
+            let rewardAmount = 0;
+            const cartTotal = Number(orderData.totalAmount) || 0;
 
-        // 💰 Execute the Math: 10% (Max 3k) or Flat 300 UGX
-        let rewardAmount = 0;
-        const cartTotal = Number(orderData.totalAmount) || 0;
+            if (cartTotal < 5000) {
+              rewardAmount = 300; 
+            } else {
+              rewardAmount = Math.min(Math.floor(cartTotal * 0.10), 3000); 
+            }
+            console.log(`7. Cart Total: ${cartTotal} UGX | Reward: ${rewardAmount} UGX`);
 
-        if (cartTotal < 5000) {
-          rewardAmount = 300; 
-        } else {
-          rewardAmount = Math.min(Math.floor(cartTotal * 0.10), 3000); 
-        }
+            // 🔒 Atomic Wallet Update
+            await partnerRef.update({
+              referralBalance: FieldValue.increment(rewardAmount),
+              referralCount: FieldValue.increment(1)
+            });
+            console.log(`8. Partner Wallet Updated successfully in Firestore.`);
 
-        // 🔒 Atomic Wallet Update
-        await partnerRef.update({
-          referralBalance: FieldValue.increment(rewardAmount),
-          referralCount: FieldValue.increment(1)
-        });
+            // 🔒 Lock the order
+            await orderRef.update({
+              payoutProcessed: true,
+              payoutAmount: rewardAmount
+            });
+            console.log(`9. Order locked to prevent double payouts.`);
 
-        // 🔒 Lock the order to prevent double-payouts
-        await orderRef.update({
-          payoutProcessed: true,
-          payoutAmount: rewardAmount
-        });
-
-        // 📱 Send Meta WhatsApp Alert
-        if (partnerData.phone) {
-          const simulatedNewBalance = (Number(partnerData.referralBalance) || 0) + rewardAmount;
-          await NotificationService.notifyPartnerCredit(
-            partnerData.phone, 
-            rewardAmount, 
-            simulatedNewBalance
-          );
-        } else {
-          console.log(`⚠️ Partner ${partnerData.email} got paid, but has no phone linked for WhatsApp alert.`);
-        }
+            // 📱 Send Meta WhatsApp Alert
+            if (partnerData.phone) {
+              console.log(`10. Firing WhatsApp alert to ${partnerData.phone}...`);
+              const simulatedNewBalance = (Number(partnerData.referralBalance) || 0) + rewardAmount;
+              await NotificationService.notifyPartnerCredit(
+                partnerData.phone, 
+                rewardAmount, 
+                simulatedNewBalance
+              );
+              console.log(`✅ COMPLETE: WhatsApp payload dispatched!`);
+            } else {
+              console.log(`⚠️ Partner ${partnerData.email} got paid, but has no phone linked for WhatsApp alert.`);
+            }
+         }
       }
     }
 
     return NextResponse.json({ success: true, message: `Order updated to ${newStatus}` });
 
   } catch (error) {
-    console.error("Admin Orders PATCH Error:", error);
+    console.error("🔥 ADMIN ORDERS PATCH CRASHED:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
