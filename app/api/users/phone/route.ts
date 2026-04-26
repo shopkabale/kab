@@ -20,11 +20,13 @@ export async function PATCH(request: Request) {
 
     const now = Date.now();
 
-    // 🚀 Safely update the user's phone number AND the confirmation timestamp
-    await adminDb.collection("users").doc(uid).update({
+    // 🚀 FIXED: Using .set() with { merge: true }
+    // This ensures that even if the user is brand new and has no Firestore document yet,
+    // it will CREATE the document and save the phone number permanently.
+    await adminDb.collection("users").doc(uid).set({
       phone: phone.trim(),
       phoneUpdatedAt: now
-    });
+    }, { merge: true });
 
     return NextResponse.json({ success: true, phone, phoneUpdatedAt: now });
   } catch (error) {
