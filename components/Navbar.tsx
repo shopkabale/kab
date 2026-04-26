@@ -92,6 +92,8 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 </div>
                 <div className="px-5 pt-3">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Explore</p>
+                  {/* 🚀 ADDED: Refer & Earn Link in Desktop Dropdown */}
+                  <Link href="/invite" className="block py-1.5 text-[14px] font-bold text-[#D97706] hover:text-amber-700">Refer & Earn 💰</Link>
                   <Link href="/requests" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Buyer Requests</Link>
                   <Link href="/ai" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">AI Shopping Guide</Link>
                   <Link href="/blog" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Journal & Updates</Link>
@@ -129,6 +131,8 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                     </div>
                     <Link href="/profile" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-[#D97706]">My Profile</Link>
                     <Link href="/sell" className="block px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-[#D97706]">My Listings</Link>
+                    {/* 🚀 ADDED: Partner Dashboard in User Menu */}
+                    <Link href="/invite" className="block px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-[#D97706]">Partner Dashboard</Link>
                     <button onClick={signOut} className="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">Sign Out</button>
                   </div>
                 </div>
@@ -251,6 +255,12 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
               <Link href="/sell" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-slate-50 transition-colors">
                 <svg className="w-6 h-6 mr-4 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4v16m8-8H4" /></svg>
                 <span className="text-[15px]">Sell on Kabale</span>
+              </Link>
+              
+              {/* 🚀 ADDED: Highly Visible Mobile Refer & Earn Link */}
+              <Link href="/invite" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-700 hover:bg-amber-100 transition-colors bg-amber-50/50">
+                <svg className="w-6 h-6 mr-4 text-[#D97706]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span className="text-[15px] font-bold text-[#D97706]">Refer & Earn Cash</span>
               </Link>
             </div>
           </div>
