@@ -12,7 +12,6 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // 1. Verify the user is actually an admin
     const adminSnap = await adminDb.collection("users").doc(adminId).get();
     if (!adminSnap.exists || adminSnap.data()?.role !== "admin") {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
@@ -24,7 +23,7 @@ export async function PATCH(request: Request) {
     let rewardAmount = 0; 
     let debugMessage = `Order status updated to ${newStatus}.`; 
 
-    // 🚀 2. PRE-TRANSACTION CHECK: Evaluate Referral Eligibility
+    // 🚀 REFERRAL PAYOUT ENGINE
     if (newStatus === "delivered") {
       const orderSnap = await adminDb.collection("orders").doc(orderId).get();
       const orderData = orderSnap.data();
@@ -32,15 +31,12 @@ export async function PATCH(request: Request) {
       if (!orderData) {
         debugMessage = "Order not found in DB.";
       } else if (!orderData.referralCodeUsed) {
-        debugMessage = "Order Delivered. (Skipped payout: No referral code attached).";
-      } else if (!orderData.buyerPhone) {
-        debugMessage = "Order Delivered. (Skipped payout: No buyer phone to verify first-time status).";
-      } else if (orderData.status === "delivered") {
-        debugMessage = "Order Delivered. (Skipped payout: Order was already delivered previously).";
+        debugMessage = "Order Delivered. (No referral code attached).";
+      } else if (orderData.status === "delivered" || orderData.payoutProcessed) {
+        debugMessage = "Order Delivered. (Partner was already paid previously).";
       } else {
         const items = orderData.cartItems || orderData.items || [];
 
-        // 🚀 RULE 1 FIXED: Check for Admin ID, Admin Phone, OR isAdminUpload tag!
         const OFFICIAL_SELLER_ID = "HemTITkLkWabkm8pj9CCf5bRlHJ3";
         const OFFICIAL_PHONE = "0759997376";
         
@@ -48,57 +44,45 @@ export async function PATCH(request: Request) {
           item.sellerId === "SYSTEM" || 
           item.sellerId === OFFICIAL_SELLER_ID || 
           item.sellerPhone === OFFICIAL_PHONE ||
-          item.isAdminUpload === true // 🚀 ADDED THE EXPLICIT TAG CHECK
+          item.isAdminUpload === true 
         );
 
         if (!hasOfficialProduct) {
           debugMessage = "Order Delivered. (Skipped payout: Cart did not contain any Official Kabale products).";
         } else {
-          // RULE 2: Buyer phone must have NO previous delivered orders (First-time purchase)
-          const prevOrders = await adminDb.collection("orders")
-            .where("buyerPhone", "==", orderData.buyerPhone)
-            .where("status", "==", "delivered")
+          // 🚀 RULE 2 HAS BEEN REMOVED! Partners now get paid EVERY TIME their link is used.
+          
+          const orderTotal = Number(orderData.totalAmount) || Number(orderData.total) || 0;
+
+          if (orderTotal < 5000) {
+            rewardAmount = 300; 
+          } else {
+            rewardAmount = Math.min(Math.floor(orderTotal * 0.10), 3000);
+          }
+
+          const referrerSnap = await adminDb.collection("users")
+            .where("referralCode", "==", orderData.referralCodeUsed)
             .limit(1)
             .get();
 
-          if (!prevOrders.empty) {
-            debugMessage = `Order Delivered. (Skipped payout: Buyer ${orderData.buyerPhone} is not a first-time customer).`;
+          if (referrerSnap.empty) {
+            debugMessage = `Order Delivered. (Nobody owns the code ${orderData.referralCodeUsed}).`;
           } else {
-            // 🚀 DYNAMIC TIERED MATH
-            const orderTotal = Number(orderData.totalAmount) || Number(orderData.total) || 0;
+            const referrerData = referrerSnap.docs[0].data();
+            referrerId = referrerSnap.docs[0].id;
+            referrerPhone = referrerData.phone || referrerData.phoneNumber || null;
+            referrerCode = orderData.referralCodeUsed;
 
-            if (orderTotal < 5000) {
-              rewardAmount = 300; 
+            if (referrerPhone) {
+              debugMessage = `✅ SUCCESS! Partner earned ${rewardAmount} UGX.\nWhatsApp alert sent.`;
             } else {
-              rewardAmount = Math.min(Math.floor(orderTotal * 0.10), 3000);
-            }
-
-            // Find the referrer who owns this code
-            const referrerSnap = await adminDb.collection("users")
-              .where("referralCode", "==", orderData.referralCodeUsed)
-              .limit(1)
-              .get();
-
-            if (referrerSnap.empty) {
-              debugMessage = `Order Delivered. (Skipped payout: Nobody owns the code ${orderData.referralCodeUsed}).`;
-            } else {
-              const referrerData = referrerSnap.docs[0].data();
-              referrerId = referrerSnap.docs[0].id;
-              referrerPhone = referrerData.phone || referrerData.phoneNumber || null;
-              referrerCode = orderData.referralCodeUsed;
-
-              if (referrerPhone) {
-                debugMessage = `SUCCESS! Partner earned ${rewardAmount} UGX.\nWhatsApp queued for ${referrerPhone}.`;
-              } else {
-                debugMessage = `SUCCESS! Partner earned ${rewardAmount} UGX, but has no phone number linked for WhatsApp alerts.`;
-              }
+              debugMessage = `✅ SUCCESS! Partner earned ${rewardAmount} UGX (No phone linked for WhatsApp alert).`;
             }
           }
         }
       }
     }
 
-    // 3. Perform the stock, lock, and status updates atomically
     await adminDb.runTransaction(async (transaction) => {
       const orderRef = adminDb.collection("orders").doc(orderId);
       const orderSnap = await transaction.get(orderRef);
@@ -108,14 +92,12 @@ export async function PATCH(request: Request) {
       const orderData = orderSnap.data()!;
       const items = orderData.cartItems || orderData.items || [];
 
-      // Ensure items array exists safely
       if (items.length > 0) {
         const productId = items[0].productId || items[0].id; 
         if (productId) {
            const productRef = adminDb.collection("products").doc(productId);
            const productSnap = await transaction.get(productRef);
 
-           // Status Behavior Rules
            if (newStatus === "cancelled") {
              transaction.update(productRef, {
                stock: FieldValue.increment(1),
@@ -136,7 +118,6 @@ export async function PATCH(request: Request) {
         }
       }
 
-      // Update the order itself (Lock payout to prevent double paying)
       const updatePayload: any = {
         status: newStatus,
         updatedAt: Date.now()
@@ -147,7 +128,6 @@ export async function PATCH(request: Request) {
       }
       transaction.update(orderRef, updatePayload);
 
-      // 🚀 4. APPLY REWARD IN TRANSACTION
       if (referrerId && rewardAmount > 0) {
         const referrerRef = adminDb.collection("users").doc(referrerId);
         transaction.update(referrerRef, {
@@ -157,7 +137,6 @@ export async function PATCH(request: Request) {
       }
     });
 
-    // 🚀 5. TRIGGER META WHATSAPP NOTIFICATION
     if (referrerId && referrerPhone && rewardAmount > 0) {
       const freshReferrer = await adminDb.collection("users").doc(referrerId).get();
       const newBalance = freshReferrer.data()?.referralBalance || rewardAmount;
@@ -165,14 +144,11 @@ export async function PATCH(request: Request) {
       NotificationService.notifyPartnerCredit(referrerPhone, rewardAmount, newBalance).catch(console.error);
     }
 
-    return NextResponse.json({ success: "V5_ACTIVE", message: debugMessage }, { status: 200 });
+    return NextResponse.json({ success: true, message: debugMessage }, { status: 200 });
 
   } catch (error: any) {
     console.error("Status update error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to update status" }, 
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error.message || "Failed to update status" }, { status: 500 });
   }
 }
 
@@ -223,7 +199,6 @@ export async function POST(request: Request) {
           sellerId: product.sellerId || "SYSTEM",
           sellerPhone: product.sellerPhone || "",
           image: product.images?.[0] || "",
-          // 🚀 CRITICAL FIX: Save the isAdminUpload tag onto the order item so the payout engine sees it!
           isAdminUpload: product.isAdminUpload === true 
         };
         validatedItems.push(finalItem);
@@ -270,8 +245,6 @@ export async function POST(request: Request) {
       });
     });
 
-    console.log("-> Executing Notification Promises for COD Order...");
-
     const notificationPromises: Promise<any>[] = [];
     const allProductsString = validatedItems.map(i => `${i.quantity}x ${i.name}`).join(", ");
 
@@ -302,7 +275,6 @@ export async function POST(request: Request) {
     }
 
     await Promise.allSettled(notificationPromises);
-    console.log("✅ All COD notifications dispatched successfully.");
 
     return NextResponse.json({ success: true, orderId: orderNumber });
 
