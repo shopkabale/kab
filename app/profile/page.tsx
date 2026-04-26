@@ -14,10 +14,11 @@ import {
   Store, 
   TrendingUp, 
   MessageCircle,
-  ChevronRight,
   ShieldCheck,
   Zap,
-  Gift // 🚀 Added for the Invite link
+  Gift,
+  Wallet,
+  ArrowRight
 } from "lucide-react";
 
 export default function ProfilePage() {
@@ -78,16 +79,28 @@ export default function ProfilePage() {
     };
   }, [user?.id]);
 
-  if (authLoading) return <div className="min-h-screen flex items-center justify-center text-slate-400 font-bold animate-pulse">Loading workspace...</div>;
+  if (authLoading) {
+    return (
+      <div className="min-h-[70vh] w-full flex flex-col items-center justify-center bg-slate-50 px-4">
+        <div className="relative flex items-center justify-center mb-5">
+          <div className="animate-spin rounded-full h-14 w-14 border-t-2 border-b-2 border-[#D97706]"></div>
+        </div>
+        <h2 className="text-slate-900 font-black text-lg md:text-xl mb-1">Loading Workspace...</h2>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
-        <div className="w-full max-w-sm bg-white p-8 rounded-3xl shadow-xl text-center">
-          <div className="w-20 h-20 bg-slate-50 text-slate-300 rounded-full flex items-center justify-center mx-auto mb-6 text-3xl shadow-inner">🔒</div>
-          <h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Your Kabale ID</h2>
-          <p className="text-slate-500 mb-8 leading-relaxed">Log in to manage your premium purchases, saved items, and local sales pipeline.</p>
-          <button onClick={signIn} className="w-full bg-[#D97706] text-white py-4 rounded-2xl font-black text-lg hover:bg-amber-600 active:scale-[0.98] transition-all shadow-[0_8px_30px_rgb(217,119,6,0.3)]">
+      <div className="w-full min-h-screen bg-slate-50 overflow-x-hidden">
+        <div className="max-w-[480px] md:max-w-2xl mx-auto p-4 pt-8 md:pt-12 flex flex-col w-full">
+          <div className="text-center mb-8 w-full">
+            <span className="text-[#D97706] font-black tracking-widest uppercase text-[11px] mb-2 block">Kabale ID</span>
+            <h1 className="text-3xl font-black text-slate-900 mb-3 leading-tight">Your Personal<br/>Workspace.</h1>
+            <p className="text-slate-500 text-[15px] px-2 w-full font-medium">Log in to manage your purchases, saved items, and local sales pipeline.</p>
+          </div>
+
+          <button onClick={signIn} className="w-full bg-[#D97706] hover:bg-amber-600 text-white font-bold py-4 rounded-xl shadow-md transition-all text-[16px] flex items-center justify-center">
             Log In Securely
           </button>
         </div>
@@ -98,190 +111,133 @@ export default function ProfilePage() {
   const hasInventory = metrics.totalItems > 0;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-28 font-sans selection:bg-amber-100">
+    <div className="w-full min-h-screen bg-slate-50 overflow-x-hidden pb-10">
+      <div className="max-w-[480px] md:max-w-2xl mx-auto p-4 pt-6 w-full flex flex-col">
 
-      {/* 👑 PREMIUM HEADER */}
-      <div className="bg-white px-6 pt-12 pb-10 shadow-[0_4px_30px_rgb(0,0,0,0.03)] rounded-b-[40px] relative z-10">
-        <div className="max-w-md mx-auto flex items-center gap-5">
-          <div className="relative">
-            <div className="w-20 h-20 bg-gradient-to-tr from-[#D97706] to-amber-300 rounded-full flex items-center justify-center text-white text-3xl font-black shadow-[0_8px_20px_rgb(217,119,6,0.3)] border-4 border-white">
-              {user.displayName?.charAt(0).toUpperCase() || "U"}
-            </div>
+        {/* HEADER */}
+        <div className="mb-6 border-b border-slate-200 pb-4 flex items-center gap-4 w-full">
+          <div className="w-14 h-14 bg-slate-200 rounded-full flex items-center justify-center text-slate-600 text-xl font-black relative flex-shrink-0">
+            {user.displayName?.charAt(0).toUpperCase() || "U"}
             {verificationStatus === "verified" && (
-              <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white w-7 h-7 rounded-full border-2 border-white flex items-center justify-center shadow-sm">
-                <ShieldCheck size={14} strokeWidth={3} />
+              <div className="absolute -bottom-1 -right-1 bg-blue-500 text-white w-5 h-5 rounded-full border-2 border-slate-50 flex items-center justify-center">
+                <ShieldCheck size={10} strokeWidth={3} />
               </div>
             )}
           </div>
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight leading-tight">
-              {user.displayName || "Kabale User"}
-            </h1>
-            <p className="text-slate-500 font-medium mt-1">{user.email}</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-black text-slate-900 truncate w-full">{user.displayName || "Kabale User"}</h1>
+            <p className="text-slate-500 font-medium text-[13px] truncate w-full">{user.email}</p>
           </div>
         </div>
-      </div>
 
-      <div className="max-w-md mx-auto px-5 mt-8 space-y-10">
-
-        {/* 💰 ISOLATED WALLET & EARNINGS SECTION */}
+        {/* SELLER WALLET & STATS */}
         {hasInventory && (
-          <section className="space-y-3 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="bg-slate-900 rounded-[32px] p-8 shadow-[0_20px_40px_rgb(0,0,0,0.1)] relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-
-              <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-2">
-                Available Earnings
-              </p>
-              <h2 className="text-4xl font-black text-white tracking-tight mb-8">
-                <span className="text-xl text-slate-500 font-bold mr-2">UGX</span>
-                {wallet.available.toLocaleString()}
-              </h2>
-
-              <div className="grid grid-cols-2 gap-6 bg-slate-800/50 rounded-2xl p-5 border border-slate-700/50 backdrop-blur-sm">
-                <div>
-                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">In Escrow</p>
-                  <p className="font-bold text-white text-lg tracking-tight">UGX {wallet.pending.toLocaleString()}</p>
+          <>
+            <div className="grid grid-cols-2 gap-3 mb-3 w-full">
+              <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm w-full flex flex-col min-w-0">
+                <div className="flex items-center gap-1.5 text-slate-400 mb-1 w-full min-w-0">
+                  <Wallet size={14} className="flex-shrink-0" />
+                  <p className="text-[10px] font-black uppercase tracking-wider truncate w-full text-slate-500">Available</p>
                 </div>
-                <div className="pl-6 border-l border-slate-700/50">
-                  <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider mb-1">Withdrawn</p>
-                  <p className="font-bold text-white text-lg tracking-tight">UGX {wallet.withdrawn.toLocaleString()}</p>
+                <p className="text-xl md:text-2xl font-black text-[#D97706] truncate w-full">
+                  {wallet.available.toLocaleString()} <span className="text-[12px] text-amber-700">UGX</span>
+                </p>
+              </div>
+
+              <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm w-full flex flex-col min-w-0">
+                <div className="flex items-center gap-1.5 text-slate-400 mb-1 w-full min-w-0">
+                  <ShieldCheck size={14} className="flex-shrink-0" />
+                  <p className="text-[10px] font-black uppercase tracking-wider truncate w-full text-slate-500">In Escrow</p>
                 </div>
+                <p className="text-xl md:text-2xl font-black text-slate-900 truncate w-full">
+                  {wallet.pending.toLocaleString()} <span className="text-[12px] text-slate-500">UGX</span>
+                </p>
               </div>
             </div>
-            <p className="text-xs text-slate-500 leading-relaxed px-2 font-medium">
-              <strong className="text-slate-700">How earnings work:</strong> Funds from online payments stay in <strong className="text-slate-700">Escrow</strong> until the buyer receives the item. Once delivered, it moves to <strong className="text-slate-700">Available</strong> for withdrawal.
-            </p>
-          </section>
-        )}
 
-        {/* 📊 ISOLATED PERFORMANCE STATS SECTION */}
-        {hasInventory && (
-          <section className="space-y-3 animate-in fade-in slide-in-from-bottom-6 duration-700">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="bg-white rounded-[24px] p-5 shadow-[0_8px_20px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col items-center justify-center text-center transition-transform hover:-translate-y-1">
-                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center mb-3">
-                  <TrendingUp size={18} strokeWidth={2.5} />
-                </div>
-                <span className="block text-2xl font-black text-slate-900 tracking-tight">{metrics.views}</span>
-                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Views</span>
+            <div className="grid grid-cols-3 gap-3 mb-6 w-full">
+              <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm flex flex-col items-center justify-center text-center">
+                <TrendingUp size={16} className="text-slate-400 mb-1" />
+                <span className="block text-lg font-black text-slate-900">{metrics.views}</span>
+                <span className="block text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Views</span>
               </div>
-
-              <div className="bg-white rounded-[24px] p-5 shadow-[0_8px_20px_rgb(0,0,0,0.03)] border border-slate-100 flex flex-col items-center justify-center text-center transition-transform hover:-translate-y-1">
-                <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mb-3">
-                  <MessageCircle size={18} strokeWidth={2.5} />
-                </div>
-                <span className="block text-2xl font-black text-slate-900 tracking-tight">{metrics.chats}</span>
-                <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">Inquiries</span>
+              <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm flex flex-col items-center justify-center text-center">
+                <MessageCircle size={16} className="text-slate-400 mb-1" />
+                <span className="block text-lg font-black text-slate-900">{metrics.chats}</span>
+                <span className="block text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">Chats</span>
               </div>
-
-              <div className="bg-gradient-to-b from-amber-50 to-white rounded-[24px] p-5 shadow-[0_8px_20px_rgb(217,119,6,0.08)] border border-amber-100 flex flex-col items-center justify-center text-center transition-transform hover:-translate-y-1">
-                <div className="w-10 h-10 rounded-full bg-amber-100 text-[#D97706] flex items-center justify-center mb-3">
-                  <Zap size={18} strokeWidth={2.5} fill="currentColor" />
-                </div>
-                <span className="block text-2xl font-black text-[#D97706] tracking-tight">{metrics.avgScore}</span>
-                <span className="block text-[10px] text-amber-700/70 font-bold uppercase tracking-wider mt-1">AI Score</span>
+              <div className="bg-white border border-slate-200 p-3 rounded-xl shadow-sm flex flex-col items-center justify-center text-center">
+                <Zap size={16} className="text-amber-500 mb-1" />
+                <span className="block text-lg font-black text-[#D97706]">{metrics.avgScore}</span>
+                <span className="block text-[9px] text-slate-500 font-bold uppercase tracking-wider mt-0.5">AI Score</span>
               </div>
             </div>
-            <p className="text-xs text-slate-500 leading-relaxed px-2 font-medium">
-              <strong className="text-slate-700">Boost your AI Score:</strong> High scores mean your items appear at the top of search results. Increase it by sharing your product links directly to WhatsApp statuses and groups.
-            </p>
-          </section>
+          </>
         )}
 
-        {/* 🗂️ SPACED NAVIGATION LINKS */}
-        <section className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
-          <h3 className="px-2 text-sm font-black text-slate-900 tracking-wide uppercase">Workspace</h3>
+        {/* WORKSPACE NAVIGATION */}
+        <h2 className="font-black text-slate-900 mb-3 text-[14px]">Your Workspace</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">
+          
+          <Link href="/invite" className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm hover:border-[#D97706] transition-colors flex items-center justify-between group md:col-span-2">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center text-[#D97706]"><Gift size={18} /></div>
+              <div><h3 className="font-black text-slate-900 text-[14px]">Invite & Earn Cash</h3><p className="text-[11px] text-slate-500 font-medium">Earn up to 3,000 UGX per referral.</p></div>
+            </div>
+            <ArrowRight size={16} className="text-slate-300 group-hover:text-[#D97706] transition-colors" />
+          </Link>
 
-          <div className="space-y-3">
-            {/* 🚀 NEW: INVITE & EARN CARD */}
-            <Link href="/invite" className="flex items-center justify-between p-5 bg-white rounded-[24px] shadow-[0_10px_30px_rgb(217,119,6,0.08)] border-2 border-amber-100 hover:shadow-[0_15px_35px_rgb(217,119,6,0.12)] active:scale-[0.98] transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-amber-50 text-[#D97706] flex items-center justify-center group-hover:bg-[#D97706] group-hover:text-white transition-colors duration-300">
-                  <Gift size={22} strokeWidth={2.5} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base">Invite & Earn Cash</h3>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">Earn up to 3,000 UGX for every friend who buys.</p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-[#D97706] group-hover:translate-x-1 transition-transform" />
-            </Link>
+          <Link href="/profile/products" className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm hover:border-[#D97706] transition-colors flex items-center justify-between group">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-600"><Store size={18} /></div>
+              <div><h3 className="font-black text-slate-900 text-[14px]">My Products</h3><p className="text-[11px] text-slate-500 font-medium">Edit ads & inventory</p></div>
+            </div>
+            <ArrowRight size={16} className="text-slate-300 group-hover:text-[#D97706] transition-colors" />
+          </Link>
 
-            <Link href="/profile/products" className="flex items-center justify-between p-5 bg-white rounded-[24px] shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] active:scale-[0.98] transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
-                  <Store size={22} strokeWidth={2.5} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base">My Products</h3>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">Edit ads & check inventory</p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-slate-300 group-hover:text-slate-900 transition-colors group-hover:translate-x-1" />
-            </Link>
+          <Link href="/profile/orders" className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm hover:border-[#D97706] transition-colors flex items-center justify-between group">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-600"><PackageSearch size={18} /></div>
+              <div><h3 className="font-black text-slate-900 text-[14px]">Sales & Orders</h3><p className="text-[11px] text-slate-500 font-medium">Manage deliveries</p></div>
+            </div>
+            <ArrowRight size={16} className="text-slate-300 group-hover:text-[#D97706] transition-colors" />
+          </Link>
 
-            <Link href="/profile/orders" className="flex items-center justify-between p-5 bg-white rounded-[24px] shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] active:scale-[0.98] transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300">
-                  <PackageSearch size={22} strokeWidth={2.5} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base">Sales & Orders</h3>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">Manage deliveries & buyers</p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-slate-300 group-hover:text-slate-900 transition-colors group-hover:translate-x-1" />
-            </Link>
+          <Link href="/profile/purchases" className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm hover:border-[#D97706] transition-colors flex items-center justify-between group">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-600"><ShoppingBag size={18} /></div>
+              <div><h3 className="font-black text-slate-900 text-[14px]">My Purchases</h3><p className="text-[11px] text-slate-500 font-medium">View buying history</p></div>
+            </div>
+            <ArrowRight size={16} className="text-slate-300 group-hover:text-[#D97706] transition-colors" />
+          </Link>
 
-            <Link href="/profile/purchases" className="flex items-center justify-between p-5 bg-white rounded-[24px] shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] active:scale-[0.98] transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center group-hover:bg-purple-600 group-hover:text-white transition-colors duration-300">
-                  <ShoppingBag size={22} strokeWidth={2.5} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base">My Purchases</h3>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">View your buying history</p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-slate-300 group-hover:text-slate-900 transition-colors group-hover:translate-x-1" />
-            </Link>
+          <Link href="/profile/wishlist" className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm hover:border-[#D97706] transition-colors flex items-center justify-between group">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-600"><Heart size={18} /></div>
+              <div><h3 className="font-black text-slate-900 text-[14px]">Saved Items</h3><p className="text-[11px] text-slate-500 font-medium">Your personal wishlist</p></div>
+            </div>
+            <ArrowRight size={16} className="text-slate-300 group-hover:text-[#D97706] transition-colors" />
+          </Link>
+        </div>
 
-            <Link href="/profile/wishlist" className="flex items-center justify-between p-5 bg-white rounded-[24px] shadow-[0_4px_20px_rgb(0,0,0,0.02)] border border-slate-100 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] active:scale-[0.98] transition-all group">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-pink-50 text-pink-600 flex items-center justify-center group-hover:bg-pink-600 group-hover:text-white transition-colors duration-300">
-                  <Heart size={22} strokeWidth={2.5} />
-                </div>
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base">Saved Items</h3>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">Your personal wishlist</p>
-                </div>
-              </div>
-              <ChevronRight size={20} className="text-slate-300 group-hover:text-slate-900 transition-colors group-hover:translate-x-1" />
-            </Link>
-          </div>
-        </section>
-
-        {/* 📢 COMMUNITY & ACTIONS */}
-        <section className="pt-4 space-y-4">
+        {/* ACTIONS */}
+        <div className="flex flex-col gap-3 w-full">
           <a 
             href="https://whatsapp.com/channel/0029Vb7mKqmKGGGKqH0bvq2D" 
             target="_blank" 
             rel="noreferrer"
-            className="w-full bg-[#25D366] text-white p-5 rounded-[24px] font-black text-lg flex items-center justify-center gap-3 shadow-[0_8px_25px_rgb(37,211,102,0.3)] hover:bg-[#20bd5a] hover:-translate-y-1 active:scale-[0.98] active:translate-y-0 transition-all"
+            className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3.5 rounded-xl shadow-sm transition-colors flex items-center justify-center gap-2 text-[14px]"
           >
-            <FaWhatsapp className="text-2xl" />
-            Join WhatsApp Channel
+            <FaWhatsapp className="text-[18px]" /> Join WhatsApp Channel
           </a>
 
           <button 
             onClick={signOut} 
-            className="w-full bg-white border-2 border-slate-200 text-slate-600 p-5 rounded-[24px] font-bold flex items-center justify-center gap-2 hover:bg-slate-50 hover:text-red-600 hover:border-red-100 active:scale-[0.98] transition-all"
+            className="w-full bg-white border border-slate-200 text-slate-700 font-bold py-3.5 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors flex items-center justify-center gap-2 text-[14px]"
           >
-            <LogOut size={20} />
-            Secure Log Out
+            <LogOut size={16} /> Secure Log Out
           </button>
-        </section>
+        </div>
 
       </div>
     </div>
