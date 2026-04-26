@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { NotificationService } from "@/lib/notifications"; // 🚀 Upgraded to Meta Template Service
+import { NotificationService } from "@/lib/notifications"; 
 import { sendAdminAlert } from "@/lib/brevo"; 
 
 export async function PATCH(request: Request) {
@@ -22,7 +22,7 @@ export async function PATCH(request: Request) {
     let referrerPhone: string | null = null;
     let referrerCode: string | null = null;
     let rewardAmount = 0; 
-    let debugMessage = `Order status updated to ${newStatus}.`; // 🚀 DEBUG TRACKER
+    let debugMessage = `Order status updated to ${newStatus}.`; 
 
     // 🚀 2. PRE-TRANSACTION CHECK: Evaluate Referral Eligibility
     if (newStatus === "delivered") {
@@ -40,8 +40,16 @@ export async function PATCH(request: Request) {
       } else {
         const items = orderData.cartItems || orderData.items || [];
 
-        // RULE 1: Must contain an official product
-        const hasOfficialProduct = items.some((item: any) => item.sellerId === "SYSTEM");
+        // 🚀 RULE 1 FIXED: Check for Admin ID, Admin Phone, OR isAdminUpload tag!
+        const OFFICIAL_SELLER_ID = "HemTITkLkWabkm8pj9CCf5bRlHJ3";
+        const OFFICIAL_PHONE = "0759997376";
+        
+        const hasOfficialProduct = items.some((item: any) => 
+          item.sellerId === "SYSTEM" || 
+          item.sellerId === OFFICIAL_SELLER_ID || 
+          item.sellerPhone === OFFICIAL_PHONE ||
+          item.isAdminUpload === true // 🚀 ADDED THE EXPLICIT TAG CHECK
+        );
 
         if (!hasOfficialProduct) {
           debugMessage = "Order Delivered. (Skipped payout: Cart did not contain any Official Kabale products).";
@@ -60,9 +68,8 @@ export async function PATCH(request: Request) {
             const orderTotal = Number(orderData.totalAmount) || Number(orderData.total) || 0;
 
             if (orderTotal < 5000) {
-              rewardAmount = 300; // Micro-reward for tiny orders
+              rewardAmount = 300; 
             } else {
-              // 10% of cart total, capped at a maximum of 3,000 UGX
               rewardAmount = Math.min(Math.floor(orderTotal * 0.10), 3000);
             }
 
@@ -103,27 +110,29 @@ export async function PATCH(request: Request) {
 
       // Ensure items array exists safely
       if (items.length > 0) {
-        const productId = items[0].productId; 
-        const productRef = adminDb.collection("products").doc(productId);
-        const productSnap = await transaction.get(productRef);
+        const productId = items[0].productId || items[0].id; 
+        if (productId) {
+           const productRef = adminDb.collection("products").doc(productId);
+           const productSnap = await transaction.get(productRef);
 
-        // Status Behavior Rules
-        if (newStatus === "cancelled") {
-          transaction.update(productRef, {
-            stock: FieldValue.increment(1),
-            locked: false,
-            status: "available",
-            updatedAt: Date.now()
-          });
-        } 
-        else if (newStatus === "delivered" && productSnap.exists) {
-          const productData = productSnap.data()!;
-          if (productData.stock <= 0) {
-            transaction.update(productRef, { 
-              status: "sold_out", 
-              updatedAt: Date.now() 
-            });
-          }
+           // Status Behavior Rules
+           if (newStatus === "cancelled") {
+             transaction.update(productRef, {
+               stock: FieldValue.increment(1),
+               locked: false,
+               status: "available",
+               updatedAt: Date.now()
+             });
+           } 
+           else if (newStatus === "delivered" && productSnap.exists) {
+             const productData = productSnap.data()!;
+             if (productData.stock <= 0) {
+               transaction.update(productRef, { 
+                 status: "sold_out", 
+                 updatedAt: Date.now() 
+               });
+             }
+           }
         }
       }
 
@@ -153,12 +162,10 @@ export async function PATCH(request: Request) {
       const freshReferrer = await adminDb.collection("users").doc(referrerId).get();
       const newBalance = freshReferrer.data()?.referralBalance || rewardAmount;
 
-      // Use the newly approved Meta Template API
       NotificationService.notifyPartnerCredit(referrerPhone, rewardAmount, newBalance).catch(console.error);
     }
 
-    // Return the specific debug message for the frontend popup
-    return NextResponse.json({ success: "V3_ACTIVE", message: debugMessage }, { status: 200 });
+    return NextResponse.json({ success: "V5_ACTIVE", message: debugMessage }, { status: 200 });
 
   } catch (error: any) {
     console.error("Status update error:", error);
@@ -166,6 +173,142 @@ export async function PATCH(request: Request) {
       { error: error.message || "Failed to update status" }, 
       { status: 500 }
     );
+  }
+}
+
+// ==========================================
+// POST & GET Methods
+// ==========================================
+
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { source, userId, buyerName, contactPhone, location, cartItems } = body;
+
+    if (!cartItems || cartItems.length === 0 || !contactPhone || !buyerName) {
+      return NextResponse.json({ error: "Missing required fields or empty cart" }, { status: 400 });
+    }
+
+    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
+    let actualTotalAmount = 0;
+    const validatedItems: any[] = [];
+    const sellerOrdersMap: Record<string, any> = {};
+
+    await adminDb.runTransaction(async (transaction) => {
+      const productDocs = await Promise.all(
+        cartItems.map((item: any) => transaction.get(adminDb.collection("products").doc(item.productId || item.id)))
+      );
+
+      productDocs.forEach((productSnap, index) => {
+        if (!productSnap.exists) throw new Error(`Item ${cartItems[index].name} is not found.`);
+
+        const product = productSnap.data()!;
+        const requestedQty = Number(cartItems[index].quantity) || 1;
+
+        if (product.stock < requestedQty || product.status === "sold_out") {
+          throw new Error(`Sorry, ${product.title || product.name} is out of stock!`);
+        }
+        if (product.locked) {
+          throw new Error(`Sorry, someone else is currently checking out with ${product.title || product.name}.`);
+        }
+
+        const actualPrice = Number(product.price) || 0;
+        actualTotalAmount += (actualPrice * requestedQty);
+
+        const finalItem = {
+          productId: productSnap.id,
+          name: product.title || product.name || "Unknown Item",
+          price: actualPrice,
+          quantity: requestedQty,
+          sellerId: product.sellerId || "SYSTEM",
+          sellerPhone: product.sellerPhone || "",
+          image: product.images?.[0] || "",
+          // 🚀 CRITICAL FIX: Save the isAdminUpload tag onto the order item so the payout engine sees it!
+          isAdminUpload: product.isAdminUpload === true 
+        };
+        validatedItems.push(finalItem);
+
+        if (!sellerOrdersMap[finalItem.sellerPhone]) {
+          sellerOrdersMap[finalItem.sellerPhone] = {
+            sellerId: finalItem.sellerId,
+            sellerPhone: finalItem.sellerPhone,
+            items: [],
+            subtotal: 0
+          };
+        }
+        sellerOrdersMap[finalItem.sellerPhone].items.push(finalItem);
+        sellerOrdersMap[finalItem.sellerPhone].subtotal += (actualPrice * requestedQty);
+
+        transaction.update(productSnap.ref, {
+          stock: FieldValue.increment(-requestedQty),
+          locked: true,
+          updatedAt: Date.now()
+        });
+      });
+
+      const sellerOrders = Object.values(sellerOrdersMap);
+      const uniqueSellerIds = Array.from(new Set(validatedItems.map(item => item.sellerId).filter(Boolean)));
+
+      const orderRef = adminDb.collection("orders").doc(orderNumber);
+
+      transaction.set(orderRef, {
+        orderId: orderNumber,
+        userId: userId || "GUEST",
+        buyerName,
+        buyerPhone: contactPhone,
+        buyerLocation: location || "Kabale",
+        source: source || "whatsapp", 
+        paymentMode: "COD",           
+        paymentStatus: "pending",     
+        status: "processing",         
+        cartItems: validatedItems,
+        sellerOrders: sellerOrders,
+        sellerIds: uniqueSellerIds,   
+        totalAmount: actualTotalAmount,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+      });
+    });
+
+    console.log("-> Executing Notification Promises for COD Order...");
+
+    const notificationPromises: Promise<any>[] = [];
+    const allProductsString = validatedItems.map(i => `${i.quantity}x ${i.name}`).join(", ");
+
+    notificationPromises.push(
+      NotificationService.notifyBuyer(contactPhone, orderNumber, allProductsString, actualTotalAmount)
+    );
+
+    notificationPromises.push(
+      sendAdminAlert(orderNumber, allProductsString, actualTotalAmount, contactPhone, "Multi-Seller COD Order")
+    );
+
+    const sellerOrdersList = Object.values(sellerOrdersMap);
+    for (const sellerCut of sellerOrdersList) {
+      const sellerItemsString = sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
+
+      notificationPromises.push(
+        NotificationService.notifySeller(
+          sellerCut.sellerPhone, 
+          "Partner", 
+          orderNumber, 
+          sellerItemsString, 
+          sellerCut.subtotal, 
+          buyerName,
+          location || "Kabale",
+          contactPhone
+        )
+      );
+    }
+
+    await Promise.allSettled(notificationPromises);
+    console.log("✅ All COD notifications dispatched successfully.");
+
+    return NextResponse.json({ success: true, orderId: orderNumber });
+
+  } catch (error: any) {
+    console.error("❌ Order creation error:", error.message);
+    return NextResponse.json({ error: error.message || "Failed to create order" }, { status: 500 });
   }
 }
 
@@ -183,17 +326,14 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Fetch all orders ordered by creation date
     const ordersSnap = await adminDb.collection("orders")
       .orderBy("createdAt", "desc")
       .get();
 
-    // 🔥 SMART FALLBACK: If total is 0 (WhatsApp orders), fetch the product price dynamically
     const orders = await Promise.all(ordersSnap.docs.map(async (doc) => {
       const data = doc.data();
       let totalAmount = Number(data.total) || 0;
 
-      // If it's a WhatsApp order lacking a total but has a productId, fetch it!
       if (totalAmount === 0 && data.productId) {
         try {
           const productDoc = await adminDb.collection("products").doc(data.productId).get();
