@@ -12,25 +12,24 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     const fetchAllOrders = async () => {
-      if (!user || user.role !== "admin") return;
+      if (!user) return; 
+      
       try {
-        const res = await fetch(`/api/admin/orders?adminId=${user.id}`);
+        const adminId = user.id || user.uid; 
+        const res = await fetch(`/api/admin/orders?adminId=${adminId}`);
         if (res.ok) {
           const data = await res.json();
           const fetchedOrders = data.orders || [];
 
-          // 🚀 FORCED SORTING LOGIC: Organizes strictly by newest date first
+          // 🚀 FORCED SORTING LOGIC
           const sortedOrders = fetchedOrders.sort((a: any, b: any) => {
             const getTime = (dateVal: any) => {
               if (!dateVal) return 0;
-              // Handle Firebase Timestamp Objects
               if (typeof dateVal === 'object') {
                 return (dateVal._seconds || dateVal.seconds || 0) * 1000;
               }
-              // Handle standard integers or strings
               return new Date(dateVal).getTime() || 0;
             };
-            
             return getTime(b.createdAt) - getTime(a.createdAt);
           });
 
@@ -57,37 +56,56 @@ export default function AdminOrdersPage() {
   };
 
   const handleStatusChange = async (orderId: string, newStatus: string) => {
-    if (!user || user.role !== "admin") return;
+    // 🚀 NUCLEAR TEST 1: Prove the button works
+    alert(`Testing: You clicked ${newStatus}`); 
+
+    if (!user || user.role !== "admin") {
+      // 🚀 NUCLEAR TEST 2: Prove the user isn't being blocked
+      alert("Blocked: System thinks you are not an Admin!"); 
+      return;
+    }
 
     setProcessingId(orderId);
     try {
+      const adminId = user.id || user.uid; 
+      
       const res = await fetch("/api/admin/orders", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          adminId: user.id,
+          adminId,
           orderId,
           newStatus
         })
       });
 
+      const rawText = await res.text();
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch (err) {
+        console.error("Backend returned non-JSON:", rawText);
+        alert("Server Crash: Backend returned an invalid response. Check Vercel logs.");
+        return;
+      }
+
       if (res.ok) {
-        const data = await res.json();
-        
-        // 🚀 POP-UP ALERT: This bypasses Vercel logs and tells you EXACTLY what the backend did!
+        // 🚀 THE TRUTH POPUP from the backend
         if (data.message) {
           alert(data.message); 
+        } else {
+          alert("Status updated successfully, but no detailed message was returned.");
         }
         
         setOrders(prev => prev.map(order => 
           order.id === orderId ? { ...order, status: newStatus } : order
         ));
       } else {
-        alert("Failed to update status.");
+        alert(`Failed to update: ${data.error || "Unknown Error"}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Something went wrong.");
+      alert(`Frontend Crash: ${error.message}`);
     } finally {
       setProcessingId(null);
     }
