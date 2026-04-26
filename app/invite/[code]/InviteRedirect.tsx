@@ -7,12 +7,13 @@ export default function InviteRedirect({ code }: { code: string }) {
   const router = useRouter();
 
   useEffect(() => {
-    if (code && code.length === 5) {
-      // Drop the 30-day cookie
-      const maxAge = 30 * 24 * 60 * 60; 
-      document.cookie = `kabale_ref=${code}; path=/; max-age=${maxAge}`;
+    // 🚀 FIXED: Removed the strict length === 5 check.
+    // Now it will accept "HEMTIT" (6 chars) or any other code length.
+    if (code && code.trim().length > 0) {
+      const maxAge = 30 * 24 * 60 * 60; // 30 days
+      document.cookie = `kabale_ref=${code.trim()}; path=/; max-age=${maxAge}`;
     }
-    
+
     // Redirect to the homepage after a split second
     router.replace("/");
   }, [code, router]);
