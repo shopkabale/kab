@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
-import { sendWhatsAppMessage } from "@/lib/whatsapp"; // 🚀 Added for referral alerts
+import { NotificationService } from "@/lib/notifications"; // 🚀 Upgraded to Meta Template Service
+import { sendAdminAlert } from "@/lib/brevo"; 
 
 export async function PATCH(request: Request) {
   try {
@@ -20,21 +21,31 @@ export async function PATCH(request: Request) {
     let referrerId: string | null = null;
     let referrerPhone: string | null = null;
     let referrerCode: string | null = null;
-    let rewardAmount = 0; // 🚀 Now dynamic based on cart total
+    let rewardAmount = 0; 
+    let debugMessage = `Order status updated to ${newStatus}.`; // 🚀 DEBUG TRACKER
 
     // 🚀 2. PRE-TRANSACTION CHECK: Evaluate Referral Eligibility
     if (newStatus === "delivered") {
       const orderSnap = await adminDb.collection("orders").doc(orderId).get();
       const orderData = orderSnap.data();
 
-      // Ensure it has a code, a phone number, and isn't already marked delivered
-      if (orderData && orderData.referralCodeUsed && orderData.buyerPhone && orderData.status !== "delivered") {
+      if (!orderData) {
+        debugMessage = "Order not found in DB.";
+      } else if (!orderData.referralCodeUsed) {
+        debugMessage = "Order Delivered. (Skipped payout: No referral code attached).";
+      } else if (!orderData.buyerPhone) {
+        debugMessage = "Order Delivered. (Skipped payout: No buyer phone to verify first-time status).";
+      } else if (orderData.status === "delivered") {
+        debugMessage = "Order Delivered. (Skipped payout: Order was already delivered previously).";
+      } else {
         const items = orderData.cartItems || orderData.items || [];
 
         // RULE 1: Must contain an official product
         const hasOfficialProduct = items.some((item: any) => item.sellerId === "SYSTEM");
 
-        if (hasOfficialProduct) {
+        if (!hasOfficialProduct) {
+          debugMessage = "Order Delivered. (Skipped payout: Cart did not contain any Official Kabale products).";
+        } else {
           // RULE 2: Buyer phone must have NO previous delivered orders (First-time purchase)
           const prevOrders = await adminDb.collection("orders")
             .where("buyerPhone", "==", orderData.buyerPhone)
@@ -42,15 +53,17 @@ export async function PATCH(request: Request) {
             .limit(1)
             .get();
 
-          if (prevOrders.empty) {
+          if (!prevOrders.empty) {
+            debugMessage = `Order Delivered. (Skipped payout: Buyer ${orderData.buyerPhone} is not a first-time customer).`;
+          } else {
             // 🚀 DYNAMIC TIERED MATH
             const orderTotal = Number(orderData.totalAmount) || Number(orderData.total) || 0;
-            
+
             if (orderTotal < 5000) {
               rewardAmount = 300; // Micro-reward for tiny orders
             } else {
               // 10% of cart total, capped at a maximum of 3,000 UGX
-              rewardAmount = Math.min(orderTotal * 0.10, 3000);
+              rewardAmount = Math.min(Math.floor(orderTotal * 0.10), 3000);
             }
 
             // Find the referrer who owns this code
@@ -59,11 +72,19 @@ export async function PATCH(request: Request) {
               .limit(1)
               .get();
 
-            if (!referrerSnap.empty) {
+            if (referrerSnap.empty) {
+              debugMessage = `Order Delivered. (Skipped payout: Nobody owns the code ${orderData.referralCodeUsed}).`;
+            } else {
               const referrerData = referrerSnap.docs[0].data();
               referrerId = referrerSnap.docs[0].id;
               referrerPhone = referrerData.phone || referrerData.phoneNumber || null;
               referrerCode = orderData.referralCodeUsed;
+
+              if (referrerPhone) {
+                debugMessage = `SUCCESS! Partner earned ${rewardAmount} UGX.\nWhatsApp queued for ${referrerPhone}.`;
+              } else {
+                debugMessage = `SUCCESS! Partner earned ${rewardAmount} UGX, but has no phone number linked for WhatsApp alerts.`;
+              }
             }
           }
         }
@@ -106,11 +127,16 @@ export async function PATCH(request: Request) {
         }
       }
 
-      // Update the order itself
-      transaction.update(orderRef, {
+      // Update the order itself (Lock payout to prevent double paying)
+      const updatePayload: any = {
         status: newStatus,
         updatedAt: Date.now()
-      });
+      };
+      if (referrerId && rewardAmount > 0) {
+         updatePayload.payoutProcessed = true;
+         updatePayload.payoutAmount = rewardAmount;
+      }
+      transaction.update(orderRef, updatePayload);
 
       // 🚀 4. APPLY REWARD IN TRANSACTION
       if (referrerId && rewardAmount > 0) {
@@ -122,19 +148,17 @@ export async function PATCH(request: Request) {
       }
     });
 
-    // 🚀 5. TRIGGER WHATSAPP NOTIFICATION
-    // We do this outside the transaction so network failures don't roll back the database
-    if (referrerId && referrerPhone && referrerCode && rewardAmount > 0) {
+    // 🚀 5. TRIGGER META WHATSAPP NOTIFICATION
+    if (referrerId && referrerPhone && rewardAmount > 0) {
       const freshReferrer = await adminDb.collection("users").doc(referrerId).get();
       const newBalance = freshReferrer.data()?.referralBalance || rewardAmount;
 
-      const msg = `🎉 *Great news!* You just earned ${rewardAmount.toLocaleString()} UGX!\n\nA friend you referred just completed their first order on Kabale Online.\n\n💰 *Total Balance:* ${newBalance.toLocaleString()} UGX.\n\nKeep sharing your link: https://www.kabaleonline.com/invite/${referrerCode}`;
-
-      // Fire and forget (don't await so the admin panel responds instantly)
-      sendWhatsAppMessage(referrerPhone, msg).catch(console.error);
+      // Use the newly approved Meta Template API
+      NotificationService.notifyPartnerCredit(referrerPhone, rewardAmount, newBalance).catch(console.error);
     }
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    // Return the specific debug message for the frontend popup
+    return NextResponse.json({ success: "V3_ACTIVE", message: debugMessage }, { status: 200 });
 
   } catch (error: any) {
     console.error("Status update error:", error);
