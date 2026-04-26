@@ -111,5 +111,27 @@ export const NotificationService = {
     } catch (error: any) {
       console.error("❌ UPDATE NOTICE FAILED:", error.message || error);
     }
+  },
+
+  // ==========================================
+  // 5. PARTNER PAYOUT NOTIFICATION (Wallet Credit)
+  // Template: wallet_credit_alert
+  // ==========================================
+  async notifyPartnerCredit(partnerPhone: string, amountCredited: number, newBalance: number) {
+    const cleanPhone = formatMetaPhone(partnerPhone);
+    if (!cleanPhone) return console.error("❌ notifyPartnerCredit failed: No partner phone provided.");
+
+    console.log(`[WhatsApp] Sending wallet credit alert to partner ${cleanPhone}...`);
+    try {
+      const variables = [
+        (amountCredited || 0).toLocaleString(), // {{1}} Amount Credited
+        (newBalance || 0).toLocaleString()      // {{2}} New Wallet Balance
+      ];
+
+      await sendWhatsAppTemplate(cleanPhone, "wallet_credit_alert", variables, "en_US");
+      console.log(`✅ PARTNER (${cleanPhone}) credit alert sent successfully!`);
+    } catch (error: any) {
+      console.error(`❌ PARTNER NOTIFICATION FAILED [${cleanPhone}]:`, error.message || error);
+    }
   }
 };
