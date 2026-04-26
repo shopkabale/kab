@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore"; // 🚀 Added Firestore real-time listener
-import { auth, googleProvider, db } from "@/lib/firebase/config"; // 🚀 Added db
+import { doc, onSnapshot } from "firebase/firestore"; 
+import { auth, googleProvider, db } from "@/lib/firebase/config"; 
 import { User } from "@/types";
 
 interface AuthContextType {
@@ -25,7 +25,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         try {
-          // 1. Still call your sync API in the background just to keep backend integrity
+          // 1. Trigger backend sync to ensure database integrity
           firebaseUser.getIdToken().then((token) => {
              fetch("/api/auth/sync", {
               method: "POST",
@@ -33,30 +33,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }).catch(console.error);
           });
 
-          // 2. 🚀 THE MAGIC: Listen directly to the user's Firestore document in real-time!
+          // 2. Real-time Firestore Listener
           unsubscribeSnapshot = onSnapshot(doc(db, "users", firebaseUser.uid), (docSnap) => {
-            if (docSnap.exists()) {
-              const firestoreData = docSnap.data();
-              
-              // Merge Firebase Auth info with Firestore Database info
-              setUser({
-                id: firebaseUser.uid,
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                displayName: firebaseUser.displayName,
-                photoURL: firebaseUser.photoURL,
-                ...firestoreData // 🚀 This instantly pulls in phone, referralBalance, etc!
-              } as User);
-            } else {
-              // Fallback if the database document doesn't exist yet
-              setUser({
-                id: firebaseUser.uid,
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                displayName: firebaseUser.displayName,
-                photoURL: firebaseUser.photoURL,
-              } as User);
-            }
+            const firestoreData = docSnap.exists() ? docSnap.data() : {};
+            
+            // 🚀 THE FIX: We explicitly provide role and createdAt defaults so TypeScript passes the build
+            setUser({
+              id: firebaseUser.uid,
+              uid: firebaseUser.uid,
+              email: firebaseUser.email,
+              displayName: firebaseUser.displayName,
+              photoURL: firebaseUser.photoURL,
+              role: firestoreData.role || "user", 
+              createdAt: firestoreData.createdAt || Date.now(),
+              ...firestoreData 
+            } as User);
+            
             setLoading(false);
           });
 
@@ -68,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else {
         setUser(null);
         setLoading(false);
-        if (unsubscribeSnapshot) unsubscribeSnapshot(); // Clean up listener on logout
+        if (unsubscribeSnapshot) unsubscribeSnapshot(); 
       }
     });
 
