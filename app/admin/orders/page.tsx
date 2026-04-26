@@ -17,7 +17,24 @@ export default function AdminOrdersPage() {
         const res = await fetch(`/api/admin/orders?adminId=${user.id}`);
         if (res.ok) {
           const data = await res.json();
-          setOrders(data.orders || []);
+          const fetchedOrders = data.orders || [];
+
+          // 🚀 FORCED SORTING LOGIC: Organizes strictly by newest date first
+          const sortedOrders = fetchedOrders.sort((a: any, b: any) => {
+            const getTime = (dateVal: any) => {
+              if (!dateVal) return 0;
+              // Handle Firebase Timestamp Objects
+              if (typeof dateVal === 'object') {
+                return (dateVal._seconds || dateVal.seconds || 0) * 1000;
+              }
+              // Handle standard integers or strings
+              return new Date(dateVal).getTime() || 0;
+            };
+            
+            return getTime(b.createdAt) - getTime(a.createdAt);
+          });
+
+          setOrders(sortedOrders);
         }
       } catch (error) {
         console.error("Failed to fetch orders", error);
@@ -167,7 +184,7 @@ export default function AdminOrdersPage() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <p className="font-bold text-slate-900 text-sm">{order.buyerName || "Guest User"}</p>
-                            {/* 🚀 ADDED: Referral Badge */}
+                            {/* 🚀 Referral Badge */}
                             {order.referralCodeUsed && (
                               <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 border border-purple-200 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                                 <FaGift /> Ref: {order.referralCodeUsed}
