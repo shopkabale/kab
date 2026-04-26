@@ -8,16 +8,16 @@ import { FaArrowLeft, FaShieldAlt, FaPhone, FaLock, FaEdit, FaSave, FaInfoCircle
 
 export default function SettingsPage() {
   const { user, loading } = useAuth();
-  
+
   const [phoneInput, setPhoneInput] = useState("");
   const [isSavingPhone, setIsSavingPhone] = useState(false);
   const [editingPhone, setEditingPhone] = useState(false);
-  const [phoneError, setPhoneError] = useState(""); // 🚀 New clean error state
+  const [phoneError, setPhoneError] = useState(""); 
 
   const [aliasInput, setAliasInput] = useState("");
   const [isSavingName, setIsSavingName] = useState(false);
   const [editingName, setEditingName] = useState(false);
-  const [aliasError, setAliasError] = useState(""); // 🚀 New clean error state
+  const [aliasError, setAliasError] = useState(""); 
 
   if (loading || !user) {
     return (
@@ -29,15 +29,18 @@ export default function SettingsPage() {
 
   const hasLockedAlias = !!user.referralName;
   const currentDisplayName = user.referralName || user.displayName?.split(' ')[0] || "Kabale User";
+  
+  // 🚀 The bulletproof fallback check
+  const currentPhone = user.phone || user.phoneNumber;
 
   const handleSavePhone = async () => {
-    setPhoneError(""); // Reset previous errors
+    setPhoneError(""); 
 
     if (!phoneInput.trim() || phoneInput.length < 9) {
       setPhoneError("Please enter a valid Mobile Money number.");
       return;
     }
-    
+
     setIsSavingPhone(true);
     try {
       const token = await auth.currentUser?.getIdToken();
@@ -55,7 +58,6 @@ export default function SettingsPage() {
         setPhoneInput(""); 
         setEditingPhone(false);
       } else {
-        // 🚀 Clean inline error display
         setPhoneError(data.error || "Failed to save phone number.");
       }
     } catch (err) {
@@ -67,7 +69,7 @@ export default function SettingsPage() {
   };
 
   const handleSaveAlias = async () => {
-    setAliasError(""); // Reset previous errors
+    setAliasError(""); 
 
     if (!aliasInput.trim() || aliasInput.length > 20) {
       setAliasError("Please enter a valid name (max 20 characters).");
@@ -104,7 +106,7 @@ export default function SettingsPage() {
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-10">
       <div className="max-w-[480px] md:max-w-2xl mx-auto p-4 pt-6">
-        
+
         <Link href="/invite" className="inline-flex items-center gap-2 text-slate-500 font-bold text-[12px] mb-6 hover:text-slate-900 transition-colors uppercase tracking-wider">
           <FaArrowLeft /> Back to Dashboard
         </Link>
@@ -121,10 +123,10 @@ export default function SettingsPage() {
               <FaPhone className="text-[#D97706]" />
               <h2 className="font-black text-slate-900 text-[14px]">Mobile Money Number</h2>
             </div>
-            
-            {user.phone && !editingPhone ? (
+
+            {currentPhone && !editingPhone ? (
               <div className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-lg border border-slate-100">
-                <span className="font-bold text-slate-700 tracking-wide">{user.phone}</span>
+                <span className="font-bold text-slate-700 tracking-wide">{currentPhone}</span>
                 <button onClick={() => { setEditingPhone(true); setPhoneError(""); }} className="text-[12px] font-bold text-[#D97706] hover:underline">Edit</button>
               </div>
             ) : (
@@ -134,7 +136,7 @@ export default function SettingsPage() {
                     type="tel" 
                     value={phoneInput}
                     onChange={(e) => { setPhoneInput(e.target.value); setPhoneError(""); }}
-                    placeholder={user.phone || "07XXXXXXXX"}
+                    placeholder={currentPhone || "07XXXXXXXX"}
                     className={`border rounded-lg px-4 py-3 text-[14px] font-bold text-slate-800 outline-none focus:ring-1 w-full ${phoneError ? 'border-red-400 focus:border-red-500 focus:ring-red-500 bg-red-50' : 'border-slate-300 focus:border-[#D97706] focus:ring-[#D97706]'}`}
                   />
                   <button 
@@ -145,15 +147,15 @@ export default function SettingsPage() {
                     {isSavingPhone ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <FaSave />}
                   </button>
                 </div>
-                
-                {/* 🚀 Clean Error Display */}
+
+                {/* Clean Error Display */}
                 {phoneError ? (
                   <p className="text-[11.5px] font-bold text-red-500">{phoneError}</p>
-                ) : !user.phone ? (
+                ) : !currentPhone ? (
                   <p className="text-[11px] font-bold text-slate-500">Required to receive payouts.</p>
                 ) : null}
 
-                {editingPhone && user.phone && (
+                {editingPhone && currentPhone && (
                   <button onClick={() => { setEditingPhone(false); setPhoneError(""); }} className="text-[11px] text-slate-400 font-bold self-start mt-1">Cancel Edit</button>
                 )}
               </div>
@@ -195,7 +197,7 @@ export default function SettingsPage() {
                   </button>
                 </div>
 
-                {/* 🚀 Clean Error Display */}
+                {/* Clean Error Display */}
                 {aliasError ? (
                   <p className="text-[11.5px] font-bold text-red-500">{aliasError}</p>
                 ) : (
