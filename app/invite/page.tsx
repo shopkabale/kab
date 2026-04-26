@@ -514,16 +514,17 @@ export default function InvitePage() {
           )}
         </div>
 
-        {/* RULES */}
+                {/* RULES */}
         <div className="bg-slate-100 p-4 rounded-xl border border-slate-200 w-full">
           <p className="font-bold text-slate-800 mb-2 uppercase tracking-wider text-[10px]">Program Guidelines</p>
           <ul className="text-[11px] text-slate-600 space-y-1.5 pl-3 list-disc">
             <li><strong className="text-slate-800">Official Items Only:</strong> Rewards apply only to official Kabale Online stock.</li>
-            <li><strong className="text-slate-800">First Order Only:</strong> The friend must be a brand new buyer.</li>
+            <li><strong className="text-slate-800">Every Order Counts:</strong> Earn on both new AND returning customers every time they use your link.</li>
             <li><strong className="text-slate-800">Dynamic Payouts:</strong> Earn 10% of the cart value (Max 3,000 UGX). Carts under 5k earn 300 UGX.</li>
             <li><strong className="text-slate-800">Completed Orders:</strong> Cash is credited the moment the delivery is marked successful.</li>
           </ul>
         </div>
+
 
       </div>
     </div>
