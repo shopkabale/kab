@@ -12,10 +12,12 @@ export default function SettingsPage() {
   const [phoneInput, setPhoneInput] = useState("");
   const [isSavingPhone, setIsSavingPhone] = useState(false);
   const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneError, setPhoneError] = useState(""); // 🚀 New clean error state
 
   const [aliasInput, setAliasInput] = useState("");
   const [isSavingName, setIsSavingName] = useState(false);
   const [editingName, setEditingName] = useState(false);
+  const [aliasError, setAliasError] = useState(""); // 🚀 New clean error state
 
   if (loading || !user) {
     return (
@@ -29,17 +31,23 @@ export default function SettingsPage() {
   const currentDisplayName = user.referralName || user.displayName?.split(' ')[0] || "Kabale User";
 
   const handleSavePhone = async () => {
+    setPhoneError(""); // Reset previous errors
+
     if (!phoneInput.trim() || phoneInput.length < 9) {
-      return alert("Please enter a valid WhatsApp/Mobile Money number (e.g. 07XXXXXXXX)");
+      setPhoneError("Please enter a valid Mobile Money number.");
+      return;
     }
+    
     setIsSavingPhone(true);
     try {
       const token = await auth.currentUser?.getIdToken();
       const res = await fetch("/api/users/phone", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ phone: phoneInput })
+        body: JSON.stringify({ phone: phoneInput.trim() })
       });
+
+      const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
         user.phone = phoneInput.trim(); 
@@ -47,19 +55,23 @@ export default function SettingsPage() {
         setPhoneInput(""); 
         setEditingPhone(false);
       } else {
-        alert("Failed to save phone number.");
+        // 🚀 Clean inline error display
+        setPhoneError(data.error || "Failed to save phone number.");
       }
     } catch (err) {
       console.error(err);
-      alert("Network error.");
+      setPhoneError("Network error. Please try again.");
     } finally {
       setIsSavingPhone(false);
     }
   };
 
   const handleSaveAlias = async () => {
+    setAliasError(""); // Reset previous errors
+
     if (!aliasInput.trim() || aliasInput.length > 20) {
-      return alert("Please enter a valid name (max 20 characters).");
+      setAliasError("Please enter a valid name (max 20 characters).");
+      return;
     }
     const confirmSave = window.confirm(`Are you sure you want to set your public alias to "${aliasInput.trim()}"?\n\nThis can only be done ONCE.`);
     if (!confirmSave) return;
@@ -70,18 +82,20 @@ export default function SettingsPage() {
       const res = await fetch("/api/users/referral-name", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-        body: JSON.stringify({ referralName: aliasInput })
+        body: JSON.stringify({ referralName: aliasInput.trim() })
       });
+
+      const data = await res.json().catch(() => ({}));
 
       if (res.ok) {
         user.referralName = aliasInput.trim(); 
         setEditingName(false);
       } else {
-        alert("Failed to save name.");
+         setAliasError(data.error || "Failed to save name.");
       }
     } catch (err) {
       console.error(err);
-      alert("Network error.");
+      setAliasError("Network error. Please try again.");
     } finally {
       setIsSavingName(false);
     }
@@ -111,7 +125,7 @@ export default function SettingsPage() {
             {user.phone && !editingPhone ? (
               <div className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-lg border border-slate-100">
                 <span className="font-bold text-slate-700 tracking-wide">{user.phone}</span>
-                <button onClick={() => setEditingPhone(true)} className="text-[12px] font-bold text-[#D97706] hover:underline">Edit</button>
+                <button onClick={() => { setEditingPhone(true); setPhoneError(""); }} className="text-[12px] font-bold text-[#D97706] hover:underline">Edit</button>
               </div>
             ) : (
               <div className="flex flex-col gap-2 w-full">
@@ -119,9 +133,9 @@ export default function SettingsPage() {
                   <input 
                     type="tel" 
                     value={phoneInput}
-                    onChange={(e) => setPhoneInput(e.target.value)}
+                    onChange={(e) => { setPhoneInput(e.target.value); setPhoneError(""); }}
                     placeholder={user.phone || "07XXXXXXXX"}
-                    className="border border-slate-300 rounded-lg px-4 py-3 text-[14px] font-bold text-slate-800 outline-none focus:border-[#D97706] focus:ring-1 focus:ring-[#D97706] w-full"
+                    className={`border rounded-lg px-4 py-3 text-[14px] font-bold text-slate-800 outline-none focus:ring-1 w-full ${phoneError ? 'border-red-400 focus:border-red-500 focus:ring-red-500 bg-red-50' : 'border-slate-300 focus:border-[#D97706] focus:ring-[#D97706]'}`}
                   />
                   <button 
                     onClick={handleSavePhone}
@@ -131,8 +145,17 @@ export default function SettingsPage() {
                     {isSavingPhone ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <FaSave />}
                   </button>
                 </div>
-                {!user.phone && <p className="text-[11px] font-bold text-red-500">Required to receive payouts.</p>}
-                {editingPhone && user.phone && <button onClick={() => setEditingPhone(false)} className="text-[11px] text-slate-400 font-bold self-start mt-1">Cancel Edit</button>}
+                
+                {/* 🚀 Clean Error Display */}
+                {phoneError ? (
+                  <p className="text-[11.5px] font-bold text-red-500">{phoneError}</p>
+                ) : !user.phone ? (
+                  <p className="text-[11px] font-bold text-slate-500">Required to receive payouts.</p>
+                ) : null}
+
+                {editingPhone && user.phone && (
+                  <button onClick={() => { setEditingPhone(false); setPhoneError(""); }} className="text-[11px] text-slate-400 font-bold self-start mt-1">Cancel Edit</button>
+                )}
               </div>
             )}
           </div>
@@ -158,10 +181,10 @@ export default function SettingsPage() {
                   <input 
                     type="text" 
                     value={aliasInput}
-                    onChange={(e) => setAliasInput(e.target.value)}
+                    onChange={(e) => { setAliasInput(e.target.value); setAliasError(""); }}
                     placeholder={currentDisplayName}
                     maxLength={20}
-                    className="border border-slate-300 rounded-lg px-4 py-3 text-[14px] font-bold text-slate-800 outline-none focus:border-[#D97706] focus:ring-1 focus:ring-[#D97706] w-full"
+                    className={`border rounded-lg px-4 py-3 text-[14px] font-bold text-slate-800 outline-none focus:ring-1 w-full ${aliasError ? 'border-red-400 focus:border-red-500 focus:ring-red-500 bg-red-50' : 'border-slate-300 focus:border-[#D97706] focus:ring-[#D97706]'}`}
                   />
                   <button 
                     onClick={handleSaveAlias}
@@ -171,12 +194,19 @@ export default function SettingsPage() {
                     {isSavingName ? <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <FaSave />}
                   </button>
                 </div>
-                <p className="text-[11px] font-bold text-red-500 flex items-center gap-1"><FaInfoCircle /> Can only be set ONCE.</p>
-                <button onClick={() => setEditingName(false)} className="text-[11px] text-slate-400 font-bold self-start mt-1">Cancel Edit</button>
+
+                {/* 🚀 Clean Error Display */}
+                {aliasError ? (
+                  <p className="text-[11.5px] font-bold text-red-500">{aliasError}</p>
+                ) : (
+                  <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1"><FaInfoCircle /> Can only be set ONCE.</p>
+                )}
+
+                <button onClick={() => { setEditingName(false); setAliasError(""); }} className="text-[11px] text-slate-400 font-bold self-start mt-1">Cancel Edit</button>
               </div>
             ) : (
               <button 
-                onClick={() => { setAliasInput(currentDisplayName); setEditingName(true); }} 
+                onClick={() => { setAliasInput(currentDisplayName); setEditingName(true); setAliasError(""); }} 
                 className="flex items-center justify-between bg-slate-50 px-4 py-3 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors"
               >
                 <span className="font-bold text-slate-800">{currentDisplayName}</span>
