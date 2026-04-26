@@ -240,13 +240,14 @@ export async function PATCH(request: Request) {
           // 📱 Send Meta WhatsApp Alert
           if (partnerData.phone) {
             const simulatedNewBalance = (Number(partnerData.referralBalance) || 0) + rewardAmount;
-            
+
+            // Wait for the WhatsApp alert to fire
             await NotificationService.notifyPartnerCredit(
               partnerData.phone, 
               rewardAmount, 
               simulatedNewBalance
             );
-            
+
             debugMessage = `SUCCESS! Order Delivered.\n\nPaid Partner: ${rewardAmount} UGX\nWhatsApp sent to: ${partnerData.phone}`;
           } else {
             debugMessage = `Order Delivered. Partner was paid ${rewardAmount} UGX, but they have NO PHONE NUMBER saved in their profile to receive the WhatsApp alert!`;
@@ -257,8 +258,8 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ success: true, message: debugMessage });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Admin Orders PATCH Error:", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: error.message || "Internal Server Error" }, { status: 500 });
   }
 }
