@@ -72,6 +72,13 @@ export default function AdminOrdersPage() {
       });
 
       if (res.ok) {
+        const data = await res.json();
+        
+        // 🚀 POP-UP ALERT: This bypasses Vercel logs and tells you EXACTLY what the backend did!
+        if (data.message) {
+          alert(data.message); 
+        }
+        
         setOrders(prev => prev.map(order => 
           order.id === orderId ? { ...order, status: newStatus } : order
         ));
@@ -184,7 +191,7 @@ export default function AdminOrdersPage() {
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-2">
                             <p className="font-bold text-slate-900 text-sm">{order.buyerName || "Guest User"}</p>
-                            {/* 🚀 Referral Badge */}
+                            {/* 🚀 ADDED: Referral Badge */}
                             {order.referralCodeUsed && (
                               <span className="inline-flex items-center gap-1 bg-purple-100 text-purple-800 border border-purple-200 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider">
                                 <FaGift /> Ref: {order.referralCodeUsed}
