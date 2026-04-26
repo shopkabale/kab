@@ -4,6 +4,9 @@ import { FieldValue } from "firebase-admin/firestore";
 import { NotificationService } from "@/lib/notifications"; 
 import { sendAdminAlert } from "@/lib/brevo"; 
 
+// ==========================================
+// 1. POST: CREATE ORDER (Checkout Logic)
+// ==========================================
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -21,7 +24,7 @@ export async function POST(request: Request) {
 
     // 2. MULTI-ITEM ATOMIC TRANSACTION
     await adminDb.runTransaction(async (transaction) => {
-      // Step A: Read all products first (Firestore rule: all reads must come before writes)
+      // Step A: Read all products first
       const productDocs = await Promise.all(
         cartItems.map((item: any) => transaction.get(adminDb.collection("products").doc(item.productId || item.id)))
       );
@@ -70,15 +73,13 @@ export async function POST(request: Request) {
         // Deduct Stock
         transaction.update(productSnap.ref, {
           stock: FieldValue.increment(-requestedQty),
-          locked: true, // Optional: You might want to remove 'locked' if you rely purely on stock
+          locked: true,
           updatedAt: Date.now()
         });
       });
 
       // Step C: Save Master Order
       const sellerOrders = Object.values(sellerOrdersMap);
-      
-      // 🔥 NEW: Extract flat array of seller IDs for Firestore Rules Security!
       const uniqueSellerIds = Array.from(new Set(validatedItems.map(item => item.sellerId).filter(Boolean)));
 
       const orderRef = adminDb.collection("orders").doc(orderNumber);
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
         status: "processing",         
         cartItems: validatedItems,
         sellerOrders: sellerOrders,
-        sellerIds: uniqueSellerIds,   // 🔥 Added flat array here
+        sellerIds: uniqueSellerIds,   
         totalAmount: actualTotalAmount,
         createdAt: Date.now(),
         updatedAt: Date.now()
@@ -110,17 +111,14 @@ export async function POST(request: Request) {
     const notificationPromises: Promise<any>[] = [];
     const allProductsString = validatedItems.map(i => `${i.quantity}x ${i.name}`).join(", ");
 
-    // A. Notify Buyer
     notificationPromises.push(
       NotificationService.notifyBuyer(contactPhone, orderNumber, allProductsString, actualTotalAmount)
     );
 
-    // B. Notify Admin
     notificationPromises.push(
       sendAdminAlert(orderNumber, allProductsString, actualTotalAmount, contactPhone, "Multi-Seller COD Order")
     );
 
-    // C. Notify Each Seller
     const sellerOrdersList = Object.values(sellerOrdersMap);
     for (const sellerCut of sellerOrdersList) {
       const sellerItemsString = sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
@@ -139,7 +137,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Freeze container until notifications fire
     await Promise.allSettled(notificationPromises);
     console.log("✅ All COD notifications dispatched successfully.");
 
@@ -148,5 +145,112 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("❌ Order creation error:", error.message);
     return NextResponse.json({ error: error.message || "Failed to create order" }, { status: 500 });
+  }
+}
+
+// ==========================================
+// 2. GET: FETCH ORDERS FOR ADMIN DASHBOARD
+// ==========================================
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const adminId = searchParams.get("adminId");
+
+    if (!adminId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const ordersSnap = await adminDb.collection("orders").orderBy("createdAt", "desc").limit(100).get();
+    const orders = ordersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    return NextResponse.json({ orders });
+  } catch (error) {
+    console.error("Admin Orders GET Error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+// ==========================================
+// 3. PATCH: UPDATE STATUS & TRIGGER PAYOUTS
+// ==========================================
+export async function PATCH(request: Request) {
+  try {
+    const { adminId, orderId, newStatus } = await request.json();
+
+    if (!adminId || !orderId || !newStatus) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const orderRef = adminDb.collection("orders").doc(orderId);
+    const orderDoc = await orderRef.get();
+
+    if (!orderDoc.exists) {
+      return NextResponse.json({ error: "Order not found" }, { status: 404 });
+    }
+
+    const orderData = orderDoc.data()!;
+
+    // A. Update the order status
+    await orderRef.update({ 
+      status: newStatus,
+      updatedAt: Date.now() 
+    });
+
+    // ==========================================
+    // 🚀 REFERRAL PAYOUT ENGINE
+    // Triggered ONLY when marked "delivered"
+    // ==========================================
+    if (newStatus === "delivered" && orderData.referralCodeUsed && !orderData.payoutProcessed) {
+      console.log(`[Referral Engine] Processing payout for order ${orderId} (Ref: ${orderData.referralCodeUsed})`);
+
+      const usersRef = adminDb.collection("users");
+      const partnerSnap = await usersRef.where("referralCode", "==", orderData.referralCodeUsed).limit(1).get();
+
+      if (!partnerSnap.empty) {
+        const partnerDoc = partnerSnap.docs[0];
+        const partnerRef = partnerDoc.ref;
+        const partnerData = partnerDoc.data();
+
+        // 💰 Execute the Math: 10% (Max 3k) or Flat 300 UGX
+        let rewardAmount = 0;
+        const cartTotal = Number(orderData.totalAmount) || 0;
+
+        if (cartTotal < 5000) {
+          rewardAmount = 300; 
+        } else {
+          rewardAmount = Math.min(Math.floor(cartTotal * 0.10), 3000); 
+        }
+
+        // 🔒 Atomic Wallet Update
+        await partnerRef.update({
+          referralBalance: FieldValue.increment(rewardAmount),
+          referralCount: FieldValue.increment(1)
+        });
+
+        // 🔒 Lock the order to prevent double-payouts
+        await orderRef.update({
+          payoutProcessed: true,
+          payoutAmount: rewardAmount
+        });
+
+        // 📱 Send Meta WhatsApp Alert
+        if (partnerData.phone) {
+          const simulatedNewBalance = (Number(partnerData.referralBalance) || 0) + rewardAmount;
+          await NotificationService.notifyPartnerCredit(
+            partnerData.phone, 
+            rewardAmount, 
+            simulatedNewBalance
+          );
+        } else {
+          console.log(`⚠️ Partner ${partnerData.email} got paid, but has no phone linked for WhatsApp alert.`);
+        }
+      }
+    }
+
+    return NextResponse.json({ success: true, message: `Order updated to ${newStatus}` });
+
+  } catch (error) {
+    console.error("Admin Orders PATCH Error:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
