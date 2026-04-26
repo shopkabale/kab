@@ -117,6 +117,8 @@ export default function Footer() {
             </h3>
             <ul className="space-y-3">
               <li><Link href="/profile" className="hover:text-[#D97706] transition-colors">My Profile</Link></li>
+              {/* 🚀 ADDED: Highly visible Refer & Earn link */}
+              <li><Link href="/invite" className="hover:text-amber-600 transition-colors text-[#D97706] font-bold">Refer & Earn Cash 💰</Link></li>
               <li><Link href="/sell" className="hover:text-amber-600 transition-colors text-[#D97706] font-bold">Sell on Kabale</Link></li>
               <li><Link href="/policies" className="hover:text-green-600 transition-colors text-green-600 font-bold">Policies & Refunds</Link></li>
               <li><Link href="/about" className="hover:text-[#D97706] transition-colors">About Us</Link></li>
@@ -131,11 +133,11 @@ export default function Footer() {
         {/* BRAND LINEAGE & LOGOS SECTION (Cross-Promotion) */}
         {/* -------------------------------------------------------- */}
         <div className="pt-8 border-t border-slate-200/80 flex flex-col space-y-8">
-          
+
           <div className="flex flex-col lg:flex-row justify-between items-center space-y-6 lg:space-y-0">
             {/* The Logos & Links */}
             <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-6">
-              
+
               {/* Kabale Online Logo & Link */}
               <Link href="/" className="flex items-center space-x-3 group">
                 <div className="w-10 h-10 bg-white rounded-xl overflow-hidden border border-slate-200 flex items-center justify-center shrink-0">
@@ -167,7 +169,7 @@ export default function Footer() {
 
           {/* Copyright & Socials */}
           <div className="flex flex-col md:flex-row justify-between items-center gap-6 pt-6 border-t border-slate-100">
-            
+
             <p className="text-slate-500 text-[11px] md:text-xs text-center md:text-left font-medium">
               © {currentYear} Kabale Online. All rights reserved.
             </p>
