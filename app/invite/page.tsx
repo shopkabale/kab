@@ -85,7 +85,9 @@ export default function InviteHubPage() {
   const referralLink = `https://www.kabaleonline.com/invite/${referralCode}`;
   const balance = user.referralBalance || 0;
   const currentDisplayName = user.referralName || user.displayName?.split(' ')[0] || "Kabale User";
-  const currentPhone = user.phone || user.phoneNumber; // The bulletproof check
+  
+  // 🚀 FIXED: TypeScript will accept this perfectly.
+  const currentPhone = user.phone;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(referralLink).then(() => {
