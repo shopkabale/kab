@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { signInWithPopup, signOut as firebaseSignOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase/config";
+import { doc, onSnapshot } from "firebase/firestore"; // 🚀 Added Firestore real-time listener
+import { auth, googleProvider, db } from "@/lib/firebase/config"; // 🚀 Added db
 import { User } from "@/types";
 
 interface AuthContextType {
@@ -19,39 +20,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
+    let unsubscribeSnapshot: () => void;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         try {
-          const token = await firebaseUser.getIdToken();
-          
-          const res = await fetch("/api/auth/sync", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+          // 1. Still call your sync API in the background just to keep backend integrity
+          firebaseUser.getIdToken().then((token) => {
+             fetch("/api/auth/sync", {
+              method: "POST",
+              headers: { Authorization: `Bearer ${token}` },
+            }).catch(console.error);
           });
 
-          if (res.ok) {
-            const data = await res.json();
-            setUser(data.user);
-          } else {
-            const errData = await res.json();
-            console.error("Backend sync failed:", errData);
-            alert(`Server Error during login: ${errData.error || 'Check Vercel logs'}`);
-            setUser(null);
-          }
+          // 2. 🚀 THE MAGIC: Listen directly to the user's Firestore document in real-time!
+          unsubscribeSnapshot = onSnapshot(doc(db, "users", firebaseUser.uid), (docSnap) => {
+            if (docSnap.exists()) {
+              const firestoreData = docSnap.data();
+              
+              // Merge Firebase Auth info with Firestore Database info
+              setUser({
+                id: firebaseUser.uid,
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+                ...firestoreData // 🚀 This instantly pulls in phone, referralBalance, etc!
+              } as User);
+            } else {
+              // Fallback if the database document doesn't exist yet
+              setUser({
+                id: firebaseUser.uid,
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                displayName: firebaseUser.displayName,
+                photoURL: firebaseUser.photoURL,
+              } as User);
+            }
+            setLoading(false);
+          });
+
         } catch (error) {
           console.error("Auth Error:", error);
-          alert("Network error while communicating with the server.");
           setUser(null);
+          setLoading(false);
         }
       } else {
         setUser(null);
+        setLoading(false);
+        if (unsubscribeSnapshot) unsubscribeSnapshot(); // Clean up listener on logout
       }
-      setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeSnapshot) unsubscribeSnapshot();
+    };
   }, []);
 
   const signIn = async () => {
