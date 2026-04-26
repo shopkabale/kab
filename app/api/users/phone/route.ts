@@ -21,13 +21,11 @@ export async function PATCH(request: Request) {
 
     const cleanPhone = phone.trim();
 
-    // 🚀 THE CLEAN CHECK: Search the DB for this exact phone number
+    // 🚀 Check if the number is already taken by someone else
     const phoneCheckSnap = await adminDb.collection("users").where("phone", "==", cleanPhone).get();
     
     if (!phoneCheckSnap.empty) {
-      // If results are found, make sure it isn't just the current user updating their own profile
       const isCurrentUser = phoneCheckSnap.docs.every(doc => doc.id === uid);
-      
       if (!isCurrentUser) {
         return NextResponse.json({ 
           error: "This phone number is already registered to another account." 
@@ -35,11 +33,12 @@ export async function PATCH(request: Request) {
       }
     }
 
-    // If the check passes, update the user
-    await adminDb.collection("users").doc(uid).update({
+    // 🚀 THE FIX: Use .set() with { merge: true } instead of .update()
+    // This forces the database to save the number even if the user document is partially incomplete.
+    await adminDb.collection("users").doc(uid).set({
       phone: cleanPhone,
       phoneUpdatedAt: Date.now()
-    });
+    }, { merge: true });
 
     return NextResponse.json({ success: true });
 
