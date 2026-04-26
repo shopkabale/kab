@@ -22,6 +22,12 @@ export default function Footer() {
   // Hide footer on admin pages
   if (pathname?.startsWith("/admin")) return null;
 
+  const isActive = (path: string) => pathname === path;
+
+  // Helper function to apply the gray/orange active logic
+  const getLinkStyle = (path: string) => 
+    `transition-colors block ${isActive(path) ? 'text-[#D97706] font-bold' : 'text-slate-500 hover:text-[#D97706]'}`;
+
   return (
     <footer className="bg-white text-slate-600 border-t border-slate-200 mt-auto text-xs md:text-sm">
       <div className="max-w-7xl mx-auto px-6 py-10 md:py-14">
@@ -29,7 +35,7 @@ export default function Footer() {
         {/* Main Grid: 4 columns on desktop, 2 columns on mobile */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10 mb-12">
 
-          {/* Brand & Contact Info (Spans full width on mobile, 1 col on desktop) */}
+          {/* Brand & Contact Info */}
           <div className="col-span-2 lg:col-span-1">
             <Link
               href="/"
@@ -38,12 +44,12 @@ export default function Footer() {
               Kabale<span className="text-[#D97706]">Online</span>
             </Link>
 
-            <p className="mt-3 mb-6 text-slate-600 font-medium tracking-wide">
+            <p className="mt-3 mb-6 text-slate-500 font-medium tracking-wide">
               Kabale's One-Stop Online Marketplace
             </p>
 
             {/* Contact Details List */}
-            <ul className="space-y-4 text-slate-600">
+            <ul className="space-y-4 text-slate-500">
               <li className="flex items-start gap-3">
                 <FaLocationDot className="mt-0.5 shrink-0 text-slate-400 text-base" /> 
                 <span>Kabale, Uganda</span>
@@ -77,53 +83,52 @@ export default function Footer() {
 
           {/* Marketplace Column */}
           <div className="col-span-1">
-            <h3 className="text-slate-900 font-bold text-[11px] uppercase tracking-widest mb-4">
+            <h3 className="text-slate-900 font-black text-[11px] uppercase tracking-widest mb-4">
               Marketplace
             </h3>
             <ul className="space-y-3">
-              <li><Link href="/officialStore" className="hover:text-[#D97706] transition-colors">Official Store</Link></li>
-              <li><Link href="/ladies" className="hover:text-[#D97706] transition-colors">Ladies' Picks 💖</Link></li>
-              <li><Link href="/category/student_item" className="hover:text-[#D97706] transition-colors">Student Market</Link></li>
-              <li><Link href="/category/electronics" className="hover:text-[#D97706] transition-colors">Electronics</Link></li>
-              <li><Link href="/category/agriculture" className="hover:text-[#D97706] transition-colors">Agriculture</Link></li>
-              <li><Link href="/products" className="hover:text-[#D97706] transition-colors">View All Products</Link></li>
+              <li><Link href="/officialStore" className={getLinkStyle('/officialStore')}>Official Store</Link></li>
+              <li><Link href="/ladies" className={getLinkStyle('/ladies')}>Ladies' Picks 💖</Link></li>
+              <li><Link href="/category/student_item" className={getLinkStyle('/category/student_item')}>Student Market</Link></li>
+              <li><Link href="/category/electronics" className={getLinkStyle('/category/electronics')}>Electronics</Link></li>
+              <li><Link href="/category/agriculture" className={getLinkStyle('/category/agriculture')}>Agriculture</Link></li>
+              <li><Link href="/products" className={getLinkStyle('/products')}>View All Products</Link></li>
             </ul>
           </div>
 
           {/* Explore & Help Column */}
           <div className="col-span-1">
-            <h3 className="text-slate-900 font-bold text-[11px] uppercase tracking-widest mb-4">
+            <h3 className="text-slate-900 font-black text-[11px] uppercase tracking-widest mb-4">
               Explore & Help
             </h3>
             <ul className="space-y-3">
-              <li><Link href="/requests" className="hover:text-[#D97706] transition-colors">Buyer Requests</Link></li>
+              <li><Link href="/requests" className={getLinkStyle('/requests')}>Buyer Requests</Link></li>
               <li>
-                <Link href="/ai" className="hover:text-[#D97706] transition-colors flex items-center gap-1.5">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                <Link href="/ai" className={`${getLinkStyle('/ai')} flex items-center gap-1.5`}>
+                  <svg className={`w-4 h-4 ${isActive('/ai') ? 'text-[#D97706]' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                   AI Shopping Guide
                 </Link>
               </li>
-              <li><Link href="/blog" className="hover:text-[#D97706] transition-colors">Journal & Updates</Link></li>
-              <li><Link href="/guide" className="hover:text-[#D97706] transition-colors">Read Documentation</Link></li>
-              <li><Link href="/guide" className="hover:text-[#D97706] transition-colors">Need Help?</Link></li>
-              <li><Link href="/faq" className="hover:text-[#D97706] transition-colors">FAQ</Link></li>
+              <li><Link href="/blog" className={getLinkStyle('/blog')}>Journal & Updates</Link></li>
+              <li><Link href="/guide" className={getLinkStyle('/guide')}>Read Documentation</Link></li>
+              <li><Link href="/guide" className={getLinkStyle('/guide')}>Need Help?</Link></li>
+              <li><Link href="/faq" className={getLinkStyle('/faq')}>FAQ</Link></li>
             </ul>
           </div>
 
           {/* Account & Company Column */}
           <div className="col-span-1">
-            <h3 className="text-slate-900 font-bold text-[11px] uppercase tracking-widest mb-4">
+            <h3 className="text-slate-900 font-black text-[11px] uppercase tracking-widest mb-4">
               Account & Company
             </h3>
             <ul className="space-y-3">
-              <li><Link href="/profile" className="hover:text-[#D97706] transition-colors">My Profile</Link></li>
-              {/* 🚀 ADDED: Highly visible Refer & Earn link */}
-              <li><Link href="/invite" className="hover:text-amber-600 transition-colors text-[#D97706] font-bold">Refer & Earn Cash 💰</Link></li>
-              <li><Link href="/sell" className="hover:text-amber-600 transition-colors text-[#D97706] font-bold">Sell on Kabale</Link></li>
-              <li><Link href="/policies" className="hover:text-green-600 transition-colors text-green-600 font-bold">Policies & Refunds</Link></li>
-              <li><Link href="/about" className="hover:text-[#D97706] transition-colors">About Us</Link></li>
-              <li><Link href="/contact" className="hover:text-[#D97706] transition-colors">Contact Us</Link></li>
-              <li><Link href="/terms" className="hover:text-[#D97706] transition-colors">Terms & Conditions</Link></li>
+              <li><Link href="/profile" className={getLinkStyle('/profile')}>My Profile</Link></li>
+              <li><Link href="/invite" className={getLinkStyle('/invite')}>Refer & Earn Cash 💰</Link></li>
+              <li><Link href="/sell" className={getLinkStyle('/sell')}>Sell on Kabale</Link></li>
+              <li><Link href="/policies" className={getLinkStyle('/policies')}>Policies & Refunds</Link></li>
+              <li><Link href="/about" className={getLinkStyle('/about')}>About Us</Link></li>
+              <li><Link href="/contact" className={getLinkStyle('/contact')}>Contact Us</Link></li>
+              <li><Link href="/terms" className={getLinkStyle('/terms')}>Terms & Conditions</Link></li>
             </ul>
           </div>
 
