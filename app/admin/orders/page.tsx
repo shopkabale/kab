@@ -15,7 +15,7 @@ export default function AdminOrdersPage() {
       if (!user) return; 
       
       try {
-        const adminId = user.id || user.uid; 
+        const adminId = user.id; // 🚀 FIXED: Removed .uid to pass Vercel TypeScript build
         const res = await fetch(`/api/admin/orders?adminId=${adminId}`);
         if (res.ok) {
           const data = await res.json();
@@ -67,7 +67,7 @@ export default function AdminOrdersPage() {
 
     setProcessingId(orderId);
     try {
-      const adminId = user.id || user.uid; 
+      const adminId = user.id; // 🚀 FIXED: Removed .uid to pass Vercel TypeScript build
       
       const res = await fetch("/api/admin/orders", {
         method: "PATCH",
