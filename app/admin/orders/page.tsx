@@ -15,13 +15,13 @@ export default function AdminOrdersPage() {
       if (!user) return; 
       
       try {
-        const adminId = user.id; // 🚀 FIXED: Removed .uid to pass Vercel TypeScript build
+        const adminId = user.id; 
         const res = await fetch(`/api/admin/orders?adminId=${adminId}`);
         if (res.ok) {
           const data = await res.json();
           const fetchedOrders = data.orders || [];
 
-          // 🚀 FORCED SORTING LOGIC
+          // 🚀 FORCED SORTING LOGIC: Organizes strictly by newest date first
           const sortedOrders = fetchedOrders.sort((a: any, b: any) => {
             const getTime = (dateVal: any) => {
               if (!dateVal) return 0;
@@ -60,18 +60,18 @@ export default function AdminOrdersPage() {
     alert(`Testing: You clicked ${newStatus}`); 
 
     if (!user || user.role !== "admin") {
-      // 🚀 NUCLEAR TEST 2: Prove the user isn't being blocked
       alert("Blocked: System thinks you are not an Admin!"); 
       return;
     }
 
     setProcessingId(orderId);
     try {
-      const adminId = user.id; // 🚀 FIXED: Removed .uid to pass Vercel TypeScript build
+      const adminId = user.id; 
       
       const res = await fetch("/api/admin/orders", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        cache: "no-store", // 🚀 FORCE VERCEL TO BYPASS ALL CACHES
         body: JSON.stringify({
           adminId,
           orderId,
@@ -85,23 +85,19 @@ export default function AdminOrdersPage() {
         data = JSON.parse(rawText);
       } catch (err) {
         console.error("Backend returned non-JSON:", rawText);
-        alert("Server Crash: Backend returned an invalid response. Check Vercel logs.");
+        alert(`Server Crash: Backend returned non-JSON text:\n\n${rawText}`);
         return;
       }
 
       if (res.ok) {
-        // 🚀 THE TRUTH POPUP from the backend
-        if (data.message) {
-          alert(data.message); 
-        } else {
-          alert("Status updated successfully, but no detailed message was returned.");
-        }
+        // 🚀 THE NAKED TRUTH POPUP: Print the raw object from the backend!
+        alert(`RAW BACKEND RESPONSE:\n\n${JSON.stringify(data, null, 2)}`);
         
         setOrders(prev => prev.map(order => 
           order.id === orderId ? { ...order, status: newStatus } : order
         ));
       } else {
-        alert(`Failed to update: ${data.error || "Unknown Error"}`);
+        alert(`Failed to update:\n\n${JSON.stringify(data, null, 2)}`);
       }
     } catch (error: any) {
       console.error(error);
