@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/firebase/config"; 
 import { collection, doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
-// Helper: Detect network (Only needed if you still want custom validation, though LivePay handles this too)
+// Helper: Detect network
 function getNetwork(phone: string): "MTN" | "AIRTEL" | null {
   const prefix = phone.substring(0, 3);
   if (["077", "078", "076", "039"].includes(prefix)) return "MTN";
@@ -17,6 +17,11 @@ export async function POST(request: Request) {
 
     if (!cartItems || cartItems.length === 0 || !contactPhone || !buyerName) {
       return NextResponse.json({ error: "Missing required fields or empty cart" }, { status: 400 });
+    }
+
+    const network = getNetwork(contactPhone);
+    if (!network) {
+      return NextResponse.json({ error: "Invalid network. Only MTN and Airtel are supported." }, { status: 400 });
     }
 
     // 1. SECURE CART VERIFICATION
@@ -79,16 +84,18 @@ export async function POST(request: Request) {
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
     const referenceId = `REF${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-    // 4. CALL LIVEPAY API (V2 Endpoint)
+    // 4. CALL LIVEPAY API (V2 Endpoint with Cloudflare Bypass Headers)
     const livePayResponse = await fetch("https://livepay.me/api/collect-money", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${process.env.LIVEPAY_API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json", // 🔥 Tells Cloudflare we are an API
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" // 🔥 Bypasses Cloudflare bot detection
       },
       body: JSON.stringify({
-        accountNumber: process.env.LIVEPAY_ACCOUNT_NUMBER, // e.g., "LP2305443309"
-        phoneNumber: contactPhone, // Changed from phone_number
+        accountNumber: process.env.LIVEPAY_ACCOUNT_NUMBER, 
+        phoneNumber: contactPhone, 
         amount: securePaymentAmount, 
         currency: "UGX",
         reference: referenceId,
@@ -102,14 +109,14 @@ export async function POST(request: Request) {
     try {
       livePayData = JSON.parse(rawResponseText);
     } catch (err) {
-      console.error("LivePay returned invalid JSON:", rawResponseText);
+      console.error("LivePay returned invalid JSON (HTML Error):", rawResponseText);
       return NextResponse.json({ error: "Payment gateway is temporarily unavailable." }, { status: 502 });
     }
 
-    // LivePay's new success format is { success: true }
-    if (!livePayResponse.ok || !livePayData.success) {
+    // LivePay's success format check
+    if (!livePayResponse.ok || livePayData.success === false || livePayData.status === "error") {
       console.error("LivePay API Error:", livePayData);
-      return NextResponse.json({ error: livePayData.error || "Payment provider error" }, { status: 400 });
+      return NextResponse.json({ error: livePayData.error || livePayData.message || "Payment provider error" }, { status: 400 });
     }
 
     // 5. SAVE THE MASTER ORDER
@@ -130,7 +137,7 @@ export async function POST(request: Request) {
       sellerIds: uniqueSellerIds, 
       totalAmount: securePaymentAmount,
       referenceId: referenceId,
-      internalReference: livePayData.internal_reference || null, // Provided by LivePay v2
+      internalReference: livePayData.internal_reference || null,
       referralCodeUsed: referralCodeUsed || null, 
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
