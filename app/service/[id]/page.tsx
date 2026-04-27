@@ -38,10 +38,13 @@ export default async function ServiceDetailsPage({ params }: { params: { id: str
   const service = { id: snap.id, ...snap.data() } as any;
   const mainImage = service.images?.[0] || "/placeholder.png";
 
-  // Financial Math
+  // ==========================================
+  // FINANCIAL MATH (Enforcing 1,000 UGX Minimum)
+  // ==========================================
   const basePrice = Number(service.price) || 0;
-  const commitmentDeposit = Math.round(basePrice * 0.10); 
-  const remainingBalance = basePrice - commitmentDeposit;
+  const calculatedDeposit = Math.round(basePrice * 0.10); 
+  const commitmentDeposit = calculatedDeposit < 1000 ? 1000 : calculatedDeposit; 
+  const remainingBalance = Math.max(0, basePrice - commitmentDeposit);
 
   // 🔥 FETCH RELATED SERVICES
   const relatedQ = query(
@@ -58,7 +61,7 @@ export default async function ServiceDetailsPage({ params }: { params: { id: str
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-24 pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
       <div className="w-full max-w-5xl mx-auto px-4 sm:px-6">
-        
+
         {/* BREADCRUMBS */}
         <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">
           <Link href="/" className="hover:text-[#D97706] transition-colors">Home</Link>
@@ -84,10 +87,10 @@ export default async function ServiceDetailsPage({ params }: { params: { id: str
 
         {/* TWO-COLUMN LAYOUT */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* LEFT COLUMN: Service Details */}
           <div className="lg:col-span-2 space-y-8">
-            
+
             {/* Header Card */}
             <div className="bg-white dark:bg-[#151515] p-6 sm:p-8 rounded-2xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
               <div className="flex items-center gap-2 mb-4">
@@ -99,7 +102,7 @@ export default async function ServiceDetailsPage({ params }: { params: { id: str
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight mb-6 leading-[1.1]">
                 {service.title}
               </h1>
-              
+
               <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8 text-sm font-medium text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-6">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-slate-100 dark:bg-[#111] rounded-full flex items-center justify-center border border-slate-200 dark:border-slate-800 shadow-sm">
@@ -110,7 +113,7 @@ export default async function ServiceDetailsPage({ params }: { params: { id: str
                     <span className="text-slate-900 dark:text-white font-bold text-base">{service.sellerName || "Verified Expert"}</span>
                   </div>
                 </div>
-                
+
                 <div className="hidden sm:block w-px h-10 bg-slate-200 dark:bg-slate-800"></div>
 
                 <div className="flex items-center gap-3">
@@ -143,13 +146,13 @@ export default async function ServiceDetailsPage({ params }: { params: { id: str
           <div className="lg:col-span-1">
             <div className="bg-white dark:bg-[#151515] p-6 sm:p-8 rounded-2xl sm:rounded-3xl border-2 border-[#D97706] shadow-xl sticky top-24">
               <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 text-center">Booking Summary</h3>
-              
+
               <div className="space-y-5 mb-8">
                 <div className="flex justify-between items-center text-slate-600 dark:text-slate-400 font-medium">
                   <span>Est. Base Price</span>
                   <span className="text-slate-900 dark:text-white font-bold">UGX {basePrice.toLocaleString()}</span>
                 </div>
-                
+
                 <div className="flex justify-between items-center text-[#D97706] font-black text-lg sm:text-xl p-4 bg-amber-50 dark:bg-[#D97706]/10 rounded-xl sm:rounded-2xl border border-amber-200 dark:border-[#D97706]/30 shadow-inner">
                   <span className="text-sm">Deposit Required</span>
                   <span>UGX {commitmentDeposit.toLocaleString()}</span>
