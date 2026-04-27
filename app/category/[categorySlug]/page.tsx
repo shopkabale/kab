@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation"; // 🔥 NEW: Added redirect
 import { Suspense } from "react";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
@@ -16,17 +17,17 @@ import {
   Wrench
 } from "lucide-react"; 
 
-// 🔥 Caches this category page for 1 hour. (1 Read per hour, per category)
+// 🔥 Caches this category page for 1 hour
 export const revalidate = 3600;
 
 // ==========================================
-// 6 FRONTEND BUCKETS MAPPING TO 11 BACKEND CATEGORIES
+// 6 FRONTEND BUCKETS
 // ==========================================
 const frontendCategoryMap: Record<string, { title: string; description: string; backendCategories: string[] }> = {
   "tech-appliances": {
     title: "Tech, Gadgets & Appliances ⚡",
     description: "Laptops, phones, smart watches, sound systems, and essential home appliances.",
-    backendCategories: ["electronics", "watches"] // Removed official_store
+    backendCategories: ["electronics", "watches"] 
   },
   "beauty-fashion": {
     title: "Glow Up: Beauty & Fashion ✨",
@@ -56,13 +57,34 @@ const frontendCategoryMap: Record<string, { title: string; description: string; 
 };
 
 // ==========================================
+// AUTOMATIC REDIRECT MAP (OLD LINKS -> NEW BUCKETS)
+// ==========================================
+const legacyMapping: Record<string, string> = {
+  "electronics": "tech-appliances",
+  "watches": "tech-appliances",
+  "official_store": "tech-appliances", // Safely mapping any lingering official store links
+  "beauty": "beauty-fashion",
+  "ladies_picks": "beauty-fashion",
+  "ladies": "beauty-fashion",
+  "agriculture": "food-groceries",
+  "groceries": "food-groceries",
+  "student_essentials": "campus-life",
+  "student_item": "campus-life", // Legacy fallback
+  "stationery": "campus-life",
+  "gifts": "campus-life",
+  "bundles": "mega-bundles",
+  "services": "repairs-services"
+};
+
+// ==========================================
 // DYNAMIC SEO & OPEN GRAPH METADATA
 // ==========================================
 export async function generateMetadata({ params }: { params: { categorySlug: string } }): Promise<Metadata> {
-  const slug = params.categorySlug;
+  const originalSlug = params.categorySlug;
+  // If it's an old link, use the new mapped slug for SEO to merge traffic
+  const slug = legacyMapping[originalSlug] || originalSlug; 
   const categoryData = frontendCategoryMap[slug];
 
-  // Fallback for older links
   const title = categoryData ? categoryData.title : `${slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`;
   const description = categoryData ? categoryData.description : `Shop the best local deals for ${slug.replace(/_/g, ' ')} delivered fast to your location.`;
 
@@ -74,26 +96,14 @@ export async function generateMetadata({ params }: { params: { categorySlug: str
     title: `${title} | Kabale Online`,
     description: description,
     keywords: [
-      title, 
-      "Kabale Online", 
-      "Kabale University", 
-      "student market", 
-      slug.replace(/_/g, ' '), 
-      "buy online Kabale"
+      title, "Kabale Online", "Kabale University", "student market", slug.replace(/_/g, ' '), "buy online Kabale"
     ],
     openGraph: {
       title: `${title} | Kabale Online`,
       description: description,
       url: currentUrl,
       siteName: "Kabale Online",
-      images: [
-        {
-          url: ogImageUrl, 
-          width: 1200,
-          height: 630,
-          alt: `${title} on Kabale Online`,
-        },
-      ],
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: `${title} on Kabale Online` }],
       locale: "en_UG",
       type: "website",
     },
@@ -109,7 +119,6 @@ export async function generateMetadata({ params }: { params: { categorySlug: str
   };
 }
 
-// Increased to 100 to ensure the client-side filter has enough data to work with without hitting Firebase again
 const PAGE_SIZE = 100;
 
 // ==========================================
@@ -120,13 +129,20 @@ export default async function CategoryPage({
 }: { 
   params: { categorySlug: string };
 }) {
-  const slug = params.categorySlug;
+  const originalSlug = params.categorySlug;
+
+  // 🔥 1. SILENT REDIRECT: If a user clicks an old link, shoot them to the new bucket
+  if (legacyMapping[originalSlug]) {
+    redirect(`/category/${legacyMapping[originalSlug]}`);
+  }
+
+  const slug = originalSlug; // Only proceeds if it's already a correct frontend slug
   const categoryData = frontendCategoryMap[slug];
 
-  // 1. FALLBACK LOGIC: If a user visits an old URL, treat it as a single category search
+  // 2. FALLBACK LOGIC: If a user visits an unmapped URL, treat it as a single category search
   const backendCategoriesToFetch = categoryData ? categoryData.backendCategories : [slug];
 
-  // 2. DYNAMIC FIREBASE QUERY using "in" to fetch multiple categories at once
+  // 3. DYNAMIC FIREBASE QUERY using "in" to fetch multiple categories at once
   const categoryQ = query(
     collection(db, "products"),
     where("category", "in", backendCategoriesToFetch),
@@ -136,7 +152,7 @@ export default async function CategoryPage({
 
   const snap = await getDocs(categoryQ);
 
-  // 3. SAFE SERIALIZATION
+  // 4. SAFE SERIALIZATION
   const initialProducts = snap.docs.map(doc => {
     const data = doc.data();
     return {
@@ -150,7 +166,7 @@ export default async function CategoryPage({
   const displayTitle = categoryData ? categoryData.title : slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   const displayDesc = categoryData ? categoryData.description : `Browse all items in ${slug.replace(/_/g, ' ')}.`;
 
-  // 4. THE 6 EXPLORE CATEGORIES
+  // 5. THE 6 EXPLORE CATEGORIES
   const exploreCategories = [
     { name: "Mega Bundles & Packs", link: "mega-bundles", desc: "Starter kits & combos", Icon: Package },
     { name: "Campus Life & Study Gear", link: "campus-life", desc: "Hostel gear, gifts & books", Icon: Bed },
@@ -163,7 +179,6 @@ export default async function CategoryPage({
   return (
     <div className="min-h-screen bg-transparent pb-12 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
       <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
-
         <div className="flex flex-col md:flex-row gap-4 w-full">
 
           {/* LEFT SIDEBAR AREA */}
