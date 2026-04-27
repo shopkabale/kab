@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase/admin"; // 🔥 Upgraded to Admin SDK for secure transactions
+import { adminDb } from "@/lib/firebase/admin"; 
 import { FieldValue } from "firebase-admin/firestore";
 import { NotificationService } from "@/lib/notifications"; 
 import { sendAdminAlert } from "@/lib/brevo"; 
@@ -7,73 +7,73 @@ import { sendAdminAlert } from "@/lib/brevo";
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
-    const { transaction_id } = payload; 
+    
+    // LivePay's webhook should send back the reference you originally sent them
+    const incomingReference = payload.reference || payload.customer_reference; 
 
-    // 1. EXTRACT ID
-    if (!transaction_id) {
-      return NextResponse.json({ error: "Missing transaction ID" }, { status: 400 });
+    if (!incomingReference) {
+      return NextResponse.json({ error: "Missing transaction reference" }, { status: 400 });
     }
 
-    // 2. VERIFY TRANSACTION WITH LIVEPAY (Double Protection - Brilliant!)
-    const livePayResponse = await fetch("https://livepay.me/api/v1/transaction-status.php", {
-      method: "POST",
+    // 1. VERIFY TRANSACTION WITH LIVEPAY (V2 GET Request)
+    const url = `https://livepay.me/api/transaction-status?accountNumber=${process.env.LIVEPAY_ACCOUNT_NUMBER}&currency=UGX&reference=${incomingReference}`;
+    
+    const livePayResponse = await fetch(url, {
+      method: "GET",
       headers: {
-        "Authorization": `Bearer ${process.env.LIVEPAY_SECRET_KEY}`,
+        "Authorization": `Bearer ${process.env.LIVEPAY_API_KEY}`,
         "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        apikey: process.env.LIVEPAY_PUBLIC_KEY,
-        transaction_id: transaction_id
-      })
+      }
     });
 
-    const statusData = await livePayResponse.json();
+    const rawResponseText = await livePayResponse.text();
+    let statusData;
+    try {
+      statusData = JSON.parse(rawResponseText);
+    } catch (err) {
+      console.error("Webhook verification failed (HTML Returned):", rawResponseText);
+      return NextResponse.json({ error: "Gateway verification error" }, { status: 502 });
+    }
 
-    // 3. FIND THE MASTER ORDER IN FIRESTORE
+    // 2. FIND THE MASTER ORDER IN FIRESTORE
     const ordersRef = adminDb.collection("orders");
-    const querySnapshot = await ordersRef.where("transactionId", "==", transaction_id).limit(1).get();
+    const querySnapshot = await ordersRef.where("referenceId", "==", incomingReference).limit(1).get();
 
     if (querySnapshot.empty) {
-      return NextResponse.json({ error: "Order not found for this transaction" }, { status: 404 });
+      return NextResponse.json({ error: "Order not found for this reference" }, { status: 404 });
     }
 
     const orderDoc = querySnapshot.docs[0];
     const orderData = orderDoc.data();
     const orderRef = orderDoc.ref;
 
-    // Idempotency check: If it's already paid, don't fund the wallet again!
     if (orderData.paymentStatus === "paid") {
       console.log(`⚠️ Order ${orderData.orderId} is already paid. Ignoring duplicate webhook.`);
       return NextResponse.json({ message: "Already processed" }, { status: 200 });
     }
 
-    // 4. PROCESS SUCCESSFUL PAYMENT & FUND ESCROW
-    if (statusData.status === "success" && statusData.transaction.status === "Success") {
+    // 3. PROCESS SUCCESSFUL PAYMENT
+    // Checking the V2 documentation format: statusData.status === "Success"
+    if (statusData.success === true && statusData.status === "Success") {
       console.log(`✅ Order ${orderData.orderId} fully paid. Funding Escrow and routing...`);
 
-      // 🔥 ATOMIC TRANSACTION: Update Order & Fund Seller Wallets simultaneously
       await adminDb.runTransaction(async (transaction) => {
-        
-        // A. Update the Master Order
         transaction.update(orderRef, {
           status: "processing", 
           paymentStatus: "paid", 
-          amountPaid: Number(statusData.transaction.amount), 
-          paymentCompletedAt: statusData.transaction.completed_at || Date.now(),
+          amountPaid: Number(statusData.amount), 
+          paymentCompletedAt: statusData.completed_at || Date.now(),
           updatedAt: Date.now()
         });
 
-        // B. Deposit funds into Seller Wallets (Pending Escrow)
         if (orderData.sellerOrders && Array.isArray(orderData.sellerOrders)) {
           for (const seller of orderData.sellerOrders) {
-            // Safety check: Skip if sellerId is missing or "SYSTEM"
             if (!seller.sellerId || seller.sellerId === "SYSTEM") continue;
 
             const walletRef = adminDb.collection("wallets").doc(seller.sellerId);
             const walletSnap = await transaction.get(walletRef);
 
             if (!walletSnap.exists) {
-              // Create wallet if it doesn't exist
               transaction.set(walletRef, {
                 availableBalance: 0,
                 pendingBalance: seller.subtotal,
@@ -81,7 +81,6 @@ export async function POST(request: Request) {
                 updatedAt: Date.now()
               });
             } else {
-              // Increment pending balance safely
               transaction.update(walletRef, {
                 pendingBalance: FieldValue.increment(seller.subtotal),
                 updatedAt: Date.now()
@@ -95,65 +94,39 @@ export async function POST(request: Request) {
       // 🚀 MULTI-SELLER NOTIFICATION ROUTING
       // ==========================================
       const notificationPromises: Promise<any>[] = [];
-
       const allProductsString = orderData.cartItems.map((item: any) => `${item.quantity}x ${item.name}`).join(", ");
 
       notificationPromises.push(
-        NotificationService.notifyBuyer(
-          orderData.buyerPhone, 
-          orderData.orderId, 
-          allProductsString, 
-          orderData.totalAmount
-        ).catch(err => console.error("❌ Buyer WhatsApp Error:", err))
+        NotificationService.notifyBuyer(orderData.buyerPhone, orderData.orderId, allProductsString, orderData.totalAmount).catch(() => {})
       );
-
       notificationPromises.push(
-        sendAdminAlert(
-          orderData.orderId, 
-          allProductsString, 
-          orderData.totalAmount, 
-          orderData.buyerPhone, 
-          "Multi-Seller Paid Order" 
-        ).catch(err => console.error("❌ Admin Email Error:", err))
+        sendAdminAlert(orderData.orderId, allProductsString, orderData.totalAmount, orderData.buyerPhone, "Multi-Seller Paid Order").catch(() => {})
       );
 
       if (orderData.sellerOrders && Array.isArray(orderData.sellerOrders)) {
         for (const sellerCut of orderData.sellerOrders) {
           const sellerItemsString = sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
-
           notificationPromises.push(
-            NotificationService.notifySeller(
-              sellerCut.sellerPhone, 
-              "Partner", 
-              orderData.orderId, 
-              sellerItemsString, 
-              sellerCut.subtotal, 
-              orderData.buyerName,
-              orderData.buyerLocation || "Kabale Town",
-              orderData.buyerPhone
-            ).catch(err => console.error(`❌ Seller (${sellerCut.sellerPhone}) WhatsApp Error:`, err))
+            NotificationService.notifySeller(sellerCut.sellerPhone, "Partner", orderData.orderId, sellerItemsString, sellerCut.subtotal, orderData.buyerName, orderData.buyerLocation || "Kabale Town", orderData.buyerPhone).catch(() => {})
           );
         }
       }
 
       await Promise.allSettled(notificationPromises);
-      console.log("✅ All notifications successfully dispatched.");
+      return NextResponse.json({ message: "Webhook verified, Escrow funded." }, { status: 200 });
 
-      return NextResponse.json({ message: "Webhook verified, order marked Paid, Escrow funded, and routed." }, { status: 200 });
-
-    // 5. PROCESS FAILED PAYMENT
-    } else if (statusData.status === "success" && statusData.transaction.status === "Failed") {
+    // 4. PROCESS FAILED PAYMENT
+    } else if (statusData.success === true && (statusData.status === "Failed" || statusData.status === "Cancelled")) {
       await orderRef.update({
         status: "cancelled",
         paymentStatus: "payment_failed",
         updatedAt: Date.now()
       });
-
       return NextResponse.json({ message: "Transaction marked as failed" }, { status: 200 });
 
-    // 6. PENDING/INVALID
+    // 5. PENDING
     } else {
-      return NextResponse.json({ message: "Transaction pending or invalid status" }, { status: 400 });
+      return NextResponse.json({ message: "Transaction still pending" }, { status: 400 });
     }
 
   } catch (error) {
