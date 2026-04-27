@@ -28,8 +28,8 @@ export default async function SuccessPage({ params }: { params: { orderId: strin
   const productId = orderData.productId || cartItems[0]?.productId || "unknown_product";
   const productName = orderData.productName || cartItems[0]?.name || "Ordered Item";
 
-  // 🔥 DETECT IF THIS IS A SERVICE BOOKING
-  const serviceItem = cartItems.find((item: any) => item.isServiceBooking);
+  // 🔥 NEW DETECTION LOGIC: We check if the name includes "Booking Deposit"
+  const serviceItem = cartItems.find((item: any) => item.name && item.name.includes("Booking Deposit"));
   const isServiceOrder = !!serviceItem;
 
   // Format the WhatsApp Number securely on the server
@@ -39,7 +39,7 @@ export default async function SuccessPage({ params }: { params: { orderId: strin
     displayPhone = serviceItem.sellerPhone;
     const cleanPhone = displayPhone.replace(/\D/g, "");
     const formattedWaPhone = cleanPhone.startsWith("0") ? `256${cleanPhone.slice(1)}` : cleanPhone;
-    const waMessage = encodeURIComponent(`Hello! I just paid the 10% deposit for your service (${serviceItem.name}) on Kabale Online. When can we schedule the meetup?`);
+    const waMessage = encodeURIComponent(`Hello! I just paid the deposit for your service (${serviceItem.name.replace("Booking Deposit: ", "")}) on Kabale Online. When can we schedule the meetup?`);
     waLink = `https://wa.me/${formattedWaPhone}?text=${waMessage}`;
   }
 
@@ -85,7 +85,7 @@ export default async function SuccessPage({ params }: { params: { orderId: strin
               <LockOpen className="w-8 h-8 animate-bounce" />
             </div>
             <h2 className="text-2xl font-black uppercase tracking-widest mb-1">Provider Unlocked</h2>
-            <p className="text-amber-100 font-medium text-sm">Your 10% deposit is secure. Contact your provider below.</p>
+            <p className="text-amber-100 font-medium text-sm">Your deposit is secure. Contact your provider below.</p>
           </div>
 
           <div className="p-6 sm:p-8 space-y-8">
@@ -95,7 +95,7 @@ export default async function SuccessPage({ params }: { params: { orderId: strin
                 <img src={serviceItem.image || "/placeholder.png"} alt="Service" className="w-full h-full object-cover" />
               </div>
               <div>
-                <h3 className="font-bold text-slate-900 dark:text-white leading-tight mb-1 line-clamp-2">{serviceItem.name}</h3>
+                <h3 className="font-bold text-slate-900 dark:text-white leading-tight mb-1 line-clamp-2">{serviceItem.name.replace("Booking Deposit: ", "")}</h3>
                 <p className="text-sm font-black text-[#D97706]">Deposit Paid: UGX {safeTotal.toLocaleString()}</p>
               </div>
             </div>
@@ -106,22 +106,28 @@ export default async function SuccessPage({ params }: { params: { orderId: strin
               </p>
               <div className="flex items-center justify-center gap-3 text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-wider mb-2">
                 <Phone className="w-5 h-5 sm:w-6 sm:h-6 text-[#D97706]" />
-                {displayPhone}
+                {displayPhone || "N/A"}
               </div>
               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
                 Remember to pay the remaining balance in cash after the service is completed.
               </p>
             </div>
 
-            <a 
-              href={waLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full bg-[#25D366] text-white py-5 rounded-2xl font-black text-base sm:text-lg hover:bg-[#20bd5a] transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl hover:-translate-y-1 text-center"
-            >
-              <MessageCircle className="w-6 h-6 shrink-0" />
-              <span>Message Provider</span>
-            </a>
+            {waLink ? (
+              <a 
+                href={waLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full bg-[#25D366] text-white py-5 rounded-2xl font-black text-base sm:text-lg hover:bg-[#20bd5a] transition-all flex items-center justify-center gap-3 shadow-lg hover:shadow-xl hover:-translate-y-1 text-center"
+              >
+                <MessageCircle className="w-6 h-6 shrink-0" />
+                <span>Message Provider</span>
+              </a>
+            ) : (
+              <div className="w-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 py-4 rounded-2xl font-bold text-center border border-slate-200 dark:border-slate-700">
+                No WhatsApp Number Provided
+              </div>
+            )}
           </div>
         </div>
       ) : (
