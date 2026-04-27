@@ -16,239 +16,131 @@ import SellCtaBanner from "@/components/SellCtaBanner";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import LeftSidebar from "@/components/LeftSidebar"; 
 
-// --- SHUFFLE HELPER FUNCTION ---
-const shuffleArray = (array: any[]) => {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-};
+// --- ICON DATA FOR JUMIA-STYLE TOP BAR ---
+const serviceShortcuts = [
+  { name: "Services", icon: "🛠️", link: "/category/services", color: "bg-blue-100" },
+  { name: "Electronics", icon: "💻", link: "/category/electronics", color: "bg-purple-100" },
+  { name: "Fashion", icon: "👕", link: "/category/fashion", color: "bg-pink-100" },
+  { name: "Students", icon: "🎓", link: "/category/student_item", color: "bg-orange-100" },
+  { name: "Agriculture", icon: "🌽", link: "/category/agriculture", color: "bg-green-100" },
+  { name: "Official", icon: "🏢", link: "/officialStore", color: "bg-amber-100" },
+];
 
 export default async function Home() {
-  const now = Date.now();
-
-  // ==========================================
-  // FETCH DATA INSTANTLY FROM CACHE
-  // ==========================================
   const data = await getCachedHomepageData();
 
-  // ==========================================
-  // DATA PROCESSING & MATH
-  // ==========================================
-  const trendingProducts = data.trendingProducts;
-  const heroProducts = data.heroProducts || [];
+  // Filter Services specifically (where booking happens)
+  const serviceProviders = data.basePool.filter(p => 
+    p.category === "services" || (p.tags && p.tags.includes("service"))
+  ).slice(0, 10);
 
-  // Deals Logic
-  const dealsProducts = [...data.basePool]
-    .filter(p => Number(p.price) > 0)
-    .sort((a, b) => {
-      const scoreA = ((a.views || 0) + 1) / Number(a.price);
-      const scoreB = ((b.views || 0) + 1) / Number(b.price);
-      return scoreB - scoreA;
-    })
-    .slice(0, 10);
+  const studentDeals = data.studentProducts;
+  const officialStores = data.officialProducts;
+  const agriMarket = data.agriProducts;
 
-  const officialProducts = shuffleArray(data.officialProducts);
-  const approvedProducts = shuffleArray(data.approvedProducts);
-  const ladiesProducts = shuffleArray(data.ladiesProducts);
-  const watchProducts = shuffleArray(data.watchProducts);
-  const electronicsProducts = shuffleArray(data.electronicsProducts);
-  const studentProducts = shuffleArray(data.studentProducts);
-  const agriProducts = shuffleArray(data.agriProducts);
-  const latestProducts = data.latestProducts;
-
-  const boostedProducts = data.boostedProducts
-    .filter((p: any) => p.boostExpiresAt && p.boostExpiresAt > now)
-    .sort((a: any, b: any) => b.boostedAt - a.boostedAt);
-
-  const featuredProducts = data.featuredProducts
-    .filter((p: any) => p.featureExpiresAt && p.featureExpiresAt > now)
-    .sort((a: any, b: any) => b.featuredAt - a.featuredAt);
-
-  // ==========================================
-  // RENDER UI
-  // ==========================================
   return (
     <ThemeProvider>
-      {/* ROOT CONTAINER */}
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-10 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
-
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-10 pt-2 font-sans selection:bg-[#D97706] selection:text-white">
         <WhatsAppPopup />
 
-        {/* MAIN LAYOUT WRAPPER */}
         <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
-
-          {/* MASTER SPLIT GRID */}
           <div className="flex flex-col md:flex-row gap-4 w-full">
 
-            {/* ========================================== */}
-            {/* COLUMN 1: LEFT SIDEBAR (Sticky)            */}
-            {/* ========================================== */}
+            {/* LEFT SIDEBAR (Hidden on Mobile) */}
             <div className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky top-[110px] h-max z-10">
               <LeftSidebar />
             </div>
 
-            {/* ========================================== */}
-            {/* COLUMN 2: THE SHOPPING FEED                */}
-            {/* ========================================== */}
+            {/* MAIN CONTENT FEED */}
             <div className="flex-grow min-w-0 flex flex-col w-full">
               
-              {/* --- 1. THE HOOK (Capture Attention Instantly) --- */}
-              <div className="mb-2">
-                <HeroCarousel products={heroProducts} />
+              {/* --- 1. JUMIA-STYLE TOP SERVICES BAR --- */}
+              <div className="flex overflow-x-auto gap-4 py-4 px-4 bg-white dark:bg-[#121212] mb-4 sm:rounded-2xl no-scrollbar border-b sm:border border-slate-100 dark:border-slate-800">
+                {serviceShortcuts.map((s) => (
+                  <Link key={s.name} href={s.link} className="flex flex-col items-center gap-2 shrink-0 group">
+                    <div className={`${s.color} w-14 h-14 rounded-full flex items-center justify-center text-2xl group-active:scale-90 transition-transform shadow-sm`}>
+                      {s.icon}
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tighter">
+                      {s.name}
+                    </span>
+                  </Link>
+                ))}
               </div>
-              <FilterPills />
-              
-              {/* Category Navigation that pops */}
-              <div className="bg-white dark:bg-[#121212] rounded-2xl p-2 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800/60 mb-4">
-                <ThemedCategoryGrid />
-              </div>
-              
+
+              {/* --- 2. HERO & STORY SECTION --- */}
+              <HeroCarousel products={data.heroProducts} />
               <UrgentStories />
 
-              {/* --- 2. THE FOMO ZONE (High Urgency & Retargeting) --- */}
-              <div className="w-full flex flex-col gap-4 sm:gap-6 mt-4">
+              <div className="flex flex-col gap-4 sm:gap-8 mt-4">
+                
+                {/* --- 3. SERVICES PORTAL (The Booking Engine) --- */}
+                {serviceProviders.length > 0 && (
+                  <div className="bg-[#1e293b] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
+                    {/* Decorative Background Element */}
+                    <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/20 blur-3xl rounded-full"></div>
+                    
+                    <div className="flex justify-between items-center mb-4 relative z-10">
+                      <div>
+                        <h2 className="text-xl font-black italic uppercase tracking-tighter">Hire Local Pros</h2>
+                        <p className="text-blue-300 text-xs font-medium uppercase tracking-widest">Verified Kabale Service Providers</p>
+                      </div>
+                      <Link href="/category/services" className="bg-white text-[#1e293b] px-4 py-2 rounded-full text-xs font-black uppercase tracking-tight">View All</Link>
+                    </div>
 
-                <ContinueBrowsing 
-                  title="Jump Back In"
-                  subtitle="Don't lose out on what you were looking at"
-                  fallbackProducts={trendingProducts} 
-                />
-
-                {/* Highlighted Deals Section */}
-                {dealsProducts.length > 0 && (
-                  <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 rounded-3xl p-4 sm:p-6 border border-amber-100 dark:border-amber-900/30 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/10 blur-3xl rounded-full pointer-events-none"></div>
                     <HorizontalScroller 
-                      title="⚡ Flash Steals in Kabale" 
-                      subtitle="Insane value. These won't last long."
-                      products={dealsProducts} 
+                      title="" 
+                      subtitle=""
+                      products={serviceProviders} 
                     />
+                    
+                    <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-blue-200/60 uppercase tracking-widest border-t border-white/10 pt-4">
+                      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                      Secure Booking Deposits Enabled
+                    </div>
                   </div>
                 )}
 
-                {/* --- 3. THE TRUST LAYER --- */}
+                {/* --- 4. STUDENT & CAMPUS SECTION --- */}
+                {studentDeals.length > 0 && (
+                  <ProductSection 
+                    title="🎓 Campus Marketplace" 
+                    subtitle="Best prices for students at Kabale Uni & Bishop Barham"
+                    products={studentDeals.slice(0, 8)} 
+                  />
+                )}
+
+                {/* --- 5. TRUST BANNER --- */}
                 <ShopWithConfidenceBanner />
 
-                {officialProducts.length > 0 && (
+                {/* --- 6. OFFICIAL STORES --- */}
+                {officialStores.length > 0 && (
                   <HorizontalScroller 
-                    title="👑 Official & Premium" 
-                    subtitle="100% genuine products from verified brands"
-                    products={officialProducts} 
+                    title="🏢 Official Brand Stores" 
+                    subtitle="Direct from authorized distributors"
+                    products={officialStores} 
                     viewAllLink="/officialStore" 
                   />
                 )}
 
-                {/* --- 4. HYPER-TARGETED NICHES --- */}
-                
-                {studentProducts.length > 0 && (
-                  <HorizontalScroller 
-                    title="🎒 Campus Essentials" 
-                    subtitle="Student-friendly prices for the semester"
-                    products={studentProducts} 
-                    viewAllLink="/category/student_item" 
-                  />
+                {/* --- 7. AGRICULTURE (KIGEZI BASKET) --- */}
+                {agriMarket.length > 0 && (
+                  <div className="bg-green-50 dark:bg-green-950/10 p-4 sm:p-6 rounded-3xl border border-green-100 dark:border-green-900/30">
+                    <HorizontalScroller 
+                      title="🌽 Kigezi Fresh Market" 
+                      subtitle="Direct from the garden to your doorstep"
+                      products={agriMarket} 
+                      viewAllLink="/category/agriculture" 
+                    />
+                  </div>
                 )}
 
-                {ladiesProducts.length > 0 && (
-                  <HorizontalScroller 
-                    title="✨ The Style Edit: For Her" 
-                    subtitle="Trending fashion, beauty, and accessories"
-                    products={ladiesProducts} 
-                    viewAllLink="/ladies" 
-                  />
-                )}
+                <SellCtaBanner />
 
-                {electronicsProducts.length > 0 && (
-                  <HorizontalScroller 
-                    title="💻 The Tech Hub" 
-                    subtitle="Upgrades for your digital life"
-                    products={electronicsProducts} 
-                    viewAllLink="/category/electronics" 
-                  />
-                )}
-
-                {/* --- 5. SOCIAL PROOF & DISCOVERY --- */}
-
-                {trendingProducts.length > 0 && (
-                  <ProductSection 
-                    title="🔥 Breaking the Internet" 
-                    subtitle="What everyone in Kigezi is viewing right now"
-                    products={trendingProducts.slice(0, 8)} 
-                  />
-                )}
-
-                {approvedProducts.length > 0 && (
-                  <ProductSection 
-                    title="Top-Rated Sellers" 
-                    subtitle="Shop safely from our most trusted vendors"
-                    products={approvedProducts.slice(0, 8)} 
-                  />
-                )}
-
-                {/* --- 6. ACTION & COMMUNITY --- */}
-                <div className="my-2">
-                  <SellCtaBanner />
-                </div>
-
-                {/* --- 7. THE DEEP SCROLL (Exploration) --- */}
-
-                {latestProducts.length > 0 && (
-                  <ProductSection 
-                    title="Fresh Drops" 
-                    subtitle="Just landed on the marketplace today"
-                    products={latestProducts.slice(0, 8)} 
-                  />
-                )}
-
-                {agriProducts.length > 0 && (
-                  <HorizontalScroller 
-                    title="🌾 Fresh Market" 
-                    subtitle="Support local: Farm produce & tools"
-                    products={agriProducts} 
-                    viewAllLink="/category/agriculture" 
-                  />
-                )}
-
-                {watchProducts.length > 0 && (
-                  <HorizontalScroller 
-                    title="⌚ Wrist Game" 
-                    subtitle="Premium timepieces to complete your look"
-                    products={watchProducts} 
-                    viewAllLink="/category/watches" 
-                  />
-                )}
-
-                {boostedProducts.length > 0 && (
-                  <HorizontalScroller 
-                    title="Sponsored Highlights" 
-                    subtitle="Promoted products from our partners"
-                    products={boostedProducts} 
-                  />
-                )}
-
-                {featuredProducts.length > 0 && (
-                  <HorizontalScroller 
-                    title="Handpicked For You" 
-                    subtitle="Our editors' top recommendations"
-                    products={featuredProducts} 
-                  />
-                )}
-
-                {/* FOOTER AREA */}
-                <div className="mt-8">
-                  <AboutKabaleOnline />
-                </div>
-
+                <AboutKabaleOnline />
               </div>
             </div>
-            {/* END COLUMN 2 */}
-
           </div>
-          {/* END MASTER SPLIT GRID */}
-
         </div>
       </div>
     </ThemeProvider>
