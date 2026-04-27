@@ -13,17 +13,23 @@ import {
   ShieldAlert, 
   Store, 
   Sparkles, 
-  GraduationCap, 
   Laptop, 
   Tractor,
-Watch
+  Watch,
+  Package,
+  Bed,
+  ShoppingBasket,
+  BookOpen,
+  Droplets,
+  Gift,
+  Wrench
 } from "lucide-react";
 
 export default function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth(); 
   const { cartCount } = useCart();
-  
+
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -62,7 +68,7 @@ export default function BottomNav() {
     return () => window.removeEventListener("mobileMenuState", handleMenuState);
   }, []);
 
-  // 4. Navigation Items (Now with SVG Icons)
+  // 4. Navigation Items
   const baseNavItems = [
     { label: "Home", href: "/", Icon: Home },
     { label: "Categories", isTrigger: true, Icon: LayoutGrid }, 
@@ -73,6 +79,22 @@ export default function BottomNav() {
   const navItems = isAdmin
     ? [...baseNavItems, { label: "Admin", href: "/admin", Icon: ShieldAlert }]
     : baseNavItems;
+
+  // 5. Hybrid Categories Data (New Student Focus + General Store)
+  const categoryLinks = [
+    { label: "Fresher Bundles & Kits", href: "/category/bundles", Icon: Package },
+    { label: "Hostel Essentials", href: "/category/student_essentials", Icon: Bed },
+    { label: "Supermarket & Groceries", href: "/category/groceries", Icon: ShoppingBasket },
+    { label: "Stationery & Academics", href: "/category/stationery", Icon: BookOpen },
+    { label: "Tech Accessories", href: "/category/electronics", Icon: Laptop },
+    { label: "Beauty & Hygiene", href: "/category/beauty", Icon: Droplets },
+    { label: "Gifts & Fun", href: "/category/gifts", Icon: Gift },
+    { label: "Student Services", href: "/category/services", Icon: Wrench },
+    { label: "Official Store", href: "/officialStore", Icon: Store },
+    { label: "Ladies' Picks", href: "/ladies", Icon: Sparkles },
+    { label: "Watches", href: "/category/watches", Icon: Watch },
+    { label: "Agriculture", href: "/category/agriculture", Icon: Tractor },
+  ];
 
   return (
     <>
@@ -97,8 +119,8 @@ export default function BottomNav() {
                       isActive ? "text-[#D97706]" : "text-slate-500 dark:text-slate-400"
                     }`} 
                   />
-                  
-                  {/* Cart Badge - Now pinned to the icon for better alignment */}
+
+                  {/* Cart Badge */}
                   {label === "Cart" && cartCount > 0 && (
                     <span className="absolute -top-2 -right-3 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white dark:border-[#0a0a0a] shadow-sm leading-none">
                       {cartCount}
@@ -151,73 +173,35 @@ export default function BottomNav() {
         </div>
       </div>
 
-      {/* CATEGORIES MODAL (Cleaned up with SVG icons instead of emojis) */}
+      {/* CATEGORIES MODAL */}
       {isCategoryModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity">
-          <div className="bg-[#1a1a1a] w-full sm:w-[400px] rounded-t-3xl sm:rounded-3xl p-6 text-white animate-slide-up border border-slate-800 shadow-2xl">
-            <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6"></div>
-            <h3 className="text-center text-xl font-bold mb-6 tracking-wide">Categories</h3>
+          <div className="bg-[#1a1a1a] w-full sm:w-[400px] max-h-[85vh] rounded-t-3xl sm:rounded-3xl p-6 text-white animate-slide-up border border-slate-800 shadow-2xl flex flex-col">
+            
+            {/* Drag Handle & Title */}
+            <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6 shrink-0"></div>
+            <h3 className="text-center text-xl font-bold mb-6 tracking-wide shrink-0">Categories</h3>
 
-            <div className="flex flex-col gap-2 text-lg font-medium">
-              <Link 
-                href="/officialStore" 
-                onClick={() => setIsCategoryModalOpen(false)} 
-                className="flex items-center gap-4 hover:text-[#D97706] transition-colors py-3 px-2 rounded-lg hover:bg-slate-800/50"
-              >
-                <Store className="text-slate-400" size={20} />
-                Official Store
-              </Link>
-
-              {/* Added Watches Option */}
-              <Link 
-                href="/category/watches" 
-                onClick={() => setIsCategoryModalOpen(false)} 
-                className="flex items-center gap-4 hover:text-[#D97706] transition-colors py-3 px-2 rounded-lg hover:bg-slate-800/50"
-              >
-                <Watch className="text-amber-500" size={20} />
-                Watches
-              </Link>
-              
-              <Link 
-                href="/ladies" 
-                onClick={() => setIsCategoryModalOpen(false)} 
-                className="flex items-center gap-4 hover:text-[#D97706] transition-colors py-3 px-2 rounded-lg hover:bg-slate-800/50"
-              >
-                <Sparkles className="text-pink-500" size={20} />
-                Ladies' Picks
-              </Link>
-              
-              <Link 
-                href="/category/student_item" 
-                onClick={() => setIsCategoryModalOpen(false)} 
-                className="flex items-center gap-4 hover:text-[#D97706] transition-colors py-3 px-2 rounded-lg hover:bg-slate-800/50"
-              >
-                <GraduationCap className="text-blue-400" size={20} />
-                Student Market
-              </Link>
-              
-              <Link 
-                href="/category/electronics" 
-                onClick={() => setIsCategoryModalOpen(false)} 
-                className="flex items-center gap-4 hover:text-[#D97706] transition-colors py-3 px-2 rounded-lg hover:bg-slate-800/50"
-              >
-                <Laptop className="text-slate-300" size={20} />
-                Electronics
-              </Link>
-              
-              <Link 
-                href="/category/agriculture" 
-                onClick={() => setIsCategoryModalOpen(false)} 
-                className="flex items-center gap-4 hover:text-[#D97706] transition-colors py-3 px-2 rounded-lg hover:bg-slate-800/50"
-              >
-                <Tractor className="text-green-500" size={20} />
-                Agriculture
-              </Link>
+            {/* Scrollable Categories List */}
+            <div className="flex flex-col gap-1 text-lg font-medium overflow-y-auto pr-2 custom-scrollbar">
+              {categoryLinks.map(({ label, href, Icon }) => (
+                <Link 
+                  key={label}
+                  href={href} 
+                  onClick={() => setIsCategoryModalOpen(false)} 
+                  className="flex items-center gap-4 hover:text-[#D97706] transition-colors py-3 px-3 rounded-lg hover:bg-slate-800/50"
+                >
+                  {/* All icons set to a uniform gray */}
+                  <Icon className="text-slate-400" size={20} />
+                  {label}
+                </Link>
+              ))}
             </div>
 
+            {/* Close Button */}
             <button 
               onClick={() => setIsCategoryModalOpen(false)} 
-              className="mt-8 w-full py-3.5 bg-slate-800 rounded-xl font-bold hover:bg-slate-700 active:scale-[0.98] transition-all"
+              className="mt-6 w-full py-3.5 bg-slate-800 rounded-xl font-bold hover:bg-slate-700 active:scale-[0.98] transition-all shrink-0"
             >
               Close
             </button>
@@ -227,4 +211,3 @@ export default function BottomNav() {
     </>
   );
 }
-
