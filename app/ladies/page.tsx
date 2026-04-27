@@ -31,7 +31,7 @@ export default function LadiesPage() {
           Taking you to Beauty & Fashion...
         </h1>
         <p className="text-base font-medium text-slate-500 max-w-xs mx-auto">
-          Gathering the best ladies' picks and premium cosmetics in Kabale ✨
+          Gathering the best ladies' picks and premium cosmetics in Kabale
         </p>
 
         {/* Loading Spinner */}
