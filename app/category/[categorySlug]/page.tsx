@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import CategoryProductFeed from "@/components/CategoryProductFeed";
+import ServiceDirectoryFeed from "@/components/ServiceDirectoryFeed"; // 🔥 IMPORTED THE NEW FEED
 import LeftSidebar from "@/components/LeftSidebar"; 
 import { 
   Laptop, 
@@ -203,11 +204,16 @@ export default async function CategoryPage({
             <div className="w-full">
               {initialProducts.length > 0 ? (
                  <Suspense fallback={<div className="w-full h-[400px] bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-md" />}>
-                   <CategoryProductFeed 
-                     initialProducts={initialProducts} 
-                     categoryName={slug} 
-                     title={`Latest Deals`} 
-                   />
+                   {/* 🔥 THE FORK: Switches UI based on the category slug */}
+                   {slug === "repairs-services" ? (
+                     <ServiceDirectoryFeed initialProducts={initialProducts} />
+                   ) : (
+                     <CategoryProductFeed 
+                       initialProducts={initialProducts} 
+                       categoryName={slug} 
+                       title={`Latest Deals`} 
+                     />
+                   )}
                  </Suspense>
               ) : (
                 <div className="bg-white dark:bg-[#151515] rounded-md border border-slate-200 dark:border-slate-800 shadow-sm p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
