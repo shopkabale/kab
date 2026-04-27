@@ -14,20 +14,14 @@ import {
   FaTiktok 
 } from "react-icons/fa6";
 
-// Imported uniform icons for the mobile drawer
+// Imported uniform icons for the mobile drawer (Only the 6 we need)
 import { 
   Package, 
   Bed, 
-  ShoppingBasket, 
-  BookOpen, 
   Laptop, 
-  Droplets, 
-  Gift, 
-  Wrench, 
-  Store, 
+  Leaf, 
   Sparkles, 
-  Watch, 
-  Tractor 
+  Wrench 
 } from "lucide-react";
 
 export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
@@ -67,20 +61,14 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
     <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
   );
 
-  // Hybrid Categories Data for Mobile Drawer Loop
+  // 🔥 THE 6 NEW HYBRID FRONTEND BUCKETS
   const categoryLinks = [
-    { label: "Fresher Bundles & Kits", href: "/category/bundles", Icon: Package },
-    { label: "Hostel Essentials", href: "/category/student_essentials", Icon: Bed },
-    { label: "Supermarket & Groceries", href: "/category/groceries", Icon: ShoppingBasket },
-    { label: "Stationery & Academics", href: "/category/stationery", Icon: BookOpen },
-    { label: "Tech Accessories", href: "/category/electronics", Icon: Laptop },
-    { label: "Beauty & Hygiene", href: "/category/beauty", Icon: Droplets },
-    { label: "Gifts & Fun", href: "/category/gifts", Icon: Gift },
-    { label: "Student Services", href: "/category/services", Icon: Wrench },
-    { label: "Official Store", href: "/officialStore", Icon: Store },
-    { label: "Ladies' Picks", href: "/ladies", Icon: Sparkles },
-    { label: "Watches", href: "/category/watches", Icon: Watch },
-    { label: "Agriculture", href: "/category/agriculture", Icon: Tractor },
+    { label: "Mega Bundles & Packs", href: "/category/mega-bundles", Icon: Package },
+    { label: "Campus Life & Study Gear", href: "/category/campus-life", Icon: Bed },
+    { label: "Tech, Gadgets & Appliances", href: "/category/tech-appliances", Icon: Laptop },
+    { label: "Farm Fresh & Groceries", href: "/category/food-groceries", Icon: Leaf },
+    { label: "Beauty, Health & Fashion", href: "/category/beauty-fashion", Icon: Sparkles },
+    { label: "Expert Repairs & Services", href: "/category/repairs-services", Icon: Wrench }
   ];
 
   return (
@@ -103,7 +91,8 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
           </div>
 
           <div className="flex items-center space-x-6">
-            <Link href="/category/student_essentials" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/student_essentials') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Hostel Essentials</Link>
+            {/* Quick access link updated to the new Campus Life bucket */}
+            <Link href="/category/campus-life" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/campus-life') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Campus Life</Link>
 
             {/* VIEW MORE DROPDOWN */}
             <div className="relative group">
@@ -115,13 +104,13 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
 
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                 <div className="px-5 pb-2 border-b border-slate-100">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Top Categories</p>
-                  <Link href="/category/bundles" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Fresher Bundles & Kits</Link>
-                  <Link href="/category/student_essentials" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Hostel Essentials</Link>
-                  <Link href="/category/electronics" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Tech Accessories</Link>
-                  <Link href="/category/groceries" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Supermarket & Groceries</Link>
-                  <Link href="/officialStore" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Official Store</Link>
-                  <Link href="/ladies" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Ladies' Picks</Link>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Shop The Market</p>
+                  <Link href="/category/mega-bundles" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Mega Bundles & Packs</Link>
+                  <Link href="/category/campus-life" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Campus Life & Study Gear</Link>
+                  <Link href="/category/tech-appliances" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Tech, Gadgets & Appliances</Link>
+                  <Link href="/category/food-groceries" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Farm Fresh & Groceries</Link>
+                  <Link href="/category/beauty-fashion" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Beauty, Health & Fashion</Link>
+                  <Link href="/category/repairs-services" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Expert Repairs & Services</Link>
                   <Link href="/products" className="block py-1.5 text-[14px] font-bold text-[#D97706] mt-1">View All Categories &rarr;</Link>
                 </div>
                 <div className="px-5 pt-3">
@@ -302,13 +291,13 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
               <span className="text-[13px] font-black text-slate-900 tracking-wide uppercase">Quick Shop</span>
             </div>
             <div className="flex flex-col pb-2">
-              <Link href="/category/electronics?max=50000" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-500 hover:bg-slate-50 transition-colors">
+              <Link href="/category/tech-appliances?max=50000" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-500 hover:bg-slate-50 transition-colors">
                 <svg className="w-6 h-6 mr-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
                 <span className="text-[15px] font-medium">Gadgets &lt; 50k</span>
               </Link>
-              <Link href="/category/student_essentials?max=100000" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-500 hover:bg-slate-50 transition-colors">
+              <Link href="/category/campus-life?max=100000" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-500 hover:bg-slate-50 transition-colors">
                 <svg className="w-6 h-6 mr-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14l9-5-9-5-9 5 9 5z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14v7" /></svg>
-                <span className="text-[15px] font-medium">Hostel Gear &lt; 100k</span>
+                <span className="text-[15px] font-medium">Campus Gear &lt; 100k</span>
               </Link>
             </div>
           </div>
@@ -337,7 +326,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
           {/* ============================================== */}
           <div className="border-b border-slate-100 py-2">
             <div className="flex justify-between items-center px-5 py-2 mb-1">
-              <span className="text-[13px] font-black text-slate-900 tracking-wide uppercase">Our Categories</span>
+              <span className="text-[13px] font-black text-slate-900 tracking-wide uppercase">Shop The Market</span>
               <Link href="/products" onClick={closeMenu} className="text-[13px] font-medium text-[#D97706]">See All</Link>
             </div>
 
