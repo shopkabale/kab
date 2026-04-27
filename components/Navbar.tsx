@@ -14,14 +14,15 @@ import {
   FaTiktok 
 } from "react-icons/fa6";
 
-// Imported uniform icons for the mobile drawer (Only the 6 we need)
+// Imported uniform icons for the mobile drawer
 import { 
   Package, 
   Bed, 
   Laptop, 
   Leaf, 
   Sparkles, 
-  Wrench 
+  Wrench,
+  Store // <-- Added Store for the Official Store
 } from "lucide-react";
 
 export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
@@ -61,8 +62,9 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
     <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
   );
 
-  // 🔥 THE 6 NEW HYBRID FRONTEND BUCKETS
+  // 🔥 THE 6 NEW HYBRID FRONTEND BUCKETS + VERIFIED PREMIUM
   const categoryLinks = [
+    { label: "Kabale's Verified Premium", href: "/officialStore", Icon: Store },
     { label: "Mega Bundles & Packs", href: "/category/mega-bundles", Icon: Package },
     { label: "Campus Life & Study Gear", href: "/category/campus-life", Icon: Bed },
     { label: "Tech, Gadgets & Appliances", href: "/category/tech-appliances", Icon: Laptop },
@@ -91,7 +93,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
           </div>
 
           <div className="flex items-center space-x-6">
-            {/* Quick access link updated to the new Campus Life bucket */}
+            {/* Quick access link */}
             <Link href="/category/campus-life" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/campus-life') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Campus Life</Link>
 
             {/* VIEW MORE DROPDOWN */}
@@ -105,6 +107,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                 <div className="px-5 pb-2 border-b border-slate-100">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Shop The Market</p>
+                  <Link href="/officialStore" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Kabale's Verified Premium</Link>
                   <Link href="/category/mega-bundles" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Mega Bundles & Packs</Link>
                   <Link href="/category/campus-life" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Campus Life & Study Gear</Link>
                   <Link href="/category/tech-appliances" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Tech, Gadgets & Appliances</Link>
