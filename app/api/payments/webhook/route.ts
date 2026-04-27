@@ -8,24 +8,27 @@ export async function POST(request: Request) {
   try {
     const payload = await request.json();
     
-    // LivePay's webhook should send back the reference you originally sent them
+    // LivePay's V2 webhook sends back the reference you originally provided
     const incomingReference = payload.reference || payload.customer_reference; 
 
     if (!incomingReference) {
       return NextResponse.json({ error: "Missing transaction reference" }, { status: 400 });
     }
 
-    // 1. VERIFY TRANSACTION WITH LIVEPAY (V2 GET Request)
+    // 1. VERIFY TRANSACTION WITH LIVEPAY (V2 GET Request with Cloudflare Bypass Headers)
     const url = `https://livepay.me/api/transaction-status?accountNumber=${process.env.LIVEPAY_ACCOUNT_NUMBER}&currency=UGX&reference=${incomingReference}`;
     
     const livePayResponse = await fetch(url, {
       method: "GET",
       headers: {
         "Authorization": `Bearer ${process.env.LIVEPAY_API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json", // 🔥 Tells Cloudflare we expect API data
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" // 🔥 Bypasses Cloudflare bot detection
       }
     });
 
+    // 🔥 SAFE JSON PARSING: Catch HTML errors if LivePay's gateway crashes
     const rawResponseText = await livePayResponse.text();
     let statusData;
     try {
@@ -47,17 +50,21 @@ export async function POST(request: Request) {
     const orderData = orderDoc.data();
     const orderRef = orderDoc.ref;
 
+    // Idempotency check: If it's already paid, don't fund the wallet again!
     if (orderData.paymentStatus === "paid") {
       console.log(`⚠️ Order ${orderData.orderId} is already paid. Ignoring duplicate webhook.`);
       return NextResponse.json({ message: "Already processed" }, { status: 200 });
     }
 
     // 3. PROCESS SUCCESSFUL PAYMENT
-    // Checking the V2 documentation format: statusData.status === "Success"
+    // Checking the V2 documentation format: statusData.success === true && statusData.status === "Success"
     if (statusData.success === true && statusData.status === "Success") {
       console.log(`✅ Order ${orderData.orderId} fully paid. Funding Escrow and routing...`);
 
+      // 🔥 ATOMIC TRANSACTION: Update Order & Fund Seller Wallets simultaneously
       await adminDb.runTransaction(async (transaction) => {
+        
+        // A. Update the Master Order
         transaction.update(orderRef, {
           status: "processing", 
           paymentStatus: "paid", 
@@ -66,14 +73,17 @@ export async function POST(request: Request) {
           updatedAt: Date.now()
         });
 
+        // B. Deposit funds into Seller Wallets (Pending Escrow)
         if (orderData.sellerOrders && Array.isArray(orderData.sellerOrders)) {
           for (const seller of orderData.sellerOrders) {
+            // Safety check: Skip if sellerId is missing or "SYSTEM"
             if (!seller.sellerId || seller.sellerId === "SYSTEM") continue;
 
             const walletRef = adminDb.collection("wallets").doc(seller.sellerId);
             const walletSnap = await transaction.get(walletRef);
 
             if (!walletSnap.exists) {
+              // Create wallet if it doesn't exist
               transaction.set(walletRef, {
                 availableBalance: 0,
                 pendingBalance: seller.subtotal,
@@ -81,6 +91,7 @@ export async function POST(request: Request) {
                 updatedAt: Date.now()
               });
             } else {
+              // Increment pending balance safely
               transaction.update(walletRef, {
                 pendingBalance: FieldValue.increment(seller.subtotal),
                 updatedAt: Date.now()
@@ -99,6 +110,7 @@ export async function POST(request: Request) {
       notificationPromises.push(
         NotificationService.notifyBuyer(orderData.buyerPhone, orderData.orderId, allProductsString, orderData.totalAmount).catch(() => {})
       );
+      
       notificationPromises.push(
         sendAdminAlert(orderData.orderId, allProductsString, orderData.totalAmount, orderData.buyerPhone, "Multi-Seller Paid Order").catch(() => {})
       );
@@ -124,9 +136,9 @@ export async function POST(request: Request) {
       });
       return NextResponse.json({ message: "Transaction marked as failed" }, { status: 200 });
 
-    // 5. PENDING
+    // 5. PENDING / UNKNOWN
     } else {
-      return NextResponse.json({ message: "Transaction still pending" }, { status: 400 });
+      return NextResponse.json({ message: "Transaction still pending or unknown status" }, { status: 400 });
     }
 
   } catch (error) {
