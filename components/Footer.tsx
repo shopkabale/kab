@@ -39,7 +39,6 @@ export default function Footer() {
 
           {/* 1. Contact Info Column */}
           <div className="col-span-2 lg:col-span-1">
-            {/* Standard Text Logo restored for the white background */}
             <Link
               href="/"
               className="text-xl md:text-2xl font-black text-slate-900 tracking-tight block mb-6"
@@ -79,33 +78,27 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* 2. Marketplace: Campus & Tech (For Students) */}
+          {/* 2. Marketplace Part 1 (Frontend Buckets) */}
           <div className="col-span-1">
             <h3 className="text-slate-900 font-black text-[11px] uppercase tracking-widest mb-4">
-              Campus & Tech
+              Shop The Market
             </h3>
             <ul className="space-y-3">
-              <li><Link href="/category/bundles" className={getLinkStyle('/category/bundles')}>Fresher Bundles & Kits</Link></li>
-              <li><Link href="/category/student_essentials" className={getLinkStyle('/category/student_essentials')}>Hostel Essentials</Link></li>
-              <li><Link href="/category/groceries" className={getLinkStyle('/category/groceries')}>Supermarket & Groceries</Link></li>
-              <li><Link href="/category/stationery" className={getLinkStyle('/category/stationery')}>Stationery & Academics</Link></li>
-              <li><Link href="/category/electronics" className={getLinkStyle('/category/electronics')}>Tech Accessories</Link></li>
-              <li><Link href="/category/services" className={getLinkStyle('/category/services')}>Student Services</Link></li>
+              <li><Link href="/category/mega-bundles" className={getLinkStyle('/category/mega-bundles')}>Mega Bundles & Packs 📦</Link></li>
+              <li><Link href="/category/campus-life" className={getLinkStyle('/category/campus-life')}>Campus Life & Study Gear 🎓</Link></li>
+              <li><Link href="/category/tech-appliances" className={getLinkStyle('/category/tech-appliances')}>Tech, Gadgets & Appliances ⚡</Link></li>
             </ul>
           </div>
 
-          {/* 3. Marketplace: Lifestyle & General (For Locals) */}
+          {/* 3. Marketplace Part 2 (Frontend Buckets) */}
           <div className="col-span-1">
             <h3 className="text-slate-900 font-black text-[11px] uppercase tracking-widest mb-4">
-              General Store
+              More Categories
             </h3>
             <ul className="space-y-3">
-              <li><Link href="/officialStore" className={getLinkStyle('/officialStore')}>Official Store 🏆</Link></li>
-              <li><Link href="/ladies" className={getLinkStyle('/ladies')}>Ladies' Picks ✨</Link></li>
-              <li><Link href="/category/beauty" className={getLinkStyle('/category/beauty')}>Beauty & Hygiene</Link></li>
-              <li><Link href="/category/watches" className={getLinkStyle('/category/watches')}>Watches</Link></li>
-              <li><Link href="/category/gifts" className={getLinkStyle('/category/gifts')}>Gifts & Fun</Link></li>
-              <li><Link href="/category/agriculture" className={getLinkStyle('/category/agriculture')}>Agriculture</Link></li>
+              <li><Link href="/category/food-groceries" className={getLinkStyle('/category/food-groceries')}>Farm Fresh & Groceries 🍅</Link></li>
+              <li><Link href="/category/beauty-fashion" className={getLinkStyle('/category/beauty-fashion')}>Beauty, Health & Fashion ✨</Link></li>
+              <li><Link href="/category/repairs-services" className={getLinkStyle('/category/repairs-services')}>Expert Repairs & Services 🛠️</Link></li>
             </ul>
           </div>
 
