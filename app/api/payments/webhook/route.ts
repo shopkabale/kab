@@ -15,7 +15,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing transaction reference" }, { status: 400 });
     }
 
-    // 1. VERIFY TRANSACTION WITH LIVEPAY (V2 GET Request with Cloudflare Bypass Headers)
+    // 1. VERIFY TRANSACTION WITH LIVEPAY (V2 GET Request with Server-to-Server Headers)
     const url = `https://livepay.me/api/transaction-status?accountNumber=${process.env.LIVEPAY_ACCOUNT_NUMBER}&currency=UGX&reference=${incomingReference}`;
     
     const livePayResponse = await fetch(url, {
@@ -23,12 +23,14 @@ export async function POST(request: Request) {
       headers: {
         "Authorization": `Bearer ${process.env.LIVEPAY_API_KEY}`,
         "Content-Type": "application/json",
-        "Accept": "application/json", // 🔥 Tells Cloudflare we expect API data
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" // 🔥 Bypasses Cloudflare bot detection
+        "Accept": "application/json", // Tells Cloudflare we expect API data
+        "User-Agent": "Node-Fetch/1.0", // Bypasses Cloudflare bot detection
+        "X-Requested-With": "XMLHttpRequest",
+        "Connection": "keep-alive"
       }
     });
 
-    // 🔥 SAFE JSON PARSING: Catch HTML errors if LivePay's gateway crashes
+    // 🔥 SAFE JSON PARSING: Catch HTML errors if LivePay's gateway crashes or blocks
     const rawResponseText = await livePayResponse.text();
     let statusData;
     try {
