@@ -84,14 +84,17 @@ export async function POST(request: Request) {
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
     const referenceId = `REF${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-    // 4. CALL LIVEPAY API (V2 Endpoint with Cloudflare Bypass Headers)
+    // 4. CALL LIVEPAY API (V2 Endpoint with Server-to-Server Headers)
     const livePayResponse = await fetch("https://livepay.me/api/collect-money", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${process.env.LIVEPAY_API_KEY}`,
         "Content-Type": "application/json",
-        "Accept": "application/json", // 🔥 Tells Cloudflare we are an API
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" // 🔥 Bypasses Cloudflare bot detection
+        "Accept": "application/json", 
+        // 🔥 Server-to-Server Bypasses: We tell Cloudflare we are a Node backend, not a fake browser
+        "User-Agent": "Node-Fetch/1.0", 
+        "X-Requested-With": "XMLHttpRequest",
+        "Connection": "keep-alive"
       },
       body: JSON.stringify({
         accountNumber: process.env.LIVEPAY_ACCOUNT_NUMBER, 
