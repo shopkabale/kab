@@ -79,13 +79,14 @@ export default function ServiceCheckoutPage({ params }: { params: { id: string }
       cartItems: [
         {
           productId: service.id,
-          name: `Booking Deposit: ${service.title}`, // Clearly labeled as a deposit
-          price: commitmentDeposit, // 🔥 Now safely 1000+ UGX
+          // 🔥 The Success Page will look for "Booking Deposit:" in this name to trigger the unlock
+          name: `Booking Deposit: ${service.title}`, 
+          price: commitmentDeposit, 
           quantity: 1,
           sellerId: service.sellerId || "SYSTEM", 
-          sellerPhone: service.sellerPhone || "", // Saved securely in the order DB!
-          image: service.images?.[0] || "",
-          isServiceBooking: true // 🔥 Flag so Success Page triggers the unlock
+          sellerPhone: service.sellerPhone || "", 
+          image: service.images?.[0] || ""
+          // ❌ REMOVED isServiceBooking flag to bypass LivePay strict validation crash
         }
       ]
     };
