@@ -4,6 +4,23 @@ import { FieldValue } from "firebase-admin/firestore";
 import { NotificationService } from "@/lib/notifications"; 
 import { sendAdminAlert } from "@/lib/brevo"; 
 
+// 🔥 NEW: Cloudflare Bypass & Retry Logic Wrapper
+async function fetchWithRetry(url: string, options: any, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    const res = await fetch(url, options);
+    const text = await res.text();
+
+    if (!text.includes("<!DOCTYPE html>")) {
+      return { ok: res.ok, data: JSON.parse(text) };
+    }
+
+    console.warn(`[Webhook Verify] Cloudflare blocked attempt ${i + 1}/${retries}. Retrying...`);
+    await new Promise(r => setTimeout(r, 1500));
+  }
+
+  throw new Error("Cloudflare blocked request completely");
+}
+
 export async function POST(request: Request) {
   try {
     const payload = await request.json();
@@ -15,30 +32,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing transaction reference" }, { status: 400 });
     }
 
-    // 1. VERIFY TRANSACTION WITH LIVEPAY (V2 GET Request with Server-to-Server Headers)
+    // 1. VERIFY TRANSACTION WITH LIVEPAY (Using Retry Wrapper)
     const url = `https://livepay.me/api/transaction-status?accountNumber=${process.env.LIVEPAY_ACCOUNT_NUMBER}&currency=UGX&reference=${incomingReference}`;
     
-    const livePayResponse = await fetch(url, {
-      method: "GET",
-      headers: {
-        "Authorization": `Bearer ${process.env.LIVEPAY_API_KEY}`,
-        "Content-Type": "application/json",
-        "Accept": "application/json", // Tells Cloudflare we expect API data
-        "User-Agent": "Node-Fetch/1.0", // Bypasses Cloudflare bot detection
-        "X-Requested-With": "XMLHttpRequest",
-        "Connection": "keep-alive"
-      }
-    });
-
-    // 🔥 SAFE JSON PARSING: Catch HTML errors if LivePay's gateway crashes or blocks
-    const rawResponseText = await livePayResponse.text();
-    let statusData;
+    let verifyResponse;
     try {
-      statusData = JSON.parse(rawResponseText);
+      verifyResponse = await fetchWithRetry(url, {
+        method: "GET",
+        headers: {
+          "Authorization": `Bearer ${process.env.LIVEPAY_API_KEY}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36"
+        }
+      });
     } catch (err) {
-      console.error("Webhook verification failed (HTML Returned):", rawResponseText);
-      return NextResponse.json({ error: "Gateway verification error" }, { status: 502 });
+      console.error("Webhook verification permanently blocked by Cloudflare.");
+      return NextResponse.json({ error: "Gateway verification error due to Cloudflare block." }, { status: 502 });
     }
+
+    const statusData = verifyResponse.data;
 
     // 2. FIND THE MASTER ORDER IN FIRESTORE
     const ordersRef = adminDb.collection("orders");
@@ -52,21 +65,18 @@ export async function POST(request: Request) {
     const orderData = orderDoc.data();
     const orderRef = orderDoc.ref;
 
-    // Idempotency check: If it's already paid, don't fund the wallet again!
+    // Idempotency check
     if (orderData.paymentStatus === "paid") {
       console.log(`⚠️ Order ${orderData.orderId} is already paid. Ignoring duplicate webhook.`);
       return NextResponse.json({ message: "Already processed" }, { status: 200 });
     }
 
     // 3. PROCESS SUCCESSFUL PAYMENT
-    // Checking the V2 documentation format: statusData.success === true && statusData.status === "Success"
     if (statusData.success === true && statusData.status === "Success") {
       console.log(`✅ Order ${orderData.orderId} fully paid. Funding Escrow and routing...`);
 
-      // 🔥 ATOMIC TRANSACTION: Update Order & Fund Seller Wallets simultaneously
+      // ATOMIC TRANSACTION
       await adminDb.runTransaction(async (transaction) => {
-        
-        // A. Update the Master Order
         transaction.update(orderRef, {
           status: "processing", 
           paymentStatus: "paid", 
@@ -75,17 +85,14 @@ export async function POST(request: Request) {
           updatedAt: Date.now()
         });
 
-        // B. Deposit funds into Seller Wallets (Pending Escrow)
         if (orderData.sellerOrders && Array.isArray(orderData.sellerOrders)) {
           for (const seller of orderData.sellerOrders) {
-            // Safety check: Skip if sellerId is missing or "SYSTEM"
             if (!seller.sellerId || seller.sellerId === "SYSTEM") continue;
 
             const walletRef = adminDb.collection("wallets").doc(seller.sellerId);
             const walletSnap = await transaction.get(walletRef);
 
             if (!walletSnap.exists) {
-              // Create wallet if it doesn't exist
               transaction.set(walletRef, {
                 availableBalance: 0,
                 pendingBalance: seller.subtotal,
@@ -93,7 +100,6 @@ export async function POST(request: Request) {
                 updatedAt: Date.now()
               });
             } else {
-              // Increment pending balance safely
               transaction.update(walletRef, {
                 pendingBalance: FieldValue.increment(seller.subtotal),
                 updatedAt: Date.now()
@@ -103,9 +109,7 @@ export async function POST(request: Request) {
         }
       });
 
-      // ==========================================
-      // 🚀 MULTI-SELLER NOTIFICATION ROUTING
-      // ==========================================
+      // NOTIFICATIONS
       const notificationPromises: Promise<any>[] = [];
       const allProductsString = orderData.cartItems.map((item: any) => `${item.quantity}x ${item.name}`).join(", ");
 
@@ -138,7 +142,7 @@ export async function POST(request: Request) {
       });
       return NextResponse.json({ message: "Transaction marked as failed" }, { status: 200 });
 
-    // 5. PENDING / UNKNOWN
+    // 5. PENDING
     } else {
       return NextResponse.json({ message: "Transaction still pending or unknown status" }, { status: 400 });
     }
