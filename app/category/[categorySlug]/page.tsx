@@ -10,72 +10,48 @@ import {
   Leaf, 
   ShoppingBag, 
   ChevronRight, 
-  Watch,
   Package,
   Bed,
-  ShoppingBasket,
-  BookOpen,
-  Droplets,
-  Gift,
-  Wrench,
-  Store,
-  Sparkles
+  Sparkles,
+  Wrench
 } from "lucide-react"; 
 
 // 🔥 Caches this category page for 1 hour. (1 Read per hour, per category)
 export const revalidate = 3600;
 
 // ==========================================
-// DYNAMIC CATEGORY UI MAPPING (All 12 Categories)
+// 6 FRONTEND BUCKETS MAPPING TO 11 BACKEND CATEGORIES
 // ==========================================
-const categoryDetails: Record<string, { title: string; description: string }> = {
-  "bundles": {
-    title: "Fresher Bundles & Kits",
-    description: "Curated starter packs and kits to save you time and money.",
+const frontendCategoryMap: Record<string, { title: string; description: string; backendCategories: string[] }> = {
+  "tech-appliances": {
+    title: "Tech, Gadgets & Appliances ⚡",
+    description: "Laptops, phones, smart watches, sound systems, and essential home appliances.",
+    backendCategories: ["electronics", "watches"] // Removed official_store
   },
-  "student_essentials": {
-    title: "Hostel Essentials",
-    description: "Electric kettles, mattress toppers, extension cables, and daily hostel gear.",
+  "beauty-fashion": {
+    title: "Glow Up: Beauty & Fashion ✨",
+    description: "Premium cosmetics, skincare, hygiene essentials, and trending ladies' fashion picks.",
+    backendCategories: ["beauty", "ladies_picks"]
   },
-  "groceries": {
-    title: "Supermarket & Groceries",
-    description: "Daily student groceries, snacks, laundry soap, and toiletries.",
+  "food-groceries": {
+    title: "Farm Fresh & Daily Groceries 🍅",
+    description: "Fresh local agriculture produce, daily supermarket groceries, and quick snacks.",
+    backendCategories: ["agriculture", "groceries"]
   },
-  "stationery": {
-    title: "Stationery & Academics",
-    description: "A4 books, scientific calculators, reams of paper, and study materials.",
+  "campus-life": {
+    title: "Campus Life & Study Gear 🎓",
+    description: "Hostel essentials, stationery, textbooks, and fun gifts to thrive on campus.",
+    backendCategories: ["student_essentials", "student_item", "stationery", "gifts"]
   },
-  "electronics": {
-    title: "Tech Accessories",
-    description: "Power banks, chargers, flash drives, earphones, and student tech.",
+  "mega-bundles": {
+    title: "Mega Bundles & Starter Packs 📦",
+    description: "Save big with our curated mega bundles and fresher starter kits. Everything in one box.",
+    backendCategories: ["bundles"]
   },
-  "beauty": {
-    title: "Beauty & Hygiene",
-    description: "Lotions, body splashes, hair care, and hygiene products.",
-  },
-  "gifts": {
-    title: "Gifts & Fun",
-    description: "Teddy bears, LED room lights, budget watches, and fun decor.",
-  },
-  "services": {
-    title: "Student Services",
-    description: "Laptop repair, hostel moving services, CV writing, and assignment help.",
-  },
-  "official_store": {
-    title: "Official Store",
-    description: "Verified premium products directly from top Kabale vendors.",
-  },
-  "ladies_picks": {
-    title: "Ladies' Picks",
-    description: "Curated fashion, accessories, and essentials for her.",
-  },
-  "watches": {
-    title: "Watches",
-    description: "Discover classic, smart, and luxury timepieces.",
-  },
-  "agriculture": {
-    title: "Agriculture",
-    description: "Support local farmers. Buy fresh produce, tools, and farm supplies.",
+  "repairs-services": {
+    title: "Expert Repairs & Services 🛠️",
+    description: "Trusted local professionals for laptop repairs, CV writing, moving services, and more.",
+    backendCategories: ["services"]
   }
 };
 
@@ -84,20 +60,21 @@ const categoryDetails: Record<string, { title: string; description: string }> = 
 // ==========================================
 export async function generateMetadata({ params }: { params: { categorySlug: string } }): Promise<Metadata> {
   const slug = params.categorySlug;
-  const info = categoryDetails[slug] || { 
-    title: `${slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`, 
-    description: `Shop the best local deals for ${slug.replace(/_/g, ' ')} delivered fast to your location.` 
-  };
+  const categoryData = frontendCategoryMap[slug];
+
+  // Fallback for older links
+  const title = categoryData ? categoryData.title : `${slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}`;
+  const description = categoryData ? categoryData.description : `Shop the best local deals for ${slug.replace(/_/g, ' ')} delivered fast to your location.`;
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.kabaleonline.com";
   const currentUrl = `${baseUrl}/category/${slug}`;
-  const ogImageUrl = `${baseUrl}/api/og?title=${encodeURIComponent(info.title)}&desc=${encodeURIComponent("Fast Local Delivery in Kabale")}`;
+  const ogImageUrl = `${baseUrl}/api/og?title=${encodeURIComponent(title)}&desc=${encodeURIComponent("Fast Local Delivery in Kabale")}`;
 
   return {
-    title: `${info.title} | Kabale Online`,
-    description: info.description,
+    title: `${title} | Kabale Online`,
+    description: description,
     keywords: [
-      info.title, 
+      title, 
       "Kabale Online", 
       "Kabale University", 
       "student market", 
@@ -105,8 +82,8 @@ export async function generateMetadata({ params }: { params: { categorySlug: str
       "buy online Kabale"
     ],
     openGraph: {
-      title: `${info.title} | Kabale Online`,
-      description: info.description,
+      title: `${title} | Kabale Online`,
+      description: description,
       url: currentUrl,
       siteName: "Kabale Online",
       images: [
@@ -114,7 +91,7 @@ export async function generateMetadata({ params }: { params: { categorySlug: str
           url: ogImageUrl, 
           width: 1200,
           height: 630,
-          alt: `${info.title} on Kabale Online`,
+          alt: `${title} on Kabale Online`,
         },
       ],
       locale: "en_UG",
@@ -122,8 +99,8 @@ export async function generateMetadata({ params }: { params: { categorySlug: str
     },
     twitter: {
       card: "summary_large_image",
-      title: `${info.title} | Kabale Online`,
-      description: info.description,
+      title: `${title} | Kabale Online`,
+      description: description,
       images: [ogImageUrl],
     },
     alternates: {
@@ -144,18 +121,22 @@ export default async function CategoryPage({
   params: { categorySlug: string };
 }) {
   const slug = params.categorySlug;
+  const categoryData = frontendCategoryMap[slug];
 
-  // 1. DYNAMIC FIREBASE QUERY
+  // 1. FALLBACK LOGIC: If a user visits an old URL, treat it as a single category search
+  const backendCategoriesToFetch = categoryData ? categoryData.backendCategories : [slug];
+
+  // 2. DYNAMIC FIREBASE QUERY using "in" to fetch multiple categories at once
   const categoryQ = query(
     collection(db, "products"),
-    where("category", "==", slug),
+    where("category", "in", backendCategoriesToFetch),
     orderBy("createdAt", "desc"),
     limit(PAGE_SIZE)
   );
 
   const snap = await getDocs(categoryQ);
 
-  // 2. SAFE SERIALIZATION
+  // 3. SAFE SERIALIZATION
   const initialProducts = snap.docs.map(doc => {
     const data = doc.data();
     return {
@@ -166,31 +147,23 @@ export default async function CategoryPage({
     };
   });
 
-  const info = categoryDetails[slug] || {
-    title: slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    description: `Browse all items in ${slug.replace(/_/g, ' ')}.`,
-  };
+  const displayTitle = categoryData ? categoryData.title : slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const displayDesc = categoryData ? categoryData.description : `Browse all items in ${slug.replace(/_/g, ' ')}.`;
 
-  // 3. EXPLORE CATEGORIES DATA
+  // 4. THE 6 EXPLORE CATEGORIES
   const exploreCategories = [
-    { name: "Fresher Bundles & Kits", link: "bundles", desc: "Curated starter packs", Icon: Package },
-    { name: "Hostel Essentials", link: "student_essentials", desc: "Kettles, bedding & gear", Icon: Bed },
-    { name: "Supermarket & Groceries", link: "groceries", desc: "Daily food & toiletries", Icon: ShoppingBasket },
-    { name: "Stationery & Academics", link: "stationery", desc: "Books, pens & calculators", Icon: BookOpen },
-    { name: "Tech Accessories", link: "electronics", desc: "Phones, power banks & audio", Icon: Laptop },
-    { name: "Beauty & Hygiene", link: "beauty", desc: "Lotions & cosmetics", Icon: Droplets },
-    { name: "Gifts & Fun", link: "gifts", desc: "Decor, watches & fun", Icon: Gift },
-    { name: "Student Services", link: "services", desc: "Repairs, moving & typing", Icon: Wrench },
-    { name: "Official Store", link: "official_store", desc: "Verified premium items", Icon: Store },
-    { name: "Ladies' Picks", link: "ladies_picks", desc: "Curated fashion for her", Icon: Sparkles },
-    { name: "Watches", link: "watches", desc: "Smart & classic timepieces", Icon: Watch },
-    { name: "Agriculture", link: "agriculture", desc: "Fresh produce & farm tools", Icon: Leaf }
+    { name: "Mega Bundles & Packs", link: "mega-bundles", desc: "Starter kits & combos", Icon: Package },
+    { name: "Campus Life & Study Gear", link: "campus-life", desc: "Hostel gear, gifts & books", Icon: Bed },
+    { name: "Tech, Gadgets & Appliances", link: "tech-appliances", desc: "Phones, laptops & home appliances", Icon: Laptop },
+    { name: "Farm Fresh & Groceries", link: "food-groceries", desc: "Daily food & supermarket", Icon: Leaf },
+    { name: "Beauty, Health & Fashion", link: "beauty-fashion", desc: "Cosmetics & ladies' picks", Icon: Sparkles },
+    { name: "Expert Repairs & Services", link: "repairs-services", desc: "Fixes, moving & typing", Icon: Wrench }
   ];
 
   return (
     <div className="min-h-screen bg-transparent pb-12 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
       <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
-        
+
         <div className="flex flex-col md:flex-row gap-4 w-full">
 
           {/* LEFT SIDEBAR AREA */}
@@ -203,11 +176,11 @@ export default async function CategoryPage({
 
             {/* PREMIUM CATEGORY BANNER */}
             <div className="bg-white dark:bg-[#151515] rounded-none md:rounded-md p-6 sm:p-8 md:p-10 border border-slate-200 dark:border-slate-800 shadow-sm border-l-4 md:border-l-4 border-l-[#D97706]">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black mb-2 text-slate-900 dark:text-white tracking-tight uppercase">
-                {info.title}
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black mb-2 text-slate-900 dark:text-white tracking-tight">
+                {displayTitle}
               </h1>
               <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base font-medium max-w-xl">
-                {info.description}
+                {displayDesc}
               </p>
             </div>
 
@@ -218,7 +191,7 @@ export default async function CategoryPage({
                    <CategoryProductFeed 
                      initialProducts={initialProducts} 
                      categoryName={slug} 
-                     title={`Latest ${info.title} Deals`} 
+                     title={`Latest Deals`} 
                    />
                  </Suspense>
               ) : (
@@ -235,10 +208,10 @@ export default async function CategoryPage({
             {/* EXPLORE OTHER CATEGORIES GRID */}
             <div className="bg-white dark:bg-[#151515] rounded-none md:rounded-md border border-slate-200 dark:border-slate-800 shadow-sm p-6 sm:p-8 mt-4">
               <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center mb-6">
-                Explore Other Categories
+                Explore The Marketplace
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {exploreCategories.map(({ name, link, desc, Icon }) => {
                   if (link === slug) return null; // Hide the active category
 
@@ -253,7 +226,7 @@ export default async function CategoryPage({
                           <Icon className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-[#D97706] transition-colors" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm font-black text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors">
+                          <span className="text-sm font-black text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors leading-tight">
                             {name}
                           </span>
                         </div>
