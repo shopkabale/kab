@@ -1,156 +1,148 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/firebase/config"; 
-import { collection, doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-
-// Helper: Detect network
-function getNetwork(phone: string): "MTN" | "AIRTEL" | null {
-  const prefix = phone.substring(0, 3);
-  if (["077", "078", "076", "039"].includes(prefix)) return "MTN";
-  if (["075", "070", "074"].includes(prefix)) return "AIRTEL";
-  return null;
-}
+import { adminDb } from "@/lib/firebase/admin"; 
+import { FieldValue } from "firebase-admin/firestore";
+import { NotificationService } from "@/lib/notifications"; 
+import { sendAdminAlert } from "@/lib/brevo"; 
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const { buyerName, contactPhone, userId, cartItems, referralCodeUsed } = body;
+    const payload = await request.json();
+    
+    // LivePay's V2 webhook sends back the reference you originally provided
+    const incomingReference = payload.reference || payload.customer_reference; 
 
-    if (!cartItems || cartItems.length === 0 || !contactPhone || !buyerName) {
-      return NextResponse.json({ error: "Missing required fields or empty cart" }, { status: 400 });
+    if (!incomingReference) {
+      return NextResponse.json({ error: "Missing transaction reference" }, { status: 400 });
     }
 
-    const network = getNetwork(contactPhone);
-    if (!network) {
-      return NextResponse.json({ error: "Invalid network. Only MTN and Airtel are supported." }, { status: 400 });
-    }
-
-    // 1. SECURE CART VERIFICATION
-    let actualTotalAmount = 0;
-    const validatedItems = [];
-
-    for (const item of cartItems) {
-      const targetId = item.productId || item.id; 
-      const productRef = doc(db, "products", targetId);
-      const productSnap = await getDoc(productRef);
-
-      if (!productSnap.exists()) {
-        return NextResponse.json({ error: `Item ${item.title || item.name} is unavailable.` }, { status: 404 });
-      }
-
-      const productData = productSnap.data();
-      const dbPrice = Number(productData.price) || 0;
-      const itemQuantity = Number(item.quantity) || 1;
-      const itemName = item.title || item.name || productData.title || "Unknown Item";
-
-      // 🔥 DETECT DEPOSIT: Charge 10% (Min 1,000 UGX) if it's a service booking
-      let finalItemPrice = dbPrice;
-      if (itemName.includes("Booking Deposit")) {
-        const calculatedDeposit = Math.round(dbPrice * 0.10);
-        finalItemPrice = calculatedDeposit < 1000 ? 1000 : calculatedDeposit;
-      }
-
-      actualTotalAmount += (finalItemPrice * itemQuantity);
-
-      validatedItems.push({
-        productId: targetId,
-        name: itemName,
-        price: finalItemPrice,
-        quantity: itemQuantity,
-        sellerId: item.sellerId || productData.sellerId || "SYSTEM",
-        sellerPhone: item.sellerPhone || productData.sellerPhone || "",
-        image: item.image || productData.images?.[0] || ""
-      });
-    }
-
-    const securePaymentAmount = Math.round(actualTotalAmount);
-
-    // 2. MULTI-SELLER ROUTING LOGIC
-    const sellerOrdersMap: Record<string, any> = {};
-    for (const item of validatedItems) {
-      if (!sellerOrdersMap[item.sellerPhone]) {
-        sellerOrdersMap[item.sellerPhone] = {
-          sellerId: item.sellerId,
-          sellerPhone: item.sellerPhone,
-          items: [],
-          subtotal: 0
-        };
-      }
-      sellerOrdersMap[item.sellerPhone].items.push(item);
-      sellerOrdersMap[item.sellerPhone].subtotal += (item.price * item.quantity);
-    }
-    const sellerOrders = Object.values(sellerOrdersMap);
-
-    // 3. GENERATE IDs (LivePay v2 limits reference to 30 chars, no spaces)
-    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
-    const referenceId = `REF${Date.now()}${Math.floor(Math.random() * 1000)}`;
-
-    // 4. CALL LIVEPAY API (V2 Endpoint with Cloudflare Bypass Headers)
-    const livePayResponse = await fetch("https://livepay.me/api/collect-money", {
-      method: "POST",
+    // 1. VERIFY TRANSACTION WITH LIVEPAY (V2 GET Request with Cloudflare Bypass Headers)
+    const url = `https://livepay.me/api/transaction-status?accountNumber=${process.env.LIVEPAY_ACCOUNT_NUMBER}&currency=UGX&reference=${incomingReference}`;
+    
+    const livePayResponse = await fetch(url, {
+      method: "GET",
       headers: {
         "Authorization": `Bearer ${process.env.LIVEPAY_API_KEY}`,
         "Content-Type": "application/json",
-        "Accept": "application/json", // 🔥 Tells Cloudflare we are an API
+        "Accept": "application/json", // 🔥 Tells Cloudflare we expect API data
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36" // 🔥 Bypasses Cloudflare bot detection
-      },
-      body: JSON.stringify({
-        accountNumber: process.env.LIVEPAY_ACCOUNT_NUMBER, 
-        phoneNumber: contactPhone, 
-        amount: securePaymentAmount, 
-        currency: "UGX",
-        reference: referenceId,
-        description: `Kabale Online Order ${orderNumber}`
-      })
+      }
     });
 
-    // Safe JSON Parsing in case LivePay returns HTML
+    // 🔥 SAFE JSON PARSING: Catch HTML errors if LivePay's gateway crashes
     const rawResponseText = await livePayResponse.text();
-    let livePayData;
+    let statusData;
     try {
-      livePayData = JSON.parse(rawResponseText);
+      statusData = JSON.parse(rawResponseText);
     } catch (err) {
-      console.error("LivePay returned invalid JSON (HTML Error):", rawResponseText);
-      return NextResponse.json({ error: "Payment gateway is temporarily unavailable." }, { status: 502 });
+      console.error("Webhook verification failed (HTML Returned):", rawResponseText);
+      return NextResponse.json({ error: "Gateway verification error" }, { status: 502 });
     }
 
-    // LivePay's success format check
-    if (!livePayResponse.ok || livePayData.success === false || livePayData.status === "error") {
-      console.error("LivePay API Error:", livePayData);
-      return NextResponse.json({ error: livePayData.error || livePayData.message || "Payment provider error" }, { status: 400 });
+    // 2. FIND THE MASTER ORDER IN FIRESTORE
+    const ordersRef = adminDb.collection("orders");
+    const querySnapshot = await ordersRef.where("referenceId", "==", incomingReference).limit(1).get();
+
+    if (querySnapshot.empty) {
+      return NextResponse.json({ error: "Order not found for this reference" }, { status: 404 });
     }
 
-    // 5. SAVE THE MASTER ORDER
-    const uniqueSellerIds = Array.from(new Set(validatedItems.map(item => item.sellerId).filter(Boolean)));
-    const orderRef = doc(db, "orders", orderNumber);
-    
-    await setDoc(orderRef, {
-      orderId: orderNumber,
-      userId: userId || "GUEST",
-      buyerName,
-      buyerPhone: contactPhone,
-      source: "cart",            
-      paymentMode: "FULL",       
-      paymentStatus: "pending",  
-      status: "new",
-      cartItems: validatedItems,
-      sellerOrders: sellerOrders,
-      sellerIds: uniqueSellerIds, 
-      totalAmount: securePaymentAmount,
-      referenceId: referenceId,
-      internalReference: livePayData.internal_reference || null,
-      referralCodeUsed: referralCodeUsed || null, 
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp()
-    });
+    const orderDoc = querySnapshot.docs[0];
+    const orderData = orderDoc.data();
+    const orderRef = orderDoc.ref;
 
-    return NextResponse.json({ 
-      success: true, 
-      orderId: orderNumber,
-      referenceId: referenceId
-    }, { status: 201 });
+    // Idempotency check: If it's already paid, don't fund the wallet again!
+    if (orderData.paymentStatus === "paid") {
+      console.log(`⚠️ Order ${orderData.orderId} is already paid. Ignoring duplicate webhook.`);
+      return NextResponse.json({ message: "Already processed" }, { status: 200 });
+    }
+
+    // 3. PROCESS SUCCESSFUL PAYMENT
+    // Checking the V2 documentation format: statusData.success === true && statusData.status === "Success"
+    if (statusData.success === true && statusData.status === "Success") {
+      console.log(`✅ Order ${orderData.orderId} fully paid. Funding Escrow and routing...`);
+
+      // 🔥 ATOMIC TRANSACTION: Update Order & Fund Seller Wallets simultaneously
+      await adminDb.runTransaction(async (transaction) => {
+        
+        // A. Update the Master Order
+        transaction.update(orderRef, {
+          status: "processing", 
+          paymentStatus: "paid", 
+          amountPaid: Number(statusData.amount), 
+          paymentCompletedAt: statusData.completed_at || Date.now(),
+          updatedAt: Date.now()
+        });
+
+        // B. Deposit funds into Seller Wallets (Pending Escrow)
+        if (orderData.sellerOrders && Array.isArray(orderData.sellerOrders)) {
+          for (const seller of orderData.sellerOrders) {
+            // Safety check: Skip if sellerId is missing or "SYSTEM"
+            if (!seller.sellerId || seller.sellerId === "SYSTEM") continue;
+
+            const walletRef = adminDb.collection("wallets").doc(seller.sellerId);
+            const walletSnap = await transaction.get(walletRef);
+
+            if (!walletSnap.exists) {
+              // Create wallet if it doesn't exist
+              transaction.set(walletRef, {
+                availableBalance: 0,
+                pendingBalance: seller.subtotal,
+                totalWithdrawn: 0,
+                updatedAt: Date.now()
+              });
+            } else {
+              // Increment pending balance safely
+              transaction.update(walletRef, {
+                pendingBalance: FieldValue.increment(seller.subtotal),
+                updatedAt: Date.now()
+              });
+            }
+          }
+        }
+      });
+
+      // ==========================================
+      // 🚀 MULTI-SELLER NOTIFICATION ROUTING
+      // ==========================================
+      const notificationPromises: Promise<any>[] = [];
+      const allProductsString = orderData.cartItems.map((item: any) => `${item.quantity}x ${item.name}`).join(", ");
+
+      notificationPromises.push(
+        NotificationService.notifyBuyer(orderData.buyerPhone, orderData.orderId, allProductsString, orderData.totalAmount).catch(() => {})
+      );
+      
+      notificationPromises.push(
+        sendAdminAlert(orderData.orderId, allProductsString, orderData.totalAmount, orderData.buyerPhone, "Multi-Seller Paid Order").catch(() => {})
+      );
+
+      if (orderData.sellerOrders && Array.isArray(orderData.sellerOrders)) {
+        for (const sellerCut of orderData.sellerOrders) {
+          const sellerItemsString = sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
+          notificationPromises.push(
+            NotificationService.notifySeller(sellerCut.sellerPhone, "Partner", orderData.orderId, sellerItemsString, sellerCut.subtotal, orderData.buyerName, orderData.buyerLocation || "Kabale Town", orderData.buyerPhone).catch(() => {})
+          );
+        }
+      }
+
+      await Promise.allSettled(notificationPromises);
+      return NextResponse.json({ message: "Webhook verified, Escrow funded." }, { status: 200 });
+
+    // 4. PROCESS FAILED PAYMENT
+    } else if (statusData.success === true && (statusData.status === "Failed" || statusData.status === "Cancelled")) {
+      await orderRef.update({
+        status: "cancelled",
+        paymentStatus: "payment_failed",
+        updatedAt: Date.now()
+      });
+      return NextResponse.json({ message: "Transaction marked as failed" }, { status: 200 });
+
+    // 5. PENDING / UNKNOWN
+    } else {
+      return NextResponse.json({ message: "Transaction still pending or unknown status" }, { status: 400 });
+    }
 
   } catch (error) {
-    console.error("Initiate Payment Error:", error);
+    console.error("Webhook Error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
