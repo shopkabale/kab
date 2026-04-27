@@ -65,11 +65,12 @@ export default function ServiceCheckoutPage({ params }: { params: { id: string }
     };
     const referralCode = getCookie("kabale_ref");
 
-    // The Financial Math
+    // 🔥 FINANCIAL MATH: Enforce 1,000 UGX Minimum for LivePay
     const basePrice = Number(service.price) || 0;
-    const commitmentDeposit = Math.round(basePrice * 0.10); 
+    const calculatedDeposit = Math.round(basePrice * 0.10); 
+    const commitmentDeposit = calculatedDeposit < 1000 ? 1000 : calculatedDeposit; 
 
-    // 🔥 WE FORMAT THE DEPOSIT AS A SINGLE CART ITEM FOR YOUR BACKEND
+    // WE FORMAT THE DEPOSIT AS A SINGLE CART ITEM FOR YOUR BACKEND
     const masterOrderPayload = {
       buyerName: buyerName.trim(),
       contactPhone: cleanPhone,
@@ -79,12 +80,12 @@ export default function ServiceCheckoutPage({ params }: { params: { id: string }
         {
           productId: service.id,
           name: `Booking Deposit: ${service.title}`, // Clearly labeled as a deposit
-          price: commitmentDeposit, // We only charge the 10%
+          price: commitmentDeposit, // 🔥 Now safely 1000+ UGX
           quantity: 1,
           sellerId: service.sellerId || "SYSTEM", 
           sellerPhone: service.sellerPhone || "", // Saved securely in the order DB!
           image: service.images?.[0] || "",
-          isServiceBooking: true // Flag just in case your backend needs to know
+          isServiceBooking: true // 🔥 Flag so Success Page triggers the unlock
         }
       ]
     };
@@ -96,7 +97,17 @@ export default function ServiceCheckoutPage({ params }: { params: { id: string }
         body: JSON.stringify(masterOrderPayload),
       });
 
-      const data = await res.json();
+      // We read the raw text first in case the API crashes and returns HTML
+      const rawText = await res.text();
+      let data;
+      try {
+        data = JSON.parse(rawText);
+      } catch (err) {
+        console.error("Payment Gateway returned non-JSON:", rawText);
+        alert("Payment gateway error. Please try again later.");
+        setProcessing(false);
+        return;
+      }
 
       if (res.ok) {
         // Redirect to your existing LivePay waiting screen
@@ -129,9 +140,11 @@ export default function ServiceCheckoutPage({ params }: { params: { id: string }
     );
   }
 
+  // 🔥 FINANCIAL MATH: Ensure UI matches the 1,000 UGX rule
   const basePrice = Number(service.price) || 0;
-  const commitmentDeposit = Math.round(basePrice * 0.10);
-  const remainingBalance = basePrice - commitmentDeposit;
+  const calculatedDeposit = Math.round(basePrice * 0.10);
+  const commitmentDeposit = calculatedDeposit < 1000 ? 1000 : calculatedDeposit;
+  const remainingBalance = Math.max(0, basePrice - commitmentDeposit);
 
   return (
     <div className="max-w-3xl mx-auto p-4 md:p-8 bg-white min-h-screen relative">
@@ -143,7 +156,7 @@ export default function ServiceCheckoutPage({ params }: { params: { id: string }
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
+
         {/* LEFT: Form */}
         <div className="order-2 md:order-1">
           <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
@@ -194,7 +207,7 @@ export default function ServiceCheckoutPage({ params }: { params: { id: string }
         <div className="order-1 md:order-2">
           <div className="bg-white border-2 border-[#D97706] rounded-2xl p-6 shadow-xl sticky top-24">
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">You are booking:</h3>
-            
+
             <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
               <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden shrink-0">
                 <img src={service.images?.[0] || "/placeholder.png"} alt="Service" className="w-full h-full object-cover" />
@@ -210,9 +223,9 @@ export default function ServiceCheckoutPage({ params }: { params: { id: string }
                 <span>Est. Base Price</span>
                 <span>UGX {basePrice.toLocaleString()}</span>
               </div>
-              
+
               <div className="flex justify-between items-center py-3 px-4 bg-amber-50 rounded-xl border border-amber-200 text-[#D97706]">
-                <span className="font-bold text-sm">10% Deposit (Due Now)</span>
+                <span className="font-bold text-sm">Deposit (Due Now)</span>
                 <span className="font-black text-lg">UGX {commitmentDeposit.toLocaleString()}</span>
               </div>
 
