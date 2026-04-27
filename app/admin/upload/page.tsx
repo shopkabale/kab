@@ -333,17 +333,32 @@ function AdminUploadContent() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div>
+                        <div>
               <label className="block text-sm font-semibold text-slate-900 mb-2">Category *</label>
               <select className="w-full rounded-xl border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
                 value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                <option value="electronics">Electronics</option>
-                <option value="agriculture">Agriculture</option>
-                <option value="student_item">Student Market</option>
-                <option value="ladies">Ladies' Picks</option>
-                <option value="watches">Watches</option>
+                {/* Fresher & Student Categories */}
+                <optgroup label="Campus & Tech">
+                  <option value="bundles">Fresher Bundles & Kits</option>
+                  <option value="student_essentials">Hostel Essentials</option>
+                  <option value="groceries">Supermarket & Groceries</option>
+                  <option value="stationery">Stationery & Academics</option>
+                  <option value="electronics">Tech Accessories</option>
+                  <option value="services">Student Services</option>
+                </optgroup>
+                
+                {/* General Store Categories */}
+                <optgroup label="General Store">
+                  <option value="official_store">Official Store</option>
+                  <option value="ladies_picks">Ladies' Picks</option>
+                  <option value="beauty">Beauty & Hygiene</option>
+                  <option value="watches">Watches</option>
+                  <option value="gifts">Gifts & Fun</option>
+                  <option value="agriculture">Agriculture</option>
+                </optgroup>
               </select>
             </div>
+
             <div>
               <label className="block text-sm font-semibold text-slate-900 mb-2">Price (UGX) *</label>
               <input required type="number" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
