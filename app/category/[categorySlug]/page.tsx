@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation"; // 🔥 NEW: Added redirect
+import { redirect } from "next/navigation"; 
 import { Suspense } from "react";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
@@ -17,11 +17,11 @@ import {
   Wrench
 } from "lucide-react"; 
 
-// 🔥 Caches this category page for 1 hour
+// 🔥 Caches this category page for 1 hour.
 export const revalidate = 3600;
 
 // ==========================================
-// 6 FRONTEND BUCKETS
+// 6 FRONTEND BUCKETS MAPPING
 // ==========================================
 const frontendCategoryMap: Record<string, { title: string; description: string; backendCategories: string[] }> = {
   "tech-appliances": {
@@ -32,7 +32,7 @@ const frontendCategoryMap: Record<string, { title: string; description: string; 
   "beauty-fashion": {
     title: "Glow Up: Beauty & Fashion ✨",
     description: "Premium cosmetics, skincare, hygiene essentials, and trending ladies' fashion picks.",
-    backendCategories: ["beauty", "ladies_picks"]
+    backendCategories: ["beauty", "ladies_picks", "ladies"] // 🔥 Legacy "ladies" included here!
   },
   "food-groceries": {
     title: "Farm Fresh & Daily Groceries 🍅",
@@ -42,7 +42,7 @@ const frontendCategoryMap: Record<string, { title: string; description: string; 
   "campus-life": {
     title: "Campus Life & Study Gear 🎓",
     description: "Hostel essentials, stationery, textbooks, and fun gifts to thrive on campus.",
-    backendCategories: ["student_essentials", "student_item", "stationery", "gifts"]
+    backendCategories: ["student_essentials", "student_item", "stationery", "gifts"] // Legacy "student_item" included here!
   },
   "mega-bundles": {
     title: "Mega Bundles & Starter Packs 📦",
@@ -62,14 +62,14 @@ const frontendCategoryMap: Record<string, { title: string; description: string; 
 const legacyMapping: Record<string, string> = {
   "electronics": "tech-appliances",
   "watches": "tech-appliances",
-  "official_store": "tech-appliances", // Safely mapping any lingering official store links
+  "official_store": "tech-appliances", // Catches stray clicks
   "beauty": "beauty-fashion",
   "ladies_picks": "beauty-fashion",
   "ladies": "beauty-fashion",
   "agriculture": "food-groceries",
   "groceries": "food-groceries",
   "student_essentials": "campus-life",
-  "student_item": "campus-life", // Legacy fallback
+  "student_item": "campus-life", 
   "stationery": "campus-life",
   "gifts": "campus-life",
   "bundles": "mega-bundles",
@@ -136,7 +136,7 @@ export default async function CategoryPage({
     redirect(`/category/${legacyMapping[originalSlug]}`);
   }
 
-  const slug = originalSlug; // Only proceeds if it's already a correct frontend slug
+  const slug = originalSlug; 
   const categoryData = frontendCategoryMap[slug];
 
   // 2. FALLBACK LOGIC: If a user visits an unmapped URL, treat it as a single category search
