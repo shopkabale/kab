@@ -22,7 +22,8 @@ import {
   BookOpen,
   Droplets,
   Gift,
-  Wrench
+  Wrench,
+  X
 } from "lucide-react";
 
 export default function BottomNav() {
@@ -80,7 +81,7 @@ export default function BottomNav() {
     ? [...baseNavItems, { label: "Admin", href: "/admin", Icon: ShieldAlert }]
     : baseNavItems;
 
-  // 5. Hybrid Categories Data (New Student Focus + General Store)
+  // 5. Hybrid Categories Data
   const categoryLinks = [
     { label: "Fresher Bundles & Kits", href: "/category/bundles", Icon: Package },
     { label: "Hostel Essentials", href: "/category/student_essentials", Icon: Bed },
@@ -173,37 +174,47 @@ export default function BottomNav() {
         </div>
       </div>
 
-      {/* CATEGORIES MODAL */}
+      {/* FULL SCREEN CATEGORIES MODAL */}
       {isCategoryModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity">
-          <div className="bg-[#1a1a1a] w-full sm:w-[400px] max-h-[85vh] rounded-t-3xl sm:rounded-3xl p-6 text-white animate-slide-up border border-slate-800 shadow-2xl flex flex-col">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1a1a1a] sm:bg-black/60 sm:backdrop-blur-sm transition-opacity">
+          
+          {/* Mobile: w-full h-[100dvh] rounded-none 
+            Tablet/Desktop: w-[400px] max-h-[85vh] rounded-3xl 
+          */}
+          <div className="bg-[#1a1a1a] w-full h-[100dvh] sm:h-auto sm:w-[400px] sm:max-h-[85vh] sm:rounded-3xl p-6 sm:border border-slate-800 shadow-2xl flex flex-col animate-slide-up">
             
-            {/* Drag Handle & Title */}
-            <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6 shrink-0"></div>
-            <h3 className="text-center text-xl font-bold mb-6 tracking-wide shrink-0">Categories</h3>
+            {/* Header: Title & Close Icon */}
+            <div className="flex items-center justify-between mb-6 pt-2 shrink-0">
+              <h3 className="text-xl font-bold tracking-wide text-white">Categories</h3>
+              <button 
+                onClick={() => setIsCategoryModalOpen(false)}
+                className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors text-slate-300"
+              >
+                <X size={20} />
+              </button>
+            </div>
 
             {/* Scrollable Categories List */}
-            <div className="flex flex-col gap-1 text-lg font-medium overflow-y-auto pr-2 custom-scrollbar">
+            <div className="flex flex-col gap-1 text-lg font-medium overflow-y-auto pr-2 custom-scrollbar pb-6 flex-grow">
               {categoryLinks.map(({ label, href, Icon }) => (
                 <Link 
                   key={label}
                   href={href} 
                   onClick={() => setIsCategoryModalOpen(false)} 
-                  className="flex items-center gap-4 hover:text-[#D97706] transition-colors py-3 px-3 rounded-lg hover:bg-slate-800/50"
+                  className="flex items-center gap-4 text-white hover:text-[#D97706] transition-colors py-3 px-3 rounded-lg hover:bg-slate-800/50"
                 >
-                  {/* All icons set to a uniform gray */}
                   <Icon className="text-slate-400" size={20} />
                   {label}
                 </Link>
               ))}
             </div>
 
-            {/* Close Button */}
+            {/* Bottom Close Button (Pushed to bottom using mt-auto) */}
             <button 
               onClick={() => setIsCategoryModalOpen(false)} 
-              className="mt-6 w-full py-3.5 bg-slate-800 rounded-xl font-bold hover:bg-slate-700 active:scale-[0.98] transition-all shrink-0"
+              className="mt-auto w-full py-3.5 bg-[#D97706] text-white rounded-xl font-bold hover:bg-amber-600 active:scale-[0.98] transition-all shrink-0"
             >
-              Close
+              Close Menu
             </button>
           </div>
         </div>
