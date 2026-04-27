@@ -167,24 +167,29 @@ export default function AdminProductsPage() {
                       UGX {Number(product.price).toLocaleString()}
                     </td>
 
-                    {/* Inline Category Dropdown */}
-<td className="px-6 py-4">
-  <select 
-    disabled={updatingId === product.id}
-    value={product.category || "uncategorized"}
-    onChange={(e) => handleCategoryChange(product.id, e.target.value)}
-    className={`text-xs font-bold rounded-lg border px-2 py-1.5 outline-none transition-colors ${updatingId === product.id ? 'opacity-50' : 'border-slate-300 bg-white hover:border-[#D97706]'}`}
-  >
-    <option value="uncategorized" disabled>Select...</option>
-    <option value="electronics">Electronics</option>
-    <option value="agriculture">Agriculture</option>
-    <option value="student_item">Student Market</option>
-    <option value="ladies">Ladies' Picks</option>
-    {/* Added Watches option below */}
-    <option value="watches">Watches</option>
-  </select>
-</td>
-
+                    {/* 🔥 Inline Category Dropdown - UPDATED HERE 🔥 */}
+                    <td className="px-6 py-4">
+                      <select 
+                        disabled={updatingId === product.id}
+                        value={product.category || "uncategorized"}
+                        onChange={(e) => handleCategoryChange(product.id, e.target.value)}
+                        className={`text-xs font-bold rounded-lg border px-2 py-1.5 outline-none transition-colors ${updatingId === product.id ? 'opacity-50' : 'border-slate-300 bg-white hover:border-[#D97706]'}`}
+                      >
+                        <option value="uncategorized" disabled>Select...</option>
+                        <option value="bundles">Fresher Bundles & Kits</option>
+                        <option value="student_essentials">Hostel Essentials</option>
+                        <option value="student_item" className="text-slate-400">Student Market (Legacy)</option>
+                        <option value="groceries">Supermarket & Groceries</option>
+                        <option value="stationery">Stationery & Academics</option>
+                        <option value="electronics">Tech Accessories</option>
+                        <option value="services">Student Services</option>
+                        <option value="ladies_picks">Ladies' Picks</option>
+                        <option value="beauty">Beauty & Hygiene</option>
+                        <option value="watches">Watches</option>
+                        <option value="gifts">Gifts & Fun</option>
+                        <option value="agriculture">Agriculture</option>
+                      </select>
+                    </td>
 
                     <td className="px-6 py-4">
                       <p className="text-sm font-semibold text-slate-700 truncate max-w-[120px]">{product.sellerName || "Unknown"}</p>
