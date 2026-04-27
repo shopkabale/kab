@@ -11,19 +11,12 @@ import {
   ShoppingCart, 
   User, 
   ShieldAlert, 
-  Store, 
-  Sparkles, 
-  Laptop, 
-  Tractor,
-  Watch,
   Package,
   Bed,
-  ShoppingBasket,
-  BookOpen,
-  Droplets,
-  Gift,
-  Wrench,
-  X
+  Laptop,
+  Leaf,
+  Sparkles,
+  Wrench
 } from "lucide-react";
 
 export default function BottomNav() {
@@ -81,20 +74,14 @@ export default function BottomNav() {
     ? [...baseNavItems, { label: "Admin", href: "/admin", Icon: ShieldAlert }]
     : baseNavItems;
 
-  // 5. Hybrid Categories Data
+  // 5. The 6 Frontend Category Buckets
   const categoryLinks = [
-    { label: "Fresher Bundles & Kits", href: "/category/bundles", Icon: Package },
-    { label: "Hostel Essentials", href: "/category/student_essentials", Icon: Bed },
-    { label: "Supermarket & Groceries", href: "/category/groceries", Icon: ShoppingBasket },
-    { label: "Stationery & Academics", href: "/category/stationery", Icon: BookOpen },
-    { label: "Tech Accessories", href: "/category/electronics", Icon: Laptop },
-    { label: "Beauty & Hygiene", href: "/category/beauty", Icon: Droplets },
-    { label: "Gifts & Fun", href: "/category/gifts", Icon: Gift },
-    { label: "Student Services", href: "/category/services", Icon: Wrench },
-    { label: "Official Store", href: "/officialStore", Icon: Store },
-    { label: "Ladies' Picks", href: "/ladies", Icon: Sparkles },
-    { label: "Watches", href: "/category/watches", Icon: Watch },
-    { label: "Agriculture", href: "/category/agriculture", Icon: Tractor },
+    { label: "Mega Bundles & Packs", href: "/category/mega-bundles", Icon: Package },
+    { label: "Campus Life & Study Gear", href: "/category/campus-life", Icon: Bed },
+    { label: "Tech, Gadgets & Appliances", href: "/category/tech-appliances", Icon: Laptop },
+    { label: "Farm Fresh & Groceries", href: "/category/food-groceries", Icon: Leaf },
+    { label: "Beauty, Health & Fashion", href: "/category/beauty-fashion", Icon: Sparkles },
+    { label: "Expert Repairs & Services", href: "/category/repairs-services", Icon: Wrench }
   ];
 
   return (
@@ -174,34 +161,25 @@ export default function BottomNav() {
         </div>
       </div>
 
-      {/* FULL SCREEN CATEGORIES MODAL */}
+      {/* ORIGINAL SLIDE-UP CATEGORIES MODAL */}
       {isCategoryModalOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#1a1a1a] sm:bg-black/60 sm:backdrop-blur-sm transition-opacity">
-          
-          {/* Mobile: w-full h-[100dvh] rounded-none 
-            Tablet/Desktop: w-[400px] max-h-[85vh] rounded-3xl 
-          */}
-          <div className="bg-[#1a1a1a] w-full h-[100dvh] sm:h-auto sm:w-[400px] sm:max-h-[85vh] sm:rounded-3xl p-6 sm:border border-slate-800 shadow-2xl flex flex-col animate-slide-up">
+        <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 backdrop-blur-sm transition-opacity">
+          <div className="bg-[#1a1a1a] w-full sm:w-[400px] rounded-t-3xl sm:rounded-3xl p-6 text-white animate-slide-up border border-slate-800 shadow-2xl">
             
-            {/* Header: Title & Close Icon */}
-            <div className="flex items-center justify-between mb-6 pt-2 shrink-0">
-              <h3 className="text-xl font-bold tracking-wide text-white">Categories</h3>
-              <button 
-                onClick={() => setIsCategoryModalOpen(false)}
-                className="p-2 bg-slate-800 rounded-full hover:bg-slate-700 transition-colors text-slate-300"
-              >
-                <X size={20} />
-              </button>
-            </div>
+            {/* Drag Handle */}
+            <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-6"></div>
+            
+            {/* Title */}
+            <h3 className="text-center text-xl font-bold mb-6 tracking-wide">Categories</h3>
 
-            {/* Scrollable Categories List */}
-            <div className="flex flex-col gap-1 text-lg font-medium overflow-y-auto pr-2 custom-scrollbar pb-6 flex-grow">
+            {/* Categories List */}
+            <div className="flex flex-col gap-2 text-lg font-medium">
               {categoryLinks.map(({ label, href, Icon }) => (
                 <Link 
                   key={label}
                   href={href} 
                   onClick={() => setIsCategoryModalOpen(false)} 
-                  className="flex items-center gap-4 text-white hover:text-[#D97706] transition-colors py-3 px-3 rounded-lg hover:bg-slate-800/50"
+                  className="flex items-center gap-4 hover:text-[#D97706] transition-colors py-3 px-2 rounded-lg hover:bg-slate-800/50"
                 >
                   <Icon className="text-slate-400" size={20} />
                   {label}
@@ -209,12 +187,12 @@ export default function BottomNav() {
               ))}
             </div>
 
-            {/* Bottom Close Button (Pushed to bottom using mt-auto) */}
+            {/* Close Button */}
             <button 
               onClick={() => setIsCategoryModalOpen(false)} 
-              className="mt-auto w-full py-3.5 bg-[#D97706] text-white rounded-xl font-bold hover:bg-amber-600 active:scale-[0.98] transition-all shrink-0"
+              className="mt-8 w-full py-3.5 bg-slate-800 rounded-xl font-bold hover:bg-slate-700 active:scale-[0.98] transition-all text-white"
             >
-              Close Menu
+              Close
             </button>
           </div>
         </div>
