@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/firebase/config"; 
 import { collection, doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
-// Helper: Detect network
+// Helper: Detect network (Only needed if you still want custom validation, though LivePay handles this too)
 function getNetwork(phone: string): "MTN" | "AIRTEL" | null {
   const prefix = phone.substring(0, 3);
   if (["077", "078", "076", "039"].includes(prefix)) return "MTN";
@@ -13,24 +13,17 @@ function getNetwork(phone: string): "MTN" | "AIRTEL" | null {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    // 📦 🚀 INJECTED: Destructure referralCodeUsed from the Master Payload
     const { buyerName, contactPhone, userId, cartItems, referralCodeUsed } = body;
 
     if (!cartItems || cartItems.length === 0 || !contactPhone || !buyerName) {
       return NextResponse.json({ error: "Missing required fields or empty cart" }, { status: 400 });
     }
 
-    const network = getNetwork(contactPhone);
-    if (!network) {
-      return NextResponse.json({ error: "Invalid network. Only MTN and Airtel are supported." }, { status: 400 });
-    }
-
-    // 1. SECURE CART VERIFICATION (100% FULL PAYMENT CALCULATION)
+    // 1. SECURE CART VERIFICATION
     let actualTotalAmount = 0;
     const validatedItems = [];
 
     for (const item of cartItems) {
-      // Use productId (FastBuy) or id (CartContext)
       const targetId = item.productId || item.id; 
       const productRef = doc(db, "products", targetId);
       const productSnap = await getDoc(productRef);
@@ -40,15 +33,23 @@ export async function POST(request: Request) {
       }
 
       const productData = productSnap.data();
-      const actualPrice = Number(productData.price) || 0;
+      const dbPrice = Number(productData.price) || 0;
       const itemQuantity = Number(item.quantity) || 1;
+      const itemName = item.title || item.name || productData.title || "Unknown Item";
 
-      actualTotalAmount += (actualPrice * itemQuantity);
+      // 🔥 DETECT DEPOSIT: Charge 10% (Min 1,000 UGX) if it's a service booking
+      let finalItemPrice = dbPrice;
+      if (itemName.includes("Booking Deposit")) {
+        const calculatedDeposit = Math.round(dbPrice * 0.10);
+        finalItemPrice = calculatedDeposit < 1000 ? 1000 : calculatedDeposit;
+      }
+
+      actualTotalAmount += (finalItemPrice * itemQuantity);
 
       validatedItems.push({
         productId: targetId,
-        name: item.title || item.name || productData.title || "Unknown Item",
-        price: actualPrice, // Strict DB Price
+        name: itemName,
+        price: finalItemPrice,
         quantity: itemQuantity,
         sellerId: item.sellerId || productData.sellerId || "SYSTEM",
         sellerPhone: item.sellerPhone || productData.sellerPhone || "",
@@ -56,7 +57,9 @@ export async function POST(request: Request) {
       });
     }
 
-    // 2. MULTI-SELLER ROUTING LOGIC (Group by sellerPhone)
+    const securePaymentAmount = Math.round(actualTotalAmount);
+
+    // 2. MULTI-SELLER ROUTING LOGIC
     const sellerOrdersMap: Record<string, any> = {};
     for (const item of validatedItems) {
       if (!sellerOrdersMap[item.sellerPhone]) {
@@ -72,57 +75,63 @@ export async function POST(request: Request) {
     }
     const sellerOrders = Object.values(sellerOrdersMap);
 
-    // 3. GENERATE IDs
-    const referenceId = crypto.randomUUID();
+    // 3. GENERATE IDs (LivePay v2 limits reference to 30 chars, no spaces)
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
+    const referenceId = `REF${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-    // 4. CALL LIVEPAY API (Charging 100% actualTotalAmount)
-    const livePayResponse = await fetch("https://livepay.me/api/v1/collect-money", {
+    // 4. CALL LIVEPAY API (V2 Endpoint)
+    const livePayResponse = await fetch("https://livepay.me/api/collect-money", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.LIVEPAY_SECRET_KEY}`,
+        "Authorization": `Bearer ${process.env.LIVEPAY_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        apikey: process.env.LIVEPAY_PUBLIC_KEY,
-        amount: actualTotalAmount, 
-        phone_number: contactPhone,
+        accountNumber: process.env.LIVEPAY_ACCOUNT_NUMBER, // e.g., "LP2305443309"
+        phoneNumber: contactPhone, // Changed from phone_number
+        amount: securePaymentAmount, 
         currency: "UGX",
-        network: network,
-        reference: referenceId
+        reference: referenceId,
+        description: `Kabale Online Order ${orderNumber}`
       })
     });
 
-    const livePayData = await livePayResponse.json();
-
-    if (!livePayResponse.ok || livePayData.status === "error") {
-      console.error("LivePay Error:", livePayData);
-      return NextResponse.json({ error: livePayData.message || "Payment provider error" }, { status: 400 });
+    // Safe JSON Parsing in case LivePay returns HTML
+    const rawResponseText = await livePayResponse.text();
+    let livePayData;
+    try {
+      livePayData = JSON.parse(rawResponseText);
+    } catch (err) {
+      console.error("LivePay returned invalid JSON:", rawResponseText);
+      return NextResponse.json({ error: "Payment gateway is temporarily unavailable." }, { status: 502 });
     }
 
-    const transactionId = livePayData.data?.transaction_id;
+    // LivePay's new success format is { success: true }
+    if (!livePayResponse.ok || !livePayData.success) {
+      console.error("LivePay API Error:", livePayData);
+      return NextResponse.json({ error: livePayData.error || "Payment provider error" }, { status: 400 });
+    }
 
     // 5. SAVE THE MASTER ORDER
-    // Extract flat array of seller IDs for Firestore Rules Security!
     const uniqueSellerIds = Array.from(new Set(validatedItems.map(item => item.sellerId).filter(Boolean)));
-
     const orderRef = doc(db, "orders", orderNumber);
+    
     await setDoc(orderRef, {
       orderId: orderNumber,
       userId: userId || "GUEST",
       buyerName,
       buyerPhone: contactPhone,
-      source: "cart",            // Hardcoded for web orders
-      paymentMode: "FULL",       // Hardcoded business rule
-      paymentStatus: "pending",  // Waiting for webhook
+      source: "cart",            
+      paymentMode: "FULL",       
+      paymentStatus: "pending",  
       status: "new",
       cartItems: validatedItems,
       sellerOrders: sellerOrders,
-      sellerIds: uniqueSellerIds, // Added flat array here
-      totalAmount: actualTotalAmount,
-      transactionId: transactionId,
+      sellerIds: uniqueSellerIds, 
+      totalAmount: securePaymentAmount,
       referenceId: referenceId,
-      referralCodeUsed: referralCodeUsed || null, // 🚀 INJECTED: Saves the cookie code into the vault!
+      internalReference: livePayData.internal_reference || null, // Provided by LivePay v2
+      referralCodeUsed: referralCodeUsed || null, 
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     });
@@ -130,7 +139,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ 
       success: true, 
       orderId: orderNumber,
-      transactionId: transactionId
+      referenceId: referenceId
     }, { status: 201 });
 
   } catch (error) {
