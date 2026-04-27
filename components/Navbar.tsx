@@ -14,6 +14,22 @@ import {
   FaTiktok 
 } from "react-icons/fa6";
 
+// Imported uniform icons for the mobile drawer
+import { 
+  Package, 
+  Bed, 
+  ShoppingBasket, 
+  BookOpen, 
+  Laptop, 
+  Droplets, 
+  Gift, 
+  Wrench, 
+  Store, 
+  Sparkles, 
+  Watch, 
+  Tractor 
+} from "lucide-react";
+
 export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
   const pathname = usePathname();
   const { user, loading, signIn, signOut } = useAuth();
@@ -51,12 +67,28 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
     <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
   );
 
+  // Hybrid Categories Data for Mobile Drawer Loop
+  const categoryLinks = [
+    { label: "Fresher Bundles & Kits", href: "/category/bundles", Icon: Package },
+    { label: "Hostel Essentials", href: "/category/student_essentials", Icon: Bed },
+    { label: "Supermarket & Groceries", href: "/category/groceries", Icon: ShoppingBasket },
+    { label: "Stationery & Academics", href: "/category/stationery", Icon: BookOpen },
+    { label: "Tech Accessories", href: "/category/electronics", Icon: Laptop },
+    { label: "Beauty & Hygiene", href: "/category/beauty", Icon: Droplets },
+    { label: "Gifts & Fun", href: "/category/gifts", Icon: Gift },
+    { label: "Student Services", href: "/category/services", Icon: Wrench },
+    { label: "Official Store", href: "/officialStore", Icon: Store },
+    { label: "Ladies' Picks", href: "/ladies", Icon: Sparkles },
+    { label: "Watches", href: "/category/watches", Icon: Watch },
+    { label: "Agriculture", href: "/category/agriculture", Icon: Tractor },
+  ];
+
   return (
     <>
       {/* ============================================== */}
       {/* NAVBAR CONTAINER                               */}
       {/* ============================================== */}
-      <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white border-b-[3px] border-blue-500 z-40 transition-all shadow-sm`}>
+      <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white border-b-[3px] border-amber-600 z-40 transition-all shadow-sm`}>
 
         {/* === DESKTOP VIEW === */}
         <div className="hidden lg:flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 justify-between items-center h-16 gap-6">
@@ -71,7 +103,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
           </div>
 
           <div className="flex items-center space-x-6">
-            <Link href="/category/student_item" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/student_item') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Student Market</Link>
+            <Link href="/category/student_essentials" className={`text-sm font-bold uppercase tracking-wide transition-colors ${isActive('/category/student_essentials') ? 'text-[#D97706]' : 'text-slate-600 hover:text-[#D97706]'}`}>Hostel Essentials</Link>
 
             {/* VIEW MORE DROPDOWN */}
             <div className="relative group">
@@ -81,14 +113,16 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
               </button>
 
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-slate-100 py-3 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50">
                 <div className="px-5 pb-2 border-b border-slate-100">
-                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Categories</p>
+                  <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Top Categories</p>
+                  <Link href="/category/bundles" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Fresher Bundles & Kits</Link>
+                  <Link href="/category/student_essentials" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Hostel Essentials</Link>
+                  <Link href="/category/electronics" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Tech Accessories</Link>
+                  <Link href="/category/groceries" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Supermarket & Groceries</Link>
                   <Link href="/officialStore" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Official Store</Link>
                   <Link href="/ladies" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Ladies' Picks</Link>
-                  <Link href="/category/electronics" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Electronics</Link>
-                  <Link href="/category/agriculture" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Agriculture</Link>
-                  <Link href="/products" className="block py-1.5 text-[14px] font-bold text-[#D97706] mt-1">View All Products &rarr;</Link>
+                  <Link href="/products" className="block py-1.5 text-[14px] font-bold text-[#D97706] mt-1">View All Categories &rarr;</Link>
                 </div>
                 <div className="px-5 pt-3">
                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Explore</p>
@@ -96,7 +130,6 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                   <Link href="/requests" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Buyer Requests</Link>
                   <Link href="/ai" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">AI Shopping Guide</Link>
                   <Link href="/blog" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Journal & Updates</Link>
-                  <Link href="/guide" className="block py-1.5 text-[14px] font-medium text-slate-700 hover:text-[#D97706]">Documentation</Link>
                 </div>
               </div>
             </div>
@@ -253,7 +286,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 <svg className={`w-6 h-6 mr-4 ${isActive('/sell') ? 'text-[#D97706]' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 4v16m8-8H4" /></svg>
                 <span className="text-[15px] font-medium">Sell on Kabale</span>
               </Link>
-              
+
               <Link href="/invite" onClick={closeMenu} className={`flex items-center px-5 py-3 transition-colors ${isActive('/invite') ? 'text-[#D97706] bg-amber-50/50 font-bold' : 'text-slate-500 hover:bg-slate-50'}`}>
                 <svg className={`w-6 h-6 mr-4 ${isActive('/invite') ? 'text-[#D97706]' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                 <span className="text-[15px] font-medium">Refer & Earn Cash 💰</span>
@@ -273,9 +306,9 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
                 <svg className="w-6 h-6 mr-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
                 <span className="text-[15px] font-medium">Gadgets &lt; 50k</span>
               </Link>
-              <Link href="/category/student_item?max=100000" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-500 hover:bg-slate-50 transition-colors">
+              <Link href="/category/student_essentials?max=100000" onClick={closeMenu} className="flex items-center px-5 py-3 text-slate-500 hover:bg-slate-50 transition-colors">
                 <svg className="w-6 h-6 mr-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14l9-5-9-5-9 5 9 5z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14v7" /></svg>
-                <span className="text-[15px] font-medium">Student Gear &lt; 100k</span>
+                <span className="text-[15px] font-medium">Hostel Gear &lt; 100k</span>
               </Link>
             </div>
           </div>
@@ -299,6 +332,9 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             </div>
           </div>
 
+          {/* ============================================== */}
+          {/* DYNAMIC CATEGORIES LOOP - MOBILE UI            */}
+          {/* ============================================== */}
           <div className="border-b border-slate-100 py-2">
             <div className="flex justify-between items-center px-5 py-2 mb-1">
               <span className="text-[13px] font-black text-slate-900 tracking-wide uppercase">Our Categories</span>
@@ -306,30 +342,17 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
             </div>
 
             <div className="flex flex-col pb-2">
-              <Link href="/officialStore" onClick={closeMenu} className={`flex items-center px-5 py-3 transition-colors ${isActive('/officialStore') ? 'text-[#D97706] bg-amber-50/50 font-bold' : 'text-slate-500 hover:bg-slate-50'}`}>
-                <svg className={`w-6 h-6 mr-4 ${isActive('/officialStore') ? 'text-[#D97706]' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" /></svg>
-                <span className="text-[15px] font-medium">Official Store</span>
-              </Link>
-
-              <Link href="/ladies" onClick={closeMenu} className={`flex items-center px-5 py-3 transition-colors ${isActive('/ladies') ? 'text-[#D97706] bg-amber-50/50 font-bold' : 'text-slate-500 hover:bg-slate-50'}`}>
-                <svg className={`w-6 h-6 mr-4 ${isActive('/ladies') ? 'text-[#D97706]' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" /></svg>
-                <span className="text-[15px] font-medium">Ladies' Picks</span>
-              </Link>
-
-              <Link href="/category/student_item" onClick={closeMenu} className={`flex items-center px-5 py-3 transition-colors ${isActive('/category/student_item') ? 'text-[#D97706] bg-amber-50/50 font-bold' : 'text-slate-500 hover:bg-slate-50'}`}>
-                <svg className={`w-6 h-6 mr-4 ${isActive('/category/student_item') ? 'text-[#D97706]' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 14l9-5-9-5-9 5 9 5z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 14v7" /></svg>
-                <span className="text-[15px] font-medium">Student Market</span>
-              </Link>
-
-              <Link href="/category/electronics" onClick={closeMenu} className={`flex items-center px-5 py-3 transition-colors ${isActive('/category/electronics') ? 'text-[#D97706] bg-amber-50/50 font-bold' : 'text-slate-500 hover:bg-slate-50'}`}>
-                <svg className={`w-6 h-6 mr-4 ${isActive('/category/electronics') ? 'text-[#D97706]' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                <span className="text-[15px] font-medium">Electronics</span>
-              </Link>
-
-              <Link href="/category/agriculture" onClick={closeMenu} className={`flex items-center px-5 py-3 transition-colors ${isActive('/category/agriculture') ? 'text-[#D97706] bg-amber-50/50 font-bold' : 'text-slate-500 hover:bg-slate-50'}`}>
-                <svg className={`w-6 h-6 mr-4 ${isActive('/category/agriculture') ? 'text-[#D97706]' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" /></svg>
-                <span className="text-[15px] font-medium">Agriculture</span>
-              </Link>
+              {categoryLinks.map(({ label, href, Icon }) => (
+                <Link 
+                  key={label}
+                  href={href} 
+                  onClick={closeMenu} 
+                  className={`flex items-center px-5 py-3 transition-colors ${isActive(href) ? 'text-[#D97706] bg-amber-50/50 font-bold' : 'text-slate-500 hover:bg-slate-50'}`}
+                >
+                  <Icon className={`w-6 h-6 mr-4 ${isActive(href) ? 'text-[#D97706]' : 'text-slate-400'}`} />
+                  <span className="text-[15px] font-medium">{label}</span>
+                </Link>
+              ))}
             </div>
           </div>
 
