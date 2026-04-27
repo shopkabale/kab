@@ -5,18 +5,17 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
-import imageCompression from "browser-image-compression"; // <-- BROUGHT THIS BACK!
+import imageCompression from "browser-image-compression";
 
 export default function SellPage() {
   const router = useRouter();
   const { user, signIn, loading: authLoading } = useAuth();
 
-  const [loading, setLoading] = useState(false); // For the main submit button
-  const [isCompressing, setIsCompressing] = useState(false); // Specifically for the image upload box
+  const [loading, setLoading] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [successData, setSuccessData] = useState<{ publicId: string; title: string } | null>(null);
 
-  // Toggle for the description field
   const [showOptional, setShowOptional] = useState(false);
 
   const [imageFiles, setImageFiles] = useState<File[]>([]);
@@ -25,13 +24,16 @@ export default function SellPage() {
 
   const [formData, setFormData] = useState({
     title: "",
-    category: "electronics", // Default matches one of the new options below
+    category: "electronics", 
     price: "",
     quantity: "1", 
     condition: "used",
     description: "",
-    sellerPhone: "", // Left blank for manual entry to avoid TS errors
+    sellerPhone: "", 
   });
+
+  // 🔥 Identify if the user is uploading a Service vs a Product
+  const isService = formData.category === "services";
 
   useEffect(() => {
     if (user && showLoginModal) {
@@ -51,22 +53,20 @@ export default function SellPage() {
         return;
       }
 
-      setIsCompressing(true); // Trigger the loading spinner on the image box
+      setIsCompressing(true);
 
       try {
         const options = {
-          maxSizeMB: 0.8, // 800KB Max
+          maxSizeMB: 0.8, 
           maxWidthOrHeight: 1200,
           useWebWorker: true,
         };
 
-        // Compress all selected images
         const compressedFilesPromises = newFiles.map(file => imageCompression(file, options));
         const compressedFiles = await Promise.all(compressedFilesPromises);
 
         setImageFiles(prev => [...prev, ...compressedFiles]);
 
-        // Generate previews
         const newPreviews = compressedFiles.map(file => URL.createObjectURL(file));
         setImagePreviews(prev => [...prev, ...newPreviews]);
 
@@ -74,7 +74,7 @@ export default function SellPage() {
         console.error("Compression error:", error);
         alert("There was an issue processing your images. Please try again.");
       } finally {
-        setIsCompressing(false); // Turn off the spinner
+        setIsCompressing(false);
       }
     }
   };
@@ -88,7 +88,7 @@ export default function SellPage() {
     e.preventDefault();
 
     if (imageFiles.length === 0) {
-      alert("Please upload at least one photo of your item.");
+      alert(`Please upload at least one photo or flyer for your ${isService ? 'service' : 'item'}.`);
       return;
     }
 
@@ -149,7 +149,6 @@ export default function SellPage() {
 
         const uploadResults = await Promise.all(uploadPromises);
 
-        // Let Cloudinary convert to WebP/AVIF when serving to buyers
         imageUrls = uploadResults.map(data => {
           const originalUrl = data.secure_url;
           if (!originalUrl) return null;
@@ -157,6 +156,7 @@ export default function SellPage() {
         }).filter(url => url) as string[];
       }
 
+      // 🔥 Safely handle default values if it's a service
       const dbRes = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -164,8 +164,8 @@ export default function SellPage() {
           title: formData.title,
           category: formData.category,
           price: formData.price,
-          stock: Number(formData.quantity) || 1, 
-          condition: formData.condition || "used",
+          stock: isService ? 1 : (Number(formData.quantity) || 1), 
+          condition: isService ? "new" : (formData.condition || "used"),
           description: formData.description || "No description provided.",
           sellerPhone: formData.sellerPhone,
           images: imageUrls,
@@ -179,10 +179,7 @@ export default function SellPage() {
       if (dbData.success) {
         setSuccessData({ publicId: dbData.publicId, title: formData.title });
         setLoading(false);
-
-        // 🔥 BREAK CACHE WHEN NEW ITEM IS UPLOADED 🔥
         await fetch('/api/revalidate');
-
       } else {
         throw new Error(dbData.error || "Database rejected the product.");
       }
@@ -194,7 +191,6 @@ export default function SellPage() {
     }
   };
 
-  // --- SHARING FUNCTIONS ---
   const copyToClipboard = () => {
     if (!successData) return;
     const url = `${window.location.origin}/product/${successData.publicId}`;
@@ -205,7 +201,7 @@ export default function SellPage() {
   const shareToWhatsApp = () => {
     if (!successData) return;
     const url = `${window.location.origin}/product/${successData.publicId}`;
-    const text = `Hey! I'm selling my *${successData.title}* on Kabale Online. Check it out here: \n\n${url}`;
+    const text = `Hey! I'm offering *${successData.title}* on Kabale Online. Check it out here: \n\n${url}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
@@ -218,13 +214,15 @@ export default function SellPage() {
         <div className="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6 text-5xl shadow-sm border-4 border-white">
           🎉
         </div>
-        <h1 className="text-3xl font-extrabold text-slate-900 mb-2">Item Posted Successfully!</h1>
+        <h1 className="text-3xl font-extrabold text-slate-900 mb-2">
+          {isService ? "Service Posted Successfully!" : "Item Posted Successfully!"}
+        </h1>
         <p className="text-slate-600 mb-8 text-lg">
           Your <span className="font-bold text-slate-900">{successData.title}</span> is now live on Kabale Online. 
         </p>
 
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-4 mb-8">
-          <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">What's Next? Get Buyers Fast!</h2>
+          <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">What's Next? Get Clients Fast!</h2>
 
           <button 
             onClick={shareToWhatsApp}
@@ -238,19 +236,18 @@ export default function SellPage() {
             onClick={copyToClipboard}
             className="w-full bg-slate-100 text-slate-700 py-3.5 rounded-xl font-bold text-base hover:bg-slate-200 transition-colors flex justify-center items-center gap-2"
           >
-            📋 Copy Item Link
+            📋 Copy Link
           </button>
         </div>
 
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link 
             href={`/product/${successData.publicId}`}
             className="px-8 py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:border-[#D97706] hover:text-[#D97706] transition-colors flex-1 text-center"
           >
-            View Live Item
+            View Live Post
           </Link>
 
-          {/* 🔥 The Cache-Busting Dashboard Link */}
           <Link 
             href="/profile?refresh=true"
             className="px-8 py-3 bg-[#D97706] text-white font-bold rounded-xl hover:bg-amber-600 transition-colors flex-1 text-center shadow-md"
@@ -259,21 +256,18 @@ export default function SellPage() {
           </Link>
         </div>
 
-        {/* Made this a subtle text button to keep focus on the main actions */}
         <button 
           onClick={() => {
             setSuccessData(null);
-            setFormData({ ...formData, title: "", category: "electronics", price: "", quantity: "1", condition: "used", description: "", sellerPhone: "" });
+            setFormData({ ...formData, title: "", price: "", quantity: "1", condition: "used", description: "", sellerPhone: "" });
             setImageFiles([]);
             setImagePreviews([]);
             setShowOptional(false);
           }}
           className="mt-6 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors inline-block"
         >
-          + Post Another Item
+          + Post Another {isService ? 'Service' : 'Item'}
         </button>
-
-
       </div>
     );
   }
@@ -284,15 +278,21 @@ export default function SellPage() {
   return (
     <div className="max-w-2xl mx-auto py-8 px-4">
       <div className="mb-6 text-center">
-        <h1 className="text-3xl font-extrabold text-slate-900">Sell in 30 Seconds</h1>
-        <p className="text-slate-500 mt-2">Snap a pic, set a price, and post. It's that easy.</p>
+        <h1 className="text-3xl font-extrabold text-slate-900">
+          {isService ? "Offer Your Services" : "Sell in 30 Seconds"}
+        </h1>
+        <p className="text-slate-500 mt-2">
+          {isService ? "Upload a flyer, set your base price, and get clients." : "Snap a pic, set a price, and post. It's that easy."}
+        </p>
       </div>
 
       <form onSubmit={handleSubmitClick} className="space-y-4">
 
         {/* STEP 1: PHOTO UPLOAD */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <label className="block text-sm font-bold text-slate-900 mb-3">1. Upload Photos *</label>
+          <label className="block text-sm font-bold text-slate-900 mb-3">
+            {isService ? "1. Upload Banner or Flyer *" : "1. Upload Photos *"}
+          </label>
           <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
             {imagePreviews.map((preview, index) => (
               <div key={index} className="relative aspect-square rounded-xl border border-slate-200 overflow-hidden group">
@@ -330,18 +330,22 @@ export default function SellPage() {
         <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
 
           <div>
-            <label className="block text-sm font-bold text-slate-900 mb-2">2. What are you selling? *</label>
-            <input required type="text" placeholder="e.g. HP Laptop, Nike Shoes" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50" 
+            <label className="block text-sm font-bold text-slate-900 mb-2">
+              {isService ? "2. What service are you providing? *" : "2. What are you selling? *"}
+            </label>
+            <input required type="text" placeholder={isService ? "e.g. Laptop Repair, Graphic Design" : "e.g. HP Laptop, Nike Shoes"} className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50" 
               value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold text-slate-900 mb-2">Price (UGX) *</label>
+              <label className="block text-sm font-bold text-slate-900 mb-2">
+                {isService ? "Estimated Base Price (UGX) *" : "Price (UGX) *"}
+              </label>
               <input required type="number" placeholder="e.g. 50000" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50"
                 value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
             </div>
-            {/* 🔥 UPDATED CATEGORIES DROPDOWN HERE 🔥 */}
+            
             <div>
               <label className="block text-sm font-bold text-slate-900 mb-2">Category *</label>
               <select className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50"
@@ -361,27 +365,32 @@ export default function SellPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-bold text-slate-900 mb-2">Condition *</label>
-              <select className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50"
-                value={formData.condition} onChange={e => setFormData({...formData, condition: e.target.value})}>
-                <option value="used">Used / Second Hand</option>
-                <option value="new">Brand New</option>
-              </select>
+          {/* 🔥 HIDE CONDITION & QUANTITY IF IT IS A SERVICE */}
+          {!isService && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-bold text-slate-900 mb-2">Condition *</label>
+                <select className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50"
+                  value={formData.condition} onChange={e => setFormData({...formData, condition: e.target.value})}>
+                  <option value="used">Used / Second Hand</option>
+                  <option value="new">Brand New</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-slate-900 mb-2">Quantity *</label>
+                <input required type="number" min="1" placeholder="1" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50"
+                  value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-bold text-slate-900 mb-2">Quantity *</label>
-              <input required type="number" min="1" placeholder="1" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50"
-                value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
-            </div>
-          </div>
+          )}
 
           <div>
             <label className="block text-sm font-bold text-slate-900 mb-2">Your WhatsApp Number *</label>
             <input required type="tel" placeholder="e.g. 07..." className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50"
               value={formData.sellerPhone} onChange={e => setFormData({...formData, sellerPhone: e.target.value})} />
-            <p className="text-xs text-slate-500 mt-1">Buyers need this to message you directly.</p>
+            <p className="text-xs text-slate-500 mt-1">
+              {isService ? "Clients will message this number after paying the deposit." : "Buyers need this to message you directly."}
+            </p>
           </div>
         </div>
 
@@ -392,13 +401,15 @@ export default function SellPage() {
             onClick={() => setShowOptional(!showOptional)}
             className="w-full p-4 flex justify-between items-center bg-slate-50 hover:bg-slate-100 transition-colors font-bold text-slate-700"
           >
-            <span>{showOptional ? "▲ Hide Description" : "▼ Add Description (Optional)"}</span>
+            <span>{showOptional ? "▲ Hide Details" : "▼ Add Details (Optional)"}</span>
           </button>
 
           {showOptional && (
             <div className="p-4 sm:p-6 border-t border-slate-100">
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Product Description</label>
-              <textarea rows={3} placeholder="Any extra details, flaws, or features?" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none resize-none"
+              <label className="block text-sm font-semibold text-slate-900 mb-2">
+                {isService ? "Service Details" : "Product Description"}
+              </label>
+              <textarea rows={3} placeholder={isService ? "What exactly is included in your service?" : "Any extra details, flaws, or features?"} className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none resize-none"
                 value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
             </div>
           )}
@@ -412,7 +423,7 @@ export default function SellPage() {
                Publishing...
              </>
           ) : (
-            "Post Product Now"
+            isService ? "Post Service Now" : "Post Product Now"
           )}
         </button>
       </form>
@@ -424,7 +435,7 @@ export default function SellPage() {
             <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">🔐</div>
             <h2 className="text-2xl font-bold text-slate-900 mb-2">Almost there!</h2>
             <p className="text-slate-600 mb-8">
-              Sign in with Google to publish your product to the marketplace. Your form data is saved.
+              Sign in with Google to publish your {isService ? 'service' : 'product'} to the marketplace. Your form data is saved.
             </p>
             <div className="space-y-3">
               <button onClick={() => { setLoading(true); signIn(); }} 
