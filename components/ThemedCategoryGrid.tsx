@@ -4,20 +4,49 @@ import Link from "next/link";
 
 export default function ThemedCategoryGrid() {
   const categories = [
-    { name: "Verified Premium", href: "/officialStore", image: "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=500&q=80" },
-    { name: "Her Glow Up", href: "/ladies", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500&q=80" },
-    { name: "Tech & Gadgets", href: "/category/electronics", image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=80" },
-    { name: "Campus Survival", href: "/category/student_item", image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&q=80" },
-    { name: "Farm Fresh", href: "/category/agriculture", image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80" },
-    { name: "Just Dropped", href: "/products", image: "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=500&q=80" },
+    { 
+      name: "Mega Bundles", 
+      href: "/category/mega-bundles", 
+      image: "https://images.unsplash.com/photo-1513885045260-6b3086b24c17?w=500&q=80" // Wrapped boxes/shopping
+    },
+    { 
+      name: "Campus Life", 
+      href: "/category/campus-life", 
+      image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&q=80" // Backpack/study
+    },
+    { 
+      name: "Tech & Gadgets", 
+      href: "/category/tech-appliances", 
+      image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&q=80" // Laptop/desk
+    },
+    { 
+      name: "Farm Fresh", 
+      href: "/category/food-groceries", 
+      image: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=500&q=80" // Vegetables/basket
+    },
+    { 
+      name: "Beauty & Fashion", 
+      href: "/category/beauty-fashion", 
+      image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500&q=80" // Makeup/beauty
+    },
+    { 
+      name: "Repairs & Services", 
+      href: "/category/repairs-services", 
+      image: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=500&q=80" // Tools/technician
+    },
   ];
 
   return (
     // Clean "White Island" container
-    <section className="bg-white dark:bg-[#151515] rounded-md shadow-sm border border-slate-200 dark:border-slate-800 p-3 sm:p-4 mb-4 select-none">
+    <section className="bg-transparent sm:bg-white sm:dark:bg-[#151515] sm:rounded-md sm:shadow-sm sm:border border-slate-200 dark:border-slate-800 p-2 sm:p-4 mb-4 select-none">
       
+      {/* Centered Heading following UI Rules */}
+      <h2 style={{ color: '#1A1A1A' }} className="text-xl sm:text-2xl font-bold dark:text-white text-center mb-4 sm:mb-6 tracking-tight">
+        Browse by category
+      </h2>
+
       {/* Mobile: 3 columns (creates 2 rows for 6 items). 
-        Desktop (md and up): 6 columns (forces all 6 items into 1 single line).
+          Desktop (md and up): 6 columns (forces all 6 items into 1 single line).
       */}
       <div className="grid grid-cols-3 md:grid-cols-6 gap-3 sm:gap-4 w-full">
         {categories.map((cat) => (
@@ -33,7 +62,7 @@ export default function ThemedCategoryGrid() {
               />
             </div>
             
-            <span className="text-[10px] sm:text-xs md:text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-[#D97706] transition-colors text-center leading-tight px-1">
+            <span style={{ color: '#6B6B6B' }} className="text-[11px] sm:text-xs md:text-sm font-medium dark:text-slate-400 group-hover:text-[#FF6A00] dark:group-hover:text-[#FF6A00] transition-colors text-center leading-tight px-1">
               {cat.name}
             </span>
           </Link>
