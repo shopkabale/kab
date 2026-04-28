@@ -46,18 +46,17 @@ export default function ProductSection({
             )}
           </div>
 
-          {/* 5. The Conditional "See more" Button */}
+                    {/* 5. The Conditional "See more" Button */}
           {viewAllLink && (
             <Link 
               href={viewAllLink}
-              // Applied UI Rule: Dark gray with Orange hover for secondary links
-              className="text-xs sm:text-sm font-bold text-[#1A1A1A] dark:text-white hover:text-[#FF6A00] dark:hover:text-[#FF6A00] transition-colors whitespace-nowrap ml-4 flex items-center gap-1"
+              // STRICT UI RULE: Primary Action Orange to match horizontal scrollers
+              className="text-xs sm:text-sm font-bold text-[#FF6A00] hover:underline whitespace-nowrap ml-4 flex items-center gap-1"
             >
               See more <span aria-hidden="true">&rarr;</span>
             </Link>
           )}
-        </div>
-      )}
+
 
       {/* GRID CONTAINER */}
       <div className="p-3 sm:p-4">
