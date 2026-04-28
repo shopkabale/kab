@@ -18,27 +18,29 @@ import {
   Sparkles,
   Monitor,
   Sprout,
-  Shirt,
-  Sofa,
+  Package,
+  Wrench,
   Store,
   Filter,
   XCircle
 } from "lucide-react";
 
-// Reusable Navigation Arrays
+// ==========================================
+// NEW CATEGORY MAPPING
+// ==========================================
 const categories = [
-  { name: "Student Market", href: "/category/student_item", icon: GraduationCap },
   { name: "Official Store", href: "/officialStore", icon: Store },
-  { name: "Ladies' Picks", href: "/ladies", icon: Shirt },
-  { name: "Electronics", href: "/category/electronics", icon: Monitor },
-  { name: "Agriculture", href: "/category/agriculture", icon: Sprout },
-  { name: "Fashion & Apparel", href: "/category/fashion", icon: ShoppingBag },
-  { name: "Home & Furniture", href: "/category/home", icon: Sofa },
+  { name: "Tech & Appliances", href: "/category/tech-appliances", icon: Monitor },
+  { name: "Campus Life", href: "/category/campus-life", icon: GraduationCap },
+  { name: "Beauty & Fashion", href: "/category/beauty-fashion", icon: Sparkles },
+  { name: "Farm & Groceries", href: "/category/food-groceries", icon: Sprout },
+  { name: "Mega Bundles", href: "/category/mega-bundles", icon: Package },
+  { name: "Repairs & Services", href: "/category/repairs-services", icon: Wrench },
 ];
 
 const quickShopLinks = [
-  { name: "Gadgets < 50k", href: "/category/electronics?max=50000", icon: Wallet },
-  { name: "Student Gear < 100k", href: "/category/student_item?max=100000", icon: Wallet },
+  { name: "Gadgets < 50k", href: "/category/tech-appliances?max=50000", icon: Wallet },
+  { name: "Student Gear < 100k", href: "/category/campus-life?max=100000", icon: Wallet },
 ];
 
 function LeftSidebarContent() {
@@ -76,17 +78,17 @@ function LeftSidebarContent() {
           )}
         </div>
         <div className="flex flex-col flex-grow min-w-0">
-          <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+          <span style={{ color: '#6B6B6B' }} className="text-[9px] font-black uppercase tracking-[0.2em] mb-0.5 dark:text-slate-400">
             Welcome
           </span>
           {user ? (
-            <span className="text-sm font-black text-slate-900 dark:text-white truncate">
+            <span style={{ color: '#1A1A1A' }} className="text-sm font-black dark:text-white truncate">
               {user.displayName || "Shopper"}
             </span>
           ) : (
             <button 
               onClick={signIn} 
-              className="text-sm font-black text-[#D97706] hover:text-amber-500 transition-colors text-left outline-none truncate"
+              className="text-sm font-black text-[#FF6A00] hover:opacity-80 transition-colors text-left outline-none truncate"
             >
               Hello, Sign In
             </button>
@@ -96,9 +98,9 @@ function LeftSidebarContent() {
 
       {/* 2. ACTIVE FILTERS FEEDBACK (Conditionally Rendered) */}
       {hasActiveFilters && (
-        <div className="bg-amber-50 dark:bg-[#D97706]/10 border border-[#D97706]/30 rounded-md p-3 shadow-sm animate-in fade-in slide-in-from-top-2">
+        <div className="bg-orange-50 dark:bg-[#FF6A00]/10 border border-[#FF6A00]/30 rounded-md p-3 shadow-sm animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-[10px] font-black text-[#D97706] uppercase tracking-[0.1em] flex items-center gap-1.5">
+            <h3 className="text-[10px] font-black text-[#FF6A00] uppercase tracking-[0.1em] flex items-center gap-1.5">
               <Filter className="w-3 h-3" />
               Active Filters
             </h3>
@@ -113,12 +115,12 @@ function LeftSidebarContent() {
           <div className="flex flex-col gap-1">
             {maxPrice && (
               <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300">
-                Under <span className="font-bold text-[#D97706]">UGX {Number(maxPrice).toLocaleString()}</span>
+                Under <span className="font-bold text-[#FF6A00]">UGX {Number(maxPrice).toLocaleString()}</span>
               </p>
             )}
             {sortType && (
               <p className="text-[11px] font-medium text-slate-700 dark:text-slate-300 capitalize">
-                Sorted by: <span className="font-bold text-[#D97706]">{sortType}</span>
+                Sorted by: <span className="font-bold text-[#FF6A00]">{sortType}</span>
               </p>
             )}
           </div>
@@ -128,7 +130,7 @@ function LeftSidebarContent() {
       {/* 3. QUICK SHOP & BROWSE SMART CARD */}
       <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-md shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
-          <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em]">
+          <h3 style={{ color: '#6B6B6B' }} className="text-[10px] font-black dark:text-slate-500 uppercase tracking-[0.15em]">
             Quick Shop
           </h3>
         </div>
@@ -141,11 +143,11 @@ function LeftSidebarContent() {
                 href={link.href}
                 className={`px-4 py-2 text-[12px] font-semibold transition-all flex items-center gap-3 group outline-none ${
                   isExactMatch 
-                    ? "text-[#D97706] bg-amber-50 dark:bg-[#D97706]/10 border-l-2 border-[#D97706]" 
-                    : "text-slate-600 dark:text-slate-300 hover:text-[#D97706] hover:bg-slate-50 dark:hover:bg-slate-800 border-l-2 border-transparent"
+                    ? "text-[#FF6A00] bg-orange-50 dark:bg-[#FF6A00]/10 border-l-2 border-[#FF6A00]" 
+                    : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#FF6A00] hover:bg-slate-50 dark:hover:bg-slate-800 border-l-2 border-transparent"
                 }`}
               >
-                <link.icon className="w-4 h-4 text-slate-400 group-hover:text-[#D97706] transition-colors" />
+                <link.icon className={`w-4 h-4 transition-colors ${isExactMatch ? 'text-[#FF6A00]' : 'text-slate-400 group-hover:text-[#FF6A00]'}`} />
                 <span className="truncate">{link.name}</span>
               </Link>
             )
@@ -153,7 +155,7 @@ function LeftSidebarContent() {
         </div>
 
         <div className="px-4 py-2 border-y border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
-          <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em]">
+          <h3 style={{ color: '#6B6B6B' }} className="text-[10px] font-black dark:text-slate-500 uppercase tracking-[0.15em]">
             Smart Browse
           </h3>
         </div>
@@ -166,11 +168,11 @@ function LeftSidebarContent() {
                 href={link.href}
                 className={`px-4 py-2 text-[12px] font-semibold transition-all flex items-center gap-3 group outline-none ${
                   isActiveSort 
-                    ? "text-[#D97706] bg-amber-50 dark:bg-[#D97706]/10 border-l-2 border-[#D97706]" 
-                    : "text-slate-600 dark:text-slate-300 hover:text-[#D97706] hover:bg-slate-50 dark:hover:bg-slate-800 border-l-2 border-transparent"
+                    ? "text-[#FF6A00] bg-orange-50 dark:bg-[#FF6A00]/10 border-l-2 border-[#FF6A00]" 
+                    : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#FF6A00] hover:bg-slate-50 dark:hover:bg-slate-800 border-l-2 border-transparent"
                 }`}
               >
-                <link.icon className="w-4 h-4 text-slate-400 group-hover:text-[#D97706] transition-colors" />
+                <link.icon className={`w-4 h-4 transition-colors ${isActiveSort ? 'text-[#FF6A00]' : 'text-slate-400 group-hover:text-[#FF6A00]'}`} />
                 <span className="truncate">{link.name}</span>
               </Link>
             )
@@ -181,7 +183,7 @@ function LeftSidebarContent() {
       {/* 4. MAIN CATEGORIES CARD */}
       <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-md shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
-          <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em]">
+          <h3 style={{ color: '#6B6B6B' }} className="text-[10px] font-black dark:text-slate-500 uppercase tracking-[0.15em]">
             Categories
           </h3>
         </div>
@@ -194,12 +196,12 @@ function LeftSidebarContent() {
                 href={cat.href}
                 className={`px-4 py-2.5 text-sm font-semibold transition-all flex items-center justify-between group outline-none ${
                   isActive 
-                    ? "text-[#D97706] bg-amber-50 dark:bg-[#D97706]/10 border-r-4 border-[#D97706]" 
-                    : "text-slate-600 dark:text-slate-300 hover:text-[#D97706] hover:bg-slate-50 dark:hover:bg-slate-800"
+                    ? "text-[#FF6A00] bg-orange-50 dark:bg-[#FF6A00]/10 border-r-4 border-[#FF6A00]" 
+                    : "text-[#6B6B6B] dark:text-slate-300 hover:text-[#FF6A00] hover:bg-slate-50 dark:hover:bg-slate-800"
                 }`}
               >
                 <div className="flex items-center gap-3 truncate">
-                  <cat.icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-[#D97706]" : "text-slate-400 group-hover:text-[#D97706]"}`} />
+                  <cat.icon className={`w-4 h-4 shrink-0 transition-colors ${isActive ? "text-[#FF6A00]" : "text-slate-400 group-hover:text-[#FF6A00]"}`} />
                   <span className="truncate">{cat.name}</span>
                 </div>
                 <ChevronRight className={`w-3 h-3 shrink-0 transition-transform ${isActive ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-hover:translate-x-1"}`} />
@@ -212,11 +214,11 @@ function LeftSidebarContent() {
       {/* 5. PERMANENT MINI CART CARD */}
       <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-md shadow-sm overflow-hidden transition-all">
          <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center">
-          <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.15em]">
+          <h3 style={{ color: '#6B6B6B' }} className="text-[10px] font-black dark:text-slate-500 uppercase tracking-[0.15em]">
             Shopping Cart
           </h3>
           {cart.length > 0 && (
-            <span className="bg-[#D97706] text-white text-[10px] font-black px-2 py-0.5 rounded-sm shadow-sm">
+            <span className="bg-[#FF6A00] text-white text-[10px] font-black px-2 py-0.5 rounded-sm shadow-sm">
               {cart.length}
             </span>
           )}
@@ -225,7 +227,7 @@ function LeftSidebarContent() {
           {cart.length === 0 ? (
             <div className="text-center py-6 flex flex-col items-center">
               <ShoppingBag className="w-8 h-8 text-slate-200 dark:text-slate-700 mb-3" />
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.1em]">Cart is Empty</p>
+              <p style={{ color: '#6B6B6B' }} className="text-[10px] font-bold uppercase tracking-[0.1em]">Cart is Empty</p>
             </div>
           ) : (
             <div className="flex flex-col">
@@ -240,8 +242,8 @@ function LeftSidebarContent() {
                       )}
                     </div>
                     <div className="flex flex-col flex-grow min-w-0 pr-6">
-                      <p className="text-[11px] font-bold text-slate-700 dark:text-slate-200 truncate">{item.title}</p>
-                      <p className="text-[10px] font-black text-[#D97706] tracking-tight">
+                      <p style={{ color: '#1A1A1A' }} className="text-[11px] font-bold dark:text-slate-200 truncate">{item.title}</p>
+                      <p className="text-[10px] font-black text-[#FF6A00] tracking-tight">
                         UGX {item.price.toLocaleString()}
                       </p>
                     </div>
@@ -258,10 +260,10 @@ function LeftSidebarContent() {
 
               <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
                 <div className="flex justify-between items-center mb-4">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</span>
-                  <span className="text-sm font-black text-slate-900 dark:text-white">UGX {cartTotal.toLocaleString()}</span>
+                  <span style={{ color: '#6B6B6B' }} className="text-[10px] font-black uppercase tracking-widest">Total</span>
+                  <span style={{ color: '#1A1A1A' }} className="text-sm font-black dark:text-white">UGX {cartTotal.toLocaleString()}</span>
                 </div>
-                <Link href="/cart" className="w-full bg-[#D97706] hover:bg-amber-600 text-white text-[11px] font-black uppercase tracking-[0.2em] py-3.5 rounded-sm flex items-center justify-center transition-all shadow-sm active:scale-[0.98]">
+                <Link href="/cart" className="w-full bg-[#FF6A00] hover:opacity-90 text-white text-[11px] font-black uppercase tracking-[0.2em] py-3.5 rounded-sm flex items-center justify-center transition-all shadow-sm active:scale-[0.98]">
                   Complete Order
                 </Link>
               </div>
@@ -271,7 +273,7 @@ function LeftSidebarContent() {
       </div>
 
       {/* 6. MERCHANT CTA CARD */}
-      <Link href="/sell" className="group bg-slate-900 dark:bg-black border border-slate-800 rounded-md shadow-lg overflow-hidden relative p-5 flex flex-col hover:border-[#D97706] transition-all outline-none">
+      <Link href="/sell" className="group bg-slate-900 dark:bg-black border border-slate-800 rounded-md shadow-lg overflow-hidden relative p-5 flex flex-col hover:border-[#FF6A00] transition-all outline-none">
         <div className="absolute -right-2 -top-2 opacity-10 group-hover:opacity-20 transition-opacity">
           <PlusCircle className="w-20 h-20 text-white" />
         </div>
@@ -279,7 +281,7 @@ function LeftSidebarContent() {
         <p className="text-[11px] text-slate-400 font-medium mb-4 leading-relaxed">
           Reach thousands of local buyers instantly.
         </p>
-        <div className="flex items-center gap-2 text-[10px] font-black text-[#D97706] uppercase tracking-widest transition-colors group-hover:text-amber-400">
+        <div className="flex items-center gap-2 text-[10px] font-black text-[#FF6A00] uppercase tracking-widest transition-colors group-hover:text-orange-400">
           Open Shop
           <PlusCircle className="w-3 h-3" />
         </div>
@@ -288,8 +290,8 @@ function LeftSidebarContent() {
       {/* 7. PAYMENT SECURITY CARD */}
       <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-md p-4 flex flex-col gap-3">
         <div className="flex items-center gap-2">
-          <ShieldCheck className="text-[#D97706] w-4 h-4 shrink-0" />
-          <h3 className="text-[10px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">Secure Portal</h3>
+          <ShieldCheck className="text-[#FF6A00] w-4 h-4 shrink-0" />
+          <h3 style={{ color: '#1A1A1A' }} className="text-[10px] font-black dark:text-slate-200 uppercase tracking-wider">Secure Portal</h3>
         </div>
         <div className="flex flex-col gap-2.5">
            <div className="flex items-center gap-1.5">
@@ -297,8 +299,8 @@ function LeftSidebarContent() {
              <div className="h-4 w-6 rounded-sm bg-slate-200 dark:bg-slate-700 animate-ug-yellow"></div>
              <div className="h-4 w-6 rounded-sm bg-slate-200 dark:bg-slate-700 animate-ug-red"></div>
            </div>
-           <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold leading-relaxed">
-             Encrypted Mobile Money checkout powered by <span className="text-slate-900 dark:text-white">Kabale Online Pay</span>.
+           <p style={{ color: '#6B6B6B' }} className="text-[10px] dark:text-slate-400 font-semibold leading-relaxed">
+             Encrypted Mobile Money checkout powered by <span style={{ color: '#1A1A1A' }} className="dark:text-white">Kabale Online Pay</span>.
            </p>
         </div>
       </div>
@@ -343,7 +345,6 @@ function LeftSidebarContent() {
 }
 
 // Wrap in Suspense to prevent useSearchParams from de-opting the entire route to client-side rendering
-// NEW: Added the sticky top-4 self-start wrapper to enable sticky scrolling behavior
 export default function LeftSidebar() {
   return (
     <div className="sticky top-4 self-start w-full">
