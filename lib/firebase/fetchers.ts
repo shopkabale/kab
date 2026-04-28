@@ -13,7 +13,9 @@ export const getCachedHomepageData = unstable_cache(
     // 1. DEFINE ALL QUERIES
     const basePoolQ = query(productsRef, orderBy("views", "desc"), limit(50));
     const trendingQ = query(productsRef, orderBy("aiScore", "desc"), limit(10));
-    const officialQ = query(productsRef, where("isAdminUpload", "==", true), limit(12));
+    // Now it ONLY pulls items you specifically toggled with the Orange "Official Store" button
+const officialQ = query(productsRef, where("isOfficialStore", "==", true), limit(12));
+
     const approvedQ = query(productsRef, where("isApprovedQuality", "==", true), limit(12));
     const boostedQ = query(productsRef, where("isBoosted", "==", true), limit(6));
     const featuredQ = query(productsRef, where("isFeatured", "==", true), limit(6));
