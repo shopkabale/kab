@@ -37,9 +37,17 @@ export default async function Home() {
     })
     .slice(0, 10);
 
-  const serviceProviders = data.basePool.filter(p => 
+    // 1. Combine all fetched pools to make sure we don't miss anything (Official + Regular + Latest)
+  const allAvailableProducts = [...data.basePool, ...data.officialProducts, ...data.latestProducts];
+  
+  // 2. Remove any duplicates (since an item might be in both "Latest" and "Official")
+  const uniqueProducts = Array.from(new Map(allAvailableProducts.map(p => [p.id, p])).values());
+
+  // 3. Filter for services from the complete list!
+  const serviceProviders = uniqueProducts.filter(p => 
     p.category === "services" || (p.tags && p.tags.includes("service"))
   ).slice(0, 10);
+
 
   const bundlesProducts = data.basePool.filter(p => p.category === "bundles");
 
