@@ -5,7 +5,7 @@ export const revalidate = 3600;
 import { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation"; // 👈 Imported redirect
 import { getProductByPublicId, getProducts } from "@/lib/firebase/firestore";
 import ImageGallery from "@/components/ImageGallery";
 import ProductActions from "@/components/ProductActions";
@@ -73,6 +73,14 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
   if (!product) notFound();
 
+  // ==========================================
+  // 🚨 THE SERVICE REDIRECT 🚨
+  // ==========================================
+  if (product.category === "services") {
+    // If your service page route is different, just change "/service/" here
+    redirect(`/service/${params.publicId}`);
+  }
+
   const safeName = product.name || "Unnamed Item";
   const safePrice = Number(product.price) || 0;
   const safeCondition = product.condition || "used";
@@ -132,7 +140,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // 5. HELPER: RENDER DESCRIPTION AS BULLETS
   // ==========================================
   const renderDescription = (desc?: string) => {
-    if (!desc) return <p className="text-slate-600 text-sm">No description provided by the seller.</p>;
+    if (!desc) return <p className="text-[#6B6B6B] text-sm">No description provided by the seller.</p>;
 
     const lines = desc.split('\n').filter(line => line.trim() !== '');
 
@@ -141,7 +149,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         {lines.map((line, idx) => {
           const cleanLine = line.replace(/^[-*•]\s*/, '').trim();
           return (
-            <li key={idx} className="text-slate-600 text-sm leading-relaxed flex items-start gap-2">
+            <li key={idx} className="text-[#6B6B6B] text-sm leading-relaxed flex items-start gap-2">
               <span className="text-slate-400 mt-[2px]">•</span>
               <span>{cleanLine}</span>
             </li>
@@ -158,14 +166,14 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
       <RecentlyViewedTracker product={product} />   
 
       {/* BREADCRUMBS */}  
-      <div className="mb-6 flex items-center text-sm text-slate-500 font-medium overflow-x-auto whitespace-nowrap scrollbar-hide">  
-        <Link href="/" className="hover:text-[#D97706] transition-colors">Home</Link>  
+      <div className="mb-6 flex items-center text-sm text-[#6B6B6B] font-medium overflow-x-auto whitespace-nowrap scrollbar-hide">  
+        <Link href="/" className="hover:text-[#FF6A00] transition-colors">Home</Link>  
         <span className="mx-2">/</span>  
-        <Link href={`/category/${safeCategory}`} className="hover:text-[#D97706] transition-colors capitalize">  
+        <Link href={`/category/${safeCategory}`} className="hover:text-[#FF6A00] transition-colors capitalize">  
           {safeCategory.replace(/_/g, ' ')}  
         </Link>  
         <span className="mx-2">/</span>  
-        <span className="text-slate-900 truncate max-w-[200px]">{safeName}</span>  
+        <span className="text-[#1A1A1A] truncate max-w-[200px]">{safeName}</span>  
       </div>  
 
       {/* MODERN E-COMMERCE LAYOUT */}
@@ -183,20 +191,20 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         <div className="flex flex-col overflow-hidden">  
 
           {/* 1. E-COMMERCE TRUST BANNER (Full width, black text) */}
-          <div className="flex items-center justify-center sm:justify-start gap-3 md:gap-5 bg-orange-50 text-black text-xs md:text-sm font-extrabold py-3 px-4 rounded-md w-full mb-6 border border-orange-100 shadow-sm">
+          <div className="flex items-center justify-center sm:justify-start gap-3 md:gap-5 bg-orange-50 text-[#1A1A1A] text-xs md:text-sm font-extrabold py-3 px-4 rounded-md w-full mb-6 border border-orange-100 shadow-sm">
             <span className="flex items-center gap-1.5"><FaCheck className="text-green-600 text-base" /> Cash on Delivery</span>
             <span className="text-orange-200">|</span>
-            <span className="flex items-center gap-1.5"><FaTruck className="text-black text-base" /> Same Day Delivery</span>
+            <span className="flex items-center gap-1.5"><FaTruck className="text-[#1A1A1A] text-base" /> Same Day Delivery</span>
           </div>
 
           {/* 2. BRAND & BADGES (Kabale Online in normal black) */}
           <div className="flex flex-wrap items-center gap-2 mb-3">  
-            <span className="font-medium text-sm uppercase tracking-wider text-black mr-2">
+            <span className="font-medium text-sm uppercase tracking-wider text-[#1A1A1A] mr-2">
               {pAny.brand || "KABALE ONLINE"}
             </span>
 
             {isMainProductNew && (
-              <span className="bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-wider">
+              <span className="bg-[#1A1A1A] text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-wider">
                  <span className="w-1 h-1 rounded-full bg-green-400 animate-pulse"></span>
                  New
               </span>
@@ -220,26 +228,26 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
           {/* 4. PRICE (Strong black) & REVIEWS */}
           <div className="mb-2 flex items-end gap-3">  
-            <span className="text-4xl sm:text-5xl font-black text-black">  
+            <span className="text-4xl sm:text-5xl font-black text-[#1A1A1A]">  
               UGX {safePrice.toLocaleString()}  
             </span>  
           </div>  
 
-          <div className="flex items-center gap-2 mb-6 text-sm text-slate-500">
+          <div className="flex items-center gap-2 mb-6 text-sm text-[#6B6B6B]">
             {/* SVG Stars instead of emojis */}
-            <div className="flex text-[#D97706] gap-0.5">
+            <div className="flex text-[#FF6A00] gap-0.5">
               {[...Array(5)].map((_, i) => (
                 <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 24 24">
                   <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
                 </svg>
               ))}
             </div>
-            <a href="#reviews" className="hover:text-[#D97706] cursor-pointer transition-colors">(View customer reviews)</a>
+            <a href="#reviews" className="hover:text-[#FF6A00] cursor-pointer transition-colors">(View customer reviews)</a>
           </div>
 
           {/* INLINE MAKE OFFER LINK */}
           <div className="mb-6 border-t border-slate-100 pt-4">
-            <p className="text-sm text-slate-500 font-medium">
+            <p className="text-sm text-[#6B6B6B] font-medium">
               Do you think the price is high? {' '}
               <InlineOfferLink product={product} safeName={safeName} />
             </p>
@@ -263,10 +271,10 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </>
             ) : safeStock <= 5 ? (
               <>
-                <svg className="w-5 h-5 shrink-0 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 shrink-0 text-[#FF6A00]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span className="text-orange-500">Hurry: Only {safeStock} left!</span>
+                <span className="text-[#FF6A00]">Hurry: Only {safeStock} left!</span>
               </>
             ) : (
               <>
@@ -287,7 +295,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                 </svg>
                 Commitment Deposit Required: Secure Your Item
               </h4>
-              <p className="text-sm text-slate-900 leading-relaxed font-medium">
+              <p className="text-sm text-[#1A1A1A] leading-relaxed font-medium">
                 With {isLowStock ? `only ${safeStock} left in stock` : 'high demand'}, a small UGX {depositRequired.toLocaleString()} commitment deposit is required to confirm your intent, hold this unique item, and prevent duplicate claims.
               </p>
             </div>
@@ -313,13 +321,13 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                 </span>
               </summary>
               {/* FIX: Added break-words to prevent long links from breaking the layout */}
-              <div className="p-4 text-slate-600 bg-white break-words overflow-hidden">
+              <div className="p-4 text-[#6B6B6B] bg-white break-words overflow-hidden">
                 {renderDescription(product.description)}
               </div>
             </details>
 
             <details className="group" open>
-              <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-slate-800 hover:bg-slate-50 transition-colors text-sm">
+              <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-[#1A1A1A] hover:bg-slate-50 transition-colors text-sm">
                 Additional Information
                 <span className="transition group-open:rotate-180">
                   <svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
@@ -330,15 +338,15 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                   <tbody className="divide-y divide-slate-100">
                     <tr>
                       <th className="w-1/3 px-4 py-3 font-semibold text-slate-700 bg-slate-50/50">Condition</th>
-                      <td className="px-4 py-3 text-slate-900 capitalize">{safeCondition}</td>
+                      <td className="px-4 py-3 text-[#1A1A1A] capitalize">{safeCondition}</td>
                     </tr>
                     <tr>
                       <th className="w-1/3 px-4 py-3 font-semibold text-slate-700 bg-slate-50/50">Location</th>
-                      <td className="px-4 py-3 text-slate-900">Available locally in Kabale</td>
+                      <td className="px-4 py-3 text-[#1A1A1A]">Available locally in Kabale</td>
                     </tr>
                     <tr>
                       <th className="w-1/3 px-4 py-3 font-semibold text-slate-700 bg-slate-50/50">Sold By</th>
-                      <td className="px-4 py-3 text-slate-900 font-bold flex items-center gap-2">
+                      <td className="px-4 py-3 text-[#1A1A1A] font-bold flex items-center gap-2">
                         {product.sellerName || "Verified Seller"} 
                         {isAdmin && <span className="text-blue-600"><MdVerifiedUser /></span>}
                       </td>
@@ -349,7 +357,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </details>
 
             <details className="group" id="reviews">
-              <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-slate-800 hover:bg-slate-50 transition-colors text-sm">
+              <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-[#1A1A1A] hover:bg-slate-50 transition-colors text-sm">
                 Customer Reviews
                 <span className="transition group-open:rotate-180">
                   <svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
@@ -371,7 +379,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
       {relatedProducts.length > 0 && (  
         <div className="mt-16 mb-8 pt-10 border-t border-slate-200">  
           <div className="flex items-center justify-between mb-8">  
-            <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">You Might Also Like</h2>  
+            <h2 className="text-2xl font-black text-[#1A1A1A] uppercase tracking-tight">You Might Also Like</h2>  
           </div>  
 
           <div className="flex overflow-x-auto gap-4 pb-6 snap-x snap-mandatory scrollbar-hide">  
@@ -417,18 +425,18 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                     )}
 
                     {!isRelSold && (isRelApproved || isRelOfficial) && (
-                      <div className={`absolute bottom-0 left-0 ${isRelApproved ? 'bg-emerald-600' : 'bg-[#D97706]'} text-white text-[8px] font-bold px-1.5 py-1 leading-none rounded-tr-sm z-10 tracking-widest uppercase shadow-sm`}>
+                      <div className={`absolute bottom-0 left-0 ${isRelApproved ? 'bg-emerald-600' : 'bg-[#FF6A00]'} text-white text-[8px] font-bold px-1.5 py-1 leading-none rounded-tr-sm z-10 tracking-widest uppercase shadow-sm`}>
                          {isRelApproved ? 'Approved Quality' : 'Official Product'}
                       </div>
                     )}
                   </div>  
 
                   <div className="p-3 flex flex-col flex-grow">  
-                    <h3 className="text-xs sm:text-sm font-medium text-slate-600 line-clamp-2 leading-snug mb-1">  
+                    <h3 className="text-xs sm:text-sm font-medium text-[#6B6B6B] line-clamp-2 leading-snug mb-1">  
                       {relProduct.name}  
                     </h3>  
                     <div className="mt-auto pt-1 flex flex-col">  
-                      <span className={`text-sm sm:text-base font-black ${isRelSold ? 'text-slate-500' : 'text-slate-900'}`}>
+                      <span className={`text-sm sm:text-base font-black ${isRelSold ? 'text-slate-500' : 'text-[#1A1A1A]'}`}>
                         UGX {Number(relProduct.price).toLocaleString()}
                       </span>  
                     </div>  
@@ -439,7 +447,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
             <Link 
               href={`/category/${safeCategory}`} 
-              className="flex-none w-[150px] sm:w-[190px] snap-start bg-slate-50 rounded-md border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-500 p-4 hover:border-[#D97706] hover:text-[#D97706] transition-colors group"
+              className="flex-none w-[150px] sm:w-[190px] snap-start bg-slate-50 rounded-md border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-slate-500 p-4 hover:border-[#FF6A00] hover:text-[#FF6A00] transition-colors group"
             >
               <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center mb-3 transition-transform group-hover:scale-110">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
@@ -453,11 +461,11 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
       )}  
 
       <div className="mt-8 mb-12 border-t border-slate-200 pt-8 text-center px-4">
-        <p className="text-slate-600 text-sm font-medium">
+        <p className="text-[#6B6B6B] text-sm font-medium">
           Got something to sell?{' '}
           <Link 
             href="/sell" 
-            className="text-[#D97706] font-bold underline decoration-2 underline-offset-4"
+            className="text-[#FF6A00] font-bold underline decoration-2 underline-offset-4"
           >
             Start selling on Kabale Online
           </Link>
