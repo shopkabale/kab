@@ -4,11 +4,11 @@ import { useState } from "react";
 
 // The confidence-building trust signals
 const trustSignals = [
-  "🔒 100% Secure Escrow Payments via MTN & Airtel",
+  "🔒 100% Secure Online Payments via MTN & Airtel",
   "⚡ Fast Delivery Across Kabale & Kigezi",
   "🛡️ Buyer Protection Guarantee on All Orders",
   "✅ Verified Local Sellers & Official Brands",
-  "⭐ Trusted by Campus Students & Residents"
+  "⭐ Trusted by Campus Students & Residents in kabale"
 ];
 
 export default function WebsiteBanner({ onClose }: { onClose: () => void }) {
