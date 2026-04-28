@@ -45,10 +45,13 @@ export default async function Home() {
     })
     .slice(0, 10);
 
-  // Extract Services (for the new Services and Expert help section)
+  // Extract Services
   const serviceProviders = data.basePool.filter(p => 
     p.category === "services" || (p.tags && p.tags.includes("service"))
   ).slice(0, 10);
+
+  // Extract Bundles
+  const bundlesProducts = data.basePool.filter(p => p.category === "bundles");
 
   const officialProducts = shuffleArray(data.officialProducts);
   const approvedProducts = shuffleArray(data.approvedProducts);
@@ -58,11 +61,6 @@ export default async function Home() {
   const studentProducts = shuffleArray(data.studentProducts);
   const agriProducts = shuffleArray(data.agriProducts);
   const latestProducts = data.latestProducts;
-
-  // Using boosted products for "Bundles and packs"
-  const boostedProducts = data.boostedProducts
-    .filter((p: any) => p.boostExpiresAt && p.boostExpiresAt > now)
-    .sort((a: any, b: any) => b.boostedAt - a.boostedAt);
 
   // ==========================================
   // RENDER UI
@@ -118,11 +116,12 @@ export default async function Home() {
                 )}
 
                 {/* 4. Bundles and packs */}
-                {boostedProducts.length > 0 && (
+                {bundlesProducts.length > 0 && (
                   <HorizontalScroller 
                     title="Bundles and packs" 
                     subtitle="Curated collections to save you more"
-                    products={boostedProducts} 
+                    products={bundlesProducts} 
+                    viewAllLink="/category/mega-bundles"
                   />
                 )}
 
@@ -132,6 +131,7 @@ export default async function Home() {
                     title="Best deals in Kabale" 
                     subtitle="Affordable & popular items people love"
                     products={dealsProducts} 
+                    viewAllLink="/category/tech-appliances?max=50000"
                   />
                 )}
 
@@ -185,6 +185,7 @@ export default async function Home() {
                     title="Approved quality" 
                     subtitle="Shop safely from top-rated sellers"
                     products={approvedProducts.slice(0, 8)} 
+                    viewAllLink="/officialStore"
                   />
                 )}
 
@@ -227,18 +228,31 @@ export default async function Home() {
                   />
                 )}
 
-                {/* 16. Affiliate description (Custom block following UI Rules) */}
-                <div className="bg-white dark:bg-[#121212] rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-sm border border-slate-100 dark:border-slate-800">
-                  <h2 style={{ color: '#1A1A1A' }} className="text-2xl font-bold dark:text-white mb-3">
+                {/* 16. Affiliate description */}
+                <div className="bg-white dark:bg-[#121212] rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-sm border border-slate-100 dark:border-slate-800">
+                  <h2 style={{ color: '#1A1A1A' }} className="text-2xl font-bold dark:text-white mb-6 text-center">
                     Earn with Kabale Online
                   </h2>
-                  <p style={{ color: '#6B6B6B' }} className="text-base font-normal max-w-lg mb-6 dark:text-gray-400">
-                    Share your favorite products with friends and earn a commission on every successful sale. Turn your network into net worth today!
-                  </p>
+                  
+                  <div style={{ color: '#6B6B6B' }} className="flex flex-col gap-4 text-sm sm:text-base font-normal max-w-2xl mb-8 dark:text-gray-400">
+                    <p>
+                      <strong className="text-[#1A1A1A] dark:text-white font-bold">Official Items Only:</strong> Commissions apply only to verified official Kabale Online stock. Third-party seller items are excluded.
+                    </p>
+                    <p>
+                      <strong className="text-[#1A1A1A] dark:text-white font-bold">Infinite Cookie Window:</strong> Earn on both new AND returning customers. If they use your link, you get the cut.
+                    </p>
+                    <p>
+                      <strong className="text-[#1A1A1A] dark:text-white font-bold">Dynamic Scaling:</strong> Earn 10% of the cart value (Max 3,000 UGX). Micro-carts under 5k earn a flat 300 UGX.
+                    </p>
+                    <p>
+                      <strong className="text-[#1A1A1A] dark:text-white font-bold">Instant Unlocks:</strong> Your wallet is credited the exact moment the order delivery is marked successful by the admin.
+                    </p>
+                  </div>
+
                   <Link 
-                    href="/affiliate" 
-                    style={{ backgroundColor: '#FF6A00', color: '#FFFFFF' }} 
-                    className="px-8 py-3 rounded-full font-bold shadow-md hover:opacity-90 active:scale-95 transition-all"
+                    href="/invite" 
+                    style={{ backgroundColor: '#1A1A1A', color: '#FFFFFF' }} 
+                    className="px-8 py-3 rounded-full font-bold shadow-md hover:opacity-90 active:scale-95 transition-all w-full sm:w-auto text-center"
                   >
                     Join the Affiliate Program
                   </Link>
