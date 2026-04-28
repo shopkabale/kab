@@ -57,7 +57,7 @@ export default function HorizontalScroller({
   if (!products || products.length === 0) return null;
 
   return (
-    // The clean "White Island" container
+    // RESTORED BACKGROUND: Brought back the original white container & borders
     <section className="bg-white dark:bg-[#151515] rounded-md shadow-sm border border-slate-200 dark:border-slate-800 mb-4 overflow-hidden select-none">
 
       {/* CLEAN MINIMALIST HEADER */}
@@ -74,7 +74,7 @@ export default function HorizontalScroller({
         </div>
         {/* View All Link */}
         {viewAllLink && (
-          <Link href={viewAllLink} className="text-sm font-semibold text-[#D97706] hover:underline flex items-center gap-1 whitespace-nowrap outline-none">
+          <Link href={viewAllLink} className="text-sm font-semibold text-[#FF6A00] hover:underline flex items-center gap-1 whitespace-nowrap outline-none">
             See All
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
           </Link>
@@ -98,10 +98,11 @@ export default function HorizontalScroller({
 
             const titleStr = p.title || p.name || 'Product';
             const isShortTitle = titleStr.length <= 24;
-            const displayTitle = (!isSold && isShortTitle) ? `${titleStr} (Ready for delivery)` : titleStr;
+            const displayTitle = (!isSold && isShortTitle) ? `${titleStr} (Ready)` : titleStr;
 
             return (
-              <div key={p.id} className={`snap-start md:snap-align-none shrink-0 md:shrink w-[140px] sm:w-[170px] md:w-full group flex flex-col transition-all hover:shadow-md rounded-md p-1 sm:p-2 relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
+              // BIGGER CARDS: Maintained 160/200 width
+              <div key={p.id} className={`snap-start md:snap-align-none shrink-0 md:shrink w-[160px] sm:w-[200px] md:w-full group flex flex-col transition-all hover:shadow-md rounded-md p-1 sm:p-2 relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
                 <Link 
                   href={`/product/${p.publicId || p.id}`} 
                   className="flex flex-col flex-grow relative outline-none"
@@ -143,21 +144,23 @@ export default function HorizontalScroller({
                     )}
 
                     {!isSold && (isApproved || isOfficial) && (
-                      <div className={`absolute bottom-0 left-0 ${isApproved ? 'bg-emerald-600' : 'bg-[#D97706]'} text-white text-[8px] md:text-[9px] font-bold px-1.5 py-1 leading-none rounded-tr-sm z-10 tracking-widest uppercase shadow-sm`}>
+                      <div className={`absolute bottom-0 left-0 ${isApproved ? 'bg-emerald-600' : 'bg-[#FF6A00]'} text-white text-[8px] md:text-[9px] font-bold px-1.5 py-1 leading-none rounded-tr-sm z-10 tracking-widest uppercase shadow-sm`}>
                          {isApproved ? 'Approved Quality' : 'Official Product'}
                       </div>
                     )}
                   </div>
 
                   <div className="flex flex-col flex-grow">
-                    <div className="h-[36px] sm:h-[42px] mb-1 flex flex-col justify-start">
-                      <h3 className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 line-clamp-2 leading-snug transition-colors duration-200 group-hover:text-[#D97706]">
+                    <div className="mb-1 flex flex-col justify-start w-full">
+                      {/* LIGHT GRAY & SINGLE LINE: Added truncate and text-slate-400 */}
+                      <h3 className="text-xs sm:text-sm font-medium text-slate-400 dark:text-slate-500 truncate transition-colors duration-200 group-hover:text-[#FF6A00]">
                         {displayTitle}
                       </h3>
                     </div>
 
                     <div className="mt-auto pt-1 flex flex-col">
-                      <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-500' : 'text-slate-900 dark:text-white group-hover:text-[#D97706]'}`}>
+                      {/* GRAY PRICE: text-slate-500 */}
+                      <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-400' : 'text-slate-500 dark:text-slate-400 group-hover:text-[#FF6A00]'}`}>
                         UGX {Number(p.price).toLocaleString()}
                       </span>
                     </div>
@@ -167,10 +170,10 @@ export default function HorizontalScroller({
             );
           })}
 
-          {/* md:hidden added here to hide the extra view all card on desktop layouts */}
+          {/* VIEW ALL CARD (Hidden on Desktop) */}
           {viewAllLink && (
-            <div className="snap-start shrink-0 w-[140px] sm:w-[170px] md:hidden flex flex-col bg-slate-50 dark:bg-[#111] rounded-md border border-dashed border-slate-200 dark:border-slate-800 hover:border-[#D97706] transition-colors group p-1 sm:p-2">
-              <Link href={viewAllLink} className="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-[#D97706] min-h-[200px] outline-none">
+            <div className="snap-start shrink-0 w-[160px] sm:w-[200px] md:hidden flex flex-col bg-slate-50 dark:bg-[#111] rounded-md border border-dashed border-slate-200 dark:border-slate-800 hover:border-[#FF6A00] transition-colors group p-1 sm:p-2">
+              <Link href={viewAllLink} className="flex flex-col items-center justify-center w-full h-full text-slate-500 hover:text-[#FF6A00] min-h-[200px] outline-none">
                 <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center group-hover:scale-110 transition-transform mb-2">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
                 </div>
@@ -181,11 +184,11 @@ export default function HorizontalScroller({
         </div>
       </div>
 
-      {/* MOBILE SCROLL PROGRESS INDICATOR */}
+      {/* MOBILE SCROLL PROGRESS INDICATOR (The Pip) */}
       <div className={`w-full mt-1 md:hidden transition-opacity duration-300 ${isScrolling ? 'opacity-100' : 'opacity-0'}`}>
         <div className="w-full h-1 bg-slate-100 dark:bg-slate-800 relative overflow-hidden">
           <div 
-            className="absolute top-0 h-full w-[15%] sm:w-[10%] bg-[#D97706] rounded-full transition-all duration-75 ease-out" 
+            className="absolute top-0 h-full w-[15%] sm:w-[10%] bg-[#FF6A00] rounded-full transition-all duration-75 ease-out" 
             style={{ 
               left: `calc(${scrollRatio} * (100% - var(--dash-width)))`,
               '--dash-width': '15%'
