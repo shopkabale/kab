@@ -53,7 +53,6 @@ export default function ServiceScroller({ title, subtitle, products, viewAllLink
             return (
               <div 
                 key={p.id} 
-                // Notice the much wider card size to accommodate a 16:9 banner
                 className="group flex-none w-[240px] sm:w-[280px] snap-start bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col hover:shadow-lg transition-all relative"
               >
                 <Link 
@@ -61,8 +60,8 @@ export default function ServiceScroller({ title, subtitle, products, viewAllLink
                   className="flex flex-col flex-grow relative pointer-events-auto outline-none"
                   onClick={() => trackSelectItem({ id: p.id, name: titleStr, price: Number(p.price) || 0, category: "services" })}
                 >
-                  {/* WIDE IMAGE (16:9 Aspect Ratio) */}
-                  <div className="relative aspect-video w-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
+                  {/* WIDE IMAGE (Taller 4:3 Aspect Ratio) */}
+                  <div className="relative aspect-[4/3] w-full bg-slate-200 dark:bg-slate-800 overflow-hidden border-b border-slate-100 dark:border-slate-800">
                     {optimizedImage ? (
                       <Image 
                         src={optimizedImage} 
@@ -74,12 +73,6 @@ export default function ServiceScroller({ title, subtitle, products, viewAllLink
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-400 uppercase">No Image</div>
                     )}
-
-                    {/* PROFESSIONAL BADGE */}
-                    <div className="absolute top-2 left-2 bg-[#1A1A1A]/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 z-10 uppercase tracking-wide border border-white/10">
-                       <span className="w-1.5 h-1.5 rounded-full bg-green-400"></span>
-                       Available Now
-                    </div>
                   </div>
 
                   {/* SERVICE DETAILS */}
@@ -103,7 +96,6 @@ export default function ServiceScroller({ title, subtitle, products, viewAllLink
                         </span>
                       </div>
                       
-                      {/* FAKE BUTTON FOR UX AFFORDANCE */}
                       <span className="bg-slate-100 dark:bg-slate-800 text-[#1A1A1A] dark:text-white text-[10px] font-bold px-3 py-1.5 rounded-full group-hover:bg-[#FF6A00] group-hover:text-white transition-colors">
                         Book
                       </span>
