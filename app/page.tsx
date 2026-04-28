@@ -96,6 +96,16 @@ export default async function Home() {
                     viewAllLink="/category/electronics" 
                   />
                 )}
+{/* 15. New arrivals (Now Vertical Grid) */}
+                {latestProducts.length > 0 && (
+                  <ProductSection 
+                    title="New arrivals" 
+                    subtitle="Fresh drops just added to the market"
+                    products={latestProducts.slice(0, 12)} 
+                    viewAllLink="/products"
+                  />
+                )}
+
 
                 {bundlesProducts.length > 0 && (
                   <HorizontalScroller 
@@ -196,15 +206,7 @@ export default async function Home() {
                   />
                 )}
 
-                                {/* 15. New arrivals (Now Vertical Grid) */}
-                {latestProducts.length > 0 && (
-                  <ProductSection 
-                    title="New arrivals" 
-                    subtitle="Fresh drops just added to the market"
-                    products={latestProducts.slice(0, 12)} 
-                    viewAllLink="/products"
-                  />
-                )}
+                                
 
 
                 {/* UPDATED AFFILIATE BANNER - Direct & Short */}
