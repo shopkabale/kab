@@ -12,6 +12,8 @@ import ThemedCategoryGrid from "@/components/ThemedCategoryGrid";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import LeftSidebar from "@/components/LeftSidebar"; 
 import ServiceScroller from "@/components/ServiceScroller"; 
+import BundleScroller from "@/components/BundleScroller"; 
+
 
 
 const shuffleArray = (array: any[]) => {
@@ -113,14 +115,15 @@ export default async function Home() {
                   />
                 )}
 
-                {bundlesProducts.length > 0 && (
-                  <HorizontalScroller 
-                    title="Bundles and packs" 
-                    subtitle="Curated collections to save you more"
-                    products={bundlesProducts} 
-                    viewAllLink="/category/mega-bundles" 
-                  />
-                )}
+                             {bundlesProducts.length > 0 && (
+               <BundleScroller 
+                 title="Bundles and packs" 
+                 subtitle="Curated collections to save you more"
+                 products={bundlesProducts} 
+                 viewAllLink="/category/mega-bundles" 
+               />
+             )}
+
 
                 {dealsProducts.length > 0 && (
                   <HorizontalScroller 
