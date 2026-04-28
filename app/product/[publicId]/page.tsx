@@ -72,13 +72,12 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const product = await getProductByPublicId(params.publicId);
 
   if (!product) notFound();
-
   // ==========================================
   // 🚨 THE SERVICE REDIRECT 🚨
   // ==========================================
   if (product.category === "services") {
-    // If your service page route is different, just change "/service/" here
-    redirect(`/service/${params.publicId}`);
+    // Change params.publicId to product.id so the LONG ID becomes the main URL
+    redirect(`/service/${product.id}`); 
   }
 
   const safeName = product.name || "Unnamed Item";
