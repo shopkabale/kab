@@ -53,22 +53,23 @@ export default function ServiceScroller({ title, subtitle, products, viewAllLink
             return (
               <div 
                 key={p.id} 
-                className="group flex-none w-[240px] sm:w-[280px] snap-start bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col hover:shadow-lg transition-all relative"
+                className="group flex-none w-[200px] sm:w-[240px] snap-start bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col hover:shadow-lg transition-all relative"
               >
                 <Link 
                   href={`/service/${p.publicId || p.id}`} 
                   className="flex flex-col flex-grow relative pointer-events-auto outline-none"
                   onClick={() => trackSelectItem({ id: p.id, name: titleStr, price: Number(p.price) || 0, category: "services" })}
                 >
-                  {/* WIDE IMAGE (Taller 4:3 Aspect Ratio) */}
-                  <div className="relative aspect-[4/3] w-full bg-slate-200 dark:bg-slate-800 overflow-hidden border-b border-slate-100 dark:border-slate-800">
+                  {/* WIDE IMAGE (Slim & Tall Portrait Aspect Ratio) */}
+                  <div className="relative aspect-[3/4] w-full bg-slate-100 dark:bg-slate-800 overflow-hidden border-b border-slate-100 dark:border-slate-800">
                     {optimizedImage ? (
                       <Image 
                         src={optimizedImage} 
                         alt={titleStr} 
                         fill 
-                        sizes="(max-width: 768px) 240px, 280px" 
-                        className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                        sizes="(max-width: 768px) 200px, 240px" 
+                        // Changed from object-cover to object-contain so NO part of the poster is ever cut off
+                        className="object-contain group-hover:scale-105 transition-transform duration-500" 
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-400 uppercase">No Image</div>
@@ -96,7 +97,7 @@ export default function ServiceScroller({ title, subtitle, products, viewAllLink
                         </span>
                       </div>
                       
-                      <span className="bg-slate-100 dark:bg-slate-800 text-[#1A1A1A] dark:text-white text-[10px] font-bold px-3 py-1.5 rounded-full group-hover:bg-[#FF6A00] group-hover:text-white transition-colors">
+                      <span className="bg-[#FF6A00] text-white text-[10px] font-bold px-4 py-1.5 rounded-full hover:opacity-90 transition-opacity">
                         Book
                       </span>
                     </div>
