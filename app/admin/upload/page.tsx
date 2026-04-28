@@ -38,6 +38,9 @@ function AdminUploadContent() {
     sellerPhone: "", 
   });
 
+  // Check if we are uploading a service
+  const isService = formData.category === "services";
+
   // ============================================================================
   // PRE-FILL DATA IF EDITING
   // ============================================================================
@@ -87,7 +90,7 @@ function AdminUploadContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           productName: formData.title,
-          features: `Category: ${formData.category}, Condition: ${formData.condition}`
+          features: `Category: ${formData.category}, Condition: ${isService ? 'N/A' : formData.condition}`
         })
       });
 
@@ -114,21 +117,21 @@ function AdminUploadContent() {
   // SECURITY CHECK
   // ============================================================================
   if (authLoading || initialFetchLoading) {
-    return <div className="py-20 text-center font-bold text-slate-500 animate-pulse">Loading Admin Portal...</div>;
+    return <div className="py-20 text-center font-bold text-[#6B6B6B] animate-pulse">Loading Admin Portal...</div>;
   }
 
   if (!user || user.role !== "admin") {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center">
         <div className="w-20 h-20 bg-red-100 text-red-600 rounded-full flex items-center justify-center text-4xl mb-6">⛔</div>
-        <h1 className="text-3xl font-black text-slate-900 mb-2">Access Denied</h1>
-        <Link href="/" className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors mt-4">Return to Homepage</Link>
+        <h1 style={{ color: '#1A1A1A' }} className="text-3xl font-black mb-2">Access Denied</h1>
+        <Link href="/" style={{ backgroundColor: '#1A1A1A' }} className="text-white px-8 py-3 rounded-xl font-bold hover:bg-black transition-colors mt-4">Return to Homepage</Link>
       </div>
     );
   }
 
   // ============================================================================
-  // IMAGE HANDLING & CLIENT-SIDE COMPRESSION
+  // IMAGE HANDLING
   // ============================================================================
   const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -142,7 +145,7 @@ function AdminUploadContent() {
 
       try {
         const options = {
-          maxSizeMB: 0.8, // 800KB Max
+          maxSizeMB: 0.8,
           maxWidthOrHeight: 1200,
           useWebWorker: true,
         };
@@ -171,7 +174,7 @@ function AdminUploadContent() {
   };
 
   // ============================================================================
-  // UPLOAD / UPDATE LOGIC
+  // UPLOAD LOGIC
   // ============================================================================
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -219,7 +222,6 @@ function AdminUploadContent() {
 
         const uploadResults = await Promise.all(uploadPromises);
 
-        // Cloudinary URL Optimization: Auto format, quality, and width capping
         newlyUploadedUrls = uploadResults.map(data => {
           const originalUrl = data.secure_url;
           if (!originalUrl) return null;
@@ -239,7 +241,7 @@ function AdminUploadContent() {
           category: formData.category,
           price: formData.price,
           stock: Number(formData.quantity),
-          condition: formData.condition,
+          condition: isService ? "N/A" : formData.condition, // Force N/A for services
           description: formData.description,
           metaDescription: formData.metaDescription, 
           sellerPhone: formData.sellerPhone,
@@ -256,7 +258,6 @@ function AdminUploadContent() {
       try {
         dbData = rawText ? JSON.parse(rawText) : {};
       } catch (parseError) {
-        console.error("Failed to parse server response. Raw text:", rawText);
         throw new Error(`Server returned an unexpected format (Status ${dbRes.status}).`);
       }
 
@@ -297,15 +298,15 @@ function AdminUploadContent() {
   return (
     <div className="max-w-4xl mx-auto py-6 px-4 sm:px-6">
 
-      <div className="bg-slate-900 rounded-3xl p-8 mb-6 text-white flex items-center justify-between shadow-lg">
+      <div style={{ backgroundColor: '#1A1A1A' }} className="rounded-3xl p-8 mb-6 text-white flex items-center justify-between shadow-lg">
         <div>
-          <span className="bg-[#D97706] text-white text-[10px] uppercase font-black px-3 py-1 rounded-full tracking-widest mb-3 inline-block">
+          <span style={{ backgroundColor: '#FF6A00' }} className="text-white text-[10px] uppercase font-black px-3 py-1 rounded-full tracking-widest mb-3 inline-block">
             {editPublicId ? "Update Mode" : "Secure Admin Portal"}
           </span>
           <h1 className="text-3xl font-extrabold mb-1">
             {editPublicId ? "Edit Official Item" : "Upload Official Inventory"}
           </h1>
-          {editPublicId && <p className="text-slate-400">Editing Product ID: {editPublicId}</p>}
+          {editPublicId && <p style={{ color: '#6B6B6B' }}>Editing Product ID: {editPublicId}</p>}
         </div>
       </div>
 
@@ -322,68 +323,79 @@ function AdminUploadContent() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-8">
-        {/* DETAILS SECTION */}
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-          <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4">Product Details</h2>
+          <h2 style={{ color: '#1A1A1A' }} className="text-xl font-bold border-b border-slate-100 pb-4">Product Details</h2>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">Product Title *</label>
-            <input required type="text" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow" 
-              value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+            <label style={{ color: '#1A1A1A' }} className="block text-sm font-semibold mb-2">
+              {isService ? "Service / Trade Name *" : "Product Title *"}
+            </label>
+            <input required type="text" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none transition-shadow" 
+              value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} 
+              placeholder={isService ? "e.g., Professional Plumber, Event Photography..." : ""} />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                                    <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Category *</label>
-              <select className="w-full rounded-xl border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
+            <div>
+              <label style={{ color: '#1A1A1A' }} className="block text-sm font-semibold mb-2">Category *</label>
+              <select className="w-full rounded-xl border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#FF6A00] outline-none transition-shadow"
                 value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                <option value="bundles">Fresher Bundles & Kits</option>
-                <option value="student_essentials">Hostel Essentials</option>
-                <option value="groceries">Supermarket & Groceries</option>
-                <option value="stationery">Stationery & Academics</option>
-                <option value="electronics">Tech Accessories</option>
-                <option value="services">Student Services</option>
-                <option value="ladies_picks">Ladies' Picks</option>
-                <option value="beauty">Beauty & Hygiene</option>
-                <option value="watches">Watches</option>
-                <option value="gifts">Gifts & Fun</option>
-                <option value="agriculture">Agriculture</option>
+                <option value="electronics">Tech, Gadgets & Appliances</option>
+                <option value="bundles">Mega Bundles & Packs</option>
+                <option value="student_item">Campus Life & Study Gear</option>
+                <option value="agriculture">Farm Fresh & Groceries</option>
+                <option value="fashion">Beauty, Health & Fashion</option>
+                <option value="watches">Watches & Accessories</option>
+                {/* The magic trigger option */}
+                <option value="services">Expert Repairs & Services</option>
               </select>
             </div>
 
+            <div>
+              <label style={{ color: '#1A1A1A' }} className="block text-sm font-semibold mb-2">
+                {isService ? "Total Service Fee (UGX) *" : "Price (UGX) *"}
+              </label>
+              <input required type="number" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none transition-shadow"
+                value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
+              {/* Dynamic Deposit Display for Services */}
+              {isService && formData.price && (
+                <p style={{ color: '#FF6A00' }} className="text-[10px] font-bold mt-1.5 flex items-center gap-1">
+                  <span>ℹ️</span> Escrow Deposit to book: UGX {(Number(formData.price) * 0.1).toLocaleString()}
+                </p>
+              )}
+            </div>
 
             <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Price (UGX) *</label>
-              <input required type="number" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
-                value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Quantity in Stock *</label>
-              <input required type="number" min="0" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
+              <label style={{ color: '#1A1A1A' }} className="block text-sm font-semibold mb-2">
+                {isService ? "Available Slots *" : "Quantity in Stock *"}
+              </label>
+              <input required type="number" min="0" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none transition-shadow"
                 value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Condition *</label>
-              <select className="w-full rounded-xl border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
-                value={formData.condition} onChange={e => setFormData({...formData, condition: e.target.value})}>
-                <option value="new">Brand New</option>
-                <option value="used">Used / Second Hand</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-900 mb-2">Official WhatsApp Number *</label>
-              <input required type="tel" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none transition-shadow"
+            {!isService && (
+              <div>
+                <label style={{ color: '#1A1A1A' }} className="block text-sm font-semibold mb-2">Condition *</label>
+                <select className="w-full rounded-xl border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#FF6A00] outline-none transition-shadow"
+                  value={formData.condition} onChange={e => setFormData({...formData, condition: e.target.value})}>
+                  <option value="new">Brand New</option>
+                  <option value="used">Used / Second Hand</option>
+                </select>
+              </div>
+            )}
+            {/* Takes full width if Condition is hidden */}
+            <div className={isService ? "col-span-1 sm:col-span-2" : ""}>
+              <label style={{ color: '#1A1A1A' }} className="block text-sm font-semibold mb-2">Official WhatsApp Number *</label>
+              <input required type="tel" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none transition-shadow"
                 value={formData.sellerPhone} onChange={e => setFormData({...formData, sellerPhone: e.target.value})} />
             </div>
           </div>
 
-          {/* AI GENERATION UI */}
           <div className="pt-4 border-t border-slate-100">
             <div className="flex justify-between items-end mb-2">
-              <label className="block text-sm font-semibold text-slate-900">Description *</label>
+              <label style={{ color: '#1A1A1A' }} className="block text-sm font-semibold">Description *</label>
               <button 
                 type="button" 
                 onClick={handleGenerateAI}
@@ -393,24 +405,22 @@ function AdminUploadContent() {
                 {isGeneratingAi ? "Generating..." : "✨ Auto-Write with AI"}
               </button>
             </div>
-            <textarea required rows={5} className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none resize-none transition-shadow"
-              value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Full product description..." />
+            <textarea required rows={5} className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none resize-none transition-shadow"
+              value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder={isService ? "Describe the service offered..." : "Full product description..."} />
           </div>
 
-          {/* SEO META DESCRIPTION FIELD */}
           <div>
-            <label className="block text-sm font-semibold text-slate-900 mb-2">SEO Meta Description (for Google Search)</label>
-            <textarea rows={2} maxLength={160} className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-indigo-500 outline-none resize-none transition-shadow text-sm"
+            <label style={{ color: '#1A1A1A' }} className="block text-sm font-semibold mb-2">SEO Meta Description</label>
+            <textarea rows={2} maxLength={160} className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none resize-none transition-shadow text-sm"
               value={formData.metaDescription} onChange={e => setFormData({...formData, metaDescription: e.target.value})} placeholder="Short snippet for Google (under 160 characters)..." />
-            <p className="text-right text-xs text-slate-500 mt-1">{formData.metaDescription.length} / 160</p>
+            <p style={{ color: '#6B6B6B' }} className="text-right text-xs mt-1">{formData.metaDescription.length} / 160</p>
           </div>
         </div>
 
-        {/* DYNAMIC IMAGE UPLOAD SECTION */}
         <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-sm space-y-6">
           <div className="flex justify-between items-center border-b border-slate-100 pb-4">
-            <h2 className="text-xl font-bold text-slate-900">Manage Images</h2>
-            <span className="text-sm font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full">{existingImages.length + imageFiles.length} / 5</span>
+            <h2 style={{ color: '#1A1A1A' }} className="text-xl font-bold">Manage Images</h2>
+            <span style={{ color: '#6B6B6B' }} className="text-sm font-bold bg-slate-100 px-3 py-1 rounded-full">{existingImages.length + imageFiles.length} / 5</span>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
@@ -422,9 +432,9 @@ function AdminUploadContent() {
             ))}
 
             {imagePreviews.map((preview, index) => (
-              <div key={`new-${index}`} className="relative aspect-square rounded-xl border-4 border-[#D97706] overflow-hidden group shadow-sm">
+              <div key={`new-${index}`} className="relative aspect-square rounded-xl border-4 border-[#FF6A00] overflow-hidden group shadow-sm">
                 <Image src={preview} alt="new preview" fill className="object-cover" />
-                <div className="absolute bottom-0 left-0 w-full bg-[#D97706] text-white text-[10px] text-center py-1 font-bold">NEW</div>
+                <div className="absolute bottom-0 left-0 w-full bg-[#FF6A00] text-white text-[10px] text-center py-1 font-bold">NEW</div>
                 <button type="button" onClick={() => removeNewImage(index)} className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
               </div>
             ))}
@@ -435,15 +445,15 @@ function AdminUploadContent() {
                 className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-colors ${
                   isCompressing 
                     ? "border-slate-300 bg-slate-50 cursor-not-allowed" 
-                    : "border-slate-300 cursor-pointer hover:bg-amber-50 hover:border-[#D97706]"
+                    : "border-slate-300 cursor-pointer hover:bg-orange-50 hover:border-[#FF6A00]"
                 }`}
               >
                 {isCompressing ? (
-                  <div className="w-6 h-6 border-2 border-[#D97706] border-t-transparent rounded-full animate-spin mb-1"></div>
+                  <div className="w-6 h-6 border-2 border-[#FF6A00] border-t-transparent rounded-full animate-spin mb-1"></div>
                 ) : (
-                  <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mb-2"><span className="text-xl text-slate-500">+</span></div>
+                  <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mb-2"><span style={{ color: '#6B6B6B' }} className="text-xl">+</span></div>
                 )}
-                <span className="text-xs text-slate-600 font-bold">
+                <span style={{ color: '#6B6B6B' }} className="text-xs font-bold">
                   {isCompressing ? "Optimizing..." : "Add Photo"}
                 </span>
               </div>
@@ -452,15 +462,14 @@ function AdminUploadContent() {
           <input type="file" ref={fileInputRef} className="hidden" multiple accept="image/*" onChange={handleImageSelect} disabled={isCompressing} />
         </div>
 
-        {/* DYNAMIC SUBMIT BUTTON */}
-        <button disabled={loading || isCompressing} type="submit" className="w-full bg-[#D97706] text-white py-5 rounded-xl font-black text-xl hover:bg-amber-600 transition-all hover:-translate-y-1 hover:shadow-xl disabled:opacity-70 disabled:hover:translate-y-0 flex justify-center items-center gap-3">
+        <button disabled={loading || isCompressing} type="submit" style={{ backgroundColor: '#FF6A00' }} className="w-full text-white py-5 rounded-xl font-black text-xl hover:opacity-90 transition-all hover:-translate-y-1 hover:shadow-xl disabled:opacity-70 disabled:hover:translate-y-0 flex justify-center items-center gap-3">
           {loading ? (
              <>
                <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-               {editPublicId ? "Saving Updates..." : "Uploading Official Product..."}
+               {editPublicId ? "Saving Updates..." : "Publishing to Network..."}
              </>
           ) : (
-            editPublicId ? "Save Product Changes" : "Publish to Official Store"
+            editPublicId ? "Save Changes" : (isService ? "Publish Service" : "Publish to Official Store")
           )}
         </button>
       </form>
@@ -468,13 +477,12 @@ function AdminUploadContent() {
   );
 }
 
-// Wrap the Content in a Suspense boundary to prevent Next.js client-side exceptions
 export default function AdminUploadPage() {
   return (
     <Suspense fallback={
       <div className="min-h-[60vh] flex flex-col items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#D97706] border-t-transparent rounded-full animate-spin"></div>
-        <p className="mt-4 text-slate-500 font-bold animate-pulse">Loading secure portal...</p>
+        <div className="w-10 h-10 border-4 border-[#FF6A00] border-t-transparent rounded-full animate-spin"></div>
+        <p style={{ color: '#6B6B6B' }} className="mt-4 font-bold animate-pulse">Loading secure portal...</p>
       </div>
     }>
       <AdminUploadContent />
