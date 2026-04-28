@@ -196,15 +196,16 @@ export default async function Home() {
                   />
                 )}
 
-                {/* ADDED VIEW MORE LINK HERE */}
+                                {/* 15. New arrivals (Now Vertical Grid) */}
                 {latestProducts.length > 0 && (
-                  <HorizontalScroller 
+                  <ProductSection 
                     title="New arrivals" 
                     subtitle="Fresh drops just added to the market"
-                    products={latestProducts} 
+                    products={latestProducts.slice(0, 12)} 
                     viewAllLink="/products"
                   />
                 )}
+
 
                 {/* UPDATED AFFILIATE BANNER - Direct & Short */}
                 <div className="bg-white dark:bg-[#121212] rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-sm border border-slate-100 dark:border-slate-800">
