@@ -80,7 +80,8 @@ export default function OfficialProductsManager() {
   // ------------------------------------------------------------------
   const toggleBadge = async (
     productId: string, 
-    field: "isOfficialStore" | "isApprovedQuality" | "ladies_home" | "watch_home" | "isHero", 
+    // 🔥 Added "tech_home" to the allowed fields here
+    field: "isOfficialStore" | "isApprovedQuality" | "ladies_home" | "watch_home" | "isHero" | "tech_home", 
     currentValue: boolean
   ) => {
     const newValue = !currentValue;
@@ -115,10 +116,10 @@ export default function OfficialProductsManager() {
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900">Official Store Manager</h1>
-          <p className="text-slate-500 font-medium mt-1">Manage Kabale Online's internal inventory & Badges</p>
+          <h1 className="text-3xl font-extrabold text-[#1A1A1A]">Official Store Manager</h1>
+          <p className="text-[#6B6B6B] font-medium mt-1">Manage Kabale Online's internal inventory & Badges</p>
         </div>
-        <Link href="/admin/upload" className="bg-[#D97706] text-white px-6 py-3 rounded-xl font-bold hover:bg-amber-600 transition-all shadow-md flex items-center justify-center gap-2 w-full sm:w-auto shrink-0">
+        <Link href="/admin/upload" className="bg-[#FF6A00] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-all shadow-md flex items-center justify-center gap-2 w-full sm:w-auto shrink-0">
           <span>+</span> Add New Item
         </Link>
       </div>
@@ -126,7 +127,8 @@ export default function OfficialProductsManager() {
       {/* PRODUCTS TABLE */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1250px]">
+          {/* Increased min-w to accommodate the new column without squishing */}
+          <table className="w-full text-left border-collapse min-w-[1350px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
                 <th className="p-4 px-6">Product</th>
@@ -137,17 +139,18 @@ export default function OfficialProductsManager() {
                 <th className="p-4 px-6 text-center">Approved Quality</th>
                 <th className="p-4 px-6 text-center">Ladies Home</th>
                 <th className="p-4 px-6 text-center">Watch Home</th>
+                <th className="p-4 px-6 text-center">Tech Home</th> {/* 🔥 NEW HEADER */}
                 <th className="p-4 px-6 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                  <tr>
-                   <td colSpan={9} className="px-6 py-12 text-center text-slate-500">Loading official inventory...</td>
+                   <td colSpan={10} className="px-6 py-12 text-center text-slate-500">Loading official inventory...</td>
                  </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-slate-500 font-medium">No official products found.</td>
+                  <td colSpan={10} className="px-6 py-12 text-center text-slate-500 font-medium">No official products found.</td>
                 </tr>
               ) : (
                 products.map((product) => (
@@ -162,12 +165,12 @@ export default function OfficialProductsManager() {
                           )}
                         </div>
                         <div>
-                          <p className="font-bold text-slate-900 line-clamp-1">{product.name || product.title}</p>
-                          <p className="text-xs text-slate-500 font-mono mt-0.5">{product.publicId || product.id.slice(0,8)}</p>
+                          <p className="font-bold text-[#1A1A1A] line-clamp-1">{product.name || product.title}</p>
+                          <p className="text-xs text-[#6B6B6B] font-mono mt-0.5">{product.publicId || product.id.slice(0,8)}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="p-4 px-6 font-bold text-slate-900 whitespace-nowrap">
+                    <td className="p-4 px-6 font-bold text-[#1A1A1A] whitespace-nowrap">
                       UGX {Number(product.price).toLocaleString()}
                     </td>
                     <td className="p-4 px-6">
@@ -176,7 +179,7 @@ export default function OfficialProductsManager() {
                       </span>
                     </td>
 
-                    {/* HERO PROMO TOGGLE (NEW) */}
+                    {/* HERO PROMO TOGGLE */}
                     <td className="p-4 px-6 text-center">
                       <button
                         onClick={() => toggleBadge(product.id, "isHero", !!product.isHero)}
@@ -191,7 +194,7 @@ export default function OfficialProductsManager() {
                     <td className="p-4 px-6 text-center">
                       <button
                         onClick={() => toggleBadge(product.id, "isOfficialStore", !!product.isOfficialStore)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.isOfficialStore ? 'bg-[#D97706]' : 'bg-slate-300'}`}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.isOfficialStore ? 'bg-[#FF6A00]' : 'bg-slate-300'}`}
                         title="Toggle Official Store Status"
                       >
                         <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.isOfficialStore ? 'translate-x-6' : 'translate-x-1'}`} />
@@ -231,10 +234,21 @@ export default function OfficialProductsManager() {
                       </button>
                     </td>
 
+                    {/* TECH HOME TOGGLE (🔥 NEW) */}
+                    <td className="p-4 px-6 text-center">
+                      <button
+                        onClick={() => toggleBadge(product.id, "tech_home", !!product.tech_home)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.tech_home ? 'bg-blue-500' : 'bg-slate-300'}`}
+                        title="Toggle Tech Home Status"
+                      >
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.tech_home ? 'translate-x-6' : 'translate-x-1'}`} />
+                      </button>
+                    </td>
+
                     <td className="p-4 px-6 text-right">
                       <Link 
                         href={`/admin/upload?edit=${product.id}`}
-                        className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100 text-slate-600 hover:bg-[#D97706] hover:text-white transition-colors shadow-sm"
+                        className="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100 text-slate-600 hover:bg-[#FF6A00] hover:text-white transition-colors shadow-sm"
                         title="Edit Official Item"
                       >
                         ✏️
@@ -254,7 +268,7 @@ export default function OfficialProductsManager() {
           <button 
             onClick={() => fetchOfficialProducts(true)}
             disabled={loadingMore}
-            className="bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-all disabled:opacity-70 flex items-center gap-2 shadow-sm"
+            className="bg-[#1A1A1A] text-white px-8 py-3 rounded-xl font-bold hover:bg-black transition-all disabled:opacity-70 flex items-center gap-2 shadow-sm"
           >
             {loadingMore ? (
               <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> Loading...</>
