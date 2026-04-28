@@ -53,7 +53,9 @@ export default async function Home() {
 
   const bundlesProducts = data.basePool.filter(p => p.category === "bundles");
 
-  const officialProducts = shuffleArray(data.officialProducts);
+  // 🔥 Bypasses the shuffle so your manual admin picks stay exactly how you want them
+const officialProducts = data.officialProducts;
+
   const approvedProducts = shuffleArray(data.approvedProducts);
   const ladiesProducts = shuffleArray(data.ladiesProducts);
   const watchProducts = shuffleArray(data.watchProducts);
