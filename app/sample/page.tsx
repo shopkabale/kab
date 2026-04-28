@@ -1,4 +1,3 @@
-import UrgentStories from "@/components/UrgentStories";
 import HorizontalScroller from "@/components/HorizontalScroller";
 import ContinueBrowsing from "@/components/ContinueBrowsing";
 import Link from "next/link";
@@ -6,141 +5,255 @@ import { getCachedHomepageData } from "@/lib/firebase/fetchers";
 
 // VIP UI COMPONENTS
 import HeroCarousel from "@/components/HeroCarousel";
-import FilterPills from "@/components/FilterPills";
 import WhatsAppPopup from "@/components/WhatsAppPopup";
 import ProductSection from "@/components/ProductSection";
 import AboutKabaleOnline from "@/components/AboutKabaleOnline";
 import ThemedCategoryGrid from "@/components/ThemedCategoryGrid";
-import ShopWithConfidenceBanner from "@/components/ShopWithConfidenceBanner"; 
-import SellCtaBanner from "@/components/SellCtaBanner"; 
 import { ThemeProvider } from "@/components/ThemeProvider";
 import LeftSidebar from "@/components/LeftSidebar"; 
 
-// --- ICON DATA FOR JUMIA-STYLE TOP BAR ---
-const serviceShortcuts = [
-  { name: "Services", icon: "🛠️", link: "/category/services", color: "bg-blue-100" },
-  { name: "Electronics", icon: "💻", link: "/category/electronics", color: "bg-purple-100" },
-  { name: "Fashion", icon: "👕", link: "/category/fashion", color: "bg-pink-100" },
-  { name: "Students", icon: "🎓", link: "/category/student_item", color: "bg-orange-100" },
-  { name: "Agriculture", icon: "🌽", link: "/category/agriculture", color: "bg-green-100" },
-  { name: "Official", icon: "🏢", link: "/officialStore", color: "bg-amber-100" },
-];
+// --- SHUFFLE HELPER FUNCTION ---
+const shuffleArray = (array: any[]) => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
 
 export default async function Home() {
+  const now = Date.now();
+
+  // ==========================================
+  // FETCH DATA INSTANTLY FROM CACHE
+  // ==========================================
   const data = await getCachedHomepageData();
 
-  // Filter Services specifically (where booking happens)
+  // ==========================================
+  // DATA PROCESSING & MATH
+  // ==========================================
+  const trendingProducts = data.trendingProducts;
+  const heroProducts = data.heroProducts || [];
+
+  const dealsProducts = [...data.basePool]
+    .filter(p => Number(p.price) > 0)
+    .sort((a, b) => {
+      const scoreA = ((a.views || 0) + 1) / Number(a.price);
+      const scoreB = ((b.views || 0) + 1) / Number(b.price);
+      return scoreB - scoreA;
+    })
+    .slice(0, 10);
+
+  // Extract Services (for the new Services and Expert help section)
   const serviceProviders = data.basePool.filter(p => 
     p.category === "services" || (p.tags && p.tags.includes("service"))
   ).slice(0, 10);
 
-  const studentDeals = data.studentProducts;
-  const officialStores = data.officialProducts;
-  const agriMarket = data.agriProducts;
+  const officialProducts = shuffleArray(data.officialProducts);
+  const approvedProducts = shuffleArray(data.approvedProducts);
+  const ladiesProducts = shuffleArray(data.ladiesProducts);
+  const watchProducts = shuffleArray(data.watchProducts);
+  const electronicsProducts = shuffleArray(data.electronicsProducts);
+  const studentProducts = shuffleArray(data.studentProducts);
+  const agriProducts = shuffleArray(data.agriProducts);
+  const latestProducts = data.latestProducts;
 
+  // Using boosted products for "Bundles and packs"
+  const boostedProducts = data.boostedProducts
+    .filter((p: any) => p.boostExpiresAt && p.boostExpiresAt > now)
+    .sort((a: any, b: any) => b.boostedAt - a.boostedAt);
+
+  // ==========================================
+  // RENDER UI
+  // ==========================================
   return (
     <ThemeProvider>
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-10 pt-2 font-sans selection:bg-[#D97706] selection:text-white">
+      {/* ROOT CONTAINER */}
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-10 pt-2 sm:pt-4 font-sans selection:bg-[#FF6A00] selection:text-white overflow-x-hidden">
+
         <WhatsAppPopup />
 
+        {/* MAIN LAYOUT WRAPPER */}
         <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
+
+          {/* MASTER SPLIT GRID */}
           <div className="flex flex-col md:flex-row gap-4 w-full">
 
-            {/* LEFT SIDEBAR (Hidden on Mobile) */}
+            {/* ========================================== */}
+            {/* COLUMN 1: LEFT SIDEBAR (Sticky)            */}
+            {/* ========================================== */}
             <div className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky top-[110px] h-max z-10">
               <LeftSidebar />
             </div>
 
-            {/* MAIN CONTENT FEED */}
+            {/* ========================================== */}
+            {/* COLUMN 2: EVERYTHING ELSE (Hero + Feed)    */}
+            {/* ========================================== */}
             <div className="flex-grow min-w-0 flex flex-col w-full">
-              
-              {/* --- 1. JUMIA-STYLE TOP SERVICES BAR --- */}
-              <div className="flex overflow-x-auto gap-4 py-4 px-4 bg-white dark:bg-[#121212] mb-4 sm:rounded-2xl no-scrollbar border-b sm:border border-slate-100 dark:border-slate-800">
-                {serviceShortcuts.map((s) => (
-                  <Link key={s.name} href={s.link} className="flex flex-col items-center gap-2 shrink-0 group">
-                    <div className={`${s.color} w-14 h-14 rounded-full flex items-center justify-center text-2xl group-active:scale-90 transition-transform shadow-sm`}>
-                      {s.icon}
-                    </div>
-                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-tighter">
-                      {s.name}
-                    </span>
-                  </Link>
-                ))}
+
+              {/* 1. Hero */}
+              <div className="mb-4">
+                <HeroCarousel products={heroProducts} />
               </div>
 
-              {/* --- 2. HERO & STORY SECTION --- */}
-              <HeroCarousel products={data.heroProducts} />
-              <UrgentStories />
+              {/* MAIN FEED SECTION */}
+              <div className="w-full flex flex-col gap-4 sm:gap-6">
 
-              <div className="flex flex-col gap-4 sm:gap-8 mt-4">
-                
-                {/* --- 3. SERVICES PORTAL (The Booking Engine) --- */}
-                {serviceProviders.length > 0 && (
-                  <div className="bg-[#1e293b] text-white rounded-3xl p-6 shadow-xl relative overflow-hidden">
-                    {/* Decorative Background Element */}
-                    <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/20 blur-3xl rounded-full"></div>
-                    
-                    <div className="flex justify-between items-center mb-4 relative z-10">
-                      <div>
-                        <h2 className="text-xl font-black italic uppercase tracking-tighter">Hire Local Pros</h2>
-                        <p className="text-blue-300 text-xs font-medium uppercase tracking-widest">Verified Kabale Service Providers</p>
-                      </div>
-                      <Link href="/category/services" className="bg-white text-[#1e293b] px-4 py-2 rounded-full text-xs font-black uppercase tracking-tight">View All</Link>
-                    </div>
+                {/* 2. Continue Browsing */}
+                <ContinueBrowsing 
+                  title="Continue Browsing"
+                  subtitle="Pick up exactly where you left off"
+                  fallbackProducts={trendingProducts} 
+                />
 
-                    <HorizontalScroller 
-                      title="" 
-                      subtitle=""
-                      products={serviceProviders} 
-                    />
-                    
-                    <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-blue-200/60 uppercase tracking-widest border-t border-white/10 pt-4">
-                      <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                      Secure Booking Deposits Enabled
-                    </div>
-                  </div>
-                )}
-
-                {/* --- 4. STUDENT & CAMPUS SECTION --- */}
-                {studentDeals.length > 0 && (
-                  <ProductSection 
-                    title="🎓 Campus Marketplace" 
-                    subtitle="Best prices for students at Kabale Uni & Bishop Barham"
-                    products={studentDeals.slice(0, 8)} 
+                {/* 3. Tech and Appliances */}
+                {electronicsProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Tech and Appliances" 
+                    subtitle="Gadgets, phones, and computing"
+                    products={electronicsProducts} 
+                    viewAllLink="/category/electronics" 
                   />
                 )}
 
-                {/* --- 5. TRUST BANNER --- */}
-                <ShopWithConfidenceBanner />
-
-                {/* --- 6. OFFICIAL STORES --- */}
-                {officialStores.length > 0 && (
+                {/* 4. Bundles and packs */}
+                {boostedProducts.length > 0 && (
                   <HorizontalScroller 
-                    title="🏢 Official Brand Stores" 
-                    subtitle="Direct from authorized distributors"
-                    products={officialStores} 
+                    title="Bundles and packs" 
+                    subtitle="Curated collections to save you more"
+                    products={boostedProducts} 
+                  />
+                )}
+
+                {/* 5. Best deals in kabale */}
+                {dealsProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Best deals in Kabale" 
+                    subtitle="Affordable & popular items people love"
+                    products={dealsProducts} 
+                  />
+                )}
+
+                {/* 6. Browse by category */}
+                <div className="bg-white dark:bg-[#121212] rounded-2xl p-2 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800/60">
+                  <ThemedCategoryGrid />
+                </div>
+
+                {/* 7. Services and Expert help */}
+                {serviceProviders.length > 0 && (
+                  <HorizontalScroller 
+                    title="Services and Expert help" 
+                    subtitle="Hire verified local professionals"
+                    products={serviceProviders} 
+                    viewAllLink="/category/services" 
+                  />
+                )}
+
+                {/* 8. From the Official Store */}
+                {officialProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="From the Official Store" 
+                    subtitle="100% genuine guaranteed products"
+                    products={officialProducts} 
                     viewAllLink="/officialStore" 
                   />
                 )}
 
-                {/* --- 7. AGRICULTURE (KIGEZI BASKET) --- */}
-                {agriMarket.length > 0 && (
-                  <div className="bg-green-50 dark:bg-green-950/10 p-4 sm:p-6 rounded-3xl border border-green-100 dark:border-green-900/30">
-                    <HorizontalScroller 
-                      title="🌽 Kigezi Fresh Market" 
-                      subtitle="Direct from the garden to your doorstep"
-                      products={agriMarket} 
-                      viewAllLink="/category/agriculture" 
-                    />
-                  </div>
+                {/* 9. Trending Now */}
+                {trendingProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Trending Now" 
+                    subtitle="Most viewed items right now"
+                    products={trendingProducts} 
+                  />
                 )}
 
-                <SellCtaBanner />
+                {/* 10. Discover your watch style */}
+                {watchProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Discover your watch style" 
+                    subtitle="Premium timepieces just for you"
+                    products={watchProducts} 
+                    viewAllLink="/category/watches" 
+                  />
+                )}
 
+                {/* 11. Approved quality (ONLY VERTICAL SECTION) */}
+                {approvedProducts.length > 0 && (
+                  <ProductSection 
+                    title="Approved quality" 
+                    subtitle="Shop safely from top-rated sellers"
+                    products={approvedProducts.slice(0, 8)} 
+                  />
+                )}
+
+                {/* 12. For Her */}
+                {ladiesProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="For Her" 
+                    subtitle="The latest fashion, beauty & accessories"
+                    products={ladiesProducts} 
+                    viewAllLink="/ladies" 
+                  />
+                )}
+
+                {/* 13. Campus Life and study gear */}
+                {studentProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Campus Life and study gear" 
+                    subtitle="Student-friendly prices and essentials"
+                    products={studentProducts} 
+                    viewAllLink="/category/student_item" 
+                  />
+                )}
+
+                {/* 14. Farm Fresh and groceries */}
+                {agriProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="Farm Fresh and groceries" 
+                    subtitle="Direct from the garden to your doorstep"
+                    products={agriProducts} 
+                    viewAllLink="/category/agriculture" 
+                  />
+                )}
+
+                {/* 15. New arrivals */}
+                {latestProducts.length > 0 && (
+                  <HorizontalScroller 
+                    title="New arrivals" 
+                    subtitle="Fresh drops just added to the market"
+                    products={latestProducts} 
+                  />
+                )}
+
+                {/* 16. Affiliate description (Custom block following UI Rules) */}
+                <div className="bg-white dark:bg-[#121212] rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center shadow-sm border border-slate-100 dark:border-slate-800">
+                  <h2 style={{ color: '#1A1A1A' }} className="text-2xl font-bold dark:text-white mb-3">
+                    Earn with Kabale Online
+                  </h2>
+                  <p style={{ color: '#6B6B6B' }} className="text-base font-normal max-w-lg mb-6 dark:text-gray-400">
+                    Share your favorite products with friends and earn a commission on every successful sale. Turn your network into net worth today!
+                  </p>
+                  <Link 
+                    href="/affiliate" 
+                    style={{ backgroundColor: '#FF6A00', color: '#FFFFFF' }} 
+                    className="px-8 py-3 rounded-full font-bold shadow-md hover:opacity-90 active:scale-95 transition-all"
+                  >
+                    Join the Affiliate Program
+                  </Link>
+                </div>
+
+                {/* 17. Kabale online about */}
                 <AboutKabaleOnline />
+
               </div>
             </div>
+            {/* END COLUMN 2 */}
+
           </div>
+          {/* END MASTER SPLIT GRID */}
+
         </div>
       </div>
     </ThemeProvider>
