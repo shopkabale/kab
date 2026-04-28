@@ -11,6 +11,8 @@ import AboutKabaleOnline from "@/components/AboutKabaleOnline";
 import ThemedCategoryGrid from "@/components/ThemedCategoryGrid";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import LeftSidebar from "@/components/LeftSidebar"; 
+import ServiceScroller from "@/components/ServiceScroller"; // 👈 Add this line
+
 
 const shuffleArray = (array: any[]) => {
   const shuffled = [...array];
@@ -109,14 +111,16 @@ export default async function Home() {
                   <ThemedCategoryGrid />
                 </div>
 
+                                {/* 7. Services and Expert help (Using the custom layout!) */}
                 {serviceProviders.length > 0 && (
-                  <HorizontalScroller 
-                    title="Services and Expert help" 
+                  <ServiceScroller 
+                    title="Services and Expert Help" 
                     subtitle="Hire verified local professionals"
                     products={serviceProviders} 
                     viewAllLink="/category/services" 
                   />
                 )}
+
 
                 {officialProducts.length > 0 && (
                   <HorizontalScroller 
