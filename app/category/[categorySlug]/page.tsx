@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation"; 
 import { Suspense } from "react";
 import { collection, query, where, getDocs, orderBy, limit } from "firebase/firestore";
@@ -22,43 +23,49 @@ import {
 export const revalidate = 3600;
 
 // ==========================================
-// 6 FRONTEND BUCKETS MAPPING
+// 6 FRONTEND BUCKETS MAPPING (With Premium Imagery)
 // ==========================================
-const frontendCategoryMap: Record<string, { title: string; description: string; backendCategories: string[] }> = {
+const frontendCategoryMap: Record<string, { title: string; description: string; backendCategories: string[]; bgImage: string }> = {
   "tech-appliances": {
-    title: "Tech, Gadgets & Appliances ⚡",
+    title: "Tech, Gadgets & Appliances",
     description: "Laptops, phones, smart watches, sound systems, and essential home appliances.",
-    backendCategories: ["electronics", "watches"] 
+    backendCategories: ["electronics", "watches"],
+    bgImage: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=1200&q=80"
   },
   "beauty-fashion": {
-    title: "Glow Up: Beauty & Fashion ✨",
-    description: "Premium cosmetics, skincare, hygiene essentials, and trending ladies' fashion picks.",
-    backendCategories: ["beauty", "ladies_picks", "ladies"] 
+    title: "Beauty, Health & Fashion",
+    description: "Premium cosmetics, skincare, hygiene essentials, and trending fashion picks.",
+    backendCategories: ["beauty", "ladies_picks", "ladies"],
+    bgImage: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=1200&q=80"
   },
   "food-groceries": {
-    title: "Farm Fresh & Daily Groceries 🍅",
+    title: "Farm Fresh & Daily Groceries",
     description: "Fresh local agriculture produce, daily supermarket groceries, and quick snacks.",
-    backendCategories: ["agriculture", "groceries"]
+    backendCategories: ["agriculture", "groceries"],
+    bgImage: "https://images.unsplash.com/photo-1542838132-92c53300491e?w=1200&q=80"
   },
   "campus-life": {
-    title: "Campus Life & Study Gear 🎓",
+    title: "Campus Life & Study Gear",
     description: "Hostel essentials, stationery, textbooks, and fun gifts to thrive on campus.",
-    backendCategories: ["student_essentials", "student_item", "stationery", "gifts"] 
+    backendCategories: ["student_essentials", "student_item", "stationery", "gifts"],
+    bgImage: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=1200&q=80"
   },
   "mega-bundles": {
-    title: "Mega Bundles & Starter Packs 📦",
+    title: "Mega Bundles & Starter Packs",
     description: "Save big with our curated mega bundles and fresher starter kits. Everything in one box.",
-    backendCategories: ["bundles"]
+    backendCategories: ["bundles"],
+    bgImage: "https://images.unsplash.com/photo-1513885045260-6b3086b24c17?w=1200&q=80"
   },
   "repairs-services": {
-    title: "Expert Repairs & Services 🛠️",
+    title: "Expert Repairs & Services",
     description: "Trusted local professionals for laptop repairs, CV writing, moving services, and more.",
-    backendCategories: ["services"]
+    backendCategories: ["services"],
+    bgImage: "https://images.unsplash.com/photo-1581092160562-40aa08e78837?w=1200&q=80"
   }
 };
 
 // ==========================================
-// AUTOMATIC REDIRECT MAP (OLD LINKS -> NEW BUCKETS)
+// AUTOMATIC REDIRECT MAP
 // ==========================================
 const legacyMapping: Record<string, string> = {
   "electronics": "tech-appliances",
@@ -141,6 +148,9 @@ export default async function CategoryPage({
 
   // 2. FALLBACK LOGIC
   const backendCategoriesToFetch = categoryData ? categoryData.backendCategories : [slug];
+  const displayTitle = categoryData ? categoryData.title : slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const displayDesc = categoryData ? categoryData.description : `Browse all items in ${slug.replace(/_/g, ' ')}.`;
+  const bgImageUrl = categoryData ? categoryData.bgImage : "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&q=80"; // Default abstract pattern
 
   // 3. DYNAMIC FIREBASE QUERY 
   const categoryQ = query(
@@ -152,7 +162,7 @@ export default async function CategoryPage({
 
   const snap = await getDocs(categoryQ);
 
-  // 4. SAFE SERIALIZATION (With TypeScript Fix)
+  // 4. SAFE SERIALIZATION
   const initialProducts = snap.docs.map(doc => {
     const data = doc.data();
     return {
@@ -168,9 +178,6 @@ export default async function CategoryPage({
     } as any; 
   });
 
-  const displayTitle = categoryData ? categoryData.title : slug.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-  const displayDesc = categoryData ? categoryData.description : `Browse all items in ${slug.replace(/_/g, ' ')}.`;
-
   // 5. THE 6 EXPLORE CATEGORIES
   const exploreCategories = [
     { name: "Mega Bundles & Packs", link: "mega-bundles", desc: "Starter kits & combos", Icon: Package },
@@ -182,7 +189,7 @@ export default async function CategoryPage({
   ];
 
   return (
-    <div className="min-h-screen bg-transparent pb-12 pt-2 sm:pt-4 font-sans selection:bg-[#D97706] selection:text-white overflow-x-hidden">
+    <div className="min-h-screen bg-transparent pb-12 pt-2 sm:pt-4 font-sans selection:bg-[#FF6A00] selection:text-white overflow-x-hidden">
       <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
         <div className="flex flex-col md:flex-row gap-4 w-full">
 
@@ -194,14 +201,28 @@ export default async function CategoryPage({
           {/* CENTER CONTENT */}
           <div className="flex-grow min-w-0 flex flex-col w-full gap-4">
 
-            {/* PREMIUM CATEGORY BANNER */}
-            <div className="bg-white dark:bg-[#151515] rounded-none md:rounded-md p-6 sm:p-8 md:p-10 border border-slate-200 dark:border-slate-800 shadow-sm border-l-4 md:border-l-4 border-l-[#D97706]">
-              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black mb-2 text-slate-900 dark:text-white tracking-tight">
-                {displayTitle}
-              </h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm md:text-base font-medium max-w-xl">
-                {displayDesc}
-              </p>
+            {/* PREMIUM CINEMATIC CATEGORY BANNER */}
+            <div className="relative w-full rounded-none md:rounded-xl overflow-hidden shadow-md min-h-[220px] md:min-h-[260px] flex flex-col justify-center px-6 sm:px-10 py-12">
+              {/* Background Image */}
+              <Image 
+                src={bgImageUrl} 
+                fill 
+                className="object-cover object-center" 
+                alt={displayTitle} 
+                priority 
+              />
+              {/* Cinematic Dark Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0a]/95 via-[#0a0a0a]/70 to-transparent"></div>
+
+              {/* Text Content */}
+              <div className="relative z-10 max-w-2xl">
+                <h1 className="text-3xl sm:text-4xl md:text-5xl font-black mb-3 text-white tracking-tight leading-tight">
+                  {displayTitle}
+                </h1>
+                <p className="text-slate-300 text-sm md:text-base font-medium leading-relaxed max-w-xl">
+                  {displayDesc}
+                </p>
+              </div>
             </div>
 
             {/* THE PAGINATED FEED */}
@@ -222,8 +243,8 @@ export default async function CategoryPage({
               ) : (
                 <div className="bg-white dark:bg-[#151515] rounded-md border border-slate-200 dark:border-slate-800 shadow-sm p-12 text-center flex flex-col items-center justify-center min-h-[300px]">
                   <ShoppingBag className="w-12 h-12 text-slate-300 dark:text-slate-700 mb-4" />
-                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-widest mb-2">No items yet</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium max-w-md">
+                  <h3 style={{ color: '#1A1A1A' }} className="text-sm font-black dark:text-white uppercase tracking-widest mb-2">No items yet</h3>
+                  <p style={{ color: '#6B6B6B' }} className="text-xs font-medium max-w-md dark:text-slate-400">
                     Check back soon! New local deals are posted here daily.
                   </p>
                 </div>
@@ -232,7 +253,7 @@ export default async function CategoryPage({
 
             {/* EXPLORE OTHER CATEGORIES GRID */}
             <div className="bg-white dark:bg-[#151515] rounded-none md:rounded-md border border-slate-200 dark:border-slate-800 shadow-sm p-6 sm:p-8 mt-4">
-              <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center mb-6">
+              <h3 style={{ color: '#6B6B6B' }} className="text-xs font-black uppercase tracking-widest text-center mb-6 dark:text-slate-400">
                 Explore The Marketplace
               </h3>
 
@@ -244,24 +265,24 @@ export default async function CategoryPage({
                     <Link 
                       key={name} 
                       href={`/category/${link}`} 
-                      className="group flex flex-col p-4 bg-slate-50 dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-lg hover:border-[#D97706] dark:hover:border-[#D97706] hover:shadow-md transition-all duration-200 w-full outline-none"
+                      className="group flex flex-col p-4 bg-slate-50 dark:bg-[#111] border border-slate-200 dark:border-slate-800 rounded-lg hover:border-[#FF6A00] dark:hover:border-[#FF6A00] hover:shadow-md transition-all duration-200 w-full outline-none"
                     >
                       <div className="flex items-center gap-4 mb-3">
                         <div className="w-12 h-12 bg-white dark:bg-[#1a1a1a] rounded-md flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-800 shadow-sm">
-                          <Icon className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-[#D97706] transition-colors" />
+                          <Icon className="w-6 h-6 text-slate-600 dark:text-slate-400 group-hover:text-[#FF6A00] transition-colors" />
                         </div>
                         <div className="flex flex-col">
-                          <span className="text-sm font-black text-slate-900 dark:text-white group-hover:text-[#D97706] transition-colors leading-tight">
+                          <span style={{ color: '#1A1A1A' }} className="text-sm font-black dark:text-white group-hover:text-[#FF6A00] transition-colors leading-tight">
                             {name}
                           </span>
                         </div>
                       </div>
 
-                      <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mb-4 line-clamp-2 flex-grow">
+                      <p style={{ color: '#6B6B6B' }} className="text-[11px] font-medium mb-4 line-clamp-2 flex-grow dark:text-slate-400">
                         {desc}
                       </p>
 
-                      <div className="flex items-center justify-between text-[#D97706] border-t border-slate-200 dark:border-slate-800 pt-3 mt-auto">
+                      <div className="flex items-center justify-between text-[#FF6A00] border-t border-slate-200 dark:border-slate-800 pt-3 mt-auto">
                         <span className="text-[10px] font-bold uppercase tracking-widest">Browse</span>
                         <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                       </div>
