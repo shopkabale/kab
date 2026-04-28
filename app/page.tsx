@@ -54,22 +54,23 @@ export default async function Home() {
   const bundlesProducts = data.basePool.filter(p => p.category === "bundles");
 
   // 🔥 Bypasses the shuffle so your manual admin picks stay exactly how you want them
-const officialProducts = data.officialProducts;
+  const officialProducts = data.officialProducts;
 
   const approvedProducts = shuffleArray(data.approvedProducts);
   const ladiesProducts = shuffleArray(data.ladiesProducts);
   const watchProducts = shuffleArray(data.watchProducts);
-  
+
   // 🔥 FIX 1: Removed shuffleArray! Now it respects your exact Admin picks.
   const electronicsProducts = data.electronicsProducts; 
-  
+
   const studentProducts = shuffleArray(data.studentProducts);
   const agriProducts = shuffleArray(data.agriProducts);
   const latestProducts = data.latestProducts;
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0a] pb-10 pt-2 sm:pt-4 font-sans selection:bg-[#FF6A00] selection:text-white overflow-x-hidden">
+      {/* Changed bg-slate-50 and dark:bg-[#0a0a0a] to bg-transparent */}
+      <div className="min-h-screen bg-transparent pb-10 pt-2 sm:pt-4 font-sans selection:bg-[#FF6A00] selection:text-white overflow-x-hidden">
         <WhatsAppPopup />
         <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
           <div className="flex flex-col md:flex-row gap-4 w-full">
@@ -98,7 +99,7 @@ const officialProducts = data.officialProducts;
                     title="Tech and Appliances" 
                     subtitle="Gadgets, phones, and computing"
                     products={electronicsProducts} 
-                    viewAllLink="/category/tech-appliances" // 🔥 FIX 2: Updated Slug
+                    viewAllLink="/category/tech-appliances" 
                   />
                 )}
 
@@ -117,7 +118,7 @@ const officialProducts = data.officialProducts;
                     title="Bundles and packs" 
                     subtitle="Curated collections to save you more"
                     products={bundlesProducts} 
-                    viewAllLink="/category/mega-bundles" // 🔥 FIX 2: Updated Slug
+                    viewAllLink="/category/mega-bundles" 
                   />
                 )}
 
@@ -126,11 +127,12 @@ const officialProducts = data.officialProducts;
                     title="Best deals in Kabale" 
                     subtitle="Affordable & popular items people love"
                     products={dealsProducts} 
-                    viewAllLink="/category/tech-appliances?max=50000" // 🔥 FIX 2: Updated Slug
+                    viewAllLink="/category/tech-appliances?max=50000" 
                   />
                 )}
 
-                <div className="bg-white dark:bg-[#121212] rounded-2xl p-2 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800/60">
+                {/* Changed bg-white to bg-transparent */}
+                <div className="bg-transparent rounded-2xl p-2 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800/60">
                   <ThemedCategoryGrid />
                 </div>
 
@@ -158,7 +160,7 @@ const officialProducts = data.officialProducts;
                     title="Services and Expert Help" 
                     subtitle="Hire verified local professionals"
                     products={serviceProviders} 
-                    viewAllLink="/category/repairs-services" // 🔥 FIX 2: Updated Slug
+                    viewAllLink="/category/repairs-services" 
                   />
                 )}
 
@@ -167,7 +169,7 @@ const officialProducts = data.officialProducts;
                     title="Discover your watch style" 
                     subtitle="Premium timepieces just for you"
                     products={watchProducts} 
-                    viewAllLink="/category/tech-appliances" // 🔥 FIX 2: Updated Slug (Merged watches into Tech)
+                    viewAllLink="/category/tech-appliances" 
                   />
                 )}
 
@@ -186,7 +188,7 @@ const officialProducts = data.officialProducts;
                     title="For Her" 
                     subtitle="The latest fashion, beauty & accessories"
                     products={ladiesProducts} 
-                    viewAllLink="/category/beauty-fashion" // 🔥 FIX 2: Updated Slug
+                    viewAllLink="/category/beauty-fashion" 
                   />
                 )}
 
@@ -195,7 +197,7 @@ const officialProducts = data.officialProducts;
                     title="Campus Life and study gear" 
                     subtitle="Student-friendly prices and essentials"
                     products={studentProducts} 
-                    viewAllLink="/category/campus-life" // 🔥 FIX 2: Updated Slug
+                    viewAllLink="/category/campus-life" 
                   />
                 )}
 
@@ -204,12 +206,12 @@ const officialProducts = data.officialProducts;
                     title="Farm Fresh and groceries" 
                     subtitle="Direct from the garden to your doorstep"
                     products={agriProducts} 
-                    viewAllLink="/category/food-groceries" // 🔥 FIX 2: Updated Slug
+                    viewAllLink="/category/food-groceries" 
                   />
                 )}
 
-                {/* UPDATED AFFILIATE BANNER - Direct & Short */}
-                <div className="bg-white dark:bg-[#121212] rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-sm border border-slate-100 dark:border-slate-800">
+                {/* UPDATED AFFILIATE BANNER - Changed bg-white to bg-transparent */}
+                <div className="bg-transparent rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-sm border border-slate-100 dark:border-slate-800">
                   <h2 style={{ color: '#1A1A1A' }} className="text-2xl font-bold dark:text-white mb-2 text-center">
                     Share. Earn. Repeat.
                   </h2>
@@ -217,7 +219,8 @@ const officialProducts = data.officialProducts;
                     Earn cash by sharing your favorite Kabale Online items.
                   </p>
 
-                  <ul style={{ color: '#1A1A1A' }} className="flex flex-col gap-3 text-sm font-medium max-w-md mb-8 dark:text-slate-300 w-full text-left bg-slate-50 dark:bg-[#1a1a1a] p-4 rounded-xl">
+                  {/* Changed list background to bg-transparent */}
+                  <ul style={{ color: '#1A1A1A' }} className="flex flex-col gap-3 text-sm font-medium max-w-md mb-8 dark:text-slate-300 w-full text-left bg-transparent p-4 rounded-xl">
                     <li className="flex gap-2"><span>✅</span> <span><strong>10% Commission</strong> (up to 3,000 UGX per order)</span></li>
                     <li className="flex gap-2"><span>✅</span> <span><strong>Earn</strong> on both new & returning users</span></li>
                     <li className="flex gap-2"><span>✅</span> <span><strong>Instant Wallet Credit</strong> on successful delivery</span></li>
