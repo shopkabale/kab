@@ -20,7 +20,8 @@ export const getCachedHomepageData = unstable_cache(
     const latestQ = query(productsRef, orderBy("createdAt", "desc"), limit(12));
     const ladiesQ = query(productsRef, where("ladies_home", "==", true), limit(12));
     const watchQ = query(productsRef, where("watch_home", "==", true), limit(12));
-    const electronicsQ = query(productsRef, where("category", "==", "electronics"), limit(12));
+    const electronicsQ = query(productsRef, where("tech_home", "==", true), limit(12));
+
     const studentQ = query(productsRef, where("category", "==", "student_item"), limit(12));
     const agriQ = query(productsRef, where("category", "==", "agriculture"), limit(12));
     
