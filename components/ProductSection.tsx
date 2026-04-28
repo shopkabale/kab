@@ -9,12 +9,14 @@ export default function ProductSection({
   title, 
   subtitle, 
   products, 
-  hideTitle 
+  hideTitle,
+  viewAllLink // 👈 1. Added the new prop here
 }: { 
   title?: string, 
   subtitle?: string, 
   products: any[], 
-  hideTitle?: boolean 
+  hideTitle?: boolean,
+  viewAllLink?: string // 👈 2. Made it optional (?) so it doesn't break other pages
 }) {
   if (!products || products.length === 0) return null;
 
@@ -32,15 +34,28 @@ export default function ProductSection({
       {!hideTitle && title && (
         <div className="flex justify-between items-center p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex flex-col">
-            <h2 className="text-base sm:text-lg md:text-xl font-bold text-slate-800 dark:text-white capitalize tracking-tight">
+            {/* 3. Applied UI Rule: #1A1A1A and Bold for Titles */}
+            <h2 style={{ color: '#1A1A1A' }} className="text-base sm:text-lg md:text-xl font-bold dark:text-white capitalize tracking-tight">
               {title}
             </h2>
             {subtitle && (
-              <p className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+              // 4. Applied UI Rule: #6B6B6B for Subtitles
+              <p style={{ color: '#6B6B6B' }} className="text-[10px] sm:text-xs font-medium mt-0.5 dark:text-slate-400">
                 {subtitle}
               </p>
             )}
           </div>
+
+          {/* 5. The Conditional "See more" Button */}
+          {viewAllLink && (
+            <Link 
+              href={viewAllLink}
+              // Applied UI Rule: Dark gray with Orange hover for secondary links
+              className="text-xs sm:text-sm font-bold text-[#1A1A1A] dark:text-white hover:text-[#FF6A00] dark:hover:text-[#FF6A00] transition-colors whitespace-nowrap ml-4 flex items-center gap-1"
+            >
+              See more <span aria-hidden="true">&rarr;</span>
+            </Link>
+          )}
         </div>
       )}
 
@@ -124,13 +139,13 @@ export default function ProductSection({
                   {/* Details Area */}
                   <div className="flex flex-col flex-grow bg-transparent">
                     <div className="h-[36px] sm:h-[42px] mb-1 flex flex-col justify-start">
-                      <h3 className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 line-clamp-2 leading-snug transition-colors duration-200 group-hover:text-[#D97706]">
+                      <h3 className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 line-clamp-2 leading-snug transition-colors duration-200 group-hover:text-[#FF6A00]">
                         {displayTitle}
                       </h3>
                     </div>
 
                     <div className="mt-auto pt-1 flex flex-col">
-                      <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-500' : 'text-slate-900 dark:text-white group-hover:text-[#D97706]'}`}>
+                      <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-500' : 'text-slate-900 dark:text-white group-hover:text-[#FF6A00]'}`}>
                         UGX {Number(p.price).toLocaleString()}
                       </span>
                     </div>
