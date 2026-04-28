@@ -56,7 +56,8 @@ export default function ServiceScroller({ title, subtitle, products, viewAllLink
                 className="group flex-none w-[200px] sm:w-[240px] snap-start bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col hover:shadow-lg transition-all relative"
               >
                 <Link 
-                  href={`/service/${p.publicId || p.id}`} 
+  href={`/service/${p.id}`} 
+ 
                   className="flex flex-col flex-grow relative pointer-events-auto outline-none"
                   onClick={() => trackSelectItem({ id: p.id, name: titleStr, price: Number(p.price) || 0, category: "services" })}
                 >
