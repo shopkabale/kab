@@ -10,74 +10,63 @@ export default function ProductSection({
   subtitle, 
   products, 
   hideTitle,
-  viewAllLink // 👈 1. Added the new prop here
+  viewAllLink
 }: { 
   title?: string, 
   subtitle?: string, 
   products: any[], 
   hideTitle?: boolean,
-  viewAllLink?: string // 👈 2. Made it optional (?) so it doesn't break other pages
+  viewAllLink?: string
 }) {
   if (!products || products.length === 0) return null;
 
-  // Helper to dynamically check if an item is less than 7 days old
   const checkIsNew = (p: any) => {
     const pDate = p.createdAt?.seconds ? p.createdAt.seconds * 1000 : new Date(p.createdAt || 0).getTime();
     return pDate > 0 && (Date.now() - pDate) < (7 * 24 * 60 * 60 * 1000); 
   };
 
   return (
-    // The clean "White Island" container
     <section className="w-full bg-white dark:bg-[#151515] rounded-md shadow-sm border border-slate-200 dark:border-slate-800 mb-4 overflow-hidden select-none">
 
-      {/* CLEAN MINIMALIST HEADER */}
       {!hideTitle && title && (
         <div className="flex justify-between items-center p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex flex-col">
-            {/* 3. Applied UI Rule: #1A1A1A and Bold for Titles */}
             <h2 style={{ color: '#1A1A1A' }} className="text-base sm:text-lg md:text-xl font-bold dark:text-white capitalize tracking-tight">
               {title}
             </h2>
             {subtitle && (
-              // 4. Applied UI Rule: #6B6B6B for Subtitles
               <p style={{ color: '#6B6B6B' }} className="text-[10px] sm:text-xs font-medium mt-0.5 dark:text-slate-400">
                 {subtitle}
               </p>
             )}
           </div>
 
-                    {/* 5. The Conditional "See more" Button */}
           {viewAllLink && (
             <Link 
               href={viewAllLink}
-              // STRICT UI RULE: Primary Action Orange to match horizontal scrollers
               className="text-xs sm:text-sm font-bold text-[#FF6A00] hover:underline whitespace-nowrap ml-4 flex items-center gap-1"
             >
               See more <span aria-hidden="true">&rarr;</span>
             </Link>
           )}
+        </div>
+      )}
 
-
-      {/* GRID CONTAINER */}
       <div className="p-3 sm:p-4">
-        {/* Grid updated: 2 on mobile, 4 on tablet, 6 on desktop, 8 on ultra-wide screens */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-2 sm:gap-4">
           {products.map((p) => {
             const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
             const isJustPosted = checkIsNew(p);
             const isSold = p.status === "sold";
 
-            // Badge Logic
             const isApproved = p.isApprovedQuality;
             const isOfficial = p.isOfficialStore || p.isAdminUpload;
 
-            // The subtle "Ready for delivery" psychological append
             const titleStr = p.title || p.name || 'Product';
             const isShortTitle = titleStr.length <= 24;
             const displayTitle = (!isSold && isShortTitle) ? `${titleStr} (Ready for delivery)` : titleStr;
 
             return (
-              // Flat card design that blends into the white container until hovered
               <div key={p.id} className={`group flex flex-col transition-all hover:shadow-md rounded-md p-1 sm:p-2 relative h-full ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
 
                 <Link 
@@ -92,7 +81,6 @@ export default function ProductSection({
                     });
                   }}
                 >
-                  {/* Image Area: Strict square for uniform alignment */}
                   <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 rounded-sm overflow-hidden mb-2">
                     {optimizedImage ? (
                       <Image 
@@ -106,7 +94,6 @@ export default function ProductSection({
                       <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">No Image</div>
                     )}
 
-                    {/* SOLD OUT OVERLAY */}
                     {isSold && (
                       <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-[2px]">
                          <span className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-lg transform -rotate-6">
@@ -115,7 +102,6 @@ export default function ProductSection({
                       </div>
                     )}
 
-                    {/* Conditional "Just Posted" Overlay */}
                     {!isSold && isJustPosted && (
                       <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center gap-1 z-10">
                          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
@@ -123,7 +109,6 @@ export default function ProductSection({
                       </div>
                     )}
 
-                    {/* Trust Badges Overlay */}
                     {!isSold && isApproved ? (
                       <div className="absolute bottom-0 left-0 bg-emerald-600/95 backdrop-blur-sm text-white text-[8px] font-bold px-1.5 py-0.5 leading-none rounded-tr-sm flex items-center shadow-sm z-10 tracking-widest uppercase">
                          Approved Quality
@@ -135,7 +120,6 @@ export default function ProductSection({
                     ) : null}
                   </div>
 
-                  {/* Details Area */}
                   <div className="flex flex-col flex-grow bg-transparent">
                     <div className="h-[36px] sm:h-[42px] mb-1 flex flex-col justify-start">
                       <h3 className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 line-clamp-2 leading-snug transition-colors duration-200 group-hover:text-[#FF6A00]">
