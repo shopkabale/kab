@@ -340,14 +340,18 @@ function AdminUploadContent() {
               <label style={{ color: '#1A1A1A' }} className="block text-sm font-semibold mb-2">Category *</label>
               <select className="w-full rounded-xl border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#FF6A00] outline-none transition-shadow"
                 value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                <option value="electronics">Tech, Gadgets & Appliances</option>
-                <option value="bundles">Mega Bundles & Packs</option>
-                <option value="student_item">Campus Life & Study Gear</option>
-                <option value="agriculture">Farm Fresh & Groceries</option>
-                <option value="fashion">Beauty, Health & Fashion</option>
-                <option value="watches">Watches & Accessories</option>
-                {/* The magic trigger option */}
-                <option value="services">Expert Repairs & Services</option>
+                {/* RESTORED ORIGINAL CATEGORIES HERE */}
+                <option value="bundles">Fresher Bundles & Kits</option>
+                <option value="student_essentials">Hostel Essentials</option>
+                <option value="groceries">Supermarket & Groceries</option>
+                <option value="stationery">Stationery & Academics</option>
+                <option value="electronics">Tech Accessories</option>
+                <option value="services">Student Services</option>
+                <option value="ladies_picks">Ladies' Picks</option>
+                <option value="beauty">Beauty & Hygiene</option>
+                <option value="watches">Watches</option>
+                <option value="gifts">Gifts & Fun</option>
+                <option value="agriculture">Agriculture</option>
               </select>
             </div>
 
