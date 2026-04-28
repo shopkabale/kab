@@ -11,7 +11,7 @@ import AboutKabaleOnline from "@/components/AboutKabaleOnline";
 import ThemedCategoryGrid from "@/components/ThemedCategoryGrid";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import LeftSidebar from "@/components/LeftSidebar"; 
-import ServiceScroller from "@/components/ServiceScroller"; // 👈 Add this line
+import ServiceScroller from "@/components/ServiceScroller"; 
 
 
 const shuffleArray = (array: any[]) => {
@@ -39,9 +39,9 @@ export default async function Home() {
     })
     .slice(0, 10);
 
-    // 1. Combine all fetched pools to make sure we don't miss anything (Official + Regular + Latest)
+  // 1. Combine all fetched pools to make sure we don't miss anything (Official + Regular + Latest)
   const allAvailableProducts = [...data.basePool, ...data.officialProducts, ...data.latestProducts];
-  
+
   // 2. Remove any duplicates (since an item might be in both "Latest" and "Official")
   const uniqueProducts = Array.from(new Map(allAvailableProducts.map(p => [p.id, p])).values());
 
@@ -57,7 +57,10 @@ export default async function Home() {
   const approvedProducts = shuffleArray(data.approvedProducts);
   const ladiesProducts = shuffleArray(data.ladiesProducts);
   const watchProducts = shuffleArray(data.watchProducts);
-  const electronicsProducts = shuffleArray(data.electronicsProducts);
+  
+  // 🔥 FIX 1: Removed shuffleArray! Now it respects your exact Admin picks.
+  const electronicsProducts = data.electronicsProducts; 
+  
   const studentProducts = shuffleArray(data.studentProducts);
   const agriProducts = shuffleArray(data.agriProducts);
   const latestProducts = data.latestProducts;
@@ -68,7 +71,7 @@ export default async function Home() {
         <WhatsAppPopup />
         <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
           <div className="flex flex-col md:flex-row gap-4 w-full">
-            
+
             {/* LEFT SIDEBAR */}
             <div className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky top-[110px] h-max z-10">
               <LeftSidebar />
@@ -81,7 +84,7 @@ export default async function Home() {
               </div>
 
               <div className="w-full flex flex-col gap-4 sm:gap-6">
-                
+
                 <ContinueBrowsing 
                   title="Continue Browsing"
                   subtitle="Pick up exactly where you left off"
@@ -93,10 +96,11 @@ export default async function Home() {
                     title="Tech and Appliances" 
                     subtitle="Gadgets, phones, and computing"
                     products={electronicsProducts} 
-                    viewAllLink="/category/electronics" 
+                    viewAllLink="/category/tech-appliances" // 🔥 FIX 2: Updated Slug
                   />
                 )}
-{/* 15. New arrivals (Now Vertical Grid) */}
+
+                {/* 15. New arrivals (Now Vertical Grid) */}
                 {latestProducts.length > 0 && (
                   <ProductSection 
                     title="New arrivals" 
@@ -106,13 +110,12 @@ export default async function Home() {
                   />
                 )}
 
-
                 {bundlesProducts.length > 0 && (
                   <HorizontalScroller 
                     title="Bundles and packs" 
                     subtitle="Curated collections to save you more"
                     products={bundlesProducts} 
-                    viewAllLink="/category/mega-bundles"
+                    viewAllLink="/category/mega-bundles" // 🔥 FIX 2: Updated Slug
                   />
                 )}
 
@@ -121,15 +124,13 @@ export default async function Home() {
                     title="Best deals in Kabale" 
                     subtitle="Affordable & popular items people love"
                     products={dealsProducts} 
-                    viewAllLink="/category/tech-appliances?max=50000"
+                    viewAllLink="/category/tech-appliances?max=50000" // 🔥 FIX 2: Updated Slug
                   />
                 )}
 
                 <div className="bg-white dark:bg-[#121212] rounded-2xl p-2 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800/60">
                   <ThemedCategoryGrid />
                 </div>
-
-                
 
                 {officialProducts.length > 0 && (
                   <HorizontalScroller 
@@ -140,7 +141,6 @@ export default async function Home() {
                   />
                 )}
 
-                {/* ADDED VIEW MORE LINK HERE */}
                 {trendingProducts.length > 0 && (
                   <HorizontalScroller 
                     title="Trending Now" 
@@ -149,23 +149,23 @@ export default async function Home() {
                     viewAllLink="/category/tech-appliances?max=50000" 
                   />
                 )}
+
                 {/* 7. Services and Expert help (Using the custom layout!) */}
                 {serviceProviders.length > 0 && (
                   <ServiceScroller 
                     title="Services and Expert Help" 
                     subtitle="Hire verified local professionals"
                     products={serviceProviders} 
-                    viewAllLink="/category/services" 
+                    viewAllLink="/category/repairs-services" // 🔥 FIX 2: Updated Slug
                   />
                 )}
-
 
                 {watchProducts.length > 0 && (
                   <HorizontalScroller 
                     title="Discover your watch style" 
                     subtitle="Premium timepieces just for you"
                     products={watchProducts} 
-                    viewAllLink="/category/watches" 
+                    viewAllLink="/category/tech-appliances" // 🔥 FIX 2: Updated Slug (Merged watches into Tech)
                   />
                 )}
 
@@ -184,7 +184,7 @@ export default async function Home() {
                     title="For Her" 
                     subtitle="The latest fashion, beauty & accessories"
                     products={ladiesProducts} 
-                    viewAllLink="/ladies" 
+                    viewAllLink="/category/beauty-fashion" // 🔥 FIX 2: Updated Slug
                   />
                 )}
 
@@ -193,7 +193,7 @@ export default async function Home() {
                     title="Campus Life and study gear" 
                     subtitle="Student-friendly prices and essentials"
                     products={studentProducts} 
-                    viewAllLink="/category/student_item" 
+                    viewAllLink="/category/campus-life" // 🔥 FIX 2: Updated Slug
                   />
                 )}
 
@@ -202,12 +202,9 @@ export default async function Home() {
                     title="Farm Fresh and groceries" 
                     subtitle="Direct from the garden to your doorstep"
                     products={agriProducts} 
-                    viewAllLink="/category/agriculture" 
+                    viewAllLink="/category/food-groceries" // 🔥 FIX 2: Updated Slug
                   />
                 )}
-
-                                
-
 
                 {/* UPDATED AFFILIATE BANNER - Direct & Short */}
                 <div className="bg-white dark:bg-[#121212] rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-sm border border-slate-100 dark:border-slate-800">
@@ -217,7 +214,7 @@ export default async function Home() {
                   <p style={{ color: '#6B6B6B' }} className="text-sm md:text-base mb-6 text-center dark:text-slate-400">
                     Earn cash by sharing your favorite Kabale Online items.
                   </p>
-                  
+
                   <ul style={{ color: '#1A1A1A' }} className="flex flex-col gap-3 text-sm font-medium max-w-md mb-8 dark:text-slate-300 w-full text-left bg-slate-50 dark:bg-[#1a1a1a] p-4 rounded-xl">
                     <li className="flex gap-2"><span>✅</span> <span><strong>10% Commission</strong> (up to 3,000 UGX per order)</span></li>
                     <li className="flex gap-2"><span>✅</span> <span><strong>Earn</strong> on both new & returning users</span></li>
