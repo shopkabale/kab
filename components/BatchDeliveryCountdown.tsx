@@ -46,7 +46,7 @@ export default function BatchDeliveryCountdown() {
   if (isOffHours) {
     return (
       <div className="bg-[#fffdfa] border border-[#FF6A00] rounded-lg p-3 text-sm font-medium text-[#1A1A1A] mb-4 shadow-sm">
-        📦 Order now for first-round delivery tomorrow morning.
+        📦 Order now to receive this item on the  first-round delivery tomorrow morning .
       </div>
     );
   }
@@ -59,7 +59,7 @@ export default function BatchDeliveryCountdown() {
 
     return (
     <div className="bg-[#fffdfa] border border-[#FF6A00] rounded-lg p-3 text-sm font-medium text-[#1A1A1A] mb-4 shadow-sm">
-      ⚡ Order within <b className="text-red-600 text-base">{timeString}</b> to catch the next delivery round.
+      ⚡ Order within <b className="text-red-600 text-base">{timeString}</b> to receive this item in the next delivery round .
     </div>
   );
 
