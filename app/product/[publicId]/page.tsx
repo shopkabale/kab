@@ -17,6 +17,7 @@ import ProductReviews from "@/components/ProductReviews";
 import { optimizeImage, calculateDepositAmount } from "@/lib/utils"; 
 import { FaCheck, FaTruck } from "react-icons/fa";
 import { MdVerifiedUser } from "react-icons/md";
+import BatchDeliveryCountdown from "@/components/BatchDeliveryCountdown"; // 👈 ADD THIS IMPORT
 
 export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
   const product = await getProductByPublicId(params.publicId);
@@ -298,6 +299,12 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                 With {isLowStock ? `only ${safeStock} left in stock` : 'high demand'}, a small UGX {depositRequired.toLocaleString()} commitment deposit is required to confirm your intent, hold this unique item, and prevent duplicate claims.
               </p>
             </div>
+          )}
+{/* ========================================== */}
+          {/* 🚨 FOMO BATCH COUNTDOWN PLACED HERE 🚨 */}
+          {/* ========================================== */}
+          {!isSoldOut && (
+            <BatchDeliveryCountdown />
           )}
 
           {/* MAIN CALL TO ACTIONS (HYBRID) */}
