@@ -57,9 +57,10 @@ export default function BatchDeliveryCountdown() {
   // Lean formatting: hides hours if less than 1 hour remains
   const timeString = h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
 
-  return (
+    return (
     <div className="bg-[#fffdfa] border border-[#FF6A00] rounded-lg p-3 text-sm font-medium text-[#1A1A1A] mb-4 shadow-sm">
-      ⚡ Order within <b className="text-[#FF6A00]">{timeString}</b> to catch the next delivery batch.
+      ⚡ Order within <b className="text-red-600 text-base">{timeString}</b> to catch the next delivery round.
     </div>
   );
+
 }
