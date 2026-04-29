@@ -12,7 +12,6 @@ import ProductActions from "@/components/ProductActions";
 import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
 import SaveProductButton from "@/components/SaveProductButton";
-import InlineOfferLink from "@/components/InlineOfferLink";
 import ProductReviews from "@/components/ProductReviews"; 
 import { optimizeImage, calculateDepositAmount } from "@/lib/utils"; 
 import { FaCheck, FaTruck } from "react-icons/fa";
@@ -247,15 +246,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
           
 
-          {/* INLINE MAKE OFFER LINK */}
-          <div className="mb-6 border-t border-slate-100 pt-4">
-            <p className="text-sm text-[#6B6B6B] font-medium">
-              Do you think the price is high? {' '}
-              <span className="text-[#6B6B6B] hover:text-[#1A1A1A] transition-colors">
-                <InlineOfferLink product={product} safeName={safeName} />
-              </span>
-            </p>
-          </div>
+          
 
           {/* 5. AUTHENTIC SCARCITY INDICATOR (Lighter Colors & Weight) */}
           <div className="mb-4 flex items-center gap-2 text-sm font-medium">
