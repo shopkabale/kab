@@ -53,7 +53,8 @@ export default async function Home() {
   ).slice(0, 10);
 
 
-  const bundlesProducts = data.basePool.filter(p => p.category === "bundles");
+  const bundlesProducts = data.bundlesProducts || [];
+
 
   // 🔥 Bypasses the shuffle so your manual admin picks stay exactly how you want them
   const officialProducts = data.officialProducts;
