@@ -14,7 +14,7 @@ export const getCachedHomepageData = unstable_cache(
     const basePoolQ = query(productsRef, orderBy("views", "desc"), limit(50));
     const trendingQ = query(productsRef, orderBy("aiScore", "desc"), limit(10));
     // Now it ONLY pulls items you specifically toggled with the Orange "Official Store" button
-const officialQ = query(productsRef, where("isOfficialStore", "==", true), limit(12));
+    const officialQ = query(productsRef, where("isOfficialStore", "==", true), limit(12));
 
     const approvedQ = query(productsRef, where("isApprovedQuality", "==", true), limit(12));
     const boostedQ = query(productsRef, where("isBoosted", "==", true), limit(6));
@@ -26,21 +26,24 @@ const officialQ = query(productsRef, where("isOfficialStore", "==", true), limit
 
     const studentQ = query(productsRef, where("category", "==", "student_item"), limit(12));
     const agriQ = query(productsRef, where("category", "==", "agriculture"), limit(12));
-    
-    // 🔥 NEW: Dedicated query ONLY for Hero products (Guaranteeing up to 5)
+
+    // 🔥 Dedicated query ONLY for Hero products (Guaranteeing up to 5)
     const heroQ = query(productsRef, where("isHero", "==", true), limit(5));
+
+    // 🔥 NEW: Dedicated query ONLY for Bundles to ensure they always load
+    const bundlesQ = query(productsRef, where("category", "==", "bundles"), limit(12));
 
     // 2. PARALLEL FETCHING
     const [
       basePoolSnap, trendingSnap, officialSnap, approvedSnap, 
       boostedSnap, featuredSnap, latestSnap, ladiesSnap, 
       watchSnap, electronicsSnap, studentSnap, agriSnap,
-      heroSnap // 🔥 Added to Promise.all
+      heroSnap, bundlesSnap // 🔥 Added bundlesSnap to Promise.all
     ] = await Promise.all([
       getDocs(basePoolQ), getDocs(trendingQ), getDocs(officialQ), getDocs(approvedQ),
       getDocs(boostedQ), getDocs(featuredQ), getDocs(latestQ), getDocs(ladiesQ),
       getDocs(watchQ), getDocs(electronicsQ), getDocs(studentQ), getDocs(agriQ),
-      getDocs(heroQ) // 🔥 Execute Hero Query
+      getDocs(heroQ), getDocs(bundlesQ) // 🔥 Execute Bundles Query
     ]);
 
     // 3. MAP DATA TO ARRAYS
@@ -58,7 +61,8 @@ const officialQ = query(productsRef, where("isOfficialStore", "==", true), limit
       electronicsProducts: electronicsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)),
       studentProducts: studentSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)),
       agriProducts: agriSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)),
-      heroProducts: heroSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)), // 🔥 Export Hero Array
+      heroProducts: heroSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)), 
+      bundlesProducts: bundlesSnap.docs.map(d => ({ id: d.id, ...d.data() } as any)), // 🔥 Export Bundles Array
     };
   },
   ['kabale-homepage-data'], // 4. The unique internal key for this data
