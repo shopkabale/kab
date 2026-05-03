@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import * as admin from "firebase-admin";
 
-import { sendWhatsAppMessage, sendWhatsAppProductCard, sendWhatsAppListMenu } from "@/lib/whatsapp"; 
+import { sendWhatsAppMessage, sendWhatsAppListMenu } from "@/lib/whatsapp"; 
 import { checkIsBotFlow } from "@/lib/bot/handlers"; 
 import { logChat } from "@/lib/bot/chatLogger"; 
 import { NotificationService } from "@/lib/notifications"; 
@@ -18,17 +18,12 @@ export async function GET(request: Request) {
     const token = url.searchParams.get("hub.verify_token");
     const challenge = url.searchParams.get("hub.challenge");
 
-    const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN;
-
-    if (mode === "subscribe" && token === verifyToken) {
+    if (mode === "subscribe" && token === process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN) {
       console.log("✅ Webhook verified successfully!");
       return new NextResponse(challenge, { status: 200 });
     }
-
-    console.warn("⚠️ Webhook verification failed.");
     return new NextResponse("Forbidden", { status: 403 });
   } catch (error) {
-    console.error("🚨 Webhook Verification Error:", error);
     return new NextResponse("Internal Server Error", { status: 500 });
   }
 }
@@ -40,18 +35,14 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
 
-    if (body?.object !== "whatsapp_business_account") {
-      return new NextResponse("Not Found", { status: 404 });
-    }
+    if (body?.object !== "whatsapp_business_account") return new NextResponse("Not Found", { status: 404 });
 
     const entries = body.entry || [];
     const messagePromises: Promise<void>[] = [];
 
     for (const entry of entries) {
-      const changes = entry.changes || [];
-      for (const change of changes) {
+      for (const change of (entry.changes || [])) {
         const value = change.value;
-
         if (value?.messages && value.messages.length > 0) {
           for (const message of value.messages) {
             const contactName = value.contacts?.[0]?.profile?.name || "WhatsApp User";
@@ -78,8 +69,6 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
   if (!fromPhone) return;
 
   try {
-    console.log(`💬 Processing incoming payload from ${fromPhone}...`);
-
     // CRM DATA CAPTURE
     adminDb.collection("customers").doc(fromPhone).set({
       phone: fromPhone,
@@ -89,25 +78,14 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     }, { merge: true }).catch(console.error);
 
     let incomingText = "";
-    let isUnsupportedMedia = false;
-
-    if (message.type === "text") {
-      incomingText = message.text?.body || "";
-    } else if (message.type === "interactive") {
-      if (message.interactive?.type === "button_reply") {
-        incomingText = message.interactive.button_reply?.title || "";
-      } else if (message.interactive?.type === "list_reply") {
-        incomingText = message.interactive.list_reply?.title || "";
-      }
-    } else if (message.type === "button") {
-      incomingText = message.button?.payload || message.button?.text || "[Template Button Clicked]";
-    } else {
-      isUnsupportedMedia = true;
+    if (message.type === "text") incomingText = message.text?.body || "";
+    else if (message.type === "interactive") {
+      if (message.interactive?.type === "button_reply") incomingText = message.interactive.button_reply?.title || "";
+      else if (message.interactive?.type === "list_reply") incomingText = message.interactive.list_reply?.title || "";
     }
 
-    if (isUnsupportedMedia) {
-      const bounceText = "⚠️ *Media Not Supported:* For your security, this private chat only supports text messages. Please type out your message.";
-      await sendWhatsAppMessage(fromPhone, bounceText);
+    if (message.type !== "text" && message.type !== "interactive") {
+      await sendWhatsAppMessage(fromPhone, "⚠️ *Media Not Supported:* Please type out your message.");
       return; 
     }
 
@@ -117,56 +95,15 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     // 🚀 THE LEAD CONVERTER INTERCEPTOR
     // ==========================================
     const isLeadConverted = await handleLeadConversion(fromPhone, contactName, incomingText);
-    if (isLeadConverted) {
-      return; 
-    }
+    if (isLeadConverted) return; 
 
     // ==========================================
-    // 🛒 INTERCEPTORS: LIST SELECTIONS & CART ADDS
-    // ==========================================
-    if (message.type === "interactive") {
-      
-      // 1. User clicked a product from the AI "View Matches" list
-      if (message.interactive.type === "list_reply" && message.interactive.list_reply.id.startsWith("SHOW_PROD_")) {
-        const productId = message.interactive.list_reply.id.replace("SHOW_PROD_", "");
-        const prodSnap = await adminDb.collection("products").doc(productId).get();
-        
-        if (prodSnap.exists) {
-          const p = prodSnap.data() as any;
-          await sendWhatsAppProductCard(fromPhone, {
-            id: prodSnap.id,
-            title: p.title,
-            price: p.price,
-            description: p.description,
-            image: p.images?.[0] || p.image
-          });
-        } else {
-          await sendWhatsAppMessage(fromPhone, "⚠️ Sorry, this item is no longer available.");
-        }
-        return; // Stop here, we showed the card
-      }
-
-      // 2. User clicked "Add to Cart" on the product card
-      if (message.interactive.type === "button_reply" && message.interactive.button_reply.id.startsWith("CART_ADD_")) {
-        const productId = message.interactive.button_reply.id.replace("CART_ADD_", "");
-        try {
-          const { addToWhatsAppCart } = await import("@/lib/bot/whatsappCartService");
-          const updatedCart = await addToWhatsAppCart(fromPhone, productId);
-          
-          await sendWhatsAppMessage(fromPhone, `✅ Added to cart!\n\n🛒 *Cart Total:* UGX ${updatedCart.subtotal.toLocaleString()}\n\nType *Checkout* when you are ready to pay, or keep asking me for more items!`);
-        } catch (error: any) {
-          await sendWhatsAppMessage(fromPhone, `⚠️ ${error.message}`);
-        }
-        return; // Stop here, the cart handled it
-      }
-    }
-
-    // ==========================================
-    // 🤖 LEGACY BOT HANDLER (Restricted)
+    // 🤖 NATIVE BOT HANDLER (Catalog, Orders, Legacy Menus)
     // ==========================================
     const isInteractive = message.type === "interactive";
     const isExactCommand = ["MENU", "START", "HELP"].includes(incomingText.trim().toUpperCase());
 
+    // If it's a button click (like "Buy Now" or "item_123") or a strict command, let your native bot handle it!
     if (isInteractive || isExactCommand) {
       const isBotHandled = await checkIsBotFlow(fromPhone, message);
       if (isBotHandled) return; 
@@ -178,13 +115,9 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     if (incomingText.trim().toUpperCase() === "END CHAT") {
       const activeSession = await getActiveChatPartner(fromPhone);
       if (activeSession) {
-        await adminDb.collection("orders").doc(activeSession.orderId).update({ 
-          status: "closed", 
-          updatedAt: Date.now() 
-        });
-
+        await adminDb.collection("orders").doc(activeSession.orderId).update({ status: "closed", updatedAt: Date.now() });
         await sendWhatsAppMessage(fromPhone, "✅ *Chat ended successfully.*\nYou are no longer connected to the other person.\n\nType *MENU* to browse more items.");
-        await sendWhatsAppMessage(activeSession.phone, "ℹ️ *Chat Ended*\nThe other person has manually ended the chat. You are no longer connected.");
+        await sendWhatsAppMessage(activeSession.phone, "ℹ️ *Chat Ended*\nThe other person has manually ended the chat.");
         return; 
       }
     }
@@ -193,43 +126,22 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     // 🔒 PROXY RELAY LOGIC
     // ==========================================
     const activeSession = await getActiveChatPartner(fromPhone);
-
     if (activeSession) {
-      const targetPhone = activeSession.phone;
-      const forwardedText = `*New Message:*\n${incomingText}`;
+      await sendWhatsAppMessage(activeSession.phone, `*New Message:*\n${incomingText}`);
+      logChat(activeSession.phone, "outgoing", "text", incomingText).catch(console.error);
+      return;
+    } 
 
-      await sendWhatsAppMessage(targetPhone, forwardedText);
-      logChat(targetPhone, "outgoing", "text", incomingText).catch(console.error);
-
-      const sessionDoc = await adminDb.collection("orders").doc(activeSession.orderId).get();
-      const currentCount = sessionDoc.data()?.messageCount || 0;
-      const newCount = currentCount + 1;
-
-      adminDb.collection("orders").doc(activeSession.orderId).update({ 
-        updatedAt: Date.now(),
-        messageCount: newCount
-      }).catch(console.error);
-
-      if (newCount === 5) {
-        const reminderText = "ℹ️ *System Tip:* You are chatting securely through Kabale Online. When you have finished negotiating, simply type *END CHAT* to close this connection.";
-        await sendWhatsAppMessage(fromPhone, reminderText);
-        await sendWhatsAppMessage(targetPhone, reminderText);
-      }
-    } else {
-      // ==========================================
-      // 🧠 THE AI STOREFRONT ROUTER
-      // ==========================================
-      console.log(`🧠 No active proxy chat. Routing message from ${fromPhone} to AI...`);
-
-      try {
-        const finalReply = await routeToAIAgent(fromPhone, contactName, incomingText);
-        logChat(fromPhone, "outgoing", "text", finalReply).catch(console.error);
-      } catch (error: any) {
-        console.error(`❌ AI Routing Error for ${fromPhone}:`, error.message);
-        const fallbackText = `Whoops, my system is taking a quick break! 😅\n\nType *MENU* to see quick options, or visit kabaleonline.com.`;
-        await sendWhatsAppMessage(fromPhone, fallbackText);
-        logChat(fromPhone, "outgoing", "text", fallbackText).catch(console.error);
-      }
+    // ==========================================
+    // 🧠 THE AI STOREFRONT ROUTER
+    // ==========================================
+    try {
+      const finalReply = await routeToAIAgent(fromPhone, contactName, incomingText);
+      logChat(fromPhone, "outgoing", "text", finalReply).catch(console.error);
+    } catch (error: any) {
+      console.error(`❌ AI Routing Error:`, error.message);
+      const fallbackText = `Whoops, my system is taking a quick break! 😅\n\nType *MENU* to see quick options, or visit kabaleonline.com.`;
+      await sendWhatsAppMessage(fromPhone, fallbackText);
     }
 
   } catch (error: any) {
@@ -245,8 +157,6 @@ async function handleLeadConversion(fromPhone: string, contactName: string, text
   if (!match) return false;
 
   const leadId = match[1];
-  console.log(`🚀 Lead detected! Converting ${leadId} for ${fromPhone}...`);
-
   try {
     let orderData: any = null;
     let sellerOrdersMap: any = {};
@@ -255,77 +165,37 @@ async function handleLeadConversion(fromPhone: string, contactName: string, text
       const leadRef = adminDb.collection("orders").doc(leadId);
       const leadSnap = await t.get(leadRef);
 
-      if (!leadSnap.exists) throw new Error("Order reference not found.");
-      if (leadSnap.data()?.status !== "lead") throw new Error("This order has already been processed.");
+      if (!leadSnap.exists || leadSnap.data()?.status !== "lead") throw new Error("Order already processed.");
 
       orderData = leadSnap.data();
-      const items = orderData.cartItems || [];
-
-      for (const item of items) {
+      for (const item of (orderData.cartItems || [])) {
         const prodRef = adminDb.collection("products").doc(item.productId);
         const prodSnap = await t.get(prodRef);
         
-        if (!prodSnap.exists || prodSnap.data()?.stock < item.quantity) {
-          throw new Error(`Sorry, ${item.name} is currently out of stock.`);
-        }
+        if (!prodSnap.exists || prodSnap.data()?.stock < item.quantity) throw new Error(`Sorry, ${item.name} is out of stock.`);
 
         if (!sellerOrdersMap[item.sellerPhone]) {
-          sellerOrdersMap[item.sellerPhone] = {
-            sellerId: item.sellerId,
-            sellerPhone: item.sellerPhone,
-            items: [],
-            subtotal: 0
-          };
+          sellerOrdersMap[item.sellerPhone] = { sellerId: item.sellerId, sellerPhone: item.sellerPhone, items: [], subtotal: 0 };
         }
         sellerOrdersMap[item.sellerPhone].items.push(item);
         sellerOrdersMap[item.sellerPhone].subtotal += (item.price * item.quantity);
 
-        t.update(prodRef, {
-          stock: admin.firestore.FieldValue.increment(-item.quantity),
-          locked: true,
-          updatedAt: Date.now()
-        });
+        t.update(prodRef, { stock: admin.firestore.FieldValue.increment(-item.quantity), locked: true, updatedAt: Date.now() });
       }
 
-      const sellerOrders = Object.values(sellerOrdersMap);
-      t.update(leadRef, {
-        buyerPhone: fromPhone,
-        buyerName: contactName,
-        status: "processing", 
-        sellerOrders: sellerOrders,
-        updatedAt: Date.now()
-      });
+      t.update(leadRef, { buyerPhone: fromPhone, buyerName: contactName, status: "processing", sellerOrders: Object.values(sellerOrdersMap), updatedAt: Date.now() });
     });
 
-    const allProductsString = orderData.cartItems.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
-    const notificationPromises: Promise<any>[] = [];
-
-    notificationPromises.push(NotificationService.notifyBuyer(fromPhone, leadId, allProductsString, orderData.totalAmount));
-    notificationPromises.push(sendAdminAlert(leadId, allProductsString, orderData.totalAmount, fromPhone, "WhatsApp COD Lead Converted"));
+    const itemsStr = orderData.cartItems.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
+    NotificationService.notifyBuyer(fromPhone, leadId, itemsStr, orderData.totalAmount);
+    sendAdminAlert(leadId, itemsStr, orderData.totalAmount, fromPhone, "WhatsApp COD Lead Converted");
 
     for (const sellerCut of Object.values(sellerOrdersMap) as any[]) {
-      const sellerItemsString = sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
-      notificationPromises.push(
-        NotificationService.notifySeller(
-          sellerCut.sellerPhone,
-          "Partner",
-          leadId,
-          sellerItemsString,
-          sellerCut.subtotal,
-          contactName,
-          "Kabale (Confirm in Chat)",
-          fromPhone
-        )
-      );
+      NotificationService.notifySeller(sellerCut.sellerPhone, "Partner", leadId, sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", "), sellerCut.subtotal, contactName, "Kabale", fromPhone);
     }
-
-    await Promise.allSettled(notificationPromises);
-    console.log(`✅ Lead ${leadId} successfully converted into active COD order.`);
     return true;
-
   } catch (error: any) {
-    console.error("Lead conversion failed:", error);
-    await sendWhatsAppMessage(fromPhone, `⚠️ *Order Update:*\n${error.message}\n\nPlease type *MENU* to browse other items.`);
+    await sendWhatsAppMessage(fromPhone, `⚠️ *Order Update:*\n${error.message}`);
     return true; 
   }
 }
@@ -334,7 +204,6 @@ async function handleLeadConversion(fromPhone: string, contactName: string, text
 // HELPER FUNCTIONS 
 // ==========================================
 function normalizeForMeta(phone: string): string {
-  if (!phone) return "";
   let cleanPhone = phone.replace(/\D/g, ""); 
   if (cleanPhone.startsWith("0")) cleanPhone = "256" + cleanPhone.substring(1); 
   return cleanPhone;
@@ -343,48 +212,29 @@ function normalizeForMeta(phone: string): string {
 async function getActiveChatPartner(senderPhone: string): Promise<{ phone: string, orderId: string } | null> {
   try {
     const ordersRef = adminDb.collection("orders"); 
-    const activeStatuses = ["pending", "confirmed", "out for delivery", "out_for_delivery"];
-
-    const phoneVariations = [senderPhone, `+${senderPhone}`];
-    if (senderPhone.startsWith("256")) phoneVariations.push(`0${senderPhone.substring(3)}`); 
+    const phoneVariations = [senderPhone, `+${senderPhone}`, `0${senderPhone.substring(3)}`]; 
 
     const [buyerSnap, sellerSnap] = await Promise.all([
-      ordersRef.where("buyerPhone", "in", phoneVariations).where("status", "in", activeStatuses).get(),
-      ordersRef.where("sellerPhone", "in", phoneVariations).where("status", "in", activeStatuses).get()
+      ordersRef.where("buyerPhone", "in", phoneVariations).where("status", "in", ["pending", "confirmed", "out for delivery"]).get(),
+      ordersRef.where("sellerPhone", "in", phoneVariations).where("status", "in", ["pending", "confirmed", "out for delivery"]).get()
     ]);
 
     let allActiveOrders: any[] = [];
     buyerSnap.forEach(doc => allActiveOrders.push(doc.data()));
     sellerSnap.forEach(doc => allActiveOrders.push(doc.data()));
-
     allActiveOrders.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 
     const normalizedSender = normalizeForMeta(senderPhone);
-    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
-    const now = Date.now();
-
     for (const order of allActiveOrders) {
-      const lastActive = order.updatedAt || order.createdAt || 0;
-
-      if (now - lastActive > TWENTY_FOUR_HOURS) {
-        ordersRef.doc(order.id).update({ status: "closed", updatedAt: now }).catch(console.error);
+      if (Date.now() - (order.updatedAt || 0) > 86400000) {
+        ordersRef.doc(order.id).update({ status: "closed", updatedAt: Date.now() }).catch(console.error);
         continue; 
       }
-
-      const normalizedBuyer = normalizeForMeta(order.buyerPhone);
-      const normalizedSeller = normalizeForMeta(order.sellerPhone);
-
-      if (normalizedSender === normalizedBuyer && normalizedSeller !== normalizedSender) {
-        return { phone: normalizedSeller, orderId: order.id }; 
-      }
-      if (normalizedSender === normalizedSeller && normalizedBuyer !== normalizedSender) {
-        return { phone: normalizedBuyer, orderId: order.id }; 
-      }
+      if (normalizedSender === normalizeForMeta(order.buyerPhone) && normalizeForMeta(order.sellerPhone) !== normalizedSender) return { phone: normalizeForMeta(order.sellerPhone), orderId: order.id }; 
+      if (normalizedSender === normalizeForMeta(order.sellerPhone) && normalizeForMeta(order.buyerPhone) !== normalizedSender) return { phone: normalizeForMeta(order.buyerPhone), orderId: order.id }; 
     }
     return null; 
-  } catch (error) {
-    return null;
-  }
+  } catch (error) { return null; }
 }
 
 // ==========================================
@@ -394,7 +244,6 @@ async function routeToAIAgent(phone: string, name: string, text: string): Promis
   const { executeAIAgent } = await import("@/lib/bot/aiService");
   const rawAiReply = await executeAIAgent([{ role: "user", content: text }], name);
 
-  // Extract the new CATALOG tag
   const catalogRegex = /\|\|CATALOG:(.*?)\|\|/g;
   let cleanReply = rawAiReply;
   let menuRows: any[] = [];
@@ -404,19 +253,15 @@ async function routeToAIAgent(phone: string, name: string, text: string): Promis
     const items = match[1].split('|');
     for (const item of items) {
       const [id, title] = item.split('=');
+      // ID here will be "item_8f72hjd8XkP" directly from the AI
       if (id && title) {
-        menuRows.push({ 
-          id: `SHOW_PROD_${id}`, 
-          title: title.substring(0, 24) // WhatsApp limits titles to 24 chars
-        });
+        menuRows.push({ id: id.trim(), title: title.substring(0, 24).trim() });
       }
     }
     cleanReply = cleanReply.replace(match[0], ""); 
   }
 
-  // Send the message
   if (menuRows.length > 0) {
-    // If we have items, send the original "View Matches" list menu
     await sendWhatsAppListMenu(
       phone,
       cleanReply.trim() || "Here are the best matches I found:",
@@ -424,7 +269,6 @@ async function routeToAIAgent(phone: string, name: string, text: string): Promis
       [{ title: "Available Items", rows: menuRows }]
     );
   } else if (cleanReply.trim()) {
-    // Otherwise, just send normal text
     await sendWhatsAppMessage(phone, cleanReply.trim());
   }
 
