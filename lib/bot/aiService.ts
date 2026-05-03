@@ -1,0 +1,130 @@
+// lib/bot/aiService.ts
+import { adminDb } from "@/lib/firebase/admin";
+import { SYSTEM_PROMPT, GROQ_CONFIG } from "@/lib/aiContext";
+
+// ==========================================
+// THE UNIFIED AI ENGINE (Shared by Web & WhatsApp)
+// ==========================================
+export async function executeAIAgent(userMessages: any[], userName: string = "User"): Promise<string> {
+  const payloadMessages = [
+    { 
+      role: "system", 
+      content: `${SYSTEM_PROMPT}\n\nSystem Override: The user's name is ${userName}. 
+      CRITICAL INSTRUCTION: If you recommend a specific product from the database, you MUST append a hidden tag at the very end of your message in this exact format: 
+      ||PRODUCT:id:title:price:imageURL|| 
+      You can append multiple tags if recommending multiple products. Do not mention these tags to the user.` 
+    },
+    ...userMessages,
+  ];
+
+  const tools = [
+    {
+      type: "function",
+      function: {
+        name: "search_catalog",
+        description: "Search the Kabale Online database for active products. Use this whenever the user asks for items, laptops, bundles, or specific products.",
+        parameters: {
+          type: "object",
+          properties: {
+            search_query: { 
+              type: "string", 
+              description: "The search keyword (e.g., 'flash', 'iphone', 'combo', 'laptop')" 
+            }
+          },
+          required: ["search_query"],
+        },
+      },
+    },
+  ];
+
+  let response = await fetchGroqCompletion(payloadMessages, tools);
+  const responseMessage = response.choices[0]?.message;
+
+  if (responseMessage?.tool_calls) {
+    const toolCall = responseMessage.tool_calls[0];
+    
+    if (toolCall.function.name === "search_catalog") {
+      const args = JSON.parse(toolCall.function.arguments);
+      console.log(`🔍 AI is searching catalog for: ${args.search_query}`);
+
+      const products = await searchFirebaseCatalog(args.search_query);
+
+      payloadMessages.push(responseMessage);
+      payloadMessages.push({
+        role: "tool",
+        tool_call_id: toolCall.id,
+        content: JSON.stringify(products),
+      });
+
+      response = await fetchGroqCompletion(payloadMessages);
+    }
+  }
+
+  return response.choices[0]?.message?.content || "Oops, my brain glitched for a second! 🔧 Try that again?";
+}
+
+// ==========================================
+// HELPER: FIREBASE CATALOG SEARCH
+// ==========================================
+async function searchFirebaseCatalog(query: string) {
+  try {
+    const snapshot = await adminDb.collection("products").where("stock", ">", 0).get();
+    const q = query.toLowerCase().trim();
+    
+    const matchedProducts = snapshot.docs
+      .map(doc => ({ id: doc.id, ...doc.data() }))
+      .filter((p: any) => 
+        p.title?.toLowerCase().includes(q) || 
+        p.description?.toLowerCase().includes(q) ||
+        p.category?.toLowerCase().includes(q)
+      )
+      .slice(0, 4);
+
+    if (matchedProducts.length === 0) return { status: "No products found." };
+
+    return matchedProducts.map((p: any) => ({
+      id: p.id,
+      title: p.title,
+      price: p.price,
+      stock: p.stock,
+      image: p.images?.[0] || p.image || "no-image"
+    }));
+
+  } catch (error) {
+    console.error("🔥 Firebase Search Error:", error);
+    return { status: "Database search failed." };
+  }
+}
+
+// ==========================================
+// HELPER: GROQ API FETCH
+// ==========================================
+async function fetchGroqCompletion(messages: any[], tools?: any[]) {
+  const bodyPayload: any = {
+    model: GROQ_CONFIG.model,
+    messages: messages,
+    temperature: GROQ_CONFIG.temperature,
+    top_p: GROQ_CONFIG.top_p,
+  };
+
+  if (tools) {
+    bodyPayload.tools = tools;
+    bodyPayload.tool_choice = "auto";
+  }
+
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+    },
+    body: JSON.stringify(bodyPayload),
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`Groq API returned status ${res.status}: ${errorText}`);
+  }
+
+  return await res.json();
+}
