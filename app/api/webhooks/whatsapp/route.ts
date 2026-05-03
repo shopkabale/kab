@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import * as admin from "firebase-admin";
 
-import { sendWhatsAppMessage, sendWhatsAppProductCard } from "@/lib/whatsapp"; 
+import { sendWhatsAppMessage, sendWhatsAppProductCard, sendWhatsAppListMenu } from "@/lib/whatsapp"; 
 import { checkIsBotFlow } from "@/lib/bot/handlers"; 
 import { logChat } from "@/lib/bot/chatLogger"; 
 import { NotificationService } from "@/lib/notifications"; 
@@ -122,25 +122,43 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     }
 
     // ==========================================
-    // 🛒 NEW: THE GHOST CART INTERCEPTOR
+    // 🛒 INTERCEPTORS: LIST SELECTIONS & CART ADDS
     // ==========================================
-    let buttonId = "";
-    if (message.type === "interactive" && message.interactive?.type === "button_reply") {
-      buttonId = message.interactive.button_reply.id || "";
-    }
-    
-    if (buttonId.startsWith("CART_ADD_")) {
-      const productId = buttonId.replace("CART_ADD_", "");
-      try {
-        const { addToWhatsAppCart } = await import("@/lib/bot/whatsappCartService");
-        const updatedCart = await addToWhatsAppCart(fromPhone, productId);
+    if (message.type === "interactive") {
+      
+      // 1. User clicked a product from the AI "View Matches" list
+      if (message.interactive.type === "list_reply" && message.interactive.list_reply.id.startsWith("SHOW_PROD_")) {
+        const productId = message.interactive.list_reply.id.replace("SHOW_PROD_", "");
+        const prodSnap = await adminDb.collection("products").doc(productId).get();
         
-        const successMsg = `✅ Added to cart!\n\n🛒 *Your Cart Total:* UGX ${updatedCart.subtotal.toLocaleString()}\n\nType *Checkout* when you are ready to pay, or keep asking me for more items!`;
-        await sendWhatsAppMessage(fromPhone, successMsg);
-      } catch (error: any) {
-        await sendWhatsAppMessage(fromPhone, `⚠️ ${error.message}`);
+        if (prodSnap.exists) {
+          const p = prodSnap.data() as any;
+          await sendWhatsAppProductCard(fromPhone, {
+            id: prodSnap.id,
+            title: p.title,
+            price: p.price,
+            description: p.description,
+            image: p.images?.[0] || p.image
+          });
+        } else {
+          await sendWhatsAppMessage(fromPhone, "⚠️ Sorry, this item is no longer available.");
+        }
+        return; // Stop here, we showed the card
       }
-      return; // Stop processing, the cart handled it
+
+      // 2. User clicked "Add to Cart" on the product card
+      if (message.interactive.type === "button_reply" && message.interactive.button_reply.id.startsWith("CART_ADD_")) {
+        const productId = message.interactive.button_reply.id.replace("CART_ADD_", "");
+        try {
+          const { addToWhatsAppCart } = await import("@/lib/bot/whatsappCartService");
+          const updatedCart = await addToWhatsAppCart(fromPhone, productId);
+          
+          await sendWhatsAppMessage(fromPhone, `✅ Added to cart!\n\n🛒 *Cart Total:* UGX ${updatedCart.subtotal.toLocaleString()}\n\nType *Checkout* when you are ready to pay, or keep asking me for more items!`);
+        } catch (error: any) {
+          await sendWhatsAppMessage(fromPhone, `⚠️ ${error.message}`);
+        }
+        return; // Stop here, the cart handled it
+      }
     }
 
     // ==========================================
@@ -373,38 +391,42 @@ async function getActiveChatPartner(senderPhone: string): Promise<{ phone: strin
 // 🧠 AI HELPER: ROUTE DIRECTLY TO GROQ ENGINE
 // ==========================================
 async function routeToAIAgent(phone: string, name: string, text: string): Promise<string> {
-  // 1. Import the unified engine from File 3 safely
   const { executeAIAgent } = await import("@/lib/bot/aiService");
-
-  // 2. Call the engine
   const rawAiReply = await executeAIAgent([{ role: "user", content: text }], name);
 
-  // 3. Extract the hidden product tags (e.g., ||PRODUCT:123:Flash Drive:25000:url||)
-  const productTagRegex = /\|\|PRODUCT:(.*?):(.*?):(.*?):(.*?)\|\|/g;
+  // Extract the new CATALOG tag
+  const catalogRegex = /\|\|CATALOG:(.*?)\|\|/g;
   let cleanReply = rawAiReply;
-  const productCardsToRender: any[] = [];
+  let menuRows: any[] = [];
 
   let match;
-  while ((match = productTagRegex.exec(rawAiReply)) !== null) {
-    productCardsToRender.push({
-      id: match[1],
-      title: match[2],
-      price: parseInt(match[3], 10) || 0,
-      image: match[4] === "no-image" ? undefined : match[4]
-    });
-    // Remove the tag from the text sent to the user
+  while ((match = catalogRegex.exec(rawAiReply)) !== null) {
+    const items = match[1].split('|');
+    for (const item of items) {
+      const [id, title] = item.split('=');
+      if (id && title) {
+        menuRows.push({ 
+          id: `SHOW_PROD_${id}`, 
+          title: title.substring(0, 24) // WhatsApp limits titles to 24 chars
+        });
+      }
+    }
     cleanReply = cleanReply.replace(match[0], ""); 
   }
 
-  // 4. Send the conversational text first
-  if (cleanReply.trim()) {
+  // Send the message
+  if (menuRows.length > 0) {
+    // If we have items, send the original "View Matches" list menu
+    await sendWhatsAppListMenu(
+      phone,
+      cleanReply.trim() || "Here are the best matches I found:",
+      "View Matches",
+      [{ title: "Available Items", rows: menuRows }]
+    );
+  } else if (cleanReply.trim()) {
+    // Otherwise, just send normal text
     await sendWhatsAppMessage(phone, cleanReply.trim());
   }
 
-  // 5. Send the interactive Product Cards immediately after
-  for (const product of productCardsToRender) {
-    await sendWhatsAppProductCard(phone, product);
-  }
-
-  return cleanReply.trim() || "Sent products.";
+  return cleanReply.trim() || "Sent menu.";
 }
