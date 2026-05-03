@@ -19,20 +19,23 @@ YOUR PERSONA & TONE:
 - You are helpful, fast, and conversational.
 - Keep responses RUTHLESSLY SHORT (1-2 sentences). 
 - Never mention that you are an AI. 
+- Build trust: Mention "Pay Cash on Delivery" and "Verified Sellers".
 
 ====================
 CORE FUNCTION: SEARCHING & MENUS (CRITICAL)
 ====================
 1. If a user asks to buy something, you MUST use the \`search_catalog\` tool.
-2. When the database returns products, DO NOT list them out in text (e.g., do not say "I have a 3 way cable for 8k and Texas for 10k"). 
-3. Instead, give a short intro and append a single CATALOG tag at the very end. This tag will automatically generate a WhatsApp List Menu for the user to choose from.
+2. When the database returns products, DO NOT list them out in text.
+3. Instead, give a short intro and append a single CATALOG tag at the very end.
 
-FORMAT: ||CATALOG:id1=Title1|id2=Title2||
+CRITICAL RULE: For the CATALOG tag, you MUST prepend the word "item_" to the EXACT 'id' provided in the tool's JSON results. 
+
+FORMAT: ||CATALOG:item_[exact_db_id]=Title1|item_[exact_db_id]=Title2||
 
 Example Workflow:
 User: "I need a cable."
-[You use tool. Algolia returns 3 cables].
-You: "I found some great cables for you! Tap the button below to choose one. ||CATALOG:cab-1=100W USB Cable|cab-2=3 Way Cable|cab-3=Texas USB||"
+[Tool returns: [{"id": "8f72hjd8XkP", "title": "100W USB Cable", "price": 10000}]]
+You: "I found some great cables for you! You can pay cash on delivery. Tap the button below to choose one. ||CATALOG:item_8f72hjd8XkP=100W USB Cable||"
 
 *Note: The title in the tag must be short (under 24 characters). Do not include prices in the tag.*`;
 
@@ -67,7 +70,6 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
       const args = JSON.parse(toolCall.function.arguments);
       console.log(`🔍 AI is querying Algolia for: ${args.search_query}`);
 
-      // 🔥 Use Algolia instead of Firestore
       const products = await searchAlgoliaCatalog(args.search_query);
 
       payloadMessages.push(responseMessage);
@@ -85,19 +87,17 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
 }
 
 // ==========================================
-// 🚀 UPGRADED: ALGOLIA SEARCH
+// 🚀 ALGOLIA SEARCH
 // ==========================================
 async function searchAlgoliaCatalog(query: string) {
   try {
-    // Hits per page set to 5 so we don't overwhelm the WhatsApp list menu
     const { hits } = await index.search(query, { hitsPerPage: 5 });
 
     if (hits.length === 0) return { status: "No products found." };
 
-    // Format the Algolia hits exactly how the AI expects them
     return hits.map((hit: any) => ({
-      id: hit.objectID,
-      title: hit.name || hit.title || "Unknown Item", // Handle your Algolia schema
+      id: hit.objectID, // <--- Exact ID passed to AI
+      title: hit.name || hit.title || "Unknown Item",
       price: hit.price
     }));
 
@@ -111,17 +111,8 @@ async function searchAlgoliaCatalog(query: string) {
 // HELPER: GROQ API FETCH
 // ==========================================
 async function fetchGroqCompletion(messages: any[], tools?: any[]) {
-  const bodyPayload: any = { 
-    model: GROQ_CONFIG.model, 
-    messages, 
-    temperature: 0.8, 
-    top_p: 0.9 
-  };
-  
-  if (tools) { 
-    bodyPayload.tools = tools; 
-    bodyPayload.tool_choice = "auto"; 
-  }
+  const bodyPayload: any = { model: GROQ_CONFIG.model, messages, temperature: 0.8, top_p: 0.9 };
+  if (tools) { bodyPayload.tools = tools; bodyPayload.tool_choice = "auto"; }
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
