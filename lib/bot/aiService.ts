@@ -28,14 +28,16 @@ CORE FUNCTION: SEARCHING & MENUS (CRITICAL)
 2. When the database returns products, DO NOT list them out in text.
 3. Instead, give a short intro and append a single CATALOG tag at the very end.
 
-CRITICAL RULE: For the CATALOG tag, you MUST prepend the word "item_" to the EXACT 'id' provided in the tool's JSON results. 
+CRITICAL RULES FOR THE CATALOG TAG:
+- You MUST prepend the word "item_" to the EXACT 'id' provided in the JSON results.
+- You MUST include ALL products returned by the database tool in your CATALOG tag. Separate each product with a pipe character '|'. Do not leave any out!
 
-FORMAT: ||CATALOG:item_[exact_db_id]=Title1|item_[exact_db_id]=Title2||
+FORMAT: ||CATALOG:item_[id1]=Title1|item_[id2]=Title2|item_[id3]=Title3||
 
 Example Workflow:
 User: "I need a cable."
-[Tool returns: [{"id": "8f72hjd8XkP", "title": "100W USB Cable", "price": 10000}]]
-You: "I found some great cables for you! You can pay cash on delivery. Tap the button below to choose one. ||CATALOG:item_8f72hjd8XkP=100W USB Cable||"
+[Tool returns: [{"id": "abc1", "title": "100W USB Cable", "price": 10000}, {"id": "xyz2", "title": "3 Way Cable", "price": 8000}]]
+You: "I found some great cables for you! You can pay cash on delivery. Tap the button below to choose one. ||CATALOG:item_abc1=100W USB Cable|item_xyz2=3 Way Cable||"
 
 *Note: The title in the tag must be short (under 24 characters). Do not include prices in the tag.*`;
 
@@ -96,7 +98,7 @@ async function searchAlgoliaCatalog(query: string) {
     if (hits.length === 0) return { status: "No products found." };
 
     return hits.map((hit: any) => ({
-      id: hit.objectID, // <--- Exact ID passed to AI
+      id: hit.objectID, 
       title: hit.name || hit.title || "Unknown Item",
       price: hit.price
     }));
