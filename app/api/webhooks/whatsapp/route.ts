@@ -118,14 +118,45 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     // ==========================================
     const isLeadConverted = await handleLeadConversion(fromPhone, contactName, incomingText);
     if (isLeadConverted) {
-      return; // Order was processed! Stop further routing.
+      return; 
     }
 
-    // Let the Bot try to handle it first
-    const isBotHandled = await checkIsBotFlow(fromPhone, message);
-    if (isBotHandled) return; 
+    // ==========================================
+    // 🛒 NEW: THE GHOST CART INTERCEPTOR
+    // ==========================================
+    let buttonId = "";
+    if (message.type === "interactive" && message.interactive?.type === "button_reply") {
+      buttonId = message.interactive.button_reply.id || "";
+    }
+    
+    if (buttonId.startsWith("CART_ADD_")) {
+      const productId = buttonId.replace("CART_ADD_", "");
+      try {
+        const { addToWhatsAppCart } = await import("@/lib/bot/whatsappCartService");
+        const updatedCart = await addToWhatsAppCart(fromPhone, productId);
+        
+        const successMsg = `✅ Added to cart!\n\n🛒 *Your Cart Total:* UGX ${updatedCart.subtotal.toLocaleString()}\n\nType *Checkout* when you are ready to pay, or keep asking me for more items!`;
+        await sendWhatsAppMessage(fromPhone, successMsg);
+      } catch (error: any) {
+        await sendWhatsAppMessage(fromPhone, `⚠️ ${error.message}`);
+      }
+      return; // Stop processing, the cart handled it
+    }
 
-    // ESCAPE HATCH (Manual Close)
+    // ==========================================
+    // 🤖 LEGACY BOT HANDLER (Restricted)
+    // ==========================================
+    const isInteractive = message.type === "interactive";
+    const isExactCommand = ["MENU", "START", "HELP"].includes(incomingText.trim().toUpperCase());
+
+    if (isInteractive || isExactCommand) {
+      const isBotHandled = await checkIsBotFlow(fromPhone, message);
+      if (isBotHandled) return; 
+    }
+
+    // ==========================================
+    // 🚪 ESCAPE HATCH (Manual Close)
+    // ==========================================
     if (incomingText.trim().toUpperCase() === "END CHAT") {
       const activeSession = await getActiveChatPartner(fromPhone);
       if (activeSession) {
@@ -141,7 +172,7 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     }
 
     // ==========================================
-    // PROXY RELAY LOGIC
+    // 🔒 PROXY RELAY LOGIC
     // ==========================================
     const activeSession = await getActiveChatPartner(fromPhone);
 
@@ -202,7 +233,6 @@ async function handleLeadConversion(fromPhone: string, contactName: string, text
     let orderData: any = null;
     let sellerOrdersMap: any = {};
 
-    // 1. Atomic Transaction to lock stock & activate lead
     await adminDb.runTransaction(async (t) => {
       const leadRef = adminDb.collection("orders").doc(leadId);
       const leadSnap = await t.get(leadRef);
@@ -213,7 +243,6 @@ async function handleLeadConversion(fromPhone: string, contactName: string, text
       orderData = leadSnap.data();
       const items = orderData.cartItems || [];
 
-      // Check stock & Map Sellers
       for (const item of items) {
         const prodRef = adminDb.collection("products").doc(item.productId);
         const prodSnap = await t.get(prodRef);
@@ -240,7 +269,6 @@ async function handleLeadConversion(fromPhone: string, contactName: string, text
         });
       }
 
-      // Activate Order
       const sellerOrders = Object.values(sellerOrdersMap);
       t.update(leadRef, {
         buyerPhone: fromPhone,
@@ -251,7 +279,6 @@ async function handleLeadConversion(fromPhone: string, contactName: string, text
       });
     });
 
-    // 2. Trigger Notifications
     const allProductsString = orderData.cartItems.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
     const notificationPromises: Promise<any>[] = [];
 
@@ -349,7 +376,6 @@ async function routeToAIAgent(phone: string, name: string, text: string): Promis
   // 1. Import the unified engine from File 3 safely
   const { executeAIAgent } = await import("@/lib/bot/aiService");
 
-
   // 2. Call the engine
   const rawAiReply = await executeAIAgent([{ role: "user", content: text }], name);
 
@@ -377,7 +403,6 @@ async function routeToAIAgent(phone: string, name: string, text: string): Promis
 
   // 5. Send the interactive Product Cards immediately after
   for (const product of productCardsToRender) {
-    // Only fire this if you exported sendWhatsAppProductCard in lib/whatsapp.ts
     await sendWhatsAppProductCard(phone, product);
   }
 
