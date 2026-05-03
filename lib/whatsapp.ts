@@ -1,22 +1,29 @@
 import { logChat } from "./bot/chatLogger";
 
+// ==========================================
+// HELPER: Phone Number Normalizer
+// ==========================================
+function normalizePhone(phoneNumber: string): string {
+  let cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
+  if (cleanPhoneNumber.startsWith('0')) {
+    cleanPhoneNumber = `256${cleanPhoneNumber.slice(1)}`;
+  }
+  return cleanPhoneNumber;
+}
+
+// ==========================================
 // 1. Standard Text Message
+// ==========================================
 export async function sendWhatsAppMessage(phoneNumber: string, messageText: string) {
   const token = process.env.WHATSAPP_ACCESS_TOKEN;
   const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
 
   if (!token || !phoneNumberId) throw new Error("Missing WhatsApp Cloud API credentials.");
 
-  let cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
-  if (cleanPhoneNumber.startsWith('0')) {
-    cleanPhoneNumber = `256${cleanPhoneNumber.slice(1)}`;
-  }
-
   const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
-
   const payload = {
     messaging_product: "whatsapp",
-    to: cleanPhoneNumber,
+    to: normalizePhone(phoneNumber),
     type: "text",
     text: { body: messageText },
   };
@@ -24,7 +31,9 @@ export async function sendWhatsAppMessage(phoneNumber: string, messageText: stri
   return await executeRequest(url, token, payload);
 }
 
+// ==========================================
 // 2. Template Message 
+// ==========================================
 export async function sendWhatsAppTemplate(
   phoneNumber: string, 
   templateName: string, 
@@ -36,16 +45,10 @@ export async function sendWhatsAppTemplate(
 
   if (!token || !phoneNumberId) throw new Error("Missing WhatsApp Cloud API credentials.");
 
-  let cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
-  if (cleanPhoneNumber.startsWith('0')) {
-    cleanPhoneNumber = `256${cleanPhoneNumber.slice(1)}`;
-  }
-
   const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
-
   const payload = {
     messaging_product: "whatsapp",
-    to: cleanPhoneNumber,
+    to: normalizePhone(phoneNumber),
     type: "template",
     template: {
       name: templateName,
@@ -62,7 +65,9 @@ export async function sendWhatsAppTemplate(
   return await executeRequest(url, token, payload);
 }
 
-// 3. Interactive Button Message (HYBRID IMAGE LOGIC)
+// ==========================================
+// 3. Interactive Button Message
+// ==========================================
 export async function sendWhatsAppInteractiveButtons(
   phoneNumber: string,
   bodyText: string,
@@ -74,16 +79,10 @@ export async function sendWhatsAppInteractiveButtons(
 
   if (!token || !phoneNumberId) throw new Error("Missing WhatsApp Cloud API credentials.");
 
-  let cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
-  if (cleanPhoneNumber.startsWith('0')) {
-    cleanPhoneNumber = `256${cleanPhoneNumber.slice(1)}`;
-  }
-
   const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
-
   const payload: any = {
     messaging_product: "whatsapp",
-    to: cleanPhoneNumber,
+    to: normalizePhone(phoneNumber),
     type: "interactive",
     interactive: {
       type: "button",
@@ -98,18 +97,15 @@ export async function sendWhatsAppInteractiveButtons(
   };
 
   if (imageUrl) {
-    // 🔥 HYBRID LOGIC: 
-    // Only transform the URL if it contains Cloudinary's auto-format tag.
-    // If it is one of your manual uploads, we let it pass through exactly as is.
+    // 🔥 HYBRID LOGIC: Safely formats Cloudinary URLs for Meta's strict CDN
     let finalImageUrl = imageUrl;
     
     if (imageUrl.includes("f_auto")) {
       finalImageUrl = imageUrl
         .replace("f_auto", "f_jpg")
-        .replace("q_auto", "q_auto:good") // Ensure quality stays high but safe for WhatsApp
-        .split('?')[0]; // Strip any extra query params that might confuse Meta's CDN parser
+        .replace("q_auto", "q_auto:good") 
+        .split('?')[0]; 
         
-      // Ensure the extension matches the forced JPG format
       if (finalImageUrl.endsWith(".webp") || finalImageUrl.endsWith(".avif")) {
         finalImageUrl = finalImageUrl.replace(/\.(webp|avif)$/, ".jpg");
       }
@@ -124,7 +120,9 @@ export async function sendWhatsAppInteractiveButtons(
   return await executeRequest(url, token, payload);
 }
 
+// ==========================================
 // 4. Interactive List Menu Message
+// ==========================================
 export async function sendWhatsAppListMenu(
   phoneNumber: string,
   bodyText: string,
@@ -136,14 +134,10 @@ export async function sendWhatsAppListMenu(
 
   if (!token || !phoneNumberId) throw new Error("Missing WhatsApp Cloud API credentials.");
 
-  let cleanPhoneNumber = phoneNumber.replace(/\D/g, '');
-  if (cleanPhoneNumber.startsWith('0')) cleanPhoneNumber = `256${cleanPhoneNumber.slice(1)}`;
-
   const url = `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`;
-
   const payload = {
     messaging_product: "whatsapp",
-    to: cleanPhoneNumber,
+    to: normalizePhone(phoneNumber),
     type: "interactive",
     interactive: {
       type: "list",
@@ -158,10 +152,30 @@ export async function sendWhatsAppListMenu(
   return await executeRequest(url, token, payload);
 }
 
-// 5. Shared helper (With Auto-Logging)
+// ==========================================
+// 🛒 5. NEW: The AI Product Card Builder
+// ==========================================
+export async function sendWhatsAppProductCard(
+  phoneNumber: string,
+  product: { id: string; title: string; price: number; image?: string; description?: string }
+) {
+  // Uses psychology: Bolds the price and uses the orange/black vibe (via emojis)
+  const bodyText = `🔥 *${product.title}*\n\n💰 *UGX ${product.price.toLocaleString()}*\n\n${product.description ? product.description.substring(0, 100) + '...' : 'Available now on Kabale Online.'}`;
+  
+  // Creates standardized button IDs that your webhook can easily intercept
+  const buttons = [
+    { id: `CART_ADD_${product.id}`, title: "🛒 Add to Cart" },
+    { id: `SELLER_CHAT_${product.id}`, title: "💬 Talk to Seller" }
+  ];
+
+  return await sendWhatsAppInteractiveButtons(phoneNumber, bodyText, buttons, product.image);
+}
+
+// ==========================================
+// 6. Shared Executor (With Auto-Logging)
+// ==========================================
 async function executeRequest(url: string, token: string, payload: any) {
   try {
-    // 🔥 AUTO-LOG OUTGOING MESSAGES
     const phoneTo = payload.to;
     const msgType = payload.type;
     let contentSnippet = "Media/Interactive";
@@ -174,10 +188,9 @@ async function executeRequest(url: string, token: string, payload: any) {
       contentSnippet = `[Menu/Button: ${payload.interactive?.body?.text?.substring(0, 30)}...]`;
     }
 
-    // Fire the logger in the background
+    // Fire the logger in the background safely
     logChat(phoneTo, "outgoing", msgType, contentSnippet).catch(console.error);
 
-    // Send the actual request to Meta
     const response = await fetch(url, {
       method: "POST",
       headers: {
