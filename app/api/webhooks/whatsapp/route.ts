@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import * as admin from "firebase-admin";
 
-import { sendWhatsAppMessage } from "@/lib/whatsapp"; 
+import { sendWhatsAppMessage, sendWhatsAppProductCard } from "@/lib/whatsapp"; 
 import { checkIsBotFlow } from "@/lib/bot/handlers"; 
 import { logChat } from "@/lib/bot/chatLogger"; 
 import { NotificationService } from "@/lib/notifications"; 
@@ -173,11 +173,8 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
       console.log(`🧠 No active proxy chat. Routing message from ${fromPhone} to AI...`);
 
       try {
-        const aiReply = await routeToAIAgent(fromPhone, contactName, incomingText);
-        
-        await sendWhatsAppMessage(fromPhone, aiReply);
-        logChat(fromPhone, "outgoing", "text", aiReply).catch(console.error);
-
+        const finalReply = await routeToAIAgent(fromPhone, contactName, incomingText);
+        logChat(fromPhone, "outgoing", "text", finalReply).catch(console.error);
       } catch (error: any) {
         console.error(`❌ AI Routing Error for ${fromPhone}:`, error.message);
         const fallbackText = `Whoops, my system is taking a quick break! 😅\n\nType *MENU* to see quick options, or visit kabaleonline.com.`;
@@ -346,46 +343,42 @@ async function getActiveChatPartner(senderPhone: string): Promise<{ phone: strin
 }
 
 // ==========================================
-// 🧠 AI HELPER: ROUTE DIRECTLY TO GROQ
+// 🧠 AI HELPER: ROUTE DIRECTLY TO GROQ ENGINE
 // ==========================================
 async function routeToAIAgent(phone: string, name: string, text: string): Promise<string> {
-  // Dynamically import the AI context so it runs safely on the server edge
-  const { GROQ_CONFIG, SYSTEM_PROMPT } = await import("@/lib/aiContext");
+  // 1. Import the unified engine from File 3 safely
+  const { executeAIAgent } = await import("@/app/api/ai-agent/route");
 
-  const payloadMessages = [
-    { 
-      role: "system", 
-      content: `System Override: The user's name is ${name}. You are interacting directly inside WhatsApp.` 
-    },
-    { 
-      role: "user", 
-      content: text 
-    }
-  ];
+  // 2. Call the engine
+  const rawAiReply = await executeAIAgent([{ role: "user", content: text }], name);
 
-  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-    },
-    body: JSON.stringify({
-      model: GROQ_CONFIG.model,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        ...payloadMessages,
-      ],
-      temperature: GROQ_CONFIG.temperature,
-      top_p: GROQ_CONFIG.top_p,
-    }),
-  });
+  // 3. Extract the hidden product tags (e.g., ||PRODUCT:123:Flash Drive:25000:url||)
+  const productTagRegex = /\|\|PRODUCT:(.*?):(.*?):(.*?):(.*?)\|\|/g;
+  let cleanReply = rawAiReply;
+  const productCardsToRender: any[] = [];
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Groq API Error:", errorText);
-    throw new Error(`Groq API returned status ${response.status}`);
+  let match;
+  while ((match = productTagRegex.exec(rawAiReply)) !== null) {
+    productCardsToRender.push({
+      id: match[1],
+      title: match[2],
+      price: parseInt(match[3], 10) || 0,
+      image: match[4] === "no-image" ? undefined : match[4]
+    });
+    // Remove the tag from the text sent to the user
+    cleanReply = cleanReply.replace(match[0], ""); 
   }
 
-  const data = await response.json();
-  return data.choices[0]?.message?.content || "Sorry, I missed that. Try again?";
+  // 4. Send the conversational text first
+  if (cleanReply.trim()) {
+    await sendWhatsAppMessage(phone, cleanReply.trim());
+  }
+
+  // 5. Send the interactive Product Cards immediately after
+  for (const product of productCardsToRender) {
+    // Only fire this if you exported sendWhatsAppProductCard in lib/whatsapp.ts
+    await sendWhatsAppProductCard(phone, product);
+  }
+
+  return cleanReply.trim() || "Sent products.";
 }
