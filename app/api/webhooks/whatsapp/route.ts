@@ -347,7 +347,8 @@ async function getActiveChatPartner(senderPhone: string): Promise<{ phone: strin
 // ==========================================
 async function routeToAIAgent(phone: string, name: string, text: string): Promise<string> {
   // 1. Import the unified engine from File 3 safely
-  const { executeAIAgent } = await import("@/app/api/ai-agent/route");
+  const { executeAIAgent } = await import("@/lib/bot/aiService");
+
 
   // 2. Call the engine
   const rawAiReply = await executeAIAgent([{ role: "user", content: text }], name);
