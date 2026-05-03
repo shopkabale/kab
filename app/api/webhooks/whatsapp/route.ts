@@ -5,8 +5,8 @@ import * as admin from "firebase-admin";
 import { sendWhatsAppMessage } from "@/lib/whatsapp"; 
 import { checkIsBotFlow } from "@/lib/bot/handlers"; 
 import { logChat } from "@/lib/bot/chatLogger"; 
-import { NotificationService } from "@/lib/notifications"; // 🔥 Added
-import { sendAdminAlert } from "@/lib/brevo"; // 🔥 Added
+import { NotificationService } from "@/lib/notifications"; 
+import { sendAdminAlert } from "@/lib/brevo"; 
 
 // ==========================================
 // 1. Handle Webhook Verification (GET)
@@ -114,7 +114,7 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     logChat(fromPhone, "incoming", message.type, incomingText).catch(console.error);
 
     // ==========================================
-    // 🚀 NEW: THE LEAD CONVERTER INTERCEPTOR
+    // 🚀 THE LEAD CONVERTER INTERCEPTOR
     // ==========================================
     const isLeadConverted = await handleLeadConversion(fromPhone, contactName, incomingText);
     if (isLeadConverted) {
@@ -140,7 +140,9 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
       }
     }
 
+    // ==========================================
     // PROXY RELAY LOGIC
+    // ==========================================
     const activeSession = await getActiveChatPartner(fromPhone);
 
     if (activeSession) {
@@ -165,10 +167,23 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
         await sendWhatsAppMessage(targetPhone, reminderText);
       }
     } else {
-      console.log(`ℹ️ No active transaction found for ${fromPhone}. Sending fallback reply.`);
-      const fallbackText = `Hi there! 👋 Welcome to *Kabale Online*.\n\nI am your campus marketplace bot. I can help you safely buy or sell laptops, phones, and more right here at uni.\n\n👉 Type *MENU* to see options.\n👉 Or visit kabaleonline.com to find an item!`;
-      await sendWhatsAppMessage(fromPhone, fallbackText);
-      logChat(fromPhone, "outgoing", "text", fallbackText).catch(console.error);
+      // ==========================================
+      // 🧠 THE AI STOREFRONT ROUTER
+      // ==========================================
+      console.log(`🧠 No active proxy chat. Routing message from ${fromPhone} to AI...`);
+
+      try {
+        const aiReply = await routeToAIAgent(fromPhone, contactName, incomingText);
+        
+        await sendWhatsAppMessage(fromPhone, aiReply);
+        logChat(fromPhone, "outgoing", "text", aiReply).catch(console.error);
+
+      } catch (error: any) {
+        console.error(`❌ AI Routing Error for ${fromPhone}:`, error.message);
+        const fallbackText = `Whoops, my system is taking a quick break! 😅\n\nType *MENU* to see quick options, or visit kabaleonline.com.`;
+        await sendWhatsAppMessage(fromPhone, fallbackText);
+        logChat(fromPhone, "outgoing", "text", fallbackText).catch(console.error);
+      }
     }
 
   } catch (error: any) {
@@ -233,7 +248,7 @@ async function handleLeadConversion(fromPhone: string, contactName: string, text
       t.update(leadRef, {
         buyerPhone: fromPhone,
         buyerName: contactName,
-        status: "processing", // 🔥 Converts lead to active order
+        status: "processing", 
         sellerOrders: sellerOrders,
         updatedAt: Date.now()
       });
@@ -243,13 +258,9 @@ async function handleLeadConversion(fromPhone: string, contactName: string, text
     const allProductsString = orderData.cartItems.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
     const notificationPromises: Promise<any>[] = [];
 
-    // Notify Buyer
     notificationPromises.push(NotificationService.notifyBuyer(fromPhone, leadId, allProductsString, orderData.totalAmount));
-    
-    // Notify Admin
     notificationPromises.push(sendAdminAlert(leadId, allProductsString, orderData.totalAmount, fromPhone, "WhatsApp COD Lead Converted"));
 
-    // Notify Sellers
     for (const sellerCut of Object.values(sellerOrdersMap) as any[]) {
       const sellerItemsString = sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
       notificationPromises.push(
@@ -273,12 +284,12 @@ async function handleLeadConversion(fromPhone: string, contactName: string, text
   } catch (error: any) {
     console.error("Lead conversion failed:", error);
     await sendWhatsAppMessage(fromPhone, `⚠️ *Order Update:*\n${error.message}\n\nPlease type *MENU* to browse other items.`);
-    return true; // Still return true so the normal bot fallback doesn't trigger
+    return true; 
   }
 }
 
 // ==========================================
-// HELPER FUNCTIONS (Kept Intact)
+// HELPER FUNCTIONS 
 // ==========================================
 function normalizeForMeta(phone: string): string {
   if (!phone) return "";
@@ -332,4 +343,49 @@ async function getActiveChatPartner(senderPhone: string): Promise<{ phone: strin
   } catch (error) {
     return null;
   }
+}
+
+// ==========================================
+// 🧠 AI HELPER: ROUTE DIRECTLY TO GROQ
+// ==========================================
+async function routeToAIAgent(phone: string, name: string, text: string): Promise<string> {
+  // Dynamically import the AI context so it runs safely on the server edge
+  const { GROQ_CONFIG, SYSTEM_PROMPT } = await import("@/lib/aiContext");
+
+  const payloadMessages = [
+    { 
+      role: "system", 
+      content: `System Override: The user's name is ${name}. You are interacting directly inside WhatsApp.` 
+    },
+    { 
+      role: "user", 
+      content: text 
+    }
+  ];
+
+  const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: GROQ_CONFIG.model,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...payloadMessages,
+      ],
+      temperature: GROQ_CONFIG.temperature,
+      top_p: GROQ_CONFIG.top_p,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Groq API Error:", errorText);
+    throw new Error(`Groq API returned status ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.choices[0]?.message?.content || "Sorry, I missed that. Try again?";
 }
