@@ -68,9 +68,19 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
 
   if (responseMessage?.tool_calls) {
     const toolCall = responseMessage.tool_calls[0];
-    if (toolCall.function.name === "search_catalog") {
-      const args = JSON.parse(toolCall.function.arguments);
+        if (toolCall.function.name === "search_catalog") {
+      let args;
+      try {
+        // We try to read the AI's JSON securely
+        args = JSON.parse(toolCall.function.arguments);
+      } catch (parseError) {
+        console.error("⚠️ AI generated bad JSON:", toolCall.function.arguments);
+        // If the AI messes up the format, we ask the user nicely to repeat instead of crashing
+        return "I had a tiny brain freeze looking that up! 😅 Could you ask me one more time?";
+      }
+      
       console.log(`🔍 AI is querying Algolia for: ${args.search_query}`);
+
 
       const products = await searchAlgoliaCatalog(args.search_query);
 
