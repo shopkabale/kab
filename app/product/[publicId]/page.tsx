@@ -276,53 +276,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                 </table>
               </div>
             </details>
-{/* 5. AUTHENTIC SCARCITY INDICATOR (Lighter Colors & Weight) */}
-          <div className="mb-4 flex items-center gap-2 text-sm font-medium">
-            {isSoldOut ? (
-               <>
-                <svg className="w-5 h-5 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-red-500">This item is currently sold out. Check similar items below.</span>
-               </>
-            ) : safeStock <= 2 ? (
-              <>
-                <svg className="w-5 h-5 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-red-500">High Demand: Only {safeStock} left in stock!</span>
-              </>
-            ) : safeStock <= 5 ? (
-              <>
-                <svg className="w-5 h-5 shrink-0 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-orange-400">Hurry: Only {safeStock} left!</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5 shrink-0 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="text-green-500">In Stock & Ready to Deliver</span>
-              </>
-            )}
-          </div>
 
-          {/* DEPOSIT REQUIREMENT BOX */}
-          {!isSoldOut && depositRequired > 0 && (
-            <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-4 shadow-sm">
-              <h4 className="text-sm sm:text-base font-bold text-green-800 flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                </svg>
-                Commitment Deposit Required: Secure Your Item
-              </h4>
-              <p className="text-sm text-[#1A1A1A] leading-relaxed font-medium">
-                With {isLowStock ? `only ${safeStock} left in stock` : 'high demand'}, a small UGX {depositRequired.toLocaleString()} commitment deposit is required to confirm your intent, hold this unique item, and prevent duplicate claims.
-              </p>
-            </div>
-          )}
 
             <details className="group" id="reviews">
               <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-[#1A1A1A] hover:bg-slate-50 transition-colors text-sm">
