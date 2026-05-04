@@ -70,7 +70,7 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
     if (toolCall.function.name === "search_catalog") {
       let args;
       try {
-        // Bulletproof JSON parsing
+        // Bulletproof JSON parsing to prevent AI hallucination crashes
         args = JSON.parse(toolCall.function.arguments);
       } catch (e) {
         console.error("⚠️ AI generated bad JSON:", toolCall.function.arguments);
@@ -122,7 +122,7 @@ async function fetchGroqCompletion(messages: any[], tools?: any[]) {
   const bodyPayload: any = { 
     model: GROQ_CONFIG.model, 
     messages, 
-    temperature: 0.6, // Kept low to prevent the AI from generating conversational fluff
+    temperature: 0.6, // Low temperature keeps it from inventing conversational fluff
     top_p: 0.9 
   };
   
