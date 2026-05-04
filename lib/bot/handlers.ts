@@ -183,7 +183,8 @@ async function handleCategoryBrowsing(phone: string, category: string, page: num
 // ==========================================
 async function handleProductSelection(phone: string, productId: string) {
   try {
-    const cleanId = productId.trim();
+    // 🔥 THE FIX: Sanitize the ID to prevent any weird hidden characters from breaking Firebase
+    const cleanId = productId.replace(/[^a-zA-Z0-9_-]/g, "");
     let productData = null;
     let actualDocId = cleanId;
 
@@ -193,7 +194,7 @@ async function handleProductSelection(phone: string, productId: string) {
       productData = exactDoc.data();
     }
 
-    // 2. FALLBACK: Try checking if Algolia's objectID matches a field in the database
+    // 2. FALLBACK 1: Try checking if Algolia's objectID matches a field in the database
     if (!productData) {
       const algoliaQuery = await adminDb.collection("products").where("objectID", "==", cleanId).limit(1).get();
       if (!algoliaQuery.empty) {
@@ -222,22 +223,21 @@ async function handleProductSelection(phone: string, productId: string) {
     const safePrice = Number(productData.price || 0).toLocaleString();
     const safeCondition = productData.condition || "Used";
     const safeDesc = productData.description || "No description provided.";
-    const safeImage = (productData.images && productData.images.length > 0) ? productData.images[0] : undefined;
 
     const messageText = `*${safeTitle}*\n\n💰 Price: *UGX ${safePrice}*\n📝 Condition: ${safeCondition}\n\n${safeDesc}\n\nTo buy this item, tap the button below!`;
 
+    // 🔥 THE FIX: Removed the `safeImage` parameter entirely.
+    // This stops Meta from silently dropping the 400 error due to long/invalid Firebase image URLs.
     await sendWhatsAppInteractiveButtons(
       phone,
       messageText,
-      [{ id: `buy_${actualDocId}`, title: "🛒 Buy Now" }],
-      safeImage 
+      [{ id: `buy_${actualDocId}`, title: "🛒 Buy Now" }]
     );
   } catch (error: any) {
     console.error("❌ Product Selection Error:", error.message);
     await sendWhatsAppMessage(phone, "Oops, we couldn't load the details for this item right now.");
   }
 }
-
 
 // ==========================================
 // 🚀 NATIVE WHATSAPP CHECKOUT (UNIFIED COD ENGINE)
