@@ -1,8 +1,13 @@
+// app/api/webhook/route.ts
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import * as admin from "firebase-admin";
 
-import { sendWhatsAppMessage, sendWhatsAppListMenu } from "@/lib/whatsapp"; 
+import { 
+  sendWhatsAppMessage, 
+  sendWhatsAppListMenu,
+  sendWhatsAppInteractiveButtons 
+} from "@/lib/whatsapp"; 
 import { checkIsBotFlow } from "@/lib/bot/handlers"; 
 import { logChat } from "@/lib/bot/chatLogger"; 
 import { NotificationService } from "@/lib/notifications"; 
@@ -69,7 +74,7 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
   if (!fromPhone) return;
 
   try {
-    // CRM DATA CAPTURE
+    // 📊 CRM DATA CAPTURE
     adminDb.collection("customers").doc(fromPhone).set({
       phone: fromPhone,
       name: contactName,
@@ -92,18 +97,93 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     logChat(fromPhone, "incoming", message.type, incomingText).catch(console.error);
 
     // ==========================================
+    // 👑 SECRET ADMIN COMMANDS
+    // ==========================================
+    const ADMIN_NUMBERS = ["256740373021", "256784655792"]; 
+    const normalizedSender = normalizeForMeta(fromPhone);
+    const upperText = incomingText.toUpperCase().trim();
+
+    if (ADMIN_NUMBERS.includes(normalizedSender)) {
+      
+      // --- 1. THE BROADCAST COMMAND ---
+      if (upperText.startsWith("/BROADCAST ")) {
+        const broadcastMsg = incomingText.substring(11).trim();
+        
+        if (!broadcastMsg) {
+          await sendWhatsAppMessage(fromPhone, "⚠️ You need to include a message! Example: /broadcast Hello everyone...");
+          return;
+        }
+
+        await sendWhatsAppMessage(fromPhone, "🚀 *Starting broadcast...* Please wait.");
+
+        try {
+          const customersSnap = await adminDb.collection("customers").get();
+          let successCount = 0;
+
+          for (const doc of customersSnap.docs) {
+            const customerPhone = doc.id;
+            if (ADMIN_NUMBERS.includes(customerPhone)) continue; 
+
+            try {
+              await sendWhatsAppMessage(customerPhone, broadcastMsg);
+              successCount++;
+              await new Promise(resolve => setTimeout(resolve, 200)); 
+            } catch (e) {
+              console.error(`Failed to send broadcast to ${customerPhone}`);
+            }
+          }
+
+          await sendWhatsAppMessage(fromPhone, `✅ *Broadcast Complete!*\nSuccessfully sent to ${successCount} users.`);
+        } catch (error) {
+          await sendWhatsAppMessage(fromPhone, `❌ Broadcast failed: ${error}`);
+        }
+        return; 
+      }
+
+      // --- 2. THE CLOSE ORDER COMMAND ---
+      if (upperText.startsWith("/CLOSE ")) {
+        const orderId = upperText.replace("/CLOSE ", "").trim();
+        
+        if (!orderId) {
+          await sendWhatsAppMessage(fromPhone, "⚠️ Please provide an Order ID. Example: /close KAB-1234");
+          return;
+        }
+
+        try {
+          const orderRef = adminDb.collection("orders").doc(orderId);
+          const orderDoc = await orderRef.get();
+
+          if (!orderDoc.exists) {
+            await sendWhatsAppMessage(fromPhone, `❌ Order ${orderId} not found in the database.`);
+            return;
+          }
+
+          await orderRef.update({ 
+            status: "completed", 
+            paymentStatus: "paid",
+            updatedAt: Date.now() 
+          });
+
+          await sendWhatsAppMessage(fromPhone, `✅ *Order ${orderId} Closed!*\nMarked as completed and paid. Great job!`);
+        } catch (e) {
+          await sendWhatsAppMessage(fromPhone, `❌ Failed to close order: ${e}`);
+        }
+        return;
+      }
+    }
+
+    // ==========================================
     // 🚀 THE LEAD CONVERTER INTERCEPTOR
     // ==========================================
     const isLeadConverted = await handleLeadConversion(fromPhone, contactName, incomingText);
     if (isLeadConverted) return; 
 
     // ==========================================
-    // 🤖 NATIVE BOT HANDLER (Catalog, Orders, Legacy Menus)
+    // 🤖 NATIVE BOT HANDLER (Catalog, Orders, Menus)
     // ==========================================
     const isInteractive = message.type === "interactive";
-    const isExactCommand = ["MENU", "START", "HELP"].includes(incomingText.trim().toUpperCase());
+    const isExactCommand = ["MENU", "START", "HELP"].includes(upperText);
 
-    // If it's a button click (like "Buy Now" or "item_123") or a strict command, let your native bot handle it!
     if (isInteractive || isExactCommand) {
       const isBotHandled = await checkIsBotFlow(fromPhone, message);
       if (isBotHandled) return; 
@@ -112,11 +192,17 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     // ==========================================
     // 🚪 ESCAPE HATCH (Manual Close)
     // ==========================================
-    if (incomingText.trim().toUpperCase() === "END CHAT") {
+    if (upperText === "END CHAT") {
       const activeSession = await getActiveChatPartner(fromPhone);
       if (activeSession) {
         await adminDb.collection("orders").doc(activeSession.orderId).update({ status: "closed", updatedAt: Date.now() });
-        await sendWhatsAppMessage(fromPhone, "✅ *Chat ended successfully.*\nYou are no longer connected to the other person.\n\nType *MENU* to browse more items.");
+        
+        await sendWhatsAppInteractiveButtons(
+          fromPhone, 
+          "✅ *Chat ended successfully.*\nYou are no longer connected to the other person.\n\nVisit www.kabaleonline.com or tap below to browse more items.",
+          [{ id: "btn_shop", title: "🛍️ Main Menu" }]
+        );
+        
         await sendWhatsAppMessage(activeSession.phone, "ℹ️ *Chat Ended*\nThe other person has manually ended the chat.");
         return; 
       }
@@ -140,8 +226,8 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
       logChat(fromPhone, "outgoing", "text", finalReply).catch(console.error);
     } catch (error: any) {
       console.error(`❌ AI Routing Error:`, error.message);
-      const fallbackText = `Whoops, my system is taking a quick break! 😅\n\nType *MENU* to see quick options, or visit kabaleonline.com.`;
-      await sendWhatsAppMessage(fromPhone, fallbackText);
+      const fallbackText = `Whoops, my system is taking a quick break! 😅\n\nVisit www.kabaleonline.com or tap the menu below to keep browsing.`;
+      await sendWhatsAppInteractiveButtons(fromPhone, fallbackText, [{ id: "btn_shop", title: "🛍️ Main Menu" }]);
     }
 
   } catch (error: any) {
@@ -195,7 +281,11 @@ async function handleLeadConversion(fromPhone: string, contactName: string, text
     }
     return true;
   } catch (error: any) {
-    await sendWhatsAppMessage(fromPhone, `⚠️ *Order Update:*\n${error.message}`);
+    await sendWhatsAppInteractiveButtons(
+      fromPhone, 
+      `⚠️ *Order Update:*\n${error.message}\n\nTap below to browse other items or visit www.kabaleonline.com.`,
+      [{ id: "btn_shop", title: "🛍️ Main Menu" }]
+    );
     return true; 
   }
 }
@@ -253,7 +343,6 @@ async function routeToAIAgent(phone: string, name: string, text: string): Promis
     const items = match[1].split('|');
     for (const item of items) {
       const [id, title] = item.split('=');
-      // ID here will be "item_8f72hjd8XkP" directly from the AI
       if (id && title) {
         menuRows.push({ id: id.trim(), title: title.substring(0, 24).trim() });
       }
