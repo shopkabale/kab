@@ -6,7 +6,6 @@ import { CartProvider } from "@/context/CartContext";
 import WebsiteBanner from "@/components/WebsiteBanner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import FloatingHelpButton from "@/components/FloatingHelpButton";
 import BottomNav from "@/components/BottomNav";
 import GlobalLoader from "@/components/GlobalLoader";
 
@@ -100,9 +99,6 @@ export default function LayoutClient({
 
           {/* MOBILE BOTTOM NAV */}
           <BottomNav />
-
-          {/* FLOATING HELP BUTTON */}
-          <FloatingHelpButton />
         </CartProvider>
       </AuthProvider>
     </>
