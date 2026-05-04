@@ -332,34 +332,46 @@ async function getActiveChatPartner(senderPhone: string): Promise<{ phone: strin
 // ==========================================
 async function routeToAIAgent(phone: string, name: string, text: string): Promise<string> {
   const { executeAIAgent } = await import("@/lib/bot/aiService");
-  const rawAiReply = await executeAIAgent([{ role: "user", content: text }], name);
-
-  const catalogRegex = /\|\|CATALOG[:=](.*?)\|\|/g;
-  let cleanReply = rawAiReply;
+  
+  // Now we get BOTH the AI text AND the pure database results
+  const aiResponse = await executeAIAgent([{ role: "user", content: text }], name);
+  
+  const cleanReply = aiResponse.text.trim();
+  const products = aiResponse.products;
   let menuRows: any[] = [];
 
-  let match;
-  while ((match = catalogRegex.exec(rawAiReply)) !== null) {
-    const items = match[1].split('|');
-    for (const item of items) {
-      const [id, title] = item.split('=');
-      if (id && title) {
-        menuRows.push({ id: id.trim(), title: title.substring(0, 24).trim() });
+  // We build the menu directly from the exact Algolia IDs (Zero AI Hallucination!)
+  if (products && Array.isArray(products) && products.length > 0) {
+    for (const p of products) {
+      if (p.id && p.title) {
+        menuRows.push({ 
+          id: `item_${p.id}`.trim(), 
+          title: p.title.substring(0, 24).trim() 
+        });
       }
     }
-    cleanReply = cleanReply.replace(match[0], ""); 
   }
 
+  // Render the final message
   if (menuRows.length > 0) {
     await sendWhatsAppListMenu(
       phone,
-      cleanReply.trim() || "Here are the best matches I found:",
+      cleanReply || "Here are the best matches I found:",
       "View Matches",
       [{ title: "Available Items", rows: menuRows }]
     );
-  } else if (cleanReply.trim()) {
-    await sendWhatsAppMessage(phone, cleanReply.trim());
+  } else if (cleanReply) {
+    // If no products were found, just send the text and a main menu fallback
+    if (cleanReply.includes("MENU") || cleanReply.includes("categories")) {
+        await sendWhatsAppInteractiveButtons(
+            phone, 
+            cleanReply, 
+            [{ id: "btn_shop", title: "🛍️ Main Menu" }]
+        );
+    } else {
+        await sendWhatsAppMessage(phone, cleanReply);
+    }
   }
 
-  return cleanReply.trim() || "Sent menu.";
+  return cleanReply || "Sent message.";
 }
