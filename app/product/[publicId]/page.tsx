@@ -196,29 +196,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             <span className="flex items-center gap-1.5"><FaTruck className="text-[#1A1A1A] text-base" /> Same Day Delivery</span>
           </div>
 
-          {/* 2. BRAND & BADGES (Kabale Online in normal black) */}
-          <div className="flex flex-wrap items-center gap-2 mb-3">  
-            <span className="font-medium text-sm uppercase tracking-wider text-[#1A1A1A] mr-2">
-              {pAny.brand || "KABALE ONLINE"}
-            </span>
-
-            {isMainProductNew && (
-              <span className="bg-[#1A1A1A] text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-wider">
-                 <span className="w-1 h-1 rounded-full bg-green-400 animate-pulse"></span>
-                 New
-              </span>
-            )}
-
-            {(isMainApproved || isMainOfficial) && (
-              <span className="bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded flex items-center gap-1 uppercase tracking-wide">
-                 Original Brand <MdVerifiedUser />
-              </span>
-            )}
-
-            <span className="text-green-600 text-[11px] font-bold flex items-center gap-1 uppercase">
-              <FaCheck /> Certified
-            </span>
-          </div>  
+          
 
           {/* 3. TITLE (Big and light gray) */}
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-400 leading-tight mb-4">  
@@ -232,69 +210,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </span>  
           </div>  
 
-          <div className="flex items-center gap-2 mb-6 text-sm text-[#6B6B6B]">
-            {/* SVG Stars instead of emojis */}
-            <div className="flex text-[#FF6A00] gap-0.5">
-              {[...Array(5)].map((_, i) => (
-                <svg key={i} className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
-                </svg>
-              ))}
-            </div>
-            <a href="#reviews" className="hover:text-[#FF6A00] cursor-pointer transition-colors">(View customer reviews)</a>
-          </div>
-
           
 
           
-
-          {/* 5. AUTHENTIC SCARCITY INDICATOR (Lighter Colors & Weight) */}
-          <div className="mb-4 flex items-center gap-2 text-sm font-medium">
-            {isSoldOut ? (
-               <>
-                <svg className="w-5 h-5 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-red-500">This item is currently sold out. Check similar items below.</span>
-               </>
-            ) : safeStock <= 2 ? (
-              <>
-                <svg className="w-5 h-5 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-red-500">High Demand: Only {safeStock} left in stock!</span>
-              </>
-            ) : safeStock <= 5 ? (
-              <>
-                <svg className="w-5 h-5 shrink-0 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span className="text-orange-400">Hurry: Only {safeStock} left!</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5 shrink-0 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 13l4 4L19 7" />
-                </svg>
-                <span className="text-green-500">In Stock & Ready to Deliver</span>
-              </>
-            )}
-          </div>
-
-          {/* DEPOSIT REQUIREMENT BOX */}
-          {!isSoldOut && depositRequired > 0 && (
-            <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-4 shadow-sm">
-              <h4 className="text-sm sm:text-base font-bold text-green-800 flex items-center gap-2 mb-2">
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                </svg>
-                Commitment Deposit Required: Secure Your Item
-              </h4>
-              <p className="text-sm text-[#1A1A1A] leading-relaxed font-medium">
-                With {isLowStock ? `only ${safeStock} left in stock` : 'high demand'}, a small UGX {depositRequired.toLocaleString()} commitment deposit is required to confirm your intent, hold this unique item, and prevent duplicate claims.
-              </p>
-            </div>
-          )}
 
           {/* ========================================== */}
           {/* 🚨 FOMO BATCH COUNTDOWN PLACED HERE 🚨 */}
@@ -358,6 +276,53 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                 </table>
               </div>
             </details>
+{/* 5. AUTHENTIC SCARCITY INDICATOR (Lighter Colors & Weight) */}
+          <div className="mb-4 flex items-center gap-2 text-sm font-medium">
+            {isSoldOut ? (
+               <>
+                <svg className="w-5 h-5 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-red-500">This item is currently sold out. Check similar items below.</span>
+               </>
+            ) : safeStock <= 2 ? (
+              <>
+                <svg className="w-5 h-5 shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-red-500">High Demand: Only {safeStock} left in stock!</span>
+              </>
+            ) : safeStock <= 5 ? (
+              <>
+                <svg className="w-5 h-5 shrink-0 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-orange-400">Hurry: Only {safeStock} left!</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-5 h-5 shrink-0 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M5 13l4 4L19 7" />
+                </svg>
+                <span className="text-green-500">In Stock & Ready to Deliver</span>
+              </>
+            )}
+          </div>
+
+          {/* DEPOSIT REQUIREMENT BOX */}
+          {!isSoldOut && depositRequired > 0 && (
+            <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-4 shadow-sm">
+              <h4 className="text-sm sm:text-base font-bold text-green-800 flex items-center gap-2 mb-2">
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                Commitment Deposit Required: Secure Your Item
+              </h4>
+              <p className="text-sm text-[#1A1A1A] leading-relaxed font-medium">
+                With {isLowStock ? `only ${safeStock} left in stock` : 'high demand'}, a small UGX {depositRequired.toLocaleString()} commitment deposit is required to confirm your intent, hold this unique item, and prevent duplicate claims.
+              </p>
+            </div>
+          )}
 
             <details className="group" id="reviews">
               <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-[#1A1A1A] hover:bg-slate-50 transition-colors text-sm">
