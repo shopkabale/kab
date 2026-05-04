@@ -14,10 +14,10 @@ const index = searchClient.initIndex(process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME 
 const SYSTEM_PROMPT = `You are the elite WhatsApp Sales Assistant for Kabale Online, the premium student marketplace in Kabale, Uganda.
 
 ====================
-CRITICAL BEHAVIOR RULES (NON-NEGOTIABLE):
+CRITICAL BEHAVIOR RULES:
 ====================
-1. NO CONVERSATION LOOPS: If a user names a product (e.g., "charger", "shoes", "otg"), DO NOT ask clarifying questions. Immediately use the \`search_catalog\` tool.
-2. USE LINE BREAKS: Keep your text short, but DO NOT smash it into one line. Use double line breaks (paragraphs) to make it readable.
+1. NO CONVERSATION LOOPS: If a user names a product (e.g., "charger", "shoes"), DO NOT ask clarifying questions. Immediately use the \`search_catalog\` tool.
+2. USE LINE BREAKS: Keep your text short. Use double line breaks (paragraphs) to make it readable.
 3. RECOGNITION: Start your response with a brief, warm recognition (e.g., "Welcome back 👋").
 
 ====================
@@ -28,28 +28,25 @@ Every time you return products, include ONE Trust Badge and ONE Psychological Tr
 - Pick ONE Psych Trigger: "🔥 Popular in Kabale", "⚡ Selling fast", or "🎓 Student favorite"
 
 ====================
-CATALOG FORMAT & MAIN MENU (STRICT):
+SYSTEM INSTRUCTION FOR SEARCHING:
 ====================
-1. Format results EXACTLY like this: ||CATALOG:item_[id1]=Title1|item_[id2]=Title2||
-2. CRITICAL: You MUST use the EXACT 'id' string provided in the JSON tool results. DO NOT invent, shorten, or make up fake IDs. Use the long ugly string.
-3. Prepend "item_" to the exact ID.
-4. You MUST use a COLON (:) immediately after the word CATALOG. Do not use an equals sign.
+When you use the \`search_catalog\` tool, the system will AUTOMATICALLY attach the products to your message as a menu. You DO NOT need to format or list the products yourself. Just provide the short, persuasive text with the badges!
+If the user asks for categories, help, or a menu, just reply: "Tap the button below to see our categories! 👇"
 
-Example Workflow (Notice the spacing & real ID format!):
+Example Workflow:
 User: "I need a charger"
-[Tool returns: [{"id": "8f72hjd8XkP9LqM", "title": "100W USB Cable", "price": 10000}]]
+[Tool returns products]
 You: 
 "Welcome back 👋 
 
 I found these fast chargers for you. ⚡ Selling fast. 
 
-✅ Pay after delivery.
-||CATALOG:item_8f72hjd8XkP9LqM=100W USB Cable||"`;
+✅ Pay after delivery."`;
 
 // ==========================================
-// THE UNIFIED AI ENGINE
+// THE UNIFIED AI ENGINE (Decoupled UI)
 // ==========================================
-export async function executeAIAgent(userMessages: any[], userName: string = "User"): Promise<string> {
+export async function executeAIAgent(userMessages: any[], userName: string = "User"): Promise<{ text: string, products: any[] | null }> {
   const payloadMessages = [
     { role: "system", content: `${SYSTEM_PROMPT}\n\nSystem Override: User's name is ${userName}.` },
     ...userMessages,
@@ -69,7 +66,8 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
   }];
 
   let response = await fetchGroqCompletion(payloadMessages, tools);
-  const responseMessage = response.choices[0]?.message;
+  let responseMessage = response.choices[0]?.message;
+  let finalProducts: any[] | null = null;
 
   if (responseMessage?.tool_calls) {
     const toolCall = responseMessage.tool_calls[0];
@@ -78,12 +76,15 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
       try {
         args = JSON.parse(toolCall.function.arguments);
       } catch (e) {
-        console.error("⚠️ AI generated bad JSON:", toolCall.function.arguments);
-        return "I had a tiny brain freeze looking that up! 😅 Could you ask me one more time?";
+        console.error("⚠️ AI generated bad JSON.");
+        return { text: "I had a tiny brain freeze looking that up! 😅 Could you ask me one more time?", products: null };
       }
       
       console.log(`🔍 AI is querying Algolia for: ${args.search_query}`);
+      
+      // Fetch the exact products and save them directly (Bypassing AI memory)
       const products = await searchAlgoliaCatalog(args.search_query);
+      finalProducts = products.length > 0 ? products : null;
 
       payloadMessages.push(responseMessage);
       payloadMessages.push({
@@ -96,7 +97,10 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
     }
   }
 
-  return response.choices[0]?.message?.content || "Oops, my brain glitched! 🔧 Try that again?";
+  return {
+    text: response.choices[0]?.message?.content || "Oops, my brain glitched! 🔧 Try that again?",
+    products: finalProducts
+  };
 }
 
 // ==========================================
@@ -105,18 +109,16 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
 async function searchAlgoliaCatalog(query: string) {
   try {
     const { hits } = await index.search(query, { hitsPerPage: 4 });
-
-    if (hits.length === 0) return { status: "No products found." };
+    if (hits.length === 0) return [];
 
     return hits.map((hit: any) => ({
       id: hit.objectID, 
       title: hit.name || hit.title || "Unknown Item",
       price: hit.price
     }));
-
   } catch (error) {
-    console.error("🔥 Algolia Search Error in AI Engine:", error);
-    return { status: "Database search failed." };
+    console.error("🔥 Algolia Search Error:", error);
+    return [];
   }
 }
 
@@ -124,24 +126,12 @@ async function searchAlgoliaCatalog(query: string) {
 // HELPER: GROQ API FETCH
 // ==========================================
 async function fetchGroqCompletion(messages: any[], tools?: any[]) {
-  const bodyPayload: any = { 
-    model: GROQ_CONFIG.model, 
-    messages, 
-    temperature: 0.5, 
-    top_p: 0.9 
-  };
-  
-  if (tools) { 
-    bodyPayload.tools = tools; 
-    bodyPayload.tool_choice = "auto"; 
-  }
+  const bodyPayload: any = { model: GROQ_CONFIG.model, messages, temperature: 0.5, top_p: 0.9 };
+  if (tools) { bodyPayload.tools = tools; bodyPayload.tool_choice = "auto"; }
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
-    headers: { 
-      "Content-Type": "application/json", 
-      Authorization: `Bearer ${process.env.GROQ_API_KEY}` 
-    },
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
     body: JSON.stringify(bodyPayload),
   });
   return await res.json();
