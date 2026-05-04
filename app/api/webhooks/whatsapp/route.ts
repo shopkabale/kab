@@ -334,7 +334,7 @@ async function routeToAIAgent(phone: string, name: string, text: string): Promis
   const { executeAIAgent } = await import("@/lib/bot/aiService");
   const rawAiReply = await executeAIAgent([{ role: "user", content: text }], name);
 
-  const catalogRegex = /\|\|CATALOG:(.*?)\|\|/g;
+  const catalogRegex = /\|\|CATALOG[:=](.*?)\|\|/g;
   let cleanReply = rawAiReply;
   let menuRows: any[] = [];
 
