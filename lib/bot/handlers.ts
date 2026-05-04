@@ -57,7 +57,6 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   // 🧭 2. NATIVE MENUS & NAVIGATION
   // ==========================================
   if (buttonId === "cmd_search") {
-    // We don't need a complex bot flow for search anymore. Just tell them to talk to the AI!
     await sendWhatsAppMessage(senderPhone, "🔍 Just type what you are looking for! (e.g., 'I need a charger' or 'shoes')");
     return true;
   }
@@ -110,7 +109,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
 // HELPER: SEND WELCOME MENU
 // ==========================================
 async function sendWelcomeMenu(phone: string) {
-  const bodyText = "Welcome to *Kabale Online*! 🛒\n\nThe safest online marketplace in Kabale. What would you like to do today?";
+  const bodyText = "Welcome to *Kabale Online*! 🛒\n\nThe safest student marketplace in Kabale. What would you like to do today?";
   const buttons = [
     { id: "btn_shop", title: "🛍️ Shop Products" },
     { id: "btn_help", title: "📞 Contact Support" }
@@ -183,18 +182,18 @@ async function handleCategoryBrowsing(phone: string, category: string, page: num
 // ==========================================
 async function handleProductSelection(phone: string, productId: string) {
   try {
-    // 🔥 THE FIX: Sanitize the ID to prevent any weird hidden characters from breaking Firebase
+    // 🔥 FIX 1: Strip hidden characters so Firebase doesn't fail the lookup
     const cleanId = productId.replace(/[^a-zA-Z0-9_-]/g, "");
     let productData = null;
     let actualDocId = cleanId;
 
-    // 1. Try the direct Firebase Document ID first
+    // Try direct Firebase Document ID
     const exactDoc = await adminDb.collection("products").doc(cleanId).get();
     if (exactDoc.exists) {
       productData = exactDoc.data();
     }
 
-    // 2. FALLBACK 1: Try checking if Algolia's objectID matches a field in the database
+    // 🔥 FIX 2: FALLBACK 1 - Algolia objectID match
     if (!productData) {
       const algoliaQuery = await adminDb.collection("products").where("objectID", "==", cleanId).limit(1).get();
       if (!algoliaQuery.empty) {
@@ -203,7 +202,7 @@ async function handleProductSelection(phone: string, productId: string) {
       }
     }
 
-    // 3. FALLBACK 2: Try checking the publicId
+    // 🔥 FIX 3: FALLBACK 2 - publicId match
     if (!productData) {
       const idQuery = await adminDb.collection("products").where("publicId", "==", cleanId).limit(1).get();
       if (!idQuery.empty) {
@@ -212,6 +211,7 @@ async function handleProductSelection(phone: string, productId: string) {
       }
     }
 
+    // If all 3 checks fail, then it's actually removed.
     if (!productData) {
       return await sendWhatsAppMessage(
         phone, 
@@ -223,15 +223,18 @@ async function handleProductSelection(phone: string, productId: string) {
     const safePrice = Number(productData.price || 0).toLocaleString();
     const safeCondition = productData.condition || "Used";
     const safeDesc = productData.description || "No description provided.";
+    
+    // 🔥 FIX 4: Securely pull the image exactly how it worked for you previously
+    const safeImage = (productData.images && Array.isArray(productData.images) && productData.images.length > 0) ? productData.images[0] : undefined;
 
     const messageText = `*${safeTitle}*\n\n💰 Price: *UGX ${safePrice}*\n📝 Condition: ${safeCondition}\n\n${safeDesc}\n\nTo buy this item, tap the button below!`;
 
-    // 🔥 THE FIX: Removed the `safeImage` parameter entirely.
-    // This stops Meta from silently dropping the 400 error due to long/invalid Firebase image URLs.
+    // 🔥 FIX 5: Pass the image directly into the interactive button 
     await sendWhatsAppInteractiveButtons(
       phone,
       messageText,
-      [{ id: `buy_${actualDocId}`, title: "🛒 Buy Now" }]
+      [{ id: `buy_${actualDocId}`, title: "🛒 Buy Now" }],
+      safeImage 
     );
   } catch (error: any) {
     console.error("❌ Product Selection Error:", error.message);
@@ -304,7 +307,7 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
       buyerPhone
     );
 
-    // 🔥 POST-CHECKOUT TRUST ASSURANCE
+    // 🔥 ADDED POST-CHECKOUT TRUST ASSURANCE
     await sendWhatsAppMessage(
       buyerPhone, 
       "✅ *Your order is confirmed.*\n\nYou will pay only after receiving the item. 🛡️ We are here to help if anything goes wrong."
