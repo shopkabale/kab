@@ -187,9 +187,28 @@ async function handleProductSelection(phone: string, productId: string) {
     let productData = null;
     let actualDocId = cleanId;
 
+    // 1. Try the direct Firebase Document ID first
     const exactDoc = await adminDb.collection("products").doc(cleanId).get();
     if (exactDoc.exists) {
       productData = exactDoc.data();
+    }
+
+    // 2. FALLBACK: Try checking if Algolia's objectID matches a field in the database
+    if (!productData) {
+      const algoliaQuery = await adminDb.collection("products").where("objectID", "==", cleanId).limit(1).get();
+      if (!algoliaQuery.empty) {
+        productData = algoliaQuery.docs[0].data();
+        actualDocId = algoliaQuery.docs[0].id;
+      }
+    }
+
+    // 3. FALLBACK 2: Try checking the publicId
+    if (!productData) {
+      const idQuery = await adminDb.collection("products").where("publicId", "==", cleanId).limit(1).get();
+      if (!idQuery.empty) {
+        productData = idQuery.docs[0].data();
+        actualDocId = idQuery.docs[0].id; 
+      }
     }
 
     if (!productData) {
@@ -218,6 +237,7 @@ async function handleProductSelection(phone: string, productId: string) {
     await sendWhatsAppMessage(phone, "Oops, we couldn't load the details for this item right now.");
   }
 }
+
 
 // ==========================================
 // 🚀 NATIVE WHATSAPP CHECKOUT (UNIFIED COD ENGINE)
