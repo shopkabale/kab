@@ -158,7 +158,7 @@ export default function ProductActions({ product, children }: { product: Product
         className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3.5 rounded-md shadow-sm transition-all flex items-center justify-center gap-2 text-[15px] disabled:opacity-70"
       >
         <FaWhatsapp className="text-xl" /> 
-        {loadingWhatsApp ? "Connecting..." : "Ask or Order on WhatsApp"}
+        {loadingWhatsApp ? "Connecting..." : "Order Using WhatsApp"}
       </button>
 
       
