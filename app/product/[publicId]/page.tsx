@@ -189,12 +189,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         {/* RIGHT COLUMN: Product Details */}  
         <div className="flex flex-col overflow-hidden">  
 
-          {/* 1. E-COMMERCE TRUST BANNER (Full width, black text) */}
-          <div className="flex items-center justify-center sm:justify-start gap-3 md:gap-5 bg-orange-50 text-[#1A1A1A] text-xs md:text-sm font-extrabold py-3 px-4 rounded-md w-full mb-6 border border-orange-100 shadow-sm">
-            <span className="flex items-center gap-1.5"><FaCheck className="text-green-600 text-base" /> Cash on Delivery</span>
-            <span className="text-orange-200">|</span>
-            <span className="flex items-center gap-1.5"><FaTruck className="text-[#1A1A1A] text-base" /> Same Day Delivery</span>
-          </div>
+          
 
           
 
@@ -214,12 +209,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
           
 
-          {/* ========================================== */}
-          {/* 🚨 FOMO BATCH COUNTDOWN PLACED HERE 🚨 */}
-          {/* ========================================== */}
-          {!isSoldOut && (
-            <BatchDeliveryCountdown />
-          )}
+          
 
 
           {/* MAIN CALL TO ACTIONS (HYBRID) */}
