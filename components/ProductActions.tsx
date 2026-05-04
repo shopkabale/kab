@@ -120,23 +120,7 @@ export default function ProductActions({ product, children }: { product: Product
   return (
     <div className="mt-6 flex flex-col gap-4">
 
-            {/* 💡 BUYER GUIDANCE BANNER (Pushing Mobile Money) */}
-      <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 shadow-sm">
-        <h4 className="text-xs font-black text-[#FF6A00] mb-2 flex items-center gap-1.5 uppercase tracking-wide">
-          <FaBolt className="text-[#FF6A00] text-sm" /> How to Buy
-        </h4>
-        <div className="space-y-3">
-          <p className="text-[12px] text-[#6B6B6B] leading-tight">
-            If you’re paying with <strong className="font-black text-[#1A1A1A]">Mobile Money</strong>, just tap <span className="font-bold text-[#1A1A1A]">Add to Cart</span> and checkout quickly. It’s faster and your order gets processed immediately.
-          </p>
-
-          <div className="h-[1px] bg-slate-200 my-1"></div>
-
-          <p className="text-[12px] text-[#6B6B6B] leading-tight opacity-90">
-            If you prefer <strong className="font-bold text-[#1A1A1A]">Cash on Delivery</strong>, use <span className="font-bold text-[#1A1A1A]">WhatsApp</span> to place your order or chat with the seller first.
-          </p>
-        </div>
-      </div>
+            
 
 
       {/* 1. QUANTITY & ADD TO CART */}
@@ -177,46 +161,7 @@ export default function ProductActions({ product, children }: { product: Product
         {loadingWhatsApp ? "Connecting..." : "Ask or Order on WhatsApp"}
       </button>
 
-      {/* 3. KABALE SHIPPING & DELIVERY CARD */}
-      <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm bg-white mt-1">
-        <div className="bg-slate-50 p-3.5 font-bold text-slate-800 border-b border-slate-200 text-sm">
-          Shipping & Delivery
-        </div>
-
-        <div className="grid grid-cols-2 p-4 gap-4">
-          <div className="flex gap-2.5">
-            <MdOutlineLocalShipping className="text-xl text-green-600 flex-shrink-0" />
-            <div>
-              <p className="font-bold text-[13px] text-slate-800">Local Delivery</p>
-              <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">Campus & Kabale Town</p>
-            </div>
-          </div>
-
-          <div className="flex gap-2.5">
-            <MdOutlineLocationOn className="text-xl text-green-600 flex-shrink-0" />
-            <div>
-              <p className="font-bold text-[13px] text-slate-800">Meetup Points</p>
-              <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">Secure central locations</p>
-            </div>
-          </div>
-
-          <div className="flex gap-2.5">
-            <FaShieldAlt className="text-xl text-red-500 flex-shrink-0" />
-            <div>
-              <p className="font-bold text-[13px] text-slate-800">Buyer Protection</p>
-              <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">Inspect before you pay</p>
-            </div>
-          </div>
-
-          <div className="flex gap-2.5">
-            <FaCheck className="text-xl text-amber-500 flex-shrink-0" />
-            <div>
-              <p className="font-bold text-[13px] text-slate-800">Verified Sellers</p>
-              <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">Safe local community</p>
-            </div>
-          </div>
-        </div>
-      </div>
+      
 
       {/* 4. MORE OPTIONS & ADMIN CONTROLS */}
       <div className="mt-1">
