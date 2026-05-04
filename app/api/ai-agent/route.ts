@@ -11,8 +11,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "A 'messages' array is required" }, { status: 400 });
     }
 
-    const reply = await executeAIAgent(messages);
-    return new NextResponse(reply, { status: 200 });
+        const reply = await executeAIAgent(messages);
+    return NextResponse.json(reply, { status: 200 });
 
   } catch (error) {
     console.error("AI Agent Endpoint Error:", error);
