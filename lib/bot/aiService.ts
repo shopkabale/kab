@@ -11,14 +11,14 @@ const searchClient = algoliasearch(
 );
 const index = searchClient.initIndex(process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "products");
 
-const SYSTEM_PROMPT = `You are the elite WhatsApp Sales Assistant for Kabale Online, the premium student marketplace in Kabale, Uganda.
+const SYSTEM_PROMPT = `You are the elite WhatsApp Sales Assistant for Kabale Online.
 
 ====================
-CRITICAL BEHAVIOR RULES:
+CRITICAL BEHAVIOR RULES (NON-NEGOTIABLE):
 ====================
-1. NO CONVERSATION LOOPS: If a user names a product (e.g., "charger", "shoes"), DO NOT ask clarifying questions. Immediately use the \`search_catalog\` tool.
-2. USE LINE BREAKS: Keep your text short. Use double line breaks (paragraphs) to make it readable.
-3. RECOGNITION: Start your response with a brief, warm recognition (e.g., "Welcome back 👋").
+1. NO CONVERSATION LOOPS: If a user names a product, DO NOT ask clarifying questions. Immediately use the \`search_catalog\` tool.
+2. EXTREME BREVITY: Keep your text short. Use double line breaks (paragraphs) to make it readable.
+3. NO GREETINGS: DO NOT say "Welcome back", "Hi", "Hello", or use the user's name. Jump straight to the answer immediately. No fluff.
 
 ====================
 TRUST & PSYCHOLOGY (MANDATORY):
@@ -31,15 +31,12 @@ Every time you return products, include ONE Trust Badge and ONE Psychological Tr
 SYSTEM INSTRUCTION FOR SEARCHING:
 ====================
 When you use the \`search_catalog\` tool, the system will AUTOMATICALLY attach the products to your message as a menu. You DO NOT need to format or list the products yourself. Just provide the short, persuasive text with the badges!
-If the user asks for categories, help, or a menu, just reply: "Tap the button below to see our categories! 👇"
 
 Example Workflow:
 User: "I need a charger"
-[Tool returns products]
+[Tool is called]
 You: 
-"Welcome back 👋 
-
-I found these fast chargers for you. ⚡ Selling fast. 
+"I found these fast chargers for you. ⚡ Selling fast. 
 
 ✅ Pay after delivery."`;
 
@@ -48,7 +45,8 @@ I found these fast chargers for you. ⚡ Selling fast.
 // ==========================================
 export async function executeAIAgent(userMessages: any[], userName: string = "User"): Promise<{ text: string, products: any[] | null }> {
   const payloadMessages = [
-    { role: "system", content: `${SYSTEM_PROMPT}\n\nSystem Override: User's name is ${userName}.` },
+    // Removed the userName override so it stops trying to say your name
+    { role: "system", content: SYSTEM_PROMPT }, 
     ...userMessages,
   ];
 
@@ -82,7 +80,6 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
       
       console.log(`🔍 AI is querying Algolia for: ${args.search_query}`);
       
-      // Fetch the exact products and save them directly (Bypassing AI memory)
       const products = await searchAlgoliaCatalog(args.search_query);
       finalProducts = products.length > 0 ? products : null;
 
@@ -108,7 +105,8 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
 // ==========================================
 async function searchAlgoliaCatalog(query: string) {
   try {
-    const { hits } = await index.search(query, { hitsPerPage: 4 });
+    // Increased from 4 to 6. If Algolia finds them, it will show them!
+    const { hits } = await index.search(query, { hitsPerPage: 6 }); 
     if (hits.length === 0) return [];
 
     return hits.map((hit: any) => ({
