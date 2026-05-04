@@ -2,42 +2,43 @@
 import algoliasearch from "algoliasearch";
 import { GROQ_CONFIG } from "@/lib/aiContext";
 
+// ==========================================
+// INITIALIZE ALGOLIA 
+// ==========================================
 const searchClient = algoliasearch(
   process.env.NEXT_PUBLIC_ALGOLIA_APP_ID || "",
   process.env.NEXT_PUBLIC_ALGOLIA_SEARCH_KEY || ""
 );
 const index = searchClient.initIndex(process.env.NEXT_PUBLIC_ALGOLIA_INDEX_NAME || "products");
 
-const SYSTEM_PROMPT = `You are the elite WhatsApp Sales Closer for Kabale Online, the premium student marketplace in Kabale, Uganda.
+const SYSTEM_PROMPT = `You are the elite WhatsApp Sales Assistant for Kabale Online, the premium student marketplace in Kabale, Uganda.
 
 ====================
-YOUR PERSONA & TONE:
+CRITICAL BEHAVIOR RULES (NON-NEGOTIABLE):
 ====================
-- You are highly persuasive, helpful, and fast.
-- Keep responses RUTHLESSLY SHORT (1-2 sentences). WhatsApp users hate reading.
-- Build trust: Always mention "Pay Cash on Delivery" and "Verified Sellers".
+1. NO CONVERSATION LOOPS: If a user names a product (e.g., "charger", "shoes", "otg"), DO NOT ask clarifying questions. Immediately use the \`search_catalog\` tool.
+2. EXTREME BREVITY: People hate reading. Use maximum 1 to 2 short lines. No yapping.
+3. RECOGNITION: Start your response with a brief, warm recognition (e.g., "Welcome back 👋" or use their name).
 
 ====================
-CONVERSATION-TO-SALE OPTIMIZATION (CRITICAL)
+TRUST & PSYCHOLOGY (MANDATORY):
 ====================
-You must guide the user to a sale, not just act like a search engine. Follow this exact flow:
+Every time you return products, you MUST include ONE Trust Badge and ONE Psychological Trigger in your short text.
+- Pick ONE Trust Badge: "✅ Pay after delivery", "✔ Verified by Kabale Online", or "🛡️ We help if anything goes wrong"
+- Pick ONE Psych Trigger: "🔥 Popular in Kabale", "⚡ Selling fast", or "🎓 Student favorite"
 
-STEP 1: CLARIFY (If vague)
-If a user asks for a broad category (e.g., "I need earphones", "laptops", "shoes"), DO NOT search immediately. Ask ONE short qualifying question. 
-Example: "We have great earphones! Are you looking for Bluetooth or wired?" or "What is your budget?"
+====================
+CATALOG FORMAT & MAIN MENU:
+====================
+1. Format results exactly like this: ||CATALOG:item_[id1]=Title1|item_[id2]=Title2||
+2. You MUST include ALL products returned by the database tool in your CATALOG tag. Separate each with a pipe '|'. Do not leave any out!
+3. Prepend "item_" to the EXACT 'id' provided in the JSON results.
+4. If the user asks for categories, help, or a menu, just reply: "Type *MENU* to see our categories and useful links! 👇"
 
-STEP 2: SHORTLIST & SEARCH
-Once you know what they want, use the \`search_catalog\` tool. 
-
-STEP 3: PUSH TO BUY (The Close)
-When the database returns products, DO NOT list them out in text. Present a curated shortlist (max 3 items) using the CATALOG tag. Use scarcity or urgency.
-Example: "I found 2 perfect matches that fit your budget. These are selling fast today. Tap below to order with cash on delivery! ||CATALOG:item_abc1=Pro Earbuds|item_xyz2=Bass Hook||"
-
-CRITICAL RULES FOR THE CATALOG TAG:
-- Prepend "item_" to the EXACT 'id' provided in the JSON results.
-- Include the selected products in your CATALOG tag, separated by a pipe '|'.
-
-FORMAT: ||CATALOG:item_[id1]=Title1|item_[id2]=Title2||`;
+Example Workflow:
+User: "I need a charger"
+[Tool returns: [{"id": "abc1", "title": "100W USB Cable", "price": 10000}, {"id": "xyz2", "title": "Fast Charger", "price": 8000}]]
+You: "Welcome back 👋 I found these for you. 🔥 Popular in Kabale. ✅ Pay after delivery. ||CATALOG:item_abc1=100W USB Cable|item_xyz2=Fast Charger||"`;
 
 // ==========================================
 // THE UNIFIED AI ENGINE
@@ -55,7 +56,7 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
       description: "Search the database for active products.",
       parameters: {
         type: "object",
-        properties: { search_query: { type: "string", description: "Specific keyword to search" } },
+        properties: { search_query: { type: "string" } },
         required: ["search_query"],
       },
     },
@@ -69,8 +70,10 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
     if (toolCall.function.name === "search_catalog") {
       let args;
       try {
+        // Bulletproof JSON parsing
         args = JSON.parse(toolCall.function.arguments);
       } catch (e) {
+        console.error("⚠️ AI generated bad JSON:", toolCall.function.arguments);
         return "I had a tiny brain freeze looking that up! 😅 Could you ask me one more time?";
       }
       
@@ -92,12 +95,11 @@ export async function executeAIAgent(userMessages: any[], userName: string = "Us
 }
 
 // ==========================================
-// 🚀 ALGOLIA SEARCH (Optimized for Shortlist)
+// 🚀 ALGOLIA SEARCH
 // ==========================================
 async function searchAlgoliaCatalog(query: string) {
   try {
-    // Only return top 3 hits so the user isn't overwhelmed (Paradox of Choice)
-    const { hits } = await index.search(query, { hitsPerPage: 3 });
+    const { hits } = await index.search(query, { hitsPerPage: 4 });
 
     if (hits.length === 0) return { status: "No products found." };
 
@@ -108,6 +110,7 @@ async function searchAlgoliaCatalog(query: string) {
     }));
 
   } catch (error) {
+    console.error("🔥 Algolia Search Error in AI Engine:", error);
     return { status: "Database search failed." };
   }
 }
@@ -116,12 +119,24 @@ async function searchAlgoliaCatalog(query: string) {
 // HELPER: GROQ API FETCH
 // ==========================================
 async function fetchGroqCompletion(messages: any[], tools?: any[]) {
-  const bodyPayload: any = { model: GROQ_CONFIG.model, messages, temperature: 0.7, top_p: 0.9 };
-  if (tools) { bodyPayload.tools = tools; bodyPayload.tool_choice = "auto"; }
+  const bodyPayload: any = { 
+    model: GROQ_CONFIG.model, 
+    messages, 
+    temperature: 0.6, // Kept low to prevent the AI from generating conversational fluff
+    top_p: 0.9 
+  };
+  
+  if (tools) { 
+    bodyPayload.tools = tools; 
+    bodyPayload.tool_choice = "auto"; 
+  }
 
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
+    headers: { 
+      "Content-Type": "application/json", 
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}` 
+    },
     body: JSON.stringify(bodyPayload),
   });
   return await res.json();
