@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { Suspense } from "react";
 import { AuthProvider } from "@/components/AuthProvider";
 import { CartProvider } from "@/context/CartContext"; 
-import WebsiteBanner from "@/components/WebsiteBanner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import BottomNav from "@/components/BottomNav";
@@ -21,42 +20,6 @@ export default function LayoutClient({
 }: {
   children: React.ReactNode;
 }) {
-  // Track if the user explicitly clicked the "X" to close the banner forever
-  const [isClosedManually, setIsClosedManually] = useState(false);
-
-  // Track scroll visibility state for the banner
-  const [showBannerOnScroll, setShowBannerOnScroll] = useState(true);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (typeof window === "undefined") return;
-
-      const scrollY = window.scrollY;
-      const windowHeight = window.innerHeight;
-      const fullHeight = document.documentElement.scrollHeight;
-
-      // Show if they are at the very top (so it's visible on first load)
-      const isAtTop = scrollY < 20;
-
-      // Show if they reached the absolute bottom 
-      // (We use a 50px buffer because mobile browsers like iOS Safari have a scroll "bounce")
-      const isAtBottom = Math.ceil(scrollY + windowHeight) >= fullHeight - 50;
-
-      // Update state: Show ONLY at the top or bottom
-      setShowBannerOnScroll(isAtTop || isAtBottom);
-    };
-
-    window.addEventListener("scroll", handleScroll, { passive: true });
-
-    // Run it once on mount just in case they load halfway down the page
-    handleScroll();
-
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  // Final visibility depends on scroll position AND if they haven't manually dismissed it
-  const isBannerVisible = showBannerOnScroll && !isClosedManually;
-
   return (
     <>
       {/* INJECT GTM GLOBALLY ONLY IF ID EXISTS */}
@@ -72,13 +35,8 @@ export default function LayoutClient({
             <ReferralTracker />
           </Suspense>
 
-          {/* FIXED WEBSITE BANNER */}
-          {isBannerVisible && (
-            <WebsiteBanner onClose={() => setIsClosedManually(true)} />
-          )}
-
-          {/* NAVBAR (moves up and down smoothly depending on banner visibility) */}
-          <Navbar bannerVisible={isBannerVisible} />
+          {/* NAVBAR */}
+          <Navbar />
 
           {/* CONTENT WRAPPER */}
           {/* Completely transparent background to let globals.css gradient show through */}
