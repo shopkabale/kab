@@ -179,15 +179,11 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     if (isLeadConverted) return; 
 
     // ==========================================
-    // 🤖 NATIVE BOT HANDLER (Catalog, Orders, Menus)
+    // 🤖 NATIVE BOT HANDLER (Catalog, Orders, Website Leads, Menus)
     // ==========================================
-    const isInteractive = message.type === "interactive";
-    const isExactCommand = ["MENU", "START", "HELP"].includes(upperText);
-
-    if (isInteractive || isExactCommand) {
-      const isBotHandled = await checkIsBotFlow(fromPhone, message);
-      if (isBotHandled) return; 
-    }
+    // 🔥 THE FIX: We pass EVERY message to handlers.ts so it can catch Website Inquiries, Images, and Menus.
+    const isBotHandled = await checkIsBotFlow(fromPhone, message);
+    if (isBotHandled) return; 
 
     // ==========================================
     // 🚪 ESCAPE HATCH (Manual Close)
