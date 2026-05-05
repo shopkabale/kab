@@ -22,10 +22,10 @@ import {
   Leaf, 
   Sparkles, 
   Wrench,
-  Store // <-- Added Store for the Official Store
+  Store 
 } from "lucide-react";
 
-export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
+export default function Navbar() {
   const pathname = usePathname();
   const { user, loading, signIn, signOut } = useAuth();
   const { cartCount } = useCart(); 
@@ -78,7 +78,7 @@ export default function Navbar({ bannerVisible }: { bannerVisible: boolean }) {
       {/* ============================================== */}
       {/* NAVBAR CONTAINER                               */}
       {/* ============================================== */}
-      <nav className={`fixed w-full ${bannerVisible ? "top-8" : "top-0"} bg-white border-b-[3px] border-amber-600 z-40 transition-all shadow-sm`}>
+      <nav className="fixed w-full top-0 bg-white border-b-[3px] border-amber-600 z-40 transition-all shadow-sm">
 
         {/* === DESKTOP VIEW === */}
         <div className="hidden lg:flex max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 justify-between items-center h-16 gap-6">
