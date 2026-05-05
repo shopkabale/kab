@@ -54,7 +54,17 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   }
 
   // ==========================================
-  // 🧭 2. NATIVE MENUS & NAVIGATION
+  // 🔥 2. RESTORED LEAD TRACKER (Website Inquiries)
+  // ==========================================
+  const productIdMatch = text.match(/Product ID:\s*\[([a-zA-Z0-9_-]+)\]/i);
+  if (productIdMatch) {
+    const productId = productIdMatch[1];
+    await handleNewWebsiteInquiry(senderPhone, productId, text); 
+    return true; 
+  }
+
+  // ==========================================
+  // 🧭 3. NATIVE MENUS & NAVIGATION
   // ==========================================
   if (buttonId === "cmd_search") {
     await sendWhatsAppMessage(senderPhone, "🔍 Just type what you are looking for! (e.g., 'I need a charger' or 'shoes')");
@@ -80,7 +90,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   }
 
   // ==========================================
-  // 📞 3. DIRECT HELP & CONTACT
+  // 📞 4. DIRECT HELP & CONTACT
   // ==========================================
   if (buttonId === "btn_help" || upperText === "HELP" || upperText === "SUPPORT") {
     await sendWhatsAppMessage(
@@ -91,7 +101,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
   }
 
   // ==========================================
-  // 👋 4. BULLETPROOF GREETINGS
+  // 👋 5. BULLETPROOF GREETINGS
   // ==========================================
   const greetings = ["HI", "HELLO", "HEY", "MENU", "START"];
   const pureText = text.replace(/[^a-zA-Z]/g, "").toUpperCase();
@@ -101,7 +111,7 @@ export async function checkIsBotFlow(senderPhone: string, message: any): Promise
     return true; 
   }
 
-  // If it is none of the above, return false so the Webhook passes it to the Groq AI!
+  // Pass everything else to April!
   return false; 
 }
 
@@ -182,18 +192,16 @@ async function handleCategoryBrowsing(phone: string, category: string, page: num
 // ==========================================
 async function handleProductSelection(phone: string, productId: string) {
   try {
-    // 🔥 FIX 1: Strip hidden characters so Firebase doesn't fail the lookup
+    // Stripping hidden characters
     const cleanId = productId.replace(/[^a-zA-Z0-9_-]/g, "");
     let productData = null;
     let actualDocId = cleanId;
 
-    // Try direct Firebase Document ID
+    // Direct Firebase Document ID
     const exactDoc = await adminDb.collection("products").doc(cleanId).get();
-    if (exactDoc.exists) {
-      productData = exactDoc.data();
-    }
+    if (exactDoc.exists) productData = exactDoc.data();
 
-    // 🔥 FIX 2: FALLBACK 1 - Algolia objectID match
+    // FALLBACK 1: Algolia objectID match
     if (!productData) {
       const algoliaQuery = await adminDb.collection("products").where("objectID", "==", cleanId).limit(1).get();
       if (!algoliaQuery.empty) {
@@ -202,7 +210,7 @@ async function handleProductSelection(phone: string, productId: string) {
       }
     }
 
-    // 🔥 FIX 3: FALLBACK 2 - publicId match
+    // FALLBACK 2: publicId match
     if (!productData) {
       const idQuery = await adminDb.collection("products").where("publicId", "==", cleanId).limit(1).get();
       if (!idQuery.empty) {
@@ -211,7 +219,6 @@ async function handleProductSelection(phone: string, productId: string) {
       }
     }
 
-    // If all 3 checks fail, then it's actually removed.
     if (!productData) {
       return await sendWhatsAppMessage(
         phone, 
@@ -224,12 +231,11 @@ async function handleProductSelection(phone: string, productId: string) {
     const safeCondition = productData.condition || "Used";
     const safeDesc = productData.description || "No description provided.";
     
-    // 🔥 FIX 4: Securely pull the image exactly how it worked for you previously
+    // Original safeImage logic exactly as it was
     const safeImage = (productData.images && Array.isArray(productData.images) && productData.images.length > 0) ? productData.images[0] : undefined;
 
     const messageText = `*${safeTitle}*\n\n💰 Price: *UGX ${safePrice}*\n📝 Condition: ${safeCondition}\n\n${safeDesc}\n\nTo buy this item, tap the button below!`;
 
-    // 🔥 FIX 5: Pass the image directly into the interactive button 
     await sendWhatsAppInteractiveButtons(
       phone,
       messageText,
@@ -259,7 +265,6 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
     const safeTitle = product.title || product.name || "Unknown Item";
     const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
 
-    // 🔥 SAVE MASTER COD ORDER SCHEMA
     await adminDb.collection("orders").doc(orderNumber).set({
       orderId: orderNumber,
       buyerPhone: buyerPhone,
@@ -293,7 +298,6 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
       messageCount: 0        
     });
 
-    // Fire correct notifications
     sendAdminAlert(orderNumber, `1x ${safeTitle}`, productPrice, buyerPhone, product.sellerPhone || "SYSTEM").catch(console.error);
     await NotificationService.notifyBuyer(buyerPhone, orderNumber, `1x ${safeTitle}`, productPrice);
     await NotificationService.notifySeller(
@@ -307,7 +311,6 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
       buyerPhone
     );
 
-    // 🔥 ADDED POST-CHECKOUT TRUST ASSURANCE
     await sendWhatsAppMessage(
       buyerPhone, 
       "✅ *Your order is confirmed.*\n\nYou will pay only after receiving the item. 🛡️ We are here to help if anything goes wrong."
@@ -316,5 +319,76 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
   } catch (error) {
     console.error("❌ Error handling native checkout:", error);
     await sendWhatsAppMessage(buyerPhone, "Oops, something went wrong setting up your order. Please try again.");
+  }
+}
+
+// ==========================================
+// 🚨 RESTORED: LEGACY WEBSITE INQUIRY FALLBACK (LEAD TRACKER)
+// ==========================================
+async function handleNewWebsiteInquiry(buyerPhone: string, productId: string, originalMessage: string) {
+  try {
+    const productDoc = await adminDb.collection("products").doc(productId).get();
+
+    if (!productDoc.exists) {
+      await sendWhatsAppMessage(buyerPhone, "Sorry, we couldn't find that product. It may have been sold or removed.");
+      return;
+    }
+
+    const product = productDoc.data()!;
+    const productPrice = Number(product.price) || 0;
+    const safeTitle = product.title || product.name || "Unknown Item";
+    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
+
+    await adminDb.collection("orders").doc(orderNumber).set({
+      orderId: orderNumber,
+      buyerPhone: buyerPhone,
+      buyerName: "Website User",
+      source: "whatsapp",
+      paymentMode: "COD",
+      paymentStatus: "pending",
+      status: "processing", 
+      totalAmount: productPrice, 
+      cartItems: [{            
+        productId: productId,
+        name: safeTitle,
+        price: productPrice,
+        quantity: 1,
+        sellerId: product.sellerId || "SYSTEM",
+        sellerPhone: product.sellerPhone || ""
+      }],
+      sellerOrders: [{
+        sellerId: product.sellerId || "SYSTEM",
+        sellerPhone: product.sellerPhone || "",
+        subtotal: productPrice,
+        items: [{
+          productId: productId,
+          name: safeTitle,
+          price: productPrice,
+          quantity: 1
+        }]
+      }],
+      createdAt: Date.now(),
+      updatedAt: Date.now(), 
+      messageCount: 0        
+    });
+
+    sendAdminAlert(orderNumber, `1x ${safeTitle}`, productPrice, buyerPhone, product.sellerPhone || "SYSTEM").catch(console.error);
+    await NotificationService.notifyBuyer(buyerPhone, orderNumber, `1x ${safeTitle}`, productPrice);
+    await NotificationService.notifySeller(
+      product.sellerPhone, 
+      "Partner", 
+      orderNumber, 
+      `1x ${safeTitle}`, 
+      productPrice, 
+      "Website User", 
+      "Kabale", 
+      buyerPhone
+    );
+
+    await sendWhatsAppMessage(product.sellerPhone, `*Buyer added a note via website:*\n"${originalMessage}"`);
+
+  } catch (error) {
+    console.error("❌ Error handling website inquiry:", error);
+    await sendWhatsAppMessage(buyerPhone, "Oops, something went wrong setting up your chat. Please try again.");
   }
 }
