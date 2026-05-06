@@ -34,7 +34,7 @@ export default function BundleScroller({ title, subtitle, products, viewAllLink 
         </div>
 
         {viewAllLink && (
-          <Link href={viewAllLink} className="text-sm font-semibold text-[#FF6A00] hover:underline flex items-center gap-1 whitespace-nowrap outline-none">
+          <Link href={viewAllLink} className="text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-[#FF6A00] transition-colors flex items-center gap-1 whitespace-nowrap outline-none">
             See All
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
@@ -45,9 +45,7 @@ export default function BundleScroller({ title, subtitle, products, viewAllLink 
 
       {/* VERTICAL GRID CONTAINER */}
       <div className="p-3 sm:p-4">
-        {/* Changed from flex overflow-x-auto to a responsive grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 pb-2">
-          {/* Sliced the array to exactly 6 items */}
           {products.slice(0, 6).map((p) => {
             const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
             const titleStr = p.title || p.name || 'Mega Bundle';
@@ -56,7 +54,6 @@ export default function BundleScroller({ title, subtitle, products, viewAllLink 
             return (
               <div 
                 key={p.id} 
-                // Removed w-[200px], snap-start, flex-none. Replaced with w-full to fill the grid cell.
                 className="group w-full bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col hover:shadow-lg transition-all relative"
               >
                 <Link 
@@ -78,7 +75,7 @@ export default function BundleScroller({ title, subtitle, products, viewAllLink 
                       <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-400 uppercase">No Image</div>
                     )}
 
-                    {/* BUNDLE BADGE */}
+                    {/* BUNDLE BADGE (Kept Orange) */}
                     <div className="absolute top-2 left-2 bg-[#FF6A00]/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 z-10 uppercase tracking-wide shadow-sm">
                        <Package className="w-3 h-3" />
                        Combo Pack
@@ -88,9 +85,9 @@ export default function BundleScroller({ title, subtitle, products, viewAllLink 
                   {/* BUNDLE DETAILS */}
                   <div className="p-3 sm:p-4 flex flex-col flex-grow bg-white dark:bg-[#121212]">
                     <div className="flex items-center gap-1 mb-2">
-                      <span className="text-[10px] font-bold text-[#FF6A00] uppercase tracking-wider line-clamp-1 flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 group-hover:text-[#FF6A00] transition-colors uppercase tracking-wider line-clamp-1 flex items-center gap-1">
                         {p.sellerName || "Official Store"} 
-                        {isOfficial && <MdVerifiedUser className="text-blue-500 text-xs" />}
+                        {isOfficial && <MdVerifiedUser className="text-slate-400 group-hover:text-blue-500 transition-colors text-xs" />}
                       </span>
                     </div>
 
@@ -106,7 +103,8 @@ export default function BundleScroller({ title, subtitle, products, viewAllLink 
                         </span>
                       </div>
 
-                      <span className="bg-[#FF6A00] text-white text-[10px] font-bold px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap">
+                      {/* Grab Deal Button (Gray/Black to Orange on hover) */}
+                      <span className="bg-slate-800 dark:bg-slate-700 text-white text-[10px] font-bold px-3 py-1.5 rounded-full group-hover:bg-[#FF6A00] transition-colors whitespace-nowrap">
                         Grab Deal
                       </span>
                     </div>
