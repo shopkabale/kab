@@ -38,7 +38,6 @@ export default function HeroCarousel({ products }: { products: any[] }) {
           const theme = slideThemes[index % slideThemes.length];
           const title = product.name || product.title || "Exclusive Deal";
           const price = Number(product.price).toLocaleString();
-          const description = product.description || "Premium quality items delivered right to your door.";
           const image = product.images?.[0] ? product.images[0] : "";
 
           return (
@@ -58,15 +57,10 @@ export default function HeroCarousel({ products }: { products: any[] }) {
                       </span>
                     </div>
 
-                    {/* Title */}
-                    <h3 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black leading-tight sm:leading-none mb-2 line-clamp-1 sm:line-clamp-2 drop-shadow-lg tracking-tight">
+                    {/* Title - Adjusted to always allow 2 lines */}
+                    <h3 className="text-xl sm:text-2xl md:text-4xl lg:text-5xl font-black leading-tight sm:leading-none mb-4 sm:mb-6 line-clamp-2 drop-shadow-lg tracking-tight">
                       {title}
                     </h3>
-
-                    {/* Description - Strictly One Line */}
-                    <p className="text-white/70 text-[10px] sm:text-xs md:text-sm mb-4 sm:mb-6 line-clamp-1 max-w-full font-medium tracking-wide">
-                      {description}
-                    </p>
 
                     {/* Price Block */}
                     <div className="flex flex-col transform transition-transform duration-500 group-hover:translate-x-1">
