@@ -24,7 +24,8 @@ export default function HorizontalScroller({
   if (!products || products.length === 0) return null;
 
   return (
-    <section className="w-full bg-white dark:bg-[#151515] rounded-md shadow-sm border border-slate-200 dark:border-slate-800 mb-4 overflow-hidden select-none">
+    // Removed rounded-md here
+    <section className="w-full bg-white dark:bg-[#151515] shadow-sm border border-slate-200 dark:border-slate-800 mb-4 overflow-hidden select-none">
 
       {/* CLEAN MINIMALIST HEADER */}
       <div className="flex justify-between items-center p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800">
@@ -51,7 +52,7 @@ export default function HorizontalScroller({
 
       {/* VERTICAL GRID CONTAINER (Capped at 6 items) */}
       <div className="p-3 sm:p-4">
-        {/* 2 columns on mobile, 3 on tablet, 6 on desktop */}
+        {/* The grid layout keeps desktop 100% flexible */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 pb-2">
           {products.slice(0, 6).map((p) => {
             const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
@@ -65,10 +66,10 @@ export default function HorizontalScroller({
             const displayTitle = (!isSold && isShortTitle) ? `${titleStr} (Ready)` : titleStr;
 
             return (
-              // POLISHED CARDS: Full width of their grid cell, nicely rounded borders, premium shadow on hover
+              // Removed rounded-xl here for sharp corners
               <div 
                 key={p.id} 
-                className={`group w-full flex flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden transition-all hover:shadow-lg relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}
+                className={`group w-full flex flex-col bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden transition-all hover:shadow-lg relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}
               >
                 <Link 
                   href={`/product/${p.publicId || p.id}`} 
@@ -98,21 +99,24 @@ export default function HorizontalScroller({
 
                     {isSold && (
                       <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-[2px]">
-                         <span className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-lg transform -rotate-6">
+                         {/* Removed rounded-sm here */}
+                         <span className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 shadow-lg transform -rotate-6">
                            Sold Out
                          </span>
                       </div>
                     )}
 
                     {!isSold && isJustPosted && (
-                      <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded-sm flex items-center gap-1 z-10">
-                         <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
+                      // Removed rounded-sm here
+                      <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 flex items-center gap-1 z-10">
+                         <span className="w-1.5 h-1.5 rounded-none bg-green-400 animate-pulse"></span>
                          New
                       </div>
                     )}
 
                     {!isSold && (isApproved || isOfficial) && (
-                      <div className={`absolute bottom-0 left-0 ${isApproved ? 'bg-emerald-600' : 'bg-[#FF6A00]'} text-white text-[8px] md:text-[9px] font-bold px-1.5 py-1 leading-none rounded-tr-md z-10 tracking-widest uppercase shadow-sm`}>
+                      // Removed rounded-tr-md here
+                      <div className={`absolute bottom-0 left-0 ${isApproved ? 'bg-emerald-600' : 'bg-[#FF6A00]'} text-white text-[8px] md:text-[9px] font-bold px-1.5 py-1 leading-none z-10 tracking-widest uppercase shadow-sm`}>
                          {isApproved ? 'Approved Quality' : 'Official Product'}
                       </div>
                     )}
