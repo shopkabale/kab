@@ -18,7 +18,7 @@ export default function ServiceScroller({ title, subtitle, products, viewAllLink
 
   return (
     <section className="w-full bg-white dark:bg-[#151515] rounded-md shadow-sm border border-slate-200 dark:border-slate-800 mb-4 overflow-hidden select-none">
-      
+
       {/* HEADER */}
       <div className="flex justify-between items-center p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800">
         <div className="flex flex-col">
@@ -42,10 +42,12 @@ export default function ServiceScroller({ title, subtitle, products, viewAllLink
         )}
       </div>
 
-      {/* HORIZONTAL SCROLL CONTAINER */}
-      <div className="p-3 sm:p-4 relative">
-        <div className="flex overflow-x-auto gap-3 sm:gap-4 pb-4 snap-x snap-mandatory scrollbar-hide">
-          {products.map((p) => {
+      {/* VERTICAL GRID CONTAINER */}
+      <div className="p-3 sm:p-4">
+        {/* Replaced flex horizontal scrolling with a 4-column responsive grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 pb-2">
+          {/* Sliced to show exactly 4 items */}
+          {products.slice(0, 4).map((p) => {
             const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
             const titleStr = p.title || p.name || 'Professional Service';
             const isOfficial = p.isOfficialStore || p.isAdminUpload;
@@ -53,11 +55,11 @@ export default function ServiceScroller({ title, subtitle, products, viewAllLink
             return (
               <div 
                 key={p.id} 
-                className="group flex-none w-[200px] sm:w-[240px] snap-start bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col hover:shadow-lg transition-all relative"
+                // Removed w-[200px], snap-start, flex-none. Added w-full to fill the grid.
+                className="group w-full bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col hover:shadow-lg transition-all relative"
               >
                 <Link 
-  href={`/service/${p.id}`} 
- 
+                  href={`/service/${p.id}`} 
                   className="flex flex-col flex-grow relative pointer-events-auto outline-none"
                   onClick={() => trackSelectItem({ id: p.id, name: titleStr, price: Number(p.price) || 0, category: "services" })}
                 >
@@ -68,8 +70,8 @@ export default function ServiceScroller({ title, subtitle, products, viewAllLink
                         src={optimizedImage} 
                         alt={titleStr} 
                         fill 
-                        sizes="(max-width: 768px) 200px, 240px" 
-                        // Changed from object-cover to object-contain so NO part of the poster is ever cut off
+                        sizes="(max-width: 1024px) 50vw, 25vw" 
+                        // Kept object-contain as requested in the original code
                         className="object-contain group-hover:scale-105 transition-transform duration-500" 
                       />
                     ) : (
@@ -97,7 +99,7 @@ export default function ServiceScroller({ title, subtitle, products, viewAllLink
                           UGX {Number(p.price).toLocaleString()}
                         </span>
                       </div>
-                      
+
                       <span className="bg-[#FF6A00] text-white text-[10px] font-bold px-4 py-1.5 rounded-full hover:opacity-90 transition-opacity">
                         Book
                       </span>
