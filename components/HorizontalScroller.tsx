@@ -24,7 +24,6 @@ export default function HorizontalScroller({
   if (!products || products.length === 0) return null;
 
   return (
-    // Removed rounded-md here
     <section className="w-full bg-white dark:bg-[#151515] shadow-sm border border-slate-200 dark:border-slate-800 mb-4 overflow-hidden select-none">
 
       {/* CLEAN MINIMALIST HEADER */}
@@ -66,7 +65,6 @@ export default function HorizontalScroller({
             const displayTitle = (!isSold && isShortTitle) ? `${titleStr} (Ready)` : titleStr;
 
             return (
-              // Removed rounded-xl here for sharp corners
               <div 
                 key={p.id} 
                 className={`group w-full flex flex-col bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden transition-all hover:shadow-lg relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}
@@ -99,7 +97,6 @@ export default function HorizontalScroller({
 
                     {isSold && (
                       <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-[2px]">
-                         {/* Removed rounded-sm here */}
                          <span className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 shadow-lg transform -rotate-6">
                            Sold Out
                          </span>
@@ -107,7 +104,6 @@ export default function HorizontalScroller({
                     )}
 
                     {!isSold && isJustPosted && (
-                      // Removed rounded-sm here
                       <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 flex items-center gap-1 z-10">
                          <span className="w-1.5 h-1.5 rounded-none bg-green-400 animate-pulse"></span>
                          New
@@ -115,7 +111,6 @@ export default function HorizontalScroller({
                     )}
 
                     {!isSold && (isApproved || isOfficial) && (
-                      // Removed rounded-tr-md here
                       <div className={`absolute bottom-0 left-0 ${isApproved ? 'bg-emerald-600' : 'bg-[#FF6A00]'} text-white text-[8px] md:text-[9px] font-bold px-1.5 py-1 leading-none z-10 tracking-widest uppercase shadow-sm`}>
                          {isApproved ? 'Approved Quality' : 'Official Product'}
                       </div>
@@ -125,15 +120,15 @@ export default function HorizontalScroller({
                   {/* TEXT/DETAILS AREA */}
                   <div className="flex flex-col flex-grow p-3 sm:p-4 bg-white dark:bg-[#121212]">
                     <div className="mb-2 flex flex-col justify-start w-full">
-                      {/* LIGHT GRAY & SINGLE LINE */}
-                      <h3 className="text-xs sm:text-sm font-medium text-slate-400 dark:text-slate-500 truncate transition-colors duration-200 group-hover:text-[#FF6A00]">
+                      {/* NORMAL BLACK NAME: text-slate-800 (dark mode: slate-300) */}
+                      <h3 className="text-xs sm:text-sm font-medium text-slate-800 dark:text-slate-300 truncate transition-colors duration-200 group-hover:text-[#FF6A00]">
                         {displayTitle}
                       </h3>
                     </div>
 
                     <div className="mt-auto pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-col">
-                      {/* GRAY PRICE */}
-                      <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-400' : 'text-slate-500 dark:text-slate-400 group-hover:text-[#FF6A00]'}`}>
+                      {/* DARK BLACK PRICE: text-black (dark mode: white) */}
+                      <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-400' : 'text-black dark:text-white group-hover:text-[#FF6A00]'}`}>
                         UGX {Number(p.price).toLocaleString()}
                       </span>
                     </div>
