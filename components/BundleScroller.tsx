@@ -19,7 +19,7 @@ export default function BundleScroller({ title, subtitle, products, viewAllLink 
 
   return (
     <section className="w-full bg-white dark:bg-[#151515] rounded-md shadow-sm border border-slate-200 dark:border-slate-800 mb-4 overflow-hidden select-none">
-      
+
       {/* HEADER */}
       <div className="flex justify-between items-center p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800">
         <div className="flex flex-col">
@@ -43,10 +43,12 @@ export default function BundleScroller({ title, subtitle, products, viewAllLink 
         )}
       </div>
 
-      {/* HORIZONTAL SCROLL CONTAINER */}
-      <div className="p-3 sm:p-4 relative">
-        <div className="flex overflow-x-auto gap-3 sm:gap-4 pb-4 snap-x snap-mandatory no-scrollbar">
-          {products.map((p) => {
+      {/* VERTICAL GRID CONTAINER */}
+      <div className="p-3 sm:p-4">
+        {/* Changed from flex overflow-x-auto to a responsive grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 pb-2">
+          {/* Sliced the array to exactly 6 items */}
+          {products.slice(0, 6).map((p) => {
             const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
             const titleStr = p.title || p.name || 'Mega Bundle';
             const isOfficial = p.isOfficialStore || p.isAdminUpload;
@@ -54,28 +56,28 @@ export default function BundleScroller({ title, subtitle, products, viewAllLink 
             return (
               <div 
                 key={p.id} 
-                className="group flex-none w-[200px] sm:w-[240px] snap-start bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col hover:shadow-lg transition-all relative"
+                // Removed w-[200px], snap-start, flex-none. Replaced with w-full to fill the grid cell.
+                className="group w-full bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col hover:shadow-lg transition-all relative"
               >
                 <Link 
                   href={`/product/${p.publicId || p.id}`} 
                   className="flex flex-col flex-grow relative pointer-events-auto outline-none"
                   onClick={() => trackSelectItem({ id: p.id, name: titleStr, price: Number(p.price) || 0, category: "bundles" })}
                 >
-                  {/* WIDE IMAGE (Slim & Tall Portrait Aspect Ratio just like Services) */}
+                  {/* WIDE IMAGE */}
                   <div className="relative aspect-[3/4] w-full bg-slate-100 dark:bg-slate-800 overflow-hidden border-b border-slate-100 dark:border-slate-800">
                     {optimizedImage ? (
                       <Image 
                         src={optimizedImage} 
                         alt={titleStr} 
                         fill 
-                        sizes="(max-width: 768px) 200px, 240px" 
-                        // Changed to object-cover so bundle spreads fill the whole tall frame beautifully
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw" 
                         className="object-cover group-hover:scale-105 transition-transform duration-500" 
                       />
                     ) : (
                       <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-slate-400 uppercase">No Image</div>
                     )}
-                    
+
                     {/* BUNDLE BADGE */}
                     <div className="absolute top-2 left-2 bg-[#FF6A00]/90 backdrop-blur-sm text-white text-[9px] font-bold px-2 py-1 rounded-md flex items-center gap-1 z-10 uppercase tracking-wide shadow-sm">
                        <Package className="w-3 h-3" />
@@ -103,7 +105,7 @@ export default function BundleScroller({ title, subtitle, products, viewAllLink 
                           UGX {Number(p.price).toLocaleString()}
                         </span>
                       </div>
-                      
+
                       <span className="bg-[#FF6A00] text-white text-[10px] font-bold px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity whitespace-nowrap">
                         Grab Deal
                       </span>
