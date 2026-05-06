@@ -46,7 +46,7 @@ export default function BundleScroller({ title, subtitle, products, viewAllLink 
       {/* VERTICAL GRID CONTAINER */}
       <div className="p-3 sm:p-4">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 pb-2">
-          {products.slice(0, 4).map((p) => {
+          {products.slice(0, 6).map((p) => {
             const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
             const titleStr = p.title || p.name || 'Mega Bundle';
             const isOfficial = p.isOfficialStore || p.isAdminUpload;
