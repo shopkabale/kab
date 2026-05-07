@@ -181,7 +181,6 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
     // ==========================================
     // 🤖 NATIVE BOT HANDLER (Catalog, Orders, Website Leads, Menus)
     // ==========================================
-    // 🔥 THE FIX: We pass EVERY message to handlers.ts so it can catch Website Inquiries, Images, and Menus.
     const isBotHandled = await checkIsBotFlow(fromPhone, message);
     if (isBotHandled) return; 
 
@@ -269,12 +268,25 @@ async function handleLeadConversion(fromPhone: string, contactName: string, text
     });
 
     const itemsStr = orderData.cartItems.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
-    NotificationService.notifyBuyer(fromPhone, leadId, itemsStr, orderData.totalAmount);
-    sendAdminAlert(leadId, itemsStr, orderData.totalAmount, fromPhone, "WhatsApp COD Lead Converted");
+
+    // 🔥 THE FIX: EXPLICIT SUCCESS MESSAGE SENT IMMEDIATELY
+    await sendWhatsAppMessage(
+      fromPhone, 
+      "✅ *Your order is confirmed.*\n\nYou will pay only after receiving the item. 🛡️ We are here to help if anything goes wrong."
+    );
+
+    // 🔥 THE SHOCK ABSORBERS: We run these in the background safely
+    sendAdminAlert(leadId, itemsStr, orderData.totalAmount, fromPhone, "WhatsApp COD Lead Converted").catch(e => console.error("Admin Email Error:", e));
+    NotificationService.notifyBuyer(fromPhone, leadId, itemsStr, orderData.totalAmount).catch(e => console.error("Buyer Notif Error:", e));
 
     for (const sellerCut of Object.values(sellerOrdersMap) as any[]) {
-      NotificationService.notifySeller(sellerCut.sellerPhone, "Partner", leadId, sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", "), sellerCut.subtotal, contactName, "Kabale", fromPhone);
+      NotificationService.notifySeller(
+        sellerCut.sellerPhone, "Partner", leadId, 
+        sellerCut.items.map((i: any) => `${i.quantity}x ${i.name}`).join(", "), 
+        sellerCut.subtotal, contactName, "Kabale", fromPhone
+      ).catch(e => console.error("Seller Notif Error:", e));
     }
+    
     return true;
   } catch (error: any) {
     await sendWhatsAppInteractiveButtons(
