@@ -229,7 +229,12 @@ async function handleProductSelection(phone: string, productId: string) {
     const safeTitle = productData.title || productData.name || "Unknown Item";
     const safePrice = Number(productData.price || 0).toLocaleString();
     const safeCondition = productData.condition || "Used";
-    const safeDesc = productData.description || "No description provided.";
+    
+    // 🔥 THE FIX: Safely truncate the description to prevent the silent 1024 character crash
+    let safeDesc = productData.description || "No description provided.";
+    if (safeDesc.length > 500) {
+      safeDesc = safeDesc.substring(0, 500) + "...";
+    }
     
     // Original safeImage logic exactly as it was
     const safeImage = (productData.images && Array.isArray(productData.images) && productData.images.length > 0) ? productData.images[0] : undefined;
@@ -298,8 +303,11 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
       messageCount: 0        
     });
 
-    sendAdminAlert(orderNumber, `1x ${safeTitle}`, productPrice, buyerPhone, product.sellerPhone || "SYSTEM").catch(console.error);
-    await NotificationService.notifyBuyer(buyerPhone, orderNumber, `1x ${safeTitle}`, productPrice);
+    // 🔥 THE FIX: Attached .catch() so background errors don't crash the checkout
+    sendAdminAlert(orderNumber, `1x ${safeTitle}`, productPrice, buyerPhone, product.sellerPhone || "SYSTEM").catch(e => console.error("Admin Email Error:", e));
+    
+    await NotificationService.notifyBuyer(buyerPhone, orderNumber, `1x ${safeTitle}`, productPrice).catch(e => console.error("Buyer Notif Error:", e));
+    
     await NotificationService.notifySeller(
       product.sellerPhone, 
       "Partner", 
@@ -309,7 +317,7 @@ async function handleNativeCheckout(buyerPhone: string, productId: string) {
       "WhatsApp User", 
       "Kabale", 
       buyerPhone
-    );
+    ).catch(e => console.error("Seller Notif Error:", e));
 
     await sendWhatsAppMessage(
       buyerPhone, 
@@ -372,8 +380,11 @@ async function handleNewWebsiteInquiry(buyerPhone: string, productId: string, or
       messageCount: 0        
     });
 
-    sendAdminAlert(orderNumber, `1x ${safeTitle}`, productPrice, buyerPhone, product.sellerPhone || "SYSTEM").catch(console.error);
-    await NotificationService.notifyBuyer(buyerPhone, orderNumber, `1x ${safeTitle}`, productPrice);
+    // 🔥 THE FIX: Attached .catch() here as well to protect website leads
+    sendAdminAlert(orderNumber, `1x ${safeTitle}`, productPrice, buyerPhone, product.sellerPhone || "SYSTEM").catch(e => console.error("Admin Email Error:", e));
+    
+    await NotificationService.notifyBuyer(buyerPhone, orderNumber, `1x ${safeTitle}`, productPrice).catch(e => console.error("Buyer Notif Error:", e));
+    
     await NotificationService.notifySeller(
       product.sellerPhone, 
       "Partner", 
@@ -383,7 +394,7 @@ async function handleNewWebsiteInquiry(buyerPhone: string, productId: string, or
       "Website User", 
       "Kabale", 
       buyerPhone
-    );
+    ).catch(e => console.error("Seller Notif Error:", e));
 
     await sendWhatsAppMessage(product.sellerPhone, `*Buyer added a note via website:*\n"${originalMessage}"`);
 
