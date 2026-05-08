@@ -232,7 +232,7 @@ async function processWhatsAppMessage(message: any, contactName: string): Promis
       logChat(fromPhone, "outgoing", "text", finalReply).catch(console.error);
     } catch (error: any) {
       console.error(`❌ AI Routing Error:`, error.message);
-      const fallbackText = `It looks like I had a quick network hiccup on my end. That's on me! 🙏\n\nCould you please ask that one more time, or tap below to view the catalog?`;
+      const fallbackText = `It looks like I had a quick network problem. That's on me! 🙏\n\nCould you please ask that one more time, or tap below to explore the shop?`;
       await sendWhatsAppInteractiveButtons(fromPhone, fallbackText, [{ id: "btn_shop", title: "🛍️ Main Menu" }]);
     }
 
