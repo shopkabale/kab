@@ -76,7 +76,7 @@ export default function Footer() {
             <div className="space-y-1 text-sm text-gray-300 mb-6">
               <p>Kabale, Uganda</p>
               <p>075 999 7376</p>
-              <p>shopkabale@gmail.com</p>
+              <p>support@kabaleonline.com</p>
             </div>
             
             {/* Social Icons (White square style from image) */}
@@ -127,7 +127,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm">
               <li><Link href="/guide" className={getLinkStyle('/guide')}>Need Help? / Docs</Link></li>
               <li><Link href="/faq" className={getLinkStyle('/faq')}>FAQ (Questions & Answers)</Link></li>
-              <li><Link href="#" className={getLinkStyle('#')}>Shipping & Returns</Link></li>
+              <li><Link href="/refunds" className={getLinkStyle('/refunds')}>Shipping & Returns</Link></li>
               <li><Link href="/terms" className={getLinkStyle('/terms')}>Terms of Service</Link></li>
               <li><Link href="/policies" className={getLinkStyle('/policies')}>Privacy Policy</Link></li>
             </ul>
