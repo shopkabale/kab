@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { 
   FaFacebookF, 
   FaInstagram, 
-  FaTiktok
+  FaTiktok,
+  FaWhatsapp
 } from "react-icons/fa6";
 
 export default function Footer() {
@@ -16,18 +17,22 @@ export default function Footer() {
 
   const isActive = (path: string) => pathname === path;
 
-  // Adapted active logic for the new dark theme
+  // Adapted active logic for the dark theme
   const getLinkStyle = (path: string) => 
     `transition-colors block ${
       isActive(path) ? 'text-white font-semibold' : 'text-gray-300 hover:text-white'
     }`;
+
+  // URL-encoded prefilled message for WhatsApp
+  const whatsappMessage = encodeURIComponent("Hello Kabale Online! I would like to place an order/shop with you.");
+  const whatsappLink = `https://wa.me/256759997376?text=${whatsappMessage}`;
 
   return (
     <footer className="bg-[#182335] text-white rounded-t-[2.5rem] mt-auto pb-16 pt-12 md:pt-20 px-6 font-sans">
       <div className="max-w-6xl mx-auto">
         
         {/* ================================================= */}
-        {/* TOP SECTION: LOGO, TITLE, & NEWSLETTER            */}
+        {/* TOP SECTION: LOGO, TITLE, & WHATSAPP CTA          */}
         {/* ================================================= */}
         <div className="flex flex-col items-center justify-center text-center mb-16">
           
@@ -39,20 +44,24 @@ export default function Footer() {
           <h2 className="text-3xl md:text-4xl font-bold mb-2 tracking-tight">
             Kabale Online Marketplace
           </h2>
-          <p className="text-gray-300 text-sm md:text-base mb-8">
-            Precision Shopping & Same Day Delivery
+          <p className="text-gray-300 text-sm md:text-base mb-6">
+            Everything You Need, Delivered .
           </p>
 
-          {/* Newsletter Form */}
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-md">
-            <input
-              type="email"
-              placeholder="Join Our Newsletter"
-              className="flex-1 w-full bg-white text-slate-900 px-5 py-3 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2C3D5A]"
-            />
-            <button className="w-full sm:w-auto bg-[#26354D] hover:bg-[#2C3D5A] text-white px-6 py-3 rounded-lg text-sm font-medium transition-colors">
-              Join Our Newsletter
-            </button>
+          {/* WhatsApp CTA (Replaces Newsletter) */}
+          <div className="flex flex-col items-center w-full max-w-sm bg-[#26354D] p-5 rounded-2xl border border-slate-700">
+            <p className="text-sm text-gray-300 mb-3">
+              Send us a message to shop via WhatsApp
+            </p>
+            <a 
+              href={whatsappLink}
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white px-6 py-3 rounded-lg text-sm font-bold transition-colors shadow-sm"
+            >
+              <FaWhatsapp className="text-lg" />
+              Shop on WhatsApp (0759997376)
+            </a>
           </div>
         </div>
 
@@ -117,10 +126,10 @@ export default function Footer() {
             <h3 className="text-white font-bold text-base mb-5">Support</h3>
             <ul className="space-y-2 text-sm">
               <li><Link href="/guide" className={getLinkStyle('/guide')}>Need Help? / Docs</Link></li>
+              <li><Link href="/faq" className={getLinkStyle('/faq')}>FAQ (Questions & Answers)</Link></li>
               <li><Link href="#" className={getLinkStyle('#')}>Shipping & Returns</Link></li>
-              <li><Link href="#" className={getLinkStyle('#')}>Track Order</Link></li>
-              <li><Link href="#" className={getLinkStyle('#')}>Terms of Service</Link></li>
-              <li><Link href="#" className={getLinkStyle('#')}>Privacy Policy</Link></li>
+              <li><Link href="/terms" className={getLinkStyle('/terms')}>Terms of Service</Link></li>
+              <li><Link href="/policies" className={getLinkStyle('/policies')}>Privacy Policy</Link></li>
             </ul>
           </div>
 
