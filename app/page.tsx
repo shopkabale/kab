@@ -214,32 +214,7 @@ export default async function Home() {
                   />
                 )}
 
-                {/* UPDATED AFFILIATE BANNER - Changed bg-white to bg-transparent */}
-                <div className="bg-transparent rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center shadow-sm border border-slate-100 dark:border-slate-800">
-                  <h2 style={{ color: '#1A1A1A' }} className="text-2xl font-bold dark:text-white mb-2 text-center">
-                    Share. Earn. Repeat.
-                  </h2>
-                  <p style={{ color: '#6B6B6B' }} className="text-sm md:text-base mb-6 text-center dark:text-slate-400">
-                    Earn cash by sharing your favorite Kabale Online items.
-                  </p>
-
-                  {/* Changed list background to bg-transparent */}
-                  <ul style={{ color: '#1A1A1A' }} className="flex flex-col gap-3 text-sm font-medium max-w-md mb-8 dark:text-slate-300 w-full text-left bg-transparent p-4 rounded-xl">
-                    <li className="flex gap-2"><span>✅</span> <span><strong>10% Commission</strong> (up to 3,000 UGX per order)</span></li>
-                    <li className="flex gap-2"><span>✅</span> <span><strong>Earn</strong> on both new & returning users</span></li>
-                    <li className="flex gap-2"><span>✅</span> <span><strong>Instant Wallet Credit</strong> on successful delivery</span></li>
-                    <li className="flex gap-2 text-xs text-[#6B6B6B] mt-1 items-center"><span>ℹ️</span> <span>Valid on Official Store items only.</span></li>
-                  </ul>
-
-                  <Link 
-                    href="/invite" 
-                    style={{ backgroundColor: '#1A1A1A', color: '#FFFFFF' }} 
-                    className="px-8 py-3 rounded-full font-bold shadow-md hover:bg-slate-800 active:scale-95 transition-all w-full sm:w-auto text-center"
-                  >
-                    Join the Affiliate Program
-                  </Link>
-                </div>
-
+                
                 <AboutKabaleOnline />
 
               </div>
