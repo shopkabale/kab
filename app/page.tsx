@@ -14,7 +14,6 @@ import LeftSidebar from "@/components/LeftSidebar";
 
 // BANNERS
 import TimepieceBanner from "@/components/banners/TimepieceBanner";
-import ExperienceBanner from "@/components/banners/ExperienceBanner";
 import WhatsAppBanner from "@/components/banners/WhatsAppBanner";
 
 const shuffleArray = (array: any[]) => {
@@ -123,9 +122,7 @@ export default async function Home() {
                   />
                 )}
 
-                {/* 9. We deliver customer experiences banner */}
-                <ExperienceBanner />
-
+                
                 {/* 10. Recently added (ProductSection Grid) */}
                 {latestProducts.length > 0 && (
                   <ProductSection 
