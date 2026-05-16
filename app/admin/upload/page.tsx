@@ -29,7 +29,7 @@ function AdminUploadContent() {
 
   const [formData, setFormData] = useState({
     title: "",
-    category: "electronics",
+    category: "phones-tvs", // 🔥 Updated default
     price: "",
     quantity: "1",
     condition: "new",
@@ -38,7 +38,7 @@ function AdminUploadContent() {
     sellerPhone: "", 
   });
 
-  // Check if we are uploading a service
+  // Check if we are uploading a service (mostly for legacy edits now)
   const isService = formData.category === "services";
 
   // ============================================================================
@@ -55,7 +55,7 @@ function AdminUploadContent() {
             setExistingImages(data.images || []);
             setFormData({
               title: data.name || data.title || "",
-              category: data.category || "electronics",
+              category: data.category || "phones-tvs", // 🔥 Updated default
               price: data.price ? data.price.toString() : "",
               quantity: data.stock !== undefined ? data.stock.toString() : "1",
               condition: data.condition || "new",
@@ -268,7 +268,7 @@ function AdminUploadContent() {
         if (!editPublicId) {
           setFormData(prev => ({
             title: "",
-            category: "electronics",
+            category: "phones-tvs", // 🔥 Updated default
             price: "",
             quantity: "1",
             condition: "new",
@@ -332,7 +332,7 @@ function AdminUploadContent() {
             </label>
             <input required type="text" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none transition-shadow" 
               value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} 
-              placeholder={isService ? "e.g., Professional Plumber, Event Photography..." : ""} />
+              placeholder={isService ? "e.g., Professional Plumber, Event Photography..." : "e.g., iPhone 15 Pro, Sony Soundbar"} />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -340,18 +340,16 @@ function AdminUploadContent() {
               <label style={{ color: '#1A1A1A' }} className="block text-sm font-semibold mb-2">Category *</label>
               <select className="w-full rounded-xl border border-slate-300 px-4 py-3 bg-white focus:ring-2 focus:ring-[#FF6A00] outline-none transition-shadow"
                 value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                {/* RESTORED ORIGINAL CATEGORIES HERE */}
-                <option value="bundles">Fresher Bundles & Kits</option>
-                <option value="student_essentials">Hostel Essentials</option>
-                <option value="groceries">Supermarket & Groceries</option>
-                <option value="stationery">Stationery & Academics</option>
-                <option value="electronics">Tech Accessories</option>
-                <option value="services">Student Services</option>
-                <option value="ladies_picks">Ladies' Picks</option>
-                <option value="beauty">Beauty & Hygiene</option>
+                {/* 🔥 NEW ELECTRONICS CATEGORIES */}
                 <option value="watches">Watches</option>
-                <option value="gifts">Gifts & Fun</option>
-                <option value="agriculture">Agriculture</option>
+                <option value="phones-tvs">Phones & TVs</option>
+                <option value="sound-systems">Sound Systems</option>
+                <option value="accessories">Accessories</option>
+                <option value="appliances">Appliances</option>
+                <option value="other">Other Products</option>
+                
+                {/* Legacy categories for fallback if editing old items */}
+                {isService && <option value="services">Services (Legacy)</option>}
               </select>
             </div>
 
