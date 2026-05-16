@@ -22,7 +22,7 @@ export default function TimepieceBanner() {
           </p>
           <div className="pt-2">
             <Link 
-              href="/watches"
+              href="/category/watches"
               className="inline-flex items-center justify-center gap-2 bg-[#FF6A00] hover:bg-[#e65c00] text-white px-6 py-3 rounded-xl font-medium transition-all active:scale-95 shadow-lg shadow-orange-500/20"
             >
               Explore Watches
