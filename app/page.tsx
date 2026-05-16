@@ -71,8 +71,7 @@ export default async function Home() {
                   fallbackProducts={trendingProducts} 
                 />
 
-                {/* 3. Find the perfect timepiece banner */}
-                <TimepieceBanner />
+                
 
                 {/* 4. Explore by category */}
                 <div className="bg-transparent rounded-2xl p-2 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800/60">
@@ -88,7 +87,8 @@ export default async function Home() {
                     viewAllLink="/category/featured"
                   />
                 )}
-
+{/* 3. Find the perfect timepiece banner */}
+                <TimepieceBanner />
                 {/* 6. Save up to 4k (ProductSection Grid) */}
                 {save4kProducts.length > 0 && (
                   <ProductSection 
