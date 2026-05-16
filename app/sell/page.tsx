@@ -24,7 +24,7 @@ export default function SellPage() {
 
   const [formData, setFormData] = useState({
     title: "",
-    category: "electronics", 
+    category: "phones-tvs", // 🔥 Updated default
     price: "",
     quantity: "1", 
     condition: "used",
@@ -32,7 +32,7 @@ export default function SellPage() {
     sellerPhone: "", 
   });
 
-  // 🔥 Identify if the user is uploading a Service vs a Product
+  // Identify if the user is uploading a Service vs a Product
   const isService = formData.category === "services";
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export default function SellPage() {
     e.preventDefault();
 
     if (imageFiles.length === 0) {
-      alert(`Please upload at least one photo or flyer for your ${isService ? 'service' : 'item'}.`);
+      alert(`Please upload at least one photo for your ${isService ? 'service' : 'item'}.`);
       return;
     }
 
@@ -156,7 +156,7 @@ export default function SellPage() {
         }).filter(url => url) as string[];
       }
 
-      // 🔥 Safely handle default values if it's a service
+      // Safely handle default values
       const dbRes = await fetch("/api/products", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -215,7 +215,7 @@ export default function SellPage() {
           🎉
         </div>
         <h1 className="text-3xl font-extrabold text-slate-900 mb-2">
-          {isService ? "Service Posted Successfully!" : "Item Posted Successfully!"}
+          Item Posted Successfully!
         </h1>
         <p className="text-slate-600 mb-8 text-lg">
           Your <span className="font-bold text-slate-900">{successData.title}</span> is now live on Kabale Online. 
@@ -243,14 +243,14 @@ export default function SellPage() {
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link 
             href={`/product/${successData.publicId}`}
-            className="px-8 py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:border-[#D97706] hover:text-[#D97706] transition-colors flex-1 text-center"
+            className="px-8 py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:border-[#FF6A00] hover:text-[#FF6A00] transition-colors flex-1 text-center"
           >
             View Live Post
           </Link>
 
           <Link 
             href="/profile?refresh=true"
-            className="px-8 py-3 bg-[#D97706] text-white font-bold rounded-xl hover:bg-amber-600 transition-colors flex-1 text-center shadow-md"
+            className="px-8 py-3 bg-[#FF6A00] text-white font-bold rounded-xl hover:bg-[#e65c00] transition-colors flex-1 text-center shadow-md"
           >
             Manage in Dashboard
           </Link>
@@ -266,7 +266,7 @@ export default function SellPage() {
           }}
           className="mt-6 text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors inline-block"
         >
-          + Post Another {isService ? 'Service' : 'Item'}
+          + Post Another Item
         </button>
       </div>
     );
@@ -279,10 +279,10 @@ export default function SellPage() {
     <div className="max-w-2xl mx-auto py-8 px-4">
       <div className="mb-6 text-center">
         <h1 className="text-3xl font-extrabold text-slate-900">
-          {isService ? "Offer Your Services" : "Sell in 30 Seconds"}
+          Sell in 30 Seconds
         </h1>
         <p className="text-slate-500 mt-2">
-          {isService ? "Upload a flyer, set your base price, and get clients." : "Snap a pic, set a price, and post. It's that easy."}
+          Snap a pic, set a price, and post. It's that easy.
         </p>
       </div>
 
@@ -291,7 +291,7 @@ export default function SellPage() {
         {/* STEP 1: PHOTO UPLOAD */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200 shadow-sm">
           <label className="block text-sm font-bold text-slate-900 mb-3">
-            {isService ? "1. Upload Banner or Flyer *" : "1. Upload Photos *"}
+            1. Upload Photos *
           </label>
           <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
             {imagePreviews.map((preview, index) => (
@@ -309,15 +309,15 @@ export default function SellPage() {
                 className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center transition-colors ${
                   isCompressing 
                     ? "border-slate-300 bg-slate-50 cursor-not-allowed" 
-                    : "border-[#D97706]/50 bg-amber-50 hover:bg-amber-100 cursor-pointer"
+                    : "border-[#FF6A00]/50 bg-orange-50 hover:bg-orange-100 cursor-pointer"
                 }`}
               >
                 {isCompressing ? (
-                  <div className="w-6 h-6 border-2 border-[#D97706] border-t-transparent rounded-full animate-spin mb-1"></div>
+                  <div className="w-6 h-6 border-2 border-[#FF6A00] border-t-transparent rounded-full animate-spin mb-1"></div>
                 ) : (
-                  <span className="text-2xl text-[#D97706] mb-1">📷</span>
+                  <span className="text-2xl text-[#FF6A00] mb-1">📷</span>
                 )}
-                <span className="text-xs text-[#D97706] font-bold">
+                <span className="text-xs text-[#FF6A00] font-bold">
                   {isCompressing ? "Optimizing..." : "Add Photo"}
                 </span>
               </div>
@@ -331,46 +331,41 @@ export default function SellPage() {
 
           <div>
             <label className="block text-sm font-bold text-slate-900 mb-2">
-              {isService ? "2. What service are you providing? *" : "2. What are you selling? *"}
+              2. What are you selling? *
             </label>
-            <input required type="text" placeholder={isService ? "e.g. Laptop Repair, Graphic Design" : "e.g. HP Laptop, Nike Shoes"} className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50" 
+            <input required type="text" placeholder="e.g. iPhone 14 Pro Max, Sony Soundbar" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none bg-slate-50" 
               value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-bold text-slate-900 mb-2">
-                {isService ? "Estimated Base Price (UGX) *" : "Price (UGX) *"}
+                Price (UGX) *
               </label>
-              <input required type="number" placeholder="e.g. 50000" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50"
+              <input required type="number" placeholder="e.g. 50000" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none bg-slate-50"
                 value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} />
             </div>
             
             <div>
               <label className="block text-sm font-bold text-slate-900 mb-2">Category *</label>
-              <select className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50"
+              <select className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none bg-slate-50"
                 value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                <option value="bundles">Fresher Bundles & Kits</option>
-                <option value="student_essentials">Hostel Essentials</option>
-                <option value="groceries">Supermarket & Groceries</option>
-                <option value="stationery">Stationery & Academics</option>
-                <option value="electronics">Tech Accessories</option>
-                <option value="services">Student Services</option>
-                <option value="ladies_picks">Ladies' Picks</option>
-                <option value="beauty">Beauty & Hygiene</option>
+                {/* 🔥 NEW ELECTRONICS CATEGORIES */}
                 <option value="watches">Watches</option>
-                <option value="gifts">Gifts & Fun</option>
-                <option value="agriculture">Agriculture</option>
+                <option value="phones-tvs">Phones & TVs</option>
+                <option value="sound-systems">Sound Systems</option>
+                <option value="accessories">Accessories</option>
+                <option value="appliances">Appliances</option>
+                <option value="other">Other Products</option>
               </select>
             </div>
           </div>
 
-          {/* 🔥 HIDE CONDITION & QUANTITY IF IT IS A SERVICE */}
           {!isService && (
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-bold text-slate-900 mb-2">Condition *</label>
-                <select className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50"
+                <select className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none bg-slate-50"
                   value={formData.condition} onChange={e => setFormData({...formData, condition: e.target.value})}>
                   <option value="used">Used / Second Hand</option>
                   <option value="new">Brand New</option>
@@ -378,7 +373,7 @@ export default function SellPage() {
               </div>
               <div>
                 <label className="block text-sm font-bold text-slate-900 mb-2">Quantity *</label>
-                <input required type="number" min="1" placeholder="1" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50"
+                <input required type="number" min="1" placeholder="1" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none bg-slate-50"
                   value={formData.quantity} onChange={e => setFormData({...formData, quantity: e.target.value})} />
               </div>
             </div>
@@ -386,10 +381,10 @@ export default function SellPage() {
 
           <div>
             <label className="block text-sm font-bold text-slate-900 mb-2">Your WhatsApp Number *</label>
-            <input required type="tel" placeholder="e.g. 07..." className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none bg-slate-50"
+            <input required type="tel" placeholder="e.g. 07..." className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none bg-slate-50"
               value={formData.sellerPhone} onChange={e => setFormData({...formData, sellerPhone: e.target.value})} />
             <p className="text-xs text-slate-500 mt-1">
-              {isService ? "Clients will message this number after paying the deposit." : "Buyers need this to message you directly."}
+              Buyers need this to message you directly about this item.
             </p>
           </div>
         </div>
@@ -407,23 +402,23 @@ export default function SellPage() {
           {showOptional && (
             <div className="p-4 sm:p-6 border-t border-slate-100">
               <label className="block text-sm font-semibold text-slate-900 mb-2">
-                {isService ? "Service Details" : "Product Description"}
+                Product Description
               </label>
-              <textarea rows={3} placeholder={isService ? "What exactly is included in your service?" : "Any extra details, flaws, or features?"} className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#D97706] outline-none resize-none"
+              <textarea rows={3} placeholder="Any extra details, flaws, specs or features?" className="w-full rounded-xl border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-[#FF6A00] outline-none resize-none"
                 value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
             </div>
           )}
         </div>
 
         {/* SUBMIT BUTTON */}
-        <button disabled={loading || isCompressing} type="submit" className="w-full bg-[#D97706] text-white py-4 rounded-xl font-black text-xl hover:bg-amber-600 transition-colors disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg mt-4">
+        <button disabled={loading || isCompressing} type="submit" className="w-full bg-[#FF6A00] text-white py-4 rounded-xl font-black text-xl hover:bg-[#e65c00] transition-colors disabled:opacity-70 flex justify-center items-center gap-2 shadow-lg mt-4">
           {loading ? (
              <>
                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                Publishing...
              </>
           ) : (
-            isService ? "Post Service Now" : "Post Product Now"
+            "Post Product Now"
           )}
         </button>
       </form>
@@ -432,14 +427,14 @@ export default function SellPage() {
       {showLoginModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-8 text-center animate-in fade-in zoom-in duration-200">
-            <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">🔐</div>
+            <div className="w-16 h-16 bg-orange-100 text-[#FF6A00] rounded-full flex items-center justify-center mx-auto mb-6 text-2xl">🔐</div>
             <h2 className="text-2xl font-bold text-slate-900 mb-2">Almost there!</h2>
             <p className="text-slate-600 mb-8">
-              Sign in with Google to publish your {isService ? 'service' : 'product'} to the marketplace. Your form data is saved.
+              Sign in with Google to publish your product to the marketplace. Your form data is saved.
             </p>
             <div className="space-y-3">
               <button onClick={() => { setLoading(true); signIn(); }} 
-                className="w-full rounded-lg bg-[#D97706] px-4 py-3 text-base font-bold text-white hover:bg-amber-600 transition-colors"
+                className="w-full rounded-lg bg-[#FF6A00] px-4 py-3 text-base font-bold text-white hover:bg-[#e65c00] transition-colors"
               >
                 Sign in with Google
               </button>
