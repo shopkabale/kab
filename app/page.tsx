@@ -14,7 +14,6 @@ import LeftSidebar from "@/components/LeftSidebar";
 
 // BANNERS
 import TimepieceBanner from "@/components/banners/TimepieceBanner";
-import WhatsAppBanner from "@/components/banners/WhatsAppBanner";
 
 const shuffleArray = (array: any[]) => {
   const shuffled = [...array];
@@ -153,8 +152,7 @@ export default async function Home() {
                   />
                 )}
 
-                {/* 13. Shop via WhatsApp banner */}
-                <WhatsAppBanner />
+                
 
                 <AboutKabaleOnline />
 
