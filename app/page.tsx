@@ -87,8 +87,7 @@ export default async function Home() {
                     viewAllLink="/category/featured"
                   />
                 )}
-{/* 3. Find the perfect timepiece banner */}
-                <TimepieceBanner />
+
                 {/* 6. Save up to 4k (ProductSection Grid) */}
                 {save4kProducts.length > 0 && (
                   <ProductSection 
@@ -108,6 +107,11 @@ export default async function Home() {
                     viewAllLink="/products"
                   />
                 )}
+
+{/* 3. Find the perfect timepiece banner */}
+                <TimepieceBanner />
+
+
 
                 {/* 8. Trending Products (ProductSection Grid) */}
                 {trendingProducts.length > 0 && (
