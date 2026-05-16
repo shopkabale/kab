@@ -22,7 +22,7 @@ export default function ThemedCategoryGrid() {
     { 
       name: "Accessories", 
       href: "/category/accessories", 
-      image: "https://images.unsplash.com/photo-1572569438061-9d11fc7b14d5?w=500&q=80" // Earbuds / Tech accessories
+      image: "https://images.unsplash.com/photo-1602526432604-029a709e131c?w=500&auto=format&fit=crop&q=80&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8N3x8cGhvbmUlMjBhY2Nlc3Nvcmllc3xlbnwwfHwwfHx8MA%3D%3D" // Earbuds / Tech accessories
     },
     { 
       name: "Appliances", 
