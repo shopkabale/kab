@@ -27,7 +27,6 @@ const shuffleArray = (array: any[]) => {
 };
 
 export default async function Home() {
-  // Fetch from the newly optimized firebase/fetchers
   const data = await getCachedHomepageData();
 
   const heroProducts = data.heroProducts || [];
@@ -35,15 +34,14 @@ export default async function Home() {
   const officialProducts = data.officialProducts || [];
   const latestProducts = data.latestProducts || [];
   
-  // New Admin-curated collections
+  // Admin-curated collections
   const featuredCollection = data.featuredCollection || [];
   const save4kProducts = data.save4kProducts || [];
   const handPickedProducts = shuffleArray(data.handPickedProducts || []);
 
-  // Filter for "Other Products" (Exclude the new main electronics categories)
-  const mainCategories = ["watches", "phones", "phones-tvs", "tvs", "sound-systems", "accessories", "appliances"];
+  // STRICTLY filter for "other" category based on your new database rule
   const otherProducts = data.basePool.filter(p => 
-    p.category && !mainCategories.includes(p.category.toLowerCase())
+    p.category && p.category.toLowerCase() === "other"
   ).slice(0, 12);
 
   return (
@@ -68,7 +66,7 @@ export default async function Home() {
 
               <div className="w-full flex flex-col gap-4 sm:gap-6">
 
-                {/* 2. Continue Browsing (HorizontalScroller wrapper) */}
+                {/* 2. Continue Browsing (Original wrapper) */}
                 <ContinueBrowsing 
                   title="Continue Browsing"
                   subtitle="Pick up exactly where you left off"
@@ -83,7 +81,7 @@ export default async function Home() {
                   <ThemedCategoryGrid />
                 </div>
 
-                {/* 5. Featured collection (Vertical Grid) */}
+                {/* 5. Featured collection (ProductSection Grid) */}
                 {featuredCollection.length > 0 && (
                   <ProductSection 
                     title="Featured collection" 
@@ -93,7 +91,7 @@ export default async function Home() {
                   />
                 )}
 
-                {/* 6. Save up to 4k (Vertical Grid) */}
+                {/* 6. Save up to 4k (ProductSection Grid) */}
                 {save4kProducts.length > 0 && (
                   <ProductSection 
                     title="Save up to 4k" 
@@ -103,7 +101,7 @@ export default async function Home() {
                   />
                 )}
 
-                {/* 7. Hand picked for you (Vertical Grid) */}
+                {/* 7. Hand picked for you (ProductSection Grid) */}
                 {handPickedProducts.length > 0 && (
                   <ProductSection 
                     title="Hand picked for you" 
@@ -113,7 +111,7 @@ export default async function Home() {
                   />
                 )}
 
-                {/* 8. Trending Products (Vertical Grid) */}
+                {/* 8. Trending Products (ProductSection Grid) */}
                 {trendingProducts.length > 0 && (
                   <ProductSection 
                     title="Trending Now" 
@@ -126,7 +124,7 @@ export default async function Home() {
                 {/* 9. We deliver customer experiences banner */}
                 <ExperienceBanner />
 
-                {/* 10. Recently added (Vertical Grid) */}
+                {/* 10. Recently added (ProductSection Grid) */}
                 {latestProducts.length > 0 && (
                   <ProductSection 
                     title="Recently added" 
@@ -152,7 +150,7 @@ export default async function Home() {
                     title="Other Products" 
                     subtitle="Explore beyond electronics"
                     products={otherProducts} 
-                    viewAllLink="/products" 
+                    viewAllLink="/category/other-products" 
                   />
                 )}
 
