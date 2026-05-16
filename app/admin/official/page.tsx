@@ -5,7 +5,7 @@ import { useAuth } from "@/components/AuthProvider";
 import Link from "next/link";
 import Image from "next/image";
 import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/config"; // Ensure this path matches your setup
+import { db } from "@/lib/firebase/config"; 
 
 export default function OfficialProductsManager() {
   const { user, loading: authLoading } = useAuth();
@@ -76,17 +76,16 @@ export default function OfficialProductsManager() {
   }, [user]);
 
   // ------------------------------------------------------------------
-  // TOGGLE PRODUCT BADGES
+  // TOGGLE PRODUCT BADGES (Updated for Electronics Pivot)
   // ------------------------------------------------------------------
   const toggleBadge = async (
     productId: string, 
-    // 🔥 Added "tech_home" to the allowed fields here
-    field: "isOfficialStore" | "isApprovedQuality" | "ladies_home" | "watch_home" | "isHero" | "tech_home", 
+    field: "isHero" | "isOfficialStore" | "isFeaturedCollection" | "isSave4k" | "isHandPicked", 
     currentValue: boolean
   ) => {
     const newValue = !currentValue;
 
-    // 1. Optimistic UI update (feels instant to the user)
+    // 1. Optimistic UI update
     setProducts(prev => 
       prev.map(p => p.id === productId ? { ...p, [field]: newValue } : p)
     );
@@ -116,8 +115,8 @@ export default function OfficialProductsManager() {
       {/* HEADER */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-slate-200 pb-6">
         <div>
-          <h1 className="text-3xl font-extrabold text-[#1A1A1A]">Official Store Manager</h1>
-          <p className="text-[#6B6B6B] font-medium mt-1">Manage Kabale Online's internal inventory & Badges</p>
+          <h1 className="text-3xl font-extrabold text-[#1A1A1A]">Homepage Layout Manager</h1>
+          <p className="text-[#6B6B6B] font-medium mt-1">Curate products for the electronics grids and banners</p>
         </div>
         <Link href="/admin/upload" className="bg-[#FF6A00] text-white px-6 py-3 rounded-xl font-bold hover:opacity-90 transition-all shadow-md flex items-center justify-center gap-2 w-full sm:w-auto shrink-0">
           <span>+</span> Add New Item
@@ -127,8 +126,7 @@ export default function OfficialProductsManager() {
       {/* PRODUCTS TABLE */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
         <div className="overflow-x-auto">
-          {/* Increased min-w to accommodate the new column without squishing */}
-          <table className="w-full text-left border-collapse min-w-[1350px]">
+          <table className="w-full text-left border-collapse min-w-[1200px]">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase tracking-wider text-slate-500 font-bold">
                 <th className="p-4 px-6">Product</th>
@@ -136,21 +134,20 @@ export default function OfficialProductsManager() {
                 <th className="p-4 px-6">Stock</th>
                 <th className="p-4 px-6 text-center">Hero Promo</th>
                 <th className="p-4 px-6 text-center">Official Store</th>
-                <th className="p-4 px-6 text-center">Approved Quality</th>
-                <th className="p-4 px-6 text-center">Ladies Home</th>
-                <th className="p-4 px-6 text-center">Watch Home</th>
-                <th className="p-4 px-6 text-center">Tech Home</th> {/* 🔥 NEW HEADER */}
+                <th className="p-4 px-6 text-center">Featured Collection</th>
+                <th className="p-4 px-6 text-center">Save up to 4k</th>
+                <th className="p-4 px-6 text-center">Hand Picked</th>
                 <th className="p-4 px-6 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                  <tr>
-                   <td colSpan={10} className="px-6 py-12 text-center text-slate-500">Loading official inventory...</td>
+                   <td colSpan={9} className="px-6 py-12 text-center text-slate-500">Loading official inventory...</td>
                  </tr>
               ) : products.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-12 text-center text-slate-500 font-medium">No official products found.</td>
+                  <td colSpan={9} className="px-6 py-12 text-center text-slate-500 font-medium">No official products found.</td>
                 </tr>
               ) : (
                 products.map((product) => (
@@ -201,47 +198,36 @@ export default function OfficialProductsManager() {
                       </button>
                     </td>
 
-                    {/* APPROVED QUALITY TOGGLE */}
+                    {/* FEATURED COLLECTION TOGGLE */}
                     <td className="p-4 px-6 text-center">
                       <button
-                        onClick={() => toggleBadge(product.id, "isApprovedQuality", !!product.isApprovedQuality)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.isApprovedQuality ? 'bg-emerald-500' : 'bg-slate-300'}`}
-                        title="Toggle Approved Quality Status"
+                        onClick={() => toggleBadge(product.id, "isFeaturedCollection", !!product.isFeaturedCollection)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.isFeaturedCollection ? 'bg-indigo-500' : 'bg-slate-300'}`}
+                        title="Toggle Featured Collection Status"
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.isApprovedQuality ? 'translate-x-6' : 'translate-x-1'}`} />
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.isFeaturedCollection ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </td>
 
-                    {/* LADIES HOME TOGGLE */}
+                    {/* SAVE UP TO 4K TOGGLE */}
                     <td className="p-4 px-6 text-center">
                       <button
-                        onClick={() => toggleBadge(product.id, "ladies_home", !!product.ladies_home)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.ladies_home ? 'bg-pink-500' : 'bg-slate-300'}`}
-                        title="Toggle Ladies Home Status"
+                        onClick={() => toggleBadge(product.id, "isSave4k", !!product.isSave4k)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.isSave4k ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                        title="Toggle Save up to 4k Status"
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.ladies_home ? 'translate-x-6' : 'translate-x-1'}`} />
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.isSave4k ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </td>
 
-                    {/* WATCH HOME TOGGLE */}
+                    {/* HAND PICKED TOGGLE */}
                     <td className="p-4 px-6 text-center">
                       <button
-                        onClick={() => toggleBadge(product.id, "watch_home", !!product.watch_home)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.watch_home ? 'bg-indigo-500' : 'bg-slate-300'}`}
-                        title="Toggle Watch Home Status"
+                        onClick={() => toggleBadge(product.id, "isHandPicked", !!product.isHandPicked)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.isHandPicked ? 'bg-blue-500' : 'bg-slate-300'}`}
+                        title="Toggle Hand Picked Status"
                       >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.watch_home ? 'translate-x-6' : 'translate-x-1'}`} />
-                      </button>
-                    </td>
-
-                    {/* TECH HOME TOGGLE (🔥 NEW) */}
-                    <td className="p-4 px-6 text-center">
-                      <button
-                        onClick={() => toggleBadge(product.id, "tech_home", !!product.tech_home)}
-                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${product.tech_home ? 'bg-blue-500' : 'bg-slate-300'}`}
-                        title="Toggle Tech Home Status"
-                      >
-                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.tech_home ? 'translate-x-6' : 'translate-x-1'}`} />
+                        <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${product.isHandPicked ? 'translate-x-6' : 'translate-x-1'}`} />
                       </button>
                     </td>
 
