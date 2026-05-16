@@ -27,7 +27,7 @@ export default function ThemedCategoryGrid() {
     { 
       name: "Appliances", 
       href: "/category/appliances", 
-      image: "https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=500&q=80" // Modern home appliances
+      image: "https://images.unsplash.com/photo-1588854337115-1c67d9247e4d?w=500&auto=format&fit=crop&q=80&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NHx8YXBwbGlhbmNlfGVufDB8fDB8fHww" // Modern home appliances
     },
     { 
       name: "Other Products", 
