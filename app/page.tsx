@@ -39,10 +39,8 @@ export default async function Home() {
   const save4kProducts = data.save4kProducts || [];
   const handPickedProducts = shuffleArray(data.handPickedProducts || []);
 
-  // STRICTLY filter for "other" category based on your new database rule
-  const otherProducts = data.basePool.filter(p => 
-    p.category && p.category.toLowerCase() === "other"
-  ).slice(0, 12);
+  // 🔥 THE FIX: Now using the dedicated direct array from Firebase
+  const otherProducts = data.otherProducts || [];
 
   return (
     <ThemeProvider>
