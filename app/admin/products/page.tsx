@@ -117,7 +117,7 @@ export default function AdminProductsPage() {
     <div className="max-w-6xl mx-auto pb-20 md:pb-0">
       <div className="mb-8 border-b border-slate-200 pb-6">
         <h1 className="text-3xl font-extrabold text-slate-900">Product Management</h1>
-        <p className="text-slate-600 mt-2 font-medium">Review user uploads, fix categories, and remove spam.</p>
+        <p className="text-slate-600 mt-2 font-medium">Review user uploads, fix categories, and clean up the database for the electronics pivot.</p>
       </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-8">
@@ -129,7 +129,6 @@ export default function AdminProductsPage() {
                 <th className="px-6 py-4">Price</th>
                 <th className="px-6 py-4">Quick Category Fix</th>
                 <th className="px-6 py-4">Seller</th>
-                {/* NEW PHONE HEADER */}
                 <th className="px-6 py-4">Phone</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
@@ -167,27 +166,40 @@ export default function AdminProductsPage() {
                       UGX {Number(product.price).toLocaleString()}
                     </td>
 
-                    {/* 🔥 Inline Category Dropdown - UPDATED HERE 🔥 */}
+                    {/* 🔥 Inline Category Dropdown - UPDATED FOR ELECTRONICS PIVOT 🔥 */}
                     <td className="px-6 py-4">
                       <select 
                         disabled={updatingId === product.id}
                         value={product.category || "uncategorized"}
                         onChange={(e) => handleCategoryChange(product.id, e.target.value)}
-                        className={`text-xs font-bold rounded-lg border px-2 py-1.5 outline-none transition-colors ${updatingId === product.id ? 'opacity-50' : 'border-slate-300 bg-white hover:border-[#D97706]'}`}
+                        className={`text-xs font-bold rounded-lg border px-2 py-1.5 outline-none transition-colors ${updatingId === product.id ? 'opacity-50' : 'border-slate-300 bg-white hover:border-[#FF6A00]'}`}
                       >
                         <option value="uncategorized" disabled>Select...</option>
-                        <option value="bundles">Fresher Bundles & Kits</option>
-                        <option value="student_essentials">Hostel Essentials</option>
-                        <option value="student_item" className="text-slate-400">Student Market (Legacy)</option>
-                        <option value="groceries">Supermarket & Groceries</option>
-                        <option value="stationery">Stationery & Academics</option>
-                        <option value="electronics">Tech Accessories</option>
-                        <option value="services">Student Services</option>
-                        <option value="ladies_picks">Ladies' Picks</option>
-                        <option value="beauty">Beauty & Hygiene</option>
-                        <option value="watches">Watches</option>
-                        <option value="gifts">Gifts & Fun</option>
-                        <option value="agriculture">Agriculture</option>
+                        
+                        {/* THE NEW ELECTRONICS CATEGORIES */}
+                        <optgroup label="New Electronics Categories">
+                          <option value="watches">Watches</option>
+                          <option value="phones-tvs">Phones & TVs</option>
+                          <option value="sound-systems">Sound Systems</option>
+                          <option value="accessories">Accessories</option>
+                          <option value="appliances">Appliances</option>
+                          <option value="other">Other Products</option>
+                        </optgroup>
+
+                        {/* LEGACY CATEGORIES FOR CLEANUP REFERENCE */}
+                        <optgroup label="Legacy Categories (Needs Update)" className="text-slate-400 italic">
+                          <option value="electronics">Old: Electronics</option>
+                          <option value="bundles">Old: Bundles</option>
+                          <option value="student_essentials">Old: Hostel Essentials</option>
+                          <option value="student_item">Old: Student Market</option>
+                          <option value="groceries">Old: Groceries</option>
+                          <option value="stationery">Old: Stationery</option>
+                          <option value="services">Old: Services</option>
+                          <option value="ladies_picks">Old: Ladies' Picks</option>
+                          <option value="beauty">Old: Beauty</option>
+                          <option value="gifts">Old: Gifts</option>
+                          <option value="agriculture">Old: Agriculture</option>
+                        </optgroup>
                       </select>
                     </td>
 
@@ -195,7 +207,6 @@ export default function AdminProductsPage() {
                       <p className="text-sm font-semibold text-slate-700 truncate max-w-[120px]">{product.sellerName || "Unknown"}</p>
                     </td>
 
-                    {/* NEW PHONE CELL */}
                     <td className="px-6 py-4">
                       {product.sellerPhone ? (
                         <div className="flex items-center gap-2">
@@ -233,7 +244,6 @@ export default function AdminProductsPage() {
         </div>
       </div>
 
-      {/* Pagination Load More Button */}
       {!loading && hasMore && (
         <div className="flex justify-center mb-8">
           <button 
