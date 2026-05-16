@@ -49,11 +49,11 @@ export default function HorizontalScroller({
         )}
       </div>
 
-      {/* HORIZONTAL SCROLLING TRACK */}
+      {/* VERTICAL GRID CONTAINER (Capped at 6 items) */}
       <div className="p-3 sm:p-4">
-        {/* 🔥 FIX: Changed from grid to flex with overflow-x-auto */}
-        <div className="flex flex-nowrap overflow-x-auto gap-3 sm:gap-4 pb-2 snap-x snap-mandatory scroll-smooth hide-scrollbar w-full">
-          {products.map((p) => {
+        {/* The grid layout keeps desktop 100% flexible */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 pb-2">
+          {products.slice(0, 6).map((p) => {
             const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
             const isJustPosted = checkIsNew(p);
             const isSold = p.status === "sold";
@@ -65,10 +65,9 @@ export default function HorizontalScroller({
             const displayTitle = (!isSold && isShortTitle) ? `${titleStr} (Ready)` : titleStr;
 
             return (
-              // 🔥 FIX: Added w-[140px] sm:w-[160px] md:w-[180px] shrink-0 snap-start
               <div 
                 key={p.id} 
-                className={`group w-[140px] sm:w-[160px] md:w-[180px] shrink-0 snap-start flex flex-col bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden transition-all hover:shadow-lg relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}
+                className={`group w-full flex flex-col bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 overflow-hidden transition-all hover:shadow-lg relative ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}
               >
                 <Link 
                   href={`/product/${p.publicId || p.id}`} 
