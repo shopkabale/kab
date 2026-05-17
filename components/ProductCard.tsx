@@ -2,7 +2,6 @@
 
 import Image from "next/image";
 import Link from "next/link";
-// Assuming you have these utilities based on your previous code
 import { optimizeImage } from "@/lib/utils";
 import { trackSelectItem } from "@/lib/analytics"; 
 
@@ -20,6 +19,14 @@ export default function ProductCard({ product }: { product: any }) {
   const isOfficial = product.isOfficialStore || product.isAdminUpload;
   
   const titleStr = product.title || product.name || 'Product';
+  
+  // 2. Short Title Logic
+  // If the title is short enough (e.g., "iPhone 13 Pro"), it likely only takes up 1 line.
+  // Appending this text fills the 2nd line nicely and acts as a great conversion booster.
+  const isShortTitle = titleStr.length <= 22;
+  const displayTitle = (!isSold && isShortTitle) 
+    ? `${titleStr} (Free delivery available)` 
+    : titleStr;
 
   return (
     <div 
@@ -60,23 +67,23 @@ export default function ProductCard({ product }: { product: any }) {
           {/* Sold Out Overlay */}
           {isSold && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-[2px]">
-               <span className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-black uppercase tracking-widest px-4 py-2 rounded shadow-lg transform -rotate-12">
+               <span className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded shadow-lg transform -rotate-12">
                  Sold Out
                </span>
             </div>
           )}
 
-          {/* New Arrival Badge */}
+          {/* New Arrival Badge (Shrunk down & tucked in corner) */}
           {!isSold && isJustPosted && (
-            <div className="absolute top-2 left-2 bg-slate-900/90 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 rounded flex items-center gap-1.5 z-10 shadow-sm">
+            <div className="absolute top-1.5 left-1.5 bg-slate-900/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-sm flex items-center gap-1 z-10 shadow-sm">
                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
                NEW
             </div>
           )}
 
-          {/* Trust Badges (Bottom of image) */}
+          {/* Trust Badges (Changed from a full-width bar to a tiny floating pill at the bottom) */}
           {!isSold && (isApproved || isOfficial) && (
-            <div className={`absolute bottom-0 left-0 w-full ${isApproved ? 'bg-emerald-600/95' : 'bg-[#FF6A00]/95'} backdrop-blur-sm text-white text-[9px] sm:text-[10px] font-bold px-2 py-1.5 leading-none z-10 tracking-widest uppercase text-center shadow-inner`}>
+            <div className={`absolute bottom-1.5 left-1.5 rounded-sm ${isApproved ? 'bg-emerald-600/95' : 'bg-[#FF6A00]/95'} backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 leading-none z-10 tracking-widest uppercase shadow-sm`}>
                {isApproved ? 'Verified Quality' : 'Official Store'}
             </div>
           )}
@@ -87,14 +94,14 @@ export default function ProductCard({ product }: { product: any }) {
         {/* ======================= */}
         <div className="flex flex-col flex-grow p-3 sm:p-4">
           
-          {/* Category / Meta (Optional nice touch for electronics) */}
+          {/* Category / Meta */}
           <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 truncate">
             {product.category?.replace('-', ' ') || 'Electronics'}
           </span>
 
-          {/* Title (line-clamp-2 allows long names like "Samsung S23 Ultra 256GB" to fit cleanly) */}
+          {/* Title with line-clamp */}
           <h3 className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 line-clamp-2 leading-tight mb-3 group-hover:text-[#FF6A00] transition-colors">
-            {titleStr}
+            {displayTitle}
           </h3>
 
           {/* Price (Pushed to bottom using mt-auto) */}
