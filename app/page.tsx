@@ -1,4 +1,3 @@
-import HorizontalScroller from "@/components/HorizontalScroller";
 import ContinueBrowsing from "@/components/ContinueBrowsing";
 import Link from "next/link";
 import { getCachedHomepageData } from "@/lib/firebase/fetchers";
@@ -62,21 +61,17 @@ export default async function Home() {
 
               <div className="w-full flex flex-col gap-4 sm:gap-6">
 
-{/* 4. Explore by category */}
+                {/* 4. Explore by category */}
                 <div className="bg-transparent rounded-2xl p-2 sm:p-4 shadow-sm border border-slate-100 dark:border-slate-800/60">
                   <ThemedCategoryGrid />
                 </div>
 
-                {/* 2. Continue Browsing (Original wrapper) */}
+                {/* 2. Continue Browsing (This is now the ONLY horizontal scroller) */}
                 <ContinueBrowsing 
                   title="Continue Browsing"
                   subtitle="Pick up exactly where you left off"
                   fallbackProducts={trendingProducts} 
                 />
-
-                
-
-                
 
                 {/* 5. Featured collection (ProductSection Grid) */}
                 {featuredCollection.length > 0 && (
@@ -108,10 +103,8 @@ export default async function Home() {
                   />
                 )}
 
-{/* 3. Find the perfect timepiece banner */}
+                {/* 3. Find the perfect timepiece banner */}
                 <TimepieceBanner />
-
-
 
                 {/* 8. Trending Products (ProductSection Grid) */}
                 {trendingProducts.length > 0 && (
@@ -134,9 +127,9 @@ export default async function Home() {
                   />
                 )}
 
-                {/* 11. Official Store (Horizontal Scroller) */}
+                {/* 11. Official Store (ProductSection Grid) */}
                 {officialProducts.length > 0 && (
-                  <HorizontalScroller 
+                  <ProductSection 
                     title="From the Official Store" 
                     subtitle="100% genuine guaranteed products"
                     products={officialProducts} 
@@ -144,17 +137,15 @@ export default async function Home() {
                   />
                 )}
 
-                {/* 12. Other products (Horizontal Scroller) */}
+                {/* 12. Other products (ProductSection Grid) */}
                 {otherProducts.length > 0 && (
-                  <HorizontalScroller 
+                  <ProductSection 
                     title="Other Products" 
                     subtitle="Explore beyond electronics"
                     products={otherProducts} 
                     viewAllLink="/category/other-products" 
                   />
                 )}
-
-                
 
                 <AboutKabaleOnline />
 
