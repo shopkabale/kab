@@ -41,16 +41,18 @@ export default async function Home() {
 
   return (
     <ThemeProvider>
-      <div className="min-h-screen bg-transparent pb-10 pt-2 sm:pt-4 font-sans selection:bg-[#FF6A00] selection:text-white overflow-x-hidden">
+      {/* 🔥 FIX 1: Removed overflow-x-hidden from here so sticky works! */}
+      <div className="min-h-screen bg-transparent pb-10 pt-2 sm:pt-4 font-sans selection:bg-[#FF6A00] selection:text-white">
         <WhatsAppPopup />
         <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
-          <div className="flex flex-col md:flex-row gap-4 w-full">
+          
+          {/* 🔥 FIX 2: Added items-start here so the sidebar doesn't stretch to the bottom */}
+          <div className="flex flex-col md:flex-row items-start gap-4 w-full">
 
-                        {/* LEFT SIDEBAR */}
+            {/* LEFT SIDEBAR */}
             <div className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky top-[85px] h-[calc(100vh-85px)] overflow-y-auto no-scrollbar overscroll-contain z-10 pb-6">
               <LeftSidebar />
             </div>
-
 
             {/* MAIN FEED */}
             <div className="flex-grow min-w-0 flex flex-col w-full">
