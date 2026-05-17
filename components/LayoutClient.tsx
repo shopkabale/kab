@@ -40,7 +40,8 @@ export default function LayoutClient({
 
           {/* CONTENT WRAPPER */}
           {/* Completely transparent background to let globals.css gradient show through */}
-          <div className="flex-grow pt-[140px] lg:pt-[90px] w-full transition-all flex flex-col min-h-screen bg-transparent dark:bg-transparent pb-10">
+          {/* 🔥 UPDATED: Exact heights applied here (109px mobile, 67px desktop) */}
+          <div className="flex-grow pt-[109px] lg:pt-[67px] w-full transition-all flex flex-col min-h-screen bg-transparent dark:bg-transparent pb-10">
 
             {/* True full-width container. 
                 Individual pages will handle their own max-widths, grids, and padding. 
