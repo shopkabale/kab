@@ -53,6 +53,18 @@ export default async function Home() {
 
             {/* MAIN FEED */}
             <div className="flex-grow min-w-0 flex flex-col w-full">
+{/* NEW: VALUE PROP HEADLINE TO FILL WHITESPACE */}
+              <div className="text-center px-4 pt-2 pb-4 sm:pt-4 sm:pb-6">
+                <h1 className="text-lg sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-tight uppercase">
+                  Kabale's Premium Tech Hub
+                </h1>
+                <div className="flex items-center justify-center gap-2 mt-1.5">
+                  <span className="flex items-center justify-center w-4 h-4 rounded-full bg-green-100 text-green-600 text-[10px]">✓</span>
+                  <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-medium">
+                    Affordable electronics delivered anywhere in Kabale.
+                  </p>
+                </div>
+              </div>
               
               {/* 1. Hero */}
               <div className="mb-4">
