@@ -13,34 +13,48 @@ import {
   PlusCircle,
   User,
   Wallet,
-  GraduationCap,
   Flame,
   Sparkles,
-  Monitor,
-  Sprout,
-  Package,
-  Wrench,
   Store,
   Filter,
-  XCircle
+  XCircle,
+  Watch,
+  Smartphone,
+  Speaker,
+  Headphones,
+  Plug,
+  Package,
+  Truck,
+  Lock,
+  PhoneCall,
+  Award,
+  Tag
 } from "lucide-react";
 
 // ==========================================
-// NEW CATEGORY MAPPING
+// UPDATED ELECTRONICS CATEGORIES
 // ==========================================
 const categories = [
-  { name: "Official Store", href: "/officialStore", icon: Store },
-  { name: "Tech & Appliances", href: "/category/tech-appliances", icon: Monitor },
-  { name: "Campus Life", href: "/category/campus-life", icon: GraduationCap },
-  { name: "Beauty & Fashion", href: "/category/beauty-fashion", icon: Sparkles },
-  { name: "Farm & Groceries", href: "/category/food-groceries", icon: Sprout },
-  { name: "Mega Bundles", href: "/category/mega-bundles", icon: Package },
-  { name: "Repairs & Services", href: "/category/repairs-services", icon: Wrench },
+  { name: "Verified Premium", href: "/officialStore", icon: Store },
+  { name: "Watches", href: "/category/watches", icon: Watch },
+  { name: "Phones & TVs", href: "/category/phones-tvs", icon: Smartphone },
+  { name: "Sound Systems", href: "/category/sound-systems", icon: Speaker },
+  { name: "Accessories", href: "/category/accessories", icon: Headphones },
+  { name: "Appliances", href: "/category/appliances", icon: Plug },
+  { name: "Other Products", href: "/category/other-products", icon: Package },
 ];
 
 const quickShopLinks = [
-  { name: "Gadgets < 50k", href: "/category/tech-appliances?max=50000", icon: Wallet },
-  { name: "Student Gear < 100k", href: "/category/campus-life?max=100000", icon: Wallet },
+  { name: "Accessories < 50k", href: "/category/accessories?max=50000", icon: Wallet },
+  { name: "Phones & TVs < 500k", href: "/category/phones-tvs?max=500000", icon: Wallet },
+];
+
+const promotionalBanners = [
+  { text: "Discover timeless watches", href: "/category/watches", icon: "⌚" },
+  { text: "Upgrade to the latest phones", href: "/category/phones-tvs", icon: "📱" },
+  { text: "Experience premium sound", href: "/category/sound-systems", icon: "🔊" },
+  { text: "Shop essential accessories", href: "/category/accessories", icon: "🎧" },
+  { text: "Upgrade your appliances", href: "/category/appliances", icon: "🔌" },
 ];
 
 function LeftSidebarContent() {
@@ -49,17 +63,12 @@ function LeftSidebarContent() {
   const { cart, removeFromCart, cartTotal } = useCart();
   const { user, signIn } = useAuth();
 
-  // Extract query parameters for UI feedback
   const maxPrice = searchParams.get("max");
   const sortType = searchParams.get("sort");
   const hasActiveFilters = maxPrice || sortType;
 
-  // =======================================================
-  // FIX: Route homepage sorting to the /products feed
-  // =======================================================
   const basePath = pathname === '/' ? '/products' : pathname;
 
-  // Dynamically generate Smart Browse links based on safe path
   const browseSmartLinks = [
     { name: "Top Rated / Popular", href: `${basePath}?sort=popular`, icon: Flame },
     { name: "New Arrivals", href: `${basePath}?sort=new`, icon: Sparkles },
@@ -96,7 +105,7 @@ function LeftSidebarContent() {
         </div>
       </div>
 
-      {/* 2. ACTIVE FILTERS FEEDBACK (Conditionally Rendered) */}
+      {/* 2. ACTIVE FILTERS FEEDBACK */}
       {hasActiveFilters && (
         <div className="bg-orange-50 dark:bg-[#FF6A00]/10 border border-[#FF6A00]/30 rounded-md p-3 shadow-sm animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center justify-between mb-2">
@@ -211,7 +220,86 @@ function LeftSidebarContent() {
         </nav>
       </div>
 
-      {/* 5. PERMANENT MINI CART CARD */}
+      {/* 5. PROMOTIONAL BANNERS */}
+      <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-md shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+          <h3 style={{ color: '#6B6B6B' }} className="text-[10px] font-black dark:text-slate-500 uppercase tracking-[0.15em]">
+            Top Offers
+          </h3>
+        </div>
+        <div className="flex flex-col p-3 gap-2">
+          {promotionalBanners.map((promo, idx) => (
+            <Link 
+              key={idx} 
+              href={promo.href} 
+              className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800 hover:border-[#FF6A00] dark:hover:border-[#FF6A00] hover:shadow-sm transition-all group"
+            >
+              <span className="text-sm">{promo.icon}</span>
+              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 group-hover:text-[#FF6A00] transition-colors">
+                {promo.text}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* 6. TRUST & BADGES CARD */}
+      <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-md shadow-sm overflow-hidden p-4">
+        <h3 className="text-[11px] font-black text-slate-900 dark:text-white uppercase tracking-widest mb-1.5 text-center leading-tight">
+          Trusted Electronics Center
+        </h3>
+        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium text-center mb-5 leading-relaxed">
+          Trusted electronics store for quality gadgets at affordable prices.
+        </p>
+
+        <div className="grid grid-cols-2 gap-y-4 gap-x-2">
+          <div className="flex flex-col items-center text-center gap-1.5">
+            <Truck className="w-5 h-5 text-[#FF6A00]" strokeWidth={2.5} />
+            <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400 leading-tight">Fast<br/>Delivery</span>
+          </div>
+          <div className="flex flex-col items-center text-center gap-1.5">
+            <Lock className="w-5 h-5 text-[#FF6A00]" strokeWidth={2.5} />
+            <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400 leading-tight">Secure<br/>Payments</span>
+          </div>
+          <div className="flex flex-col items-center text-center gap-1.5">
+            <PhoneCall className="w-5 h-5 text-[#FF6A00]" strokeWidth={2.5} />
+            <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400 leading-tight">24/7<br/>Support</span>
+          </div>
+          <div className="flex flex-col items-center text-center gap-1.5">
+            <ShieldCheck className="w-5 h-5 text-[#FF6A00]" strokeWidth={2.5} />
+            <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400 leading-tight">Verified<br/>Products</span>
+          </div>
+          <div className="flex flex-col items-center text-center gap-1.5">
+            <Award className="w-5 h-5 text-[#FF6A00]" strokeWidth={2.5} />
+            <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400 leading-tight">Best<br/>Quality</span>
+          </div>
+          <div className="flex flex-col items-center text-center gap-1.5">
+            <Tag className="w-5 h-5 text-[#FF6A00]" strokeWidth={2.5} />
+            <span className="text-[9px] font-bold text-slate-600 dark:text-slate-400 leading-tight">Best<br/>Offers</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 7. TOP BRANDS CARD */}
+      <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-md shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50">
+          <h3 style={{ color: '#6B6B6B' }} className="text-[10px] font-black dark:text-slate-500 uppercase tracking-[0.15em]">
+            Top Brands
+          </h3>
+        </div>
+        <div className="p-3 flex flex-wrap justify-center gap-2">
+          {["Apple", "Samsung", "Tecno", "Oraimo", "Hisense", "JBL", "Sony", "LG", "Infinix"].map((brand) => (
+            <span 
+              key={brand} 
+              className="text-[10px] font-bold px-2.5 py-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-sm"
+            >
+              {brand}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* 8. PERMANENT MINI CART CARD */}
       <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-md shadow-sm overflow-hidden transition-all">
          <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/50 flex justify-between items-center">
           <h3 style={{ color: '#6B6B6B' }} className="text-[10px] font-black dark:text-slate-500 uppercase tracking-[0.15em]">
@@ -272,7 +360,7 @@ function LeftSidebarContent() {
         </div>
       </div>
 
-      {/* 6. MERCHANT CTA CARD */}
+      {/* 9. MERCHANT CTA CARD */}
       <Link href="/sell" className="group bg-slate-900 dark:bg-black border border-slate-800 rounded-md shadow-lg overflow-hidden relative p-5 flex flex-col hover:border-[#FF6A00] transition-all outline-none">
         <div className="absolute -right-2 -top-2 opacity-10 group-hover:opacity-20 transition-opacity">
           <PlusCircle className="w-20 h-20 text-white" />
@@ -287,67 +375,20 @@ function LeftSidebarContent() {
         </div>
       </Link>
 
-      {/* 7. PAYMENT SECURITY CARD */}
-      <div className="bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800 rounded-md p-4 flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="text-[#FF6A00] w-4 h-4 shrink-0" />
-          <h3 style={{ color: '#1A1A1A' }} className="text-[10px] font-black dark:text-slate-200 uppercase tracking-wider">Secure Portal</h3>
-        </div>
-        <div className="flex flex-col gap-2.5">
-           <div className="flex items-center gap-1.5">
-             <div className="h-4 w-6 rounded-sm bg-slate-200 dark:bg-slate-700 animate-ug-black"></div>
-             <div className="h-4 w-6 rounded-sm bg-slate-200 dark:bg-slate-700 animate-ug-yellow"></div>
-             <div className="h-4 w-6 rounded-sm bg-slate-200 dark:bg-slate-700 animate-ug-red"></div>
-           </div>
-           <p style={{ color: '#6B6B6B' }} className="text-[10px] dark:text-slate-400 font-semibold leading-relaxed">
-             Encrypted Mobile Money checkout powered by <span style={{ color: '#1A1A1A' }} className="dark:text-white">Kabale Online Pay</span>.
-           </p>
-        </div>
-      </div>
-
       <style jsx global>{`
-        .animate-ug-black { animation: pulseBlack 2s infinite ease-in-out; }
-        .animate-ug-yellow { animation: pulseYellow 2s infinite ease-in-out 0.3s; }
-        .animate-ug-red { animation: pulseRed 2s infinite ease-in-out 0.6s; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        @keyframes pulseBlack {
-          0%, 100% { background-color: #cbd5e1; }
-          50% { background-color: #0f172a; }
-        }
-        @keyframes pulseYellow {
-          0%, 100% { background-color: #cbd5e1; }
-          50% { background-color: #eab308; }
-        }
-        @keyframes pulseRed {
-          0%, 100% { background-color: #cbd5e1; }
-          50% { background-color: #dc2626; }
-        }
-
-        @media (prefers-color-scheme: dark) {
-          @keyframes pulseBlack {
-            0%, 100% { background-color: #334155; }
-            50% { background-color: #000000; }
-          }
-          @keyframes pulseYellow {
-            0%, 100% { background-color: #334155; }
-            50% { background-color: #eab308; }
-          }
-          @keyframes pulseRed {
-            0%, 100% { background-color: #334155; }
-            50% { background-color: #dc2626; }
-          }
-        }
       `}</style>
     </div>
   );
 }
 
-// Wrap in Suspense to prevent useSearchParams from de-opting the entire route to client-side rendering
+// 🔥 CRITICAL FIX: Removed the `sticky top-4 self-start` from this wrapper! 
+// This forces it to align completely flush with the top of the parent container 
+// in app/page.tsx, eliminating that white space you saw above the Welcome card.
 export default function LeftSidebar() {
   return (
-    <div className="sticky top-4 self-start w-full">
+    <div className="w-full">
       <Suspense fallback={<div className="w-full h-[800px] bg-slate-50 dark:bg-slate-900/50 animate-pulse rounded-md" />}>
         <LeftSidebarContent />
       </Suspense>
