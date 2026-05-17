@@ -4,11 +4,9 @@ import { useState } from "react";
 import { collection, query, where, orderBy, limit, startAfter, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import Link from "next/link";
-import Image from "next/image";
-import { optimizeImage } from "@/lib/utils";
-import { trackSelectItem } from "@/lib/analytics";
+import ProductCard from "@/components/ProductCard"; // Adjust import path if needed
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 100; // 🔥 Updated to fetch and paginate by 100
 
 export default function OfficialProductFeed({ initialProducts }: { initialProducts: any[] }) {
   const [products, setProducts] = useState<any[]>(initialProducts);
@@ -74,7 +72,7 @@ export default function OfficialProductFeed({ initialProducts }: { initialProduc
         </p>
         <Link 
           href="/" 
-          className="px-6 py-3 bg-[#D97706] hover:bg-amber-600 text-white text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-sm transition-colors shadow-sm outline-none"
+          className="px-6 py-3 bg-[#FF6A00] hover:bg-[#e65c00] text-white text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-sm transition-colors shadow-sm outline-none"
         >
           Return Home
         </Link>
@@ -100,66 +98,9 @@ export default function OfficialProductFeed({ initialProducts }: { initialProduc
 
         {/* CUSTOM GRID: Fixed to 4 columns max to prevent crushing next to the sidebar */}
         <div className="p-3 sm:p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-          {products.map((p) => {
-            const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
-            const isSold = p.status === "sold";
-            const titleStr = p.title || p.name || 'Product';
-
-            return (
-              <div key={p.id} className={`group flex flex-col transition-all hover:shadow-md rounded-md p-1 sm:p-2 relative h-full ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
-                <Link 
-                  href={`/product/${p.publicId || p.id}`} 
-                  className="flex flex-col flex-grow relative pointer-events-auto outline-none"
-                  onClick={() => {
-                    trackSelectItem({
-                      id: p.id,
-                      name: titleStr, 
-                      price: Number(p.price) || 0,
-                      category: p.category || "official",
-                    });
-                  }}
-                >
-                  {/* Image Area - Strict Square */}
-                  <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 rounded-sm overflow-hidden mb-2 border border-slate-100 dark:border-slate-800/50">
-                    {optimizedImage ? (
-                      <Image 
-                        src={optimizedImage} 
-                        alt={titleStr} 
-                        fill 
-                        sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw" 
-                        className="object-cover group-hover:scale-105 transition-transform duration-500" 
-                      />
-                    ) : (
-                      <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">No Image</div>
-                    )}
-
-                    {isSold && (
-                      <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-[2px]">
-                         <span className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-lg transform -rotate-6">
-                           Sold Out
-                         </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Text Area */}
-                  <div className="flex flex-col flex-grow bg-transparent">
-                    <div className="h-[36px] sm:h-[42px] mb-1 flex flex-col justify-start">
-                      <h3 className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 line-clamp-2 leading-snug transition-colors duration-200 group-hover:text-[#D97706]">
-                        {titleStr}
-                      </h3>
-                    </div>
-
-                    <div className="mt-auto pt-1 flex flex-col">
-                      <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-500' : 'text-slate-900 dark:text-white group-hover:text-[#D97706]'}`}>
-                        UGX {Number(p.price).toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              </div>
-            );
-          })}
+          {products.map((p) => (
+            <ProductCard key={p.id} product={p} />
+          ))}
         </div>
       </div>
 
@@ -167,7 +108,7 @@ export default function OfficialProductFeed({ initialProducts }: { initialProduc
       <div className="flex flex-col items-center justify-center h-16">
         {loading ? (
           <div className="flex flex-col items-center gap-2">
-            <svg className="w-5 h-5 text-[#D97706] animate-spin" fill="none" viewBox="0 0 24 24">
+            <svg className="w-5 h-5 text-[#FF6A00] animate-spin" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
@@ -178,10 +119,10 @@ export default function OfficialProductFeed({ initialProducts }: { initialProduc
         ) : hasMore ? (
           <button 
             onClick={loadMore}
-            className="px-6 py-3 rounded-sm bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[10px] sm:text-xs uppercase tracking-widest hover:border-[#D97706] hover:text-[#D97706] dark:hover:border-[#D97706] transition-all shadow-sm active:scale-95 flex items-center gap-2 group outline-none"
+            className="px-6 py-3 rounded-sm bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-bold text-[10px] sm:text-xs uppercase tracking-widest hover:border-[#FF6A00] hover:text-[#FF6A00] dark:hover:border-[#FF6A00] transition-all shadow-sm active:scale-95 flex items-center gap-2 group outline-none"
           >
             Load More Products
-            <svg className="w-4 h-4 text-slate-400 group-hover:text-[#D97706] transition-transform group-hover:translate-y-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 text-slate-400 group-hover:text-[#FF6A00] transition-transform group-hover:translate-y-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
             </svg>
           </button>
