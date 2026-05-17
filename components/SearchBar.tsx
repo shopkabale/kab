@@ -18,14 +18,12 @@ interface SearchBarProps {
   onSearch?: () => void;
 }
 
-// 🔥 STRATEGIC TRENDING SEARCHES: High profit margin items
+// 🔥 STRATEGIC TRENDING SEARCHES: Updated to match your new list
 const TRENDING_SEARCHES = [
   "watches", 
   "cables", 
   "flash", 
-  "jbl", 
-  "power bank",
-  "earpods"
+  "power bank"
 ];
 
 function SearchBarContent({ onSearch }: SearchBarProps) {
@@ -100,13 +98,13 @@ function SearchBarContent({ onSearch }: SearchBarProps) {
     setIsTyping(true);
   };
 
-  // CORE LOGIC: Triggers the actual search (used by form submit AND suggestion clicks)
+  // CORE LOGIC: Triggers the actual search
   const executeSearch = async (searchStr: string) => {
     const finalQuery = searchStr.trim();
 
     if (finalQuery !== "") {
       setIsOpen(false);
-      setQuery(finalQuery); // Update the input box to show what they clicked
+      setQuery(finalQuery); 
       setIsNavigating(true); 
 
       if (onSearch) onSearch();
@@ -136,12 +134,18 @@ function SearchBarContent({ onSearch }: SearchBarProps) {
   return (
     <div className="relative w-full mx-auto" ref={searchRef}>
       <form onSubmit={handleFormSubmit} className="relative flex items-center">
+        
         {/* CLEAR BUTTON (X) */}
         {query && (
           <button
             type="button"
-            onClick={() => setQuery("")}
-            className="absolute right-12 z-10 p-2 text-slate-400 hover:text-slate-600"
+            onClick={() => {
+              setQuery("");
+              setSuggestions([]);
+              setIsOpen(false); // 🔥 Explicitly closes the dropdown
+            }}
+            // Adjusted right placement to account for the wider Search button
+            className="absolute right-[100px] md:right-[110px] z-10 p-2 text-slate-400 hover:text-slate-600"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -155,20 +159,26 @@ function SearchBarContent({ onSearch }: SearchBarProps) {
           onChange={handleInputChange}
           onFocus={() => setIsOpen(true)}
           placeholder="Search products, brands and categories"
-          className="w-full pl-4 pr-20 py-2 md:py-2.5 border border-slate-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#D97706] focus:border-transparent transition-all shadow-sm"
+          // Increased pr-[130px] so text doesn't hide behind the new wide button
+          className="w-full pl-4 pr-[130px] py-2 md:py-2.5 border border-slate-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-[#FF6A00] focus:border-transparent transition-all shadow-sm"
         />
 
+        {/* UPDATED SEARCH BUTTON */}
         <button 
           type="submit"
           aria-label="Submit Search"
-          className="absolute right-1 top-1 bottom-1 w-8 md:w-10 bg-[#D97706] hover:bg-amber-600 text-white rounded-full flex items-center justify-center transition-colors shadow-sm"
+          className="absolute right-1 top-1 bottom-1 px-4 sm:px-5 bg-[#FF6A00] hover:bg-[#e65c00] text-white rounded-full flex items-center justify-center gap-1.5 transition-colors shadow-sm"
         >
           {isTyping ? (
              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           ) : (
-            <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+            <>
+              {/* Added explicit Search text */}
+              <span className="text-xs sm:text-sm font-bold tracking-wide">Search</span>
+              <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </>
           )}
         </button>
       </form>
@@ -176,7 +186,7 @@ function SearchBarContent({ onSearch }: SearchBarProps) {
       {/* DROPDOWN UI */}
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-[100]">
-          
+
           {/* STATE 1: EMPTY SEARCH BAR (TRENDING PILLS) */}
           {query.trim() === "" && (
             <div className="p-4">
@@ -207,7 +217,7 @@ function SearchBarContent({ onSearch }: SearchBarProps) {
                   className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors focus:bg-slate-50 focus:outline-none border-b border-slate-50 last:border-0"
                 >
                   <span className="text-sm font-bold text-slate-700 truncate">{suggestion}</span>
-                  
+
                   <svg className="w-4 h-4 text-slate-400 flex-shrink-0 ml-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
@@ -218,7 +228,7 @@ function SearchBarContent({ onSearch }: SearchBarProps) {
         </div>
       )}
 
-      {/* 🔥 THE INJECTED CUSTOM LOADER OVERLAY RESTORED */}
+      {/* CUSTOM LOADER OVERLAY RESTORED (Color updated to #FF6A00) */}
       {isNavigating && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-transparent pointer-events-none transition-opacity duration-300">
           <style>{`
@@ -233,7 +243,7 @@ function SearchBarContent({ onSearch }: SearchBarProps) {
           `}</style>
 
           <svg 
-            className="animate-kinetic-spin w-16 h-16 text-[#D97706] drop-shadow-md" 
+            className="animate-kinetic-spin w-16 h-16 text-[#FF6A00] drop-shadow-md" 
             viewBox="0 0 100 100" 
             fill="none" 
             xmlns="http://www.w3.org/2000/svg"
