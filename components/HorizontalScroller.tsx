@@ -46,7 +46,7 @@ export default function HorizontalScroller({
       <div className="p-3 sm:p-4">
         {/* The grid layout keeps desktop 100% flexible */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 pb-2">
-          {products.slice(0, 6).map((p) => (
+          {products.slice(0, 12).map((p) => (
             <ProductCard key={p.id} product={p} />
           ))}
         </div>
