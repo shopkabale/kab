@@ -21,10 +21,19 @@ export default function ProductActions({ product, children }: { product: Product
 
   const botPhoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_BOT_NUMBER || "256740373021";
 
+  // 🔥 CHECK IF PRICE IS ZERO (NEGOTIABLE)
+  const isNegotiable = Number(product.price) === 0;
+
   // ==========================================
   // 🛒 CART LOGIC
   // ==========================================
   const handleAddToCart = () => {
+    // Failsafe in case it gets clicked
+    if (isNegotiable) {
+      alert("This item's price is negotiable. Please use WhatsApp to contact the seller.");
+      return;
+    }
+
     addToCart({
       id: product.id,
       title: product.name || "Unknown Item", 
@@ -39,13 +48,12 @@ export default function ProductActions({ product, children }: { product: Product
   };
 
   // ==========================================
-  // 🚀 WHATSAPP LEAD CAPTURE (Now with Referral Tracking!)
+  // 🚀 WHATSAPP LEAD CAPTURE
   // ==========================================
   const handleBotInquiry = async () => {
     setLoadingWhatsApp(true);
 
     try {
-      // 🚀 1. READ THE REFERRAL COOKIE
       const getCookie = (name: string) => {
         if (typeof document === "undefined") return null;
         const value = `; ${document.cookie}`;
@@ -55,7 +63,6 @@ export default function ProductActions({ product, children }: { product: Product
       };
       const referralCode = getCookie("kabale_ref");
 
-      // 🚀 2. SEND IT TO YOUR LEAD API
       const res = await fetch("/api/orders/lead", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,7 +72,7 @@ export default function ProductActions({ product, children }: { product: Product
           sellerId: product.sellerId,
           sellerPhone: product.sellerPhone,
           price: product.price,
-          referralCodeUsed: referralCode || null // 🔥 INJECTED HERE
+          referralCodeUsed: referralCode || null 
         }),
       });
 
@@ -76,7 +83,9 @@ export default function ProductActions({ product, children }: { product: Product
         referenceCode = data.leadId; 
       }
 
-      const rawMessage = `Hi! I want to order or ask about this item on Kabale Online:\n\n*${product.name}*\n\nRef: [${referenceCode}]`;
+      // Adjust message slightly if negotiable
+      const priceText = isNegotiable ? "Price: Negotiable" : `Price: UGX ${Number(product.price).toLocaleString()}`;
+      const rawMessage = `Hi! I want to order or ask about this item on Kabale Online:\n\n*${product.name}*\n${priceText}\n\nRef: [${referenceCode}]`;
       const encodedMessage = encodeURIComponent(rawMessage);
 
       window.open(`https://wa.me/${botPhoneNumber}?text=${encodedMessage}`, "_blank");
@@ -120,48 +129,52 @@ export default function ProductActions({ product, children }: { product: Product
   return (
     <div className="mt-6 flex flex-col gap-4">
 
-            
+      {/* 1. QUANTITY & ADD TO CART (Hidden if Negotiable) */}
+      {!isNegotiable ? (
+        <div className="flex items-center gap-3 mt-1">
+          <div className="flex items-center border border-slate-300 rounded-md overflow-hidden h-12 bg-white shadow-sm">
+            <button 
+              onClick={() => setQuantity(Math.max(1, quantity - 1))}
+              className="px-4 h-full text-lg font-bold text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+            >
+              -
+            </button>
+            <span className="px-4 font-semibold text-lg border-x border-slate-300 h-full flex items-center justify-center min-w-[45px] text-slate-800 bg-slate-50">
+              {quantity}
+            </span>
+            <button 
+              onClick={() => setQuantity(quantity + 1)}
+              className="px-4 h-full text-lg font-bold text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+            >
+              +
+            </button>
+          </div>
 
-
-      {/* 1. QUANTITY & ADD TO CART */}
-      <div className="flex items-center gap-3 mt-1">
-        <div className="flex items-center border border-slate-300 rounded-md overflow-hidden h-12 bg-white shadow-sm">
           <button 
-            onClick={() => setQuantity(Math.max(1, quantity - 1))}
-            className="px-4 h-full text-lg font-bold text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors"
+            onClick={handleAddToCart}
+            className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 rounded-md text-sm uppercase tracking-wider shadow-sm transition-all active:scale-[0.98]"
           >
-            -
-          </button>
-          <span className="px-4 font-semibold text-lg border-x border-slate-300 h-full flex items-center justify-center min-w-[45px] text-slate-800 bg-slate-50">
-            {quantity}
-          </span>
-          <button 
-            onClick={() => setQuantity(quantity + 1)}
-            className="px-4 h-full text-lg font-bold text-slate-600 hover:bg-slate-50 active:bg-slate-100 transition-colors"
-          >
-            +
+            Add to Cart
           </button>
         </div>
-
-        <button 
-          onClick={handleAddToCart}
-          className="flex-1 bg-slate-900 hover:bg-slate-800 text-white font-bold h-12 rounded-md text-sm uppercase tracking-wider shadow-sm transition-all active:scale-[0.98]"
-        >
-          Add to Cart
-        </button>
-      </div>
+      ) : (
+        <div className="bg-orange-50 dark:bg-[#FF6A00]/10 border border-[#FF6A00]/30 rounded-md p-3 flex items-start gap-2 animate-in fade-in">
+          <span className="text-lg">🤝</span>
+          <p className="text-xs text-slate-700 dark:text-slate-300 font-medium leading-relaxed">
+            The price for this item is <strong className="text-[#FF6A00]">Negotiable</strong>. "Add to Cart" is disabled. Please contact the seller via WhatsApp to agree on a price.
+          </p>
+        </div>
+      )}
 
       {/* 2. ASK OR ORDER ON WHATSAPP */}
       <button 
         onClick={handleBotInquiry}
         disabled={loadingWhatsApp}
-        className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3.5 rounded-md shadow-sm transition-all flex items-center justify-center gap-2 text-[15px] disabled:opacity-70"
+        className={`w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-3.5 rounded-md shadow-sm transition-all flex items-center justify-center gap-2 text-[15px] disabled:opacity-70 ${isNegotiable ? 'animate-pulse' : ''}`}
       >
         <FaWhatsapp className="text-xl" /> 
-        {loadingWhatsApp ? "Connecting..." : "Order Using WhatsApp"}
+        {loadingWhatsApp ? "Connecting..." : isNegotiable ? "Negotiate on WhatsApp" : "Order Using WhatsApp"}
       </button>
-
-      
 
       {/* 4. MORE OPTIONS & ADMIN CONTROLS */}
       <div className="mt-1">
