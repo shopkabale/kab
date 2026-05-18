@@ -5,7 +5,7 @@ export const revalidate = 3600;
 import { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { notFound, redirect } from "next/navigation"; // 👈 Imported redirect
+import { notFound, redirect } from "next/navigation"; 
 import { getProductByPublicId, getProducts } from "@/lib/firebase/firestore";
 import ImageGallery from "@/components/ImageGallery";
 import ProductActions from "@/components/ProductActions";
@@ -16,7 +16,7 @@ import ProductReviews from "@/components/ProductReviews";
 import { optimizeImage, calculateDepositAmount } from "@/lib/utils"; 
 import { FaCheck, FaTruck } from "react-icons/fa";
 import { MdVerifiedUser } from "react-icons/md";
-import BatchDeliveryCountdown from "@/components/BatchDeliveryCountdown"; // 👈 ADD THIS IMPORT
+import BatchDeliveryCountdown from "@/components/BatchDeliveryCountdown"; 
 
 export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
   const product = await getProductByPublicId(params.publicId);
@@ -24,7 +24,8 @@ export async function generateMetadata({ params }: { params: { publicId: string 
   if (!product) return { title: "Item Not Found | Kabale Online" };
 
   const safeName = product.name || "Unnamed Item";
-  const formattedPrice = `UGX ${(Number(product.price) || 0).toLocaleString()}`;
+  // Format metadata price to say Negotiable if 0
+  const formattedPrice = Number(product.price) === 0 ? "Negotiable" : `UGX ${(Number(product.price) || 0).toLocaleString()}`;
 
   const title = `${safeName} - Available in Kabale | ${formattedPrice}`;
   const description = product.description?.slice(0, 150) || `Buy this ${safeName} for ${formattedPrice}. Pay strictly Cash on Delivery in Kabale town.`;
@@ -72,30 +73,24 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const product = await getProductByPublicId(params.publicId);
 
   if (!product) notFound();
-  // ==========================================
-  // 🚨 THE SERVICE REDIRECT 🚨
-  // ==========================================
+  
   if (product.category === "services") {
-    // Change params.publicId to product.id so the LONG ID becomes the main URL
     redirect(`/service/${product.id}`); 
   }
 
   const safeName = product.name || "Unnamed Item";
   const safePrice = Number(product.price) || 0;
+  const isNegotiable = safePrice === 0; // 🔥 CHECK IF ZERO
+  
   const safeCondition = product.condition || "used";
   const safeCategory = product.category || "general";
 
-  // TypeScript Bypass
   const pAny = product as any;
 
-  // Product States
   const isMainProductNew = checkIsNew(product);
   const isMainApproved = pAny.isApprovedQuality;
   const isMainOfficial = pAny.isOfficialStore || pAny.isAdminUpload;
 
-  // ==========================================
-  // 1. BULLETPROOF STOCK PARSING
-  // ==========================================
   let safeStock = 1;
   if (product.stock !== undefined && product.stock !== null) {
     const parsed = Number(product.stock);
@@ -107,23 +102,13 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const isLowStock = safeStock > 0 && safeStock <= 5;
   const isSoldOut = safeStock <= 0 || product.status === "sold";
 
-  // ==========================================
-  // 2. BULLETPROOF ADMIN CHECK
-  // ==========================================
   const sellerNameStr = String(product.sellerName || "").toLowerCase();
   const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
 
-  // CALCULATE DEPOSIT FOR UI
   const depositRequired = safePrice >= 20000 ? calculateDepositAmount(safePrice, false) : 0;
 
-  // ==========================================
-  // 3. OPTIMIZE IMAGES
-  // ==========================================
   const optimizedImages = product.images?.map((img: string) => optimizeImage(img)) || [];
 
-  // ==========================================
-  // 4. FETCH RELATED PRODUCTS
-  // ==========================================
   const rawCategoryProducts = await getProducts(safeCategory, 12);
 
   const relatedProducts = rawCategoryProducts
@@ -135,9 +120,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
       images: p.images?.map((img: string) => optimizeImage(img)) || []
     }));
 
-  // ==========================================
-  // 5. HELPER: RENDER DESCRIPTION AS BULLETS
-  // ==========================================
   const renderDescription = (desc?: string) => {
     if (!desc) return <p className="text-[#6B6B6B] text-sm">No description provided by the seller.</p>;
 
@@ -159,7 +141,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   };
 
   return (
-    // FIX: Added w-full and overflow-x-hidden to lock the layout into mobile view
     <div className="py-8 w-full max-w-full overflow-x-hidden mx-auto px-4 sm:px-6 bg-white min-h-screen">
       <ProductTracker product={product} />
       <RecentlyViewedTracker product={product} />   
@@ -189,28 +170,17 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         {/* RIGHT COLUMN: Product Details */}  
         <div className="flex flex-col overflow-hidden">  
 
-          
-
-          
-
           {/* 3. TITLE (Big and light gray) */}
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-400 leading-tight mb-4">  
             {safeName}
           </h1>  
 
-          {/* 4. PRICE (Strong black) & REVIEWS */}
+          {/* 4. PRICE (Displays Negotiable if 0) */}
           <div className="mb-2 flex items-end gap-3">  
-            <span className="text-4xl sm:text-5xl font-black text-[#1A1A1A]">  
-              UGX {safePrice.toLocaleString()}  
+            <span className={`font-black ${isNegotiable ? 'text-3xl sm:text-4xl text-[#FF6A00]' : 'text-4xl sm:text-5xl text-[#1A1A1A]'}`}>  
+              {isNegotiable ? "Price Negotiable" : `UGX ${safePrice.toLocaleString()}`}
             </span>  
           </div>  
-
-          
-
-          
-
-          
-
 
           {/* MAIN CALL TO ACTIONS (HYBRID) */}
           <div className={`mb-8 ${isSoldOut ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
@@ -231,7 +201,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                   <svg fill="none" height="20" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" viewBox="0 0 24 24" width="20"><path d="M6 9l6 6 6-6"></path></svg>
                 </span>
               </summary>
-              {/* FIX: Added break-words to prevent long links from breaking the layout */}
               <div className="p-4 text-[#6B6B6B] bg-white break-words overflow-hidden">
                 {renderDescription(product.description)}
               </div>
@@ -267,7 +236,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               </div>
             </details>
 
-
             <details className="group" id="reviews">
               <summary className="flex justify-between items-center font-bold cursor-pointer list-none p-4 text-[#1A1A1A] hover:bg-slate-50 transition-colors text-sm">
                 Customer Reviews
@@ -301,6 +269,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               const isRelNew = checkIsNew(relProduct);
               const isRelApproved = relAny.isApprovedQuality;
               const isRelOfficial = relAny.isOfficialStore || relAny.isAdminUpload;
+              
+              // 🔥 Check if related product is negotiable
+              const isRelNegotiable = Number(relProduct.price) === 0;
 
               return (
                 <Link   
@@ -348,8 +319,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                       {relProduct.name}  
                     </h3>  
                     <div className="mt-auto pt-1 flex flex-col">  
-                      <span className={`text-sm sm:text-base font-black ${isRelSold ? 'text-slate-500' : 'text-[#1A1A1A]'}`}>
-                        UGX {Number(relProduct.price).toLocaleString()}
+                      <span className={`text-sm sm:text-base font-black ${isRelSold ? 'text-slate-500' : isRelNegotiable ? 'text-[#FF6A00]' : 'text-[#1A1A1A]'}`}>
+                        {/* 🔥 Display Negotiable or formatted price */}
+                        {isRelNegotiable ? "Negotiable" : `UGX ${Number(relProduct.price).toLocaleString()}`}
                       </span>  
                     </div>  
                   </div>  
