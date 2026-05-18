@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, limit, getDocs, startAfter, QueryDocumentSnapshot, DocumentData } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -13,21 +13,28 @@ interface SearchLog {
   createdAt: any;
 }
 
+const PAGE_SIZE = 200; // You can adjust how many logs load per page
+
 export default function AdminSearchesPage() {
   const { user } = useAuth();
   const [logs, setLogs] = useState<SearchLog[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Pagination State
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot<DocumentData> | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
 
+  // Initial Fetch
   useEffect(() => {
-    const fetchSearchLogs = async () => {
+    const fetchInitialLogs = async () => {
       if (!user || user.role !== "admin") return;
 
       try {
-        // Fetch the 100 most recent searches
         const q = query(
           collection(db, "search_queries"),
           orderBy("createdAt", "desc"),
-          limit(100)
+          limit(PAGE_SIZE)
         );
         
         const querySnapshot = await getDocs(q);
@@ -38,6 +45,12 @@ export default function AdminSearchesPage() {
         });
         
         setLogs(fetchedLogs);
+
+        // Setup pagination cursor
+        if (querySnapshot.docs.length > 0) {
+          setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
+          setHasMore(querySnapshot.docs.length === PAGE_SIZE);
+        }
       } catch (error) {
         console.error("Failed to fetch search logs:", error);
       } finally {
@@ -45,8 +58,44 @@ export default function AdminSearchesPage() {
       }
     };
 
-    fetchSearchLogs();
+    fetchInitialLogs();
   }, [user]);
+
+  // Load More Function
+  const loadMore = async () => {
+    if (loadingMore || !hasMore || !lastDoc) return;
+    setLoadingMore(true);
+
+    try {
+      const q = query(
+        collection(db, "search_queries"),
+        orderBy("createdAt", "desc"),
+        startAfter(lastDoc),
+        limit(PAGE_SIZE)
+      );
+      
+      const querySnapshot = await getDocs(q);
+      const fetchedLogs: SearchLog[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        fetchedLogs.push({ id: doc.id, ...doc.data() } as SearchLog);
+      });
+      
+      setLogs((prev) => [...prev, ...fetchedLogs]);
+
+      // Update cursor for the next batch
+      if (querySnapshot.docs.length > 0) {
+        setLastDoc(querySnapshot.docs[querySnapshot.docs.length - 1]);
+        setHasMore(querySnapshot.docs.length === PAGE_SIZE);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("Failed to fetch more search logs:", error);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -69,11 +118,11 @@ export default function AdminSearchesPage() {
           <p className="text-slate-600 mt-2 font-medium">See exactly what the Kabale community is looking for.</p>
         </div>
         <div className="bg-purple-50 text-purple-700 px-4 py-2 rounded-lg font-bold text-sm border border-purple-100 shadow-sm flex items-center gap-2">
-          <span>🔍</span> {logs.length} Recent Queries
+          <span>🔍</span> {logs.length} Queries Loaded
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -125,6 +174,27 @@ export default function AdminSearchesPage() {
           </table>
         </div>
       </div>
+
+      {/* PAGINATION CONTROLS */}
+      {logs.length > 0 && (
+        <div className="flex justify-center mb-8">
+          {loadingMore ? (
+            <div className="flex items-center gap-2 text-slate-500 font-bold text-sm uppercase tracking-widest">
+              <div className="w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin"></div>
+              Loading...
+            </div>
+          ) : hasMore ? (
+            <button
+              onClick={loadMore}
+              className="px-6 py-2.5 bg-white border-2 border-slate-200 hover:border-purple-500 hover:text-purple-600 text-slate-700 font-bold text-sm rounded-lg transition-all shadow-sm active:scale-95"
+            >
+              Load Older Searches
+            </button>
+          ) : (
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">End of logs</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
