@@ -29,10 +29,11 @@ export async function generateMetadata({ params }: { params: { publicId: string 
 
   const safeName = product.name || "Unnamed Item";
   
-  // Factor in potential sales for metadata
-  const currentPrice = product.isSale && new Date(product.saleEndDate).getTime() > Date.now() 
+  // 🔥 FIXED TYPESCRIPT ERROR: Cast to any to access new deal fields safely
+  const pAny = product as any;
+  const currentPrice = pAny.isSale && pAny.saleEndDate && new Date(pAny.saleEndDate).getTime() > Date.now() 
     ? Number(product.price) 
-    : (Number(product.originalPrice) || Number(product.price));
+    : (Number(pAny.originalPrice) || Number(product.price));
 
   const formattedPrice = currentPrice === 0 ? "Negotiable" : `UGX ${(currentPrice || 0).toLocaleString()}`;
 
@@ -92,10 +93,13 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   // ==========================================
   // 🧹 THE "LAZY REVERT" SECURITY SYSTEM
   // ==========================================
-  let isSale = product.isSale === true;
+  // 🔥 FIXED TYPESCRIPT ERROR: Cast to any
+  const pAny = product as any;
+
+  let isSale = pAny.isSale === true;
   let safePrice = Number(product.price) || 0;
-  let originalPrice = Number(product.originalPrice) || 0;
-  let saleEndDate = product.saleEndDate ? new Date(product.saleEndDate).getTime() : 0;
+  let originalPrice = Number(pAny.originalPrice) || 0;
+  let saleEndDate = pAny.saleEndDate ? new Date(pAny.saleEndDate).getTime() : 0;
   const now = Date.now();
 
   if (isSale && saleEndDate > 0 && saleEndDate <= now) {
@@ -126,8 +130,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   
   const safeCondition = product.condition || "used";
   const safeCategory = product.category || "general";
-
-  const pAny = product as any;
 
   const isMainProductNew = checkIsNew(product);
   const isMainApproved = pAny.isApprovedQuality;
@@ -366,10 +368,10 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               const isRelOfficial = relAny.isOfficialStore || relAny.isAdminUpload;
               
               // Apply Lazy Revert Logic for Related Items too to avoid fake pricing
-              let relIsSale = relProduct.isSale === true;
+              let relIsSale = relAny.isSale === true;
               let relPrice = Number(relProduct.price) || 0;
-              let relOrigPrice = Number(relProduct.originalPrice) || 0;
-              let relEndDate = relProduct.saleEndDate ? new Date(relProduct.saleEndDate).getTime() : 0;
+              let relOrigPrice = Number(relAny.originalPrice) || 0;
+              let relEndDate = relAny.saleEndDate ? new Date(relAny.saleEndDate).getTime() : 0;
               
               if (relIsSale && relEndDate > 0 && relEndDate <= now) {
                 relIsSale = false;
