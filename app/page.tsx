@@ -1,5 +1,5 @@
 // 🔥 CRITICAL: Tells Next.js to refresh this page every 60 seconds to pull new deals!
-export const revalidate = 7200; 
+export const revalidate = 60; 
 
 import ContinueBrowsing from "@/components/ContinueBrowsing";
 import Link from "next/link";
@@ -32,6 +32,15 @@ const shuffleArray = (array: any[]) => {
   return shuffled;
 };
 
+// 🔥 THE SMART TITLE DICTIONARY
+const campaignDisplayNames: Record<string, string> = {
+  "flash-sales": "Flash Sales",
+  "weekend-deals": "Weekend Deals",
+  "clearance": "Clearance Sale",
+  "student-deals": "Student Deals",
+  "mega-sale": "Mega Sale"
+};
+
 export default async function Home() {
   const data = await getCachedHomepageData();
 
@@ -57,7 +66,7 @@ export default async function Home() {
     const dealsQ = query(
       collection(db, "products"), 
       where("isSale", "==", true), 
-      limit(20) // Limit increased to grab deals from multiple campaigns
+      limit(20) 
     );
     const dealsSnap = await getDocs(dealsQ);
 
@@ -94,9 +103,7 @@ export default async function Home() {
 
           <div className="flex flex-col md:flex-row items-start gap-4 w-full">
 
-            {/* ========================================== */}
-            {/* THE INVISIBLE SCROLLBAR SIDEBAR            */}
-            {/* ========================================== */}
+            {/* THE INVISIBLE SCROLLBAR SIDEBAR */}
             <div className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky top-[85px] h-[calc(100vh-85px)] overflow-y-auto overscroll-contain z-10 pb-6 pr-1 md:pr-2 
               [&::-webkit-scrollbar]:w-1.5 
               [&::-webkit-scrollbar-track]:bg-transparent 
@@ -112,19 +119,11 @@ export default async function Home() {
             {/* MAIN FEED */}
             <div className="flex-grow min-w-0 flex flex-col w-full">
 
-              {/* ========================================== */}
-              {/* THE "SEAMLESS STACK" DASHBOARD BLOCK       */}
-              {/* ========================================== */}
               <div className="w-full flex flex-col shadow-sm mb-4 sm:mb-6">
-                {/* 1. Value Prop Banner */}
                 <ValuePropBanner />
-
-                {/* 2. Hero Carousel */}
                 <div className="w-full z-0">
                   <HeroCarousel products={heroProducts} />
                 </div>
-
-                {/* 3. Explore by category */}
                 <div className="w-full bg-white dark:bg-[#151515] sm:rounded-b-xl border-x border-b border-slate-200 dark:border-slate-800 p-4 pt-5 sm:pt-6">
                   <ThemedCategoryGrid />
                 </div>
@@ -133,31 +132,29 @@ export default async function Home() {
               {/* ========================================== */}
               {/* 🔥 RENDER EVERY ACTIVE CAMPAIGN DYNAMICALLY*/}
               {/* ========================================== */}
-              {Object.entries(campaigns).map(([slug, campaignData]) => (
-                <div className="w-full mb-4 sm:mb-6" key={slug}>
-                  <CampaignScroller 
-                    // Automatically formats "student-deals" into "Student Deals"
-                    title={slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} 
-                    endTime={campaignData.earliestEndDate} 
-                    products={campaignData.products} 
-                    campaignSlug={slug} 
-                  />
-                </div>
-              ))}
+              {Object.entries(campaigns).map(([slug, campaignData]) => {
+                // Look up the nice name, fallback to formatting the slug if not found
+                const displayTitle = campaignDisplayNames[slug] || slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                
+                return (
+                  <div className="w-full mb-4 sm:mb-6" key={slug}>
+                    <CampaignScroller 
+                      title={displayTitle} 
+                      endTime={campaignData.earliestEndDate} 
+                      products={campaignData.products} 
+                      campaignSlug={slug} 
+                    />
+                  </div>
+                );
+              })}
 
-              {/* ========================================== */}
-              {/* 🛍️ REST OF THE PRODUCT FEED                 */}
-              {/* ========================================== */}
               <div className="w-full flex flex-col gap-4 sm:gap-6">
-
-                {/* Continue Browsing */}
                 <ContinueBrowsing 
                   title="Continue Browsing"
                   subtitle="Pick up exactly where you left off"
                   fallbackProducts={trendingProducts} 
                 />
 
-                {/* Featured collection */}
                 {featuredCollection.length > 0 && (
                   <ProductSection 
                     title="Featured collection" 
@@ -167,7 +164,6 @@ export default async function Home() {
                   />
                 )}
 
-                {/* Save up to 4k */}
                 {save4kProducts.length > 0 && (
                   <ProductSection 
                     title="Save up to 4k" 
@@ -177,7 +173,6 @@ export default async function Home() {
                   />
                 )}
 
-                {/* Hand picked for you */}
                 {handPickedProducts.length > 0 && (
                   <ProductSection 
                     title="Hand picked for you" 
@@ -187,10 +182,8 @@ export default async function Home() {
                   />
                 )}
 
-                {/* Find the perfect timepiece banner */}
                 <TimepieceBanner />
 
-                {/* Trending Products */}
                 {trendingProducts.length > 0 && (
                   <ProductSection 
                     title="Trending Now" 
@@ -200,7 +193,6 @@ export default async function Home() {
                   />
                 )}
                 
-                {/* Recently added */}
                 {latestProducts.length > 0 && (
                   <ProductSection 
                     title="Recently added" 
@@ -210,7 +202,6 @@ export default async function Home() {
                   />
                 )}
 
-                {/* Official Store */}
                 {officialProducts.length > 0 && (
                   <ProductSection 
                     title="From the Official Store" 
@@ -220,7 +211,6 @@ export default async function Home() {
                   />
                 )}
 
-                {/* Other products */}
                 {otherProducts.length > 0 && (
                   <ProductSection 
                     title="Other Products" 
