@@ -13,11 +13,37 @@ export default function AdminDealsPage() {
   const [campaignType, setCampaignType] = useState("flash-sales");
   const [endDate, setEndDate] = useState("");
   const [campaignLocked, setCampaignLocked] = useState(false);
+  const [isStateLoaded, setIsStateLoaded] = useState(false);
 
   // 2. PRODUCT STATE
   const [searchId, setSearchId] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [salePrice, setSalePrice] = useState("");
+
+  // ==========================================
+  // 🔥 AUTO-SAVE DRAFT PROGRESS (Local Storage)
+  // ==========================================
+  // Load saved progress when page first opens
+  useEffect(() => {
+    const savedType = localStorage.getItem("kabale_campaign_type");
+    const savedDate = localStorage.getItem("kabale_campaign_date");
+    const savedLocked = localStorage.getItem("kabale_campaign_locked");
+
+    if (savedType) setCampaignType(savedType);
+    if (savedDate) setEndDate(savedDate);
+    if (savedLocked === "true") setCampaignLocked(true);
+    
+    setIsStateLoaded(true);
+  }, []);
+
+  // Save progress automatically whenever it changes
+  useEffect(() => {
+    if (isStateLoaded) {
+      localStorage.setItem("kabale_campaign_type", campaignType);
+      localStorage.setItem("kabale_campaign_date", endDate);
+      localStorage.setItem("kabale_campaign_locked", campaignLocked.toString());
+    }
+  }, [campaignType, endDate, campaignLocked, isStateLoaded]);
 
   // Fetch all currently active deals
   const fetchDeals = async () => {
@@ -33,22 +59,6 @@ export default function AdminDealsPage() {
   useEffect(() => {
     fetchDeals();
   }, []);
-
-  // 🔥 SMART AUTO-DETECT: If they select a campaign that is already running, grab its end date!
-  useEffect(() => {
-    if (activeDeals.length > 0 && !campaignLocked) {
-      const existingDeal = activeDeals.find(d => d.campaignType === campaignType);
-      if (existingDeal && existingDeal.saleEndDate) {
-        // Convert ISO string back to datetime-local format (YYYY-MM-DDThh:mm)
-        const dateObj = new Date(existingDeal.saleEndDate);
-        // Add offset to get local time properly formatted for the input
-        const localIso = new Date(dateObj.getTime() - (dateObj.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-        setEndDate(localIso);
-      } else {
-        setEndDate(""); // Clear it if this is a brand new campaign
-      }
-    }
-  }, [campaignType, activeDeals, campaignLocked]);
 
   // Handle Finding a Product to put on sale
   const handleSearch = async () => {
@@ -88,7 +98,7 @@ export default function AdminDealsPage() {
         saleEndDate: new Date(endDate).toISOString(), 
       });
       
-      alert(`Success! Added to ${campaignType}.`);
+      alert(`Success! Added to ${campaignType.replace('-', ' ')}.`);
       setSelectedProduct(null);
       setSearchId("");
       setSalePrice("");
@@ -144,7 +154,7 @@ export default function AdminDealsPage() {
       });
       await batch.commit(); 
       alert("All deals have been successfully terminated.");
-      setCampaignLocked(false);
+      setCampaignLocked(false); // Automatically unlock so you can start fresh
       fetchDeals(); 
     } catch (error) {
       console.error("Emergency stop failed:", error);
@@ -152,6 +162,9 @@ export default function AdminDealsPage() {
       setLoading(false);
     }
   };
+
+  // Don't render until state is loaded to prevent hydration errors
+  if (!isStateLoaded) return <div className="p-6">Loading dashboard...</div>;
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
