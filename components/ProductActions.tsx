@@ -234,7 +234,7 @@ export default function ProductActions({ product, children }: { product: Product
               
               {/* 🔥 UPDATED: Added icon in brackets to the message text */}
               <p className="text-[13px] text-slate-500 dark:text-slate-400 text-center mb-6 leading-relaxed">
-                When WhatsApp opens, tap <strong className="text-slate-800 dark:text-slate-200">SEND</strong> (looks like <WhatsAppSendIcon/> on mobile) to send the pre-filled message and confirm your order instantly.
+                When WhatsApp opens, tap <strong className="text-slate-800 dark:text-slate-200">SEND</strong> (looks like <WhatsAppSendIcon/> on mobile) to send the pre-filled message and we will confirm your order immediately.
               </p>
 
               {/* Trust Indicators */}
