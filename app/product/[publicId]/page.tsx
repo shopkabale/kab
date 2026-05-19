@@ -140,8 +140,39 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
     );
   };
 
+  // ==========================================
+  // 🚀 SEO JSON-LD STRUCTURED DATA
+  // ==========================================
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": safeName,
+    "image": optimizedImages[0] || "",
+    "description": product.description || `Buy ${safeName} safely in Kabale.`,
+    "offers": {
+      "@type": "Offer",
+      "url": `https://www.kabaleonline.com/product/${params.publicId}`,
+      "priceCurrency": "UGX",
+      "price": safePrice,
+      "availability": isSoldOut ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+      "itemCondition": safeCondition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
+      "seller": {
+        "@type": "Organization",
+        "name": product.sellerName || "Kabale Online"
+      }
+    }
+  };
+
   return (
     <div className="py-8 w-full max-w-full overflow-x-hidden mx-auto px-4 sm:px-6 bg-white min-h-screen">
+      
+      {/* INJECT JSON-LD FOR GOOGLE SEARCH RANKING */}
+      <script
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
       <ProductTracker product={product} />
       <RecentlyViewedTracker product={product} />   
 
@@ -176,11 +207,19 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
           </h1>  
 
           {/* 4. PRICE (Displays Negotiable if 0) */}
-          <div className="mb-2 flex items-end gap-3">  
+          <div className="mb-4 flex items-end gap-3">  
             <span className={`font-black ${isNegotiable ? 'text-3xl sm:text-4xl text-[#FF6A00]' : 'text-4xl sm:text-5xl text-[#1A1A1A]'}`}>  
               {isNegotiable ? "Price Negotiable" : `UGX ${safePrice.toLocaleString()}`}
             </span>  
           </div>  
+
+          {/* 🔥 REAL SCARCITY TRIGGER: LOW STOCK WARNING */}
+          {!isSoldOut && isLowStock && !isNegotiable && (
+            <div className="mb-6 flex items-center gap-2 text-[#FF6A00] bg-orange-50 px-3 py-2.5 rounded-md w-fit border border-[#FF6A00]/20 shadow-sm">
+              <span className="animate-bounce">⚠️</span>
+              <span className="text-xs font-black uppercase tracking-wider">Only {safeStock} left in stock - order soon!</span>
+            </div>
+          )}
 
           {/* MAIN CALL TO ACTIONS (HYBRID) */}
           <div className={`mb-8 ${isSoldOut ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
