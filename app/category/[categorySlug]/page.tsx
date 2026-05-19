@@ -57,7 +57,7 @@ const frontendCategoryMap: Record<string, { title: string; description: string; 
   "other-products": {
     title: "Other Products",
     description: "Explore a variety of other great products and lifestyle items.",
-    backendCategories: ["other", "other-products", "general", "beauty", "agriculture", "student_item"], // Add legacy backend strings here if needed
+    backendCategories: ["other", "other-products", "general", "beauty", "agriculture", "student_item"], 
     bgImage: "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=1200&q=80"
   }
 };
@@ -191,12 +191,23 @@ export default async function CategoryPage({
   ];
 
   return (
-    <div className="min-h-screen bg-transparent pb-12 pt-2 sm:pt-4 font-sans selection:bg-[#FF6A00] selection:text-white overflow-x-hidden">
+    {/* 🔥 FIX 1: Removed overflow-x-hidden so the sidebar can stick! */}
+    <div className="min-h-screen bg-transparent pb-12 pt-2 sm:pt-4 font-sans selection:bg-[#FF6A00] selection:text-white">
       <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
-        <div className="flex flex-col md:flex-row gap-4 w-full">
+        
+        {/* 🔥 FIX 2: Added items-start so columns track independently */}
+        <div className="flex flex-col md:flex-row items-start gap-4 w-full">
 
-          {/* LEFT SIDEBAR AREA */}
-          <div className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky top-[110px] h-max z-10">
+          {/* 🔥 FIX 3: Applied the invisible scrollbar and correct heights */}
+          <div className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky top-[85px] h-[calc(100vh-85px)] overflow-y-auto overscroll-contain z-10 pb-6 pr-1 md:pr-2 
+              [&::-webkit-scrollbar]:w-1.5 
+              [&::-webkit-scrollbar-track]:bg-transparent 
+              [&::-webkit-scrollbar-thumb]:bg-slate-200 
+              dark:[&::-webkit-scrollbar-thumb]:bg-slate-800 
+              [&::-webkit-scrollbar-thumb]:rounded-full 
+              hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 
+              dark:hover:[&::-webkit-scrollbar-thumb]:bg-slate-700"
+          >
             <LeftSidebar />
           </div>
 
