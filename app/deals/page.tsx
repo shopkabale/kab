@@ -1,18 +1,19 @@
+export const dynamic = "force-dynamic"; // 🔥 FIX 1: Allows ?campaign= URL parameters to work safely without crashing
+
 import { collection, query, where, getDocs, orderBy, limit, doc, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import CategoryProductFeed from "@/components/CategoryProductFeed";
 import Link from "next/link";
 import { ZapOff, Home } from "lucide-react";
 
-// Revalidate every 60 seconds. Balances fast updates with cheap Firebase reads.
-export const revalidate = 60; 
-
 export default async function DealsPage({
   searchParams,
 }: {
-  searchParams: { campaign?: string };
+  searchParams: { campaign?: string | string[] };
 }) {
-  const campaignFilter = searchParams.campaign;
+  // Extract string safely if Next.js passes an array
+  const param = searchParams.campaign;
+  const campaignFilter = Array.isArray(param) ? param[0] : param;
 
   // Format the title dynamically
   const pageTitle = campaignFilter 
@@ -27,7 +28,6 @@ export default async function DealsPage({
     limit(100)
   );
 
-  // If a specific campaign is requested, filter further
   if (campaignFilter) {
     dealsQuery = query(
       collection(db, "products"),
@@ -40,9 +40,6 @@ export default async function DealsPage({
 
   const snap = await getDocs(dealsQuery);
   
-  // ==========================================
-  // 🧹 THE "LAZY REVERT" SECURITY SYSTEM
-  // ==========================================
   const now = new Date().getTime();
   const validProducts: any[] = [];
   const expiredDocs: any[] = [];
@@ -52,34 +49,38 @@ export default async function DealsPage({
     const endTime = new Date(data.saleEndDate || 0).getTime();
 
     if (endTime > now) {
-      // Deal is still active!
+      // 🔥 FIX 2: Sanitize Firebase Timestamps to prevent Next.js 500 Serialization Error
+      const safeData = { ...data };
+      for (const key in safeData) {
+        if (safeData[key] && typeof safeData[key] === "object" && safeData[key].seconds !== undefined) {
+           safeData[key] = safeData[key].seconds * 1000;
+        }
+      }
+
       validProducts.push({
         id: document.id,
-        ...data,
-        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : new Date(data.createdAt || 0).getTime(),
+        ...safeData,
+        createdAt: data.createdAt?.seconds ? data.createdAt.seconds * 1000 : new Date(data.createdAt || 0).getTime(),
       });
     } else {
-      // Deal has expired! Catch it for the lazy revert.
       expiredDocs.push({ id: document.id, originalPrice: data.originalPrice });
     }
   });
 
-  // If we found expired deals, silently clean them up in Firebase
   if (expiredDocs.length > 0) {
     try {
       const batch = writeBatch(db);
       expiredDocs.forEach(expired => {
         const docRef = doc(db, "products", expired.id);
         batch.update(docRef, {
-          price: Number(expired.originalPrice), // Restore original price
+          price: Number(expired.originalPrice), 
           originalPrice: null,
           isSale: false,
           campaignType: null,
           saleEndDate: null
         });
       });
-      await batch.commit(); // Fire the cleanup!
-      console.log(`🧹 Lazy Revert cleaned up ${expiredDocs.length} expired deals.`);
+      await batch.commit(); 
     } catch (error) {
       console.error("Failed to lazy revert expired deals:", error);
     }
@@ -89,9 +90,7 @@ export default async function DealsPage({
     <div className="min-h-screen bg-transparent pb-12 pt-4 font-sans selection:bg-[#FF6A00] selection:text-white">
       <div className="w-full max-w-[1400px] mx-auto px-4">
 
-        {/* Universal Header */}
         <div className="w-full bg-gradient-to-r from-[#FF6A00] to-[#e65f00] rounded-xl p-8 mb-8 text-white shadow-md relative overflow-hidden">
-          {/* Decorative Background Element */}
           <div className="absolute top-0 right-0 opacity-10 transform translate-x-1/4 -translate-y-1/4 pointer-events-none">
             <svg width="300" height="300" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
               <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" />
@@ -108,9 +107,6 @@ export default async function DealsPage({
           </div>
         </div>
 
-        {/* ========================================== */}
-        {/* DISPLAY GRID OR EMPTY STATE                */}
-        {/* ========================================== */}
         {validProducts.length > 0 ? (
           <CategoryProductFeed 
              initialProducts={validProducts} 
