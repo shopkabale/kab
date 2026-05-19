@@ -41,23 +41,26 @@ export default async function Home() {
 
   return (
     <ThemeProvider>
-      {/* 🔥 FIX 1: Removed overflow-x-hidden from here so sticky works! */}
       <div className="min-h-screen bg-transparent pb-10 pt-2 sm:pt-4 font-sans selection:bg-[#FF6A00] selection:text-white">
         <WhatsAppPopup />
         <div className="w-full max-w-[1400px] mx-auto px-0 sm:px-4">
           
-          {/* 🔥 FIX 2: Added items-start here so the sidebar doesn't stretch to the bottom */}
           <div className="flex flex-col md:flex-row items-start gap-4 w-full">
 
-                        {/* LEFT SIDEBAR */}
-            {/* Removed independent scroll. Added smart CSS top calculation */}
-            <div 
-              className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky z-10 pb-6"
-              style={{ top: "min(85px, calc(100vh - 100% - 24px))" }}
+            {/* ========================================== */}
+            {/* 🛑 FIXED: THE INVISIBLE SCROLLBAR SIDEBAR  */}
+            {/* ========================================== */}
+            <div className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky top-[85px] h-[calc(100vh-85px)] overflow-y-auto overscroll-contain z-10 pb-6 pr-1 md:pr-2 
+              [&::-webkit-scrollbar]:w-1.5 
+              [&::-webkit-scrollbar-track]:bg-transparent 
+              [&::-webkit-scrollbar-thumb]:bg-slate-200 
+              dark:[&::-webkit-scrollbar-thumb]:bg-slate-800 
+              [&::-webkit-scrollbar-thumb]:rounded-full 
+              hover:[&::-webkit-scrollbar-thumb]:bg-slate-300 
+              dark:hover:[&::-webkit-scrollbar-thumb]:bg-slate-700"
             >
               <LeftSidebar />
             </div>
-
 
             {/* MAIN FEED */}
             <div className="flex-grow min-w-0 flex flex-col w-full">
