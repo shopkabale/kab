@@ -15,18 +15,33 @@ export default function ProductCard({ product }: { product: any }) {
   const optimizedImage = product.images?.[0] ? optimizeImage(product.images[0]) : null;
   const isJustPosted = checkIsNew(product);
   const isSold = product.status === "sold";
-  
-  // 🔥 Check if the price is 0 (Negotiable)
+
+  // Check if the price is 0 (Negotiable)
   const isNegotiable = Number(product.price) === 0;
-  
+
   const titleStr = product.title || product.name || 'Product';
-  
+
   // 2. Short Title Logic
-  // Increased to 32 characters. If it fits, we append the free delivery text.
   const isShortTitle = titleStr.length <= 32;
   const displayTitle = (!isSold && isShortTitle) 
     ? `${titleStr} (Free delivery available)` 
     : titleStr;
+
+  // ==========================================
+  // 🔥 DYNAMIC STOCK BAR LOGIC
+  // ==========================================
+  // Safely grab stock. If it doesn't exist, assume it's full (10)
+  const rawStock = product.stock !== undefined && product.stock !== null ? Number(product.stock) : 10;
+  const safeStock = isNaN(rawStock) ? 10 : Math.max(0, rawStock);
+  const maxStock = 10;
+  
+  // Calculate width (capped at 100%)
+  const stockWidth = Math.min(100, (safeStock / maxStock) * 100);
+
+  // Determine Color based on your exact logic
+  let stockColorClass = "bg-green-500"; // 7 - 10
+  if (safeStock <= 6) stockColorClass = "bg-amber-500"; // 4 - 6
+  if (safeStock <= 3) stockColorClass = "bg-red-500"; // 1 - 3
 
   return (
     <div 
@@ -73,7 +88,7 @@ export default function ProductCard({ product }: { product: any }) {
             </div>
           )}
 
-          {/* New Arrival Badge (Sitting flush against the exact top-left corner) */}
+          {/* New Arrival Badge */}
           {!isSold && isJustPosted && (
             <div className="absolute top-0 left-0 bg-slate-900/90 backdrop-blur-sm text-white text-[8px] sm:text-[9px] font-bold px-2 py-1 rounded-br-lg flex items-center gap-1 z-10">
                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse"></span>
@@ -86,7 +101,7 @@ export default function ProductCard({ product }: { product: any }) {
         {/* BOTTOM: TEXT & DETAILS  */}
         {/* ======================= */}
         <div className="flex flex-col flex-grow p-3 sm:p-4">
-          
+
           {/* Category / Meta */}
           <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 truncate">
             {product.category?.replace('-', ' ') || 'Electronics'}
@@ -97,21 +112,39 @@ export default function ProductCard({ product }: { product: any }) {
             {displayTitle}
           </h3>
 
-          {/* Price (Pushed to bottom using mt-auto) */}
-          <div className="mt-auto pt-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
-            {/* 🔥 UPDATED: Displays "Negotiable" in orange if price is 0 */}
-            <span className={`text-sm sm:text-base font-black ${isSold ? 'text-slate-400 line-through' : isNegotiable ? 'text-[#FF6A00]' : 'text-slate-900 dark:text-white group-hover:text-[#FF6A00]'} transition-colors`}>
-              {isNegotiable ? "Negotiable" : `UGX ${Number(product.price).toLocaleString()}`}
-            </span>
+          {/* Wrapper to push bottom items to the bottom of the card */}
+          <div className="mt-auto flex flex-col gap-3">
             
-            {/* Subtle View Button Icon (Appears on hover) */}
+            {/* 🔥 NEW: VISUAL STOCK BAR */}
             {!isSold && (
-              <div className="w-6 h-6 rounded-full bg-orange-50 dark:bg-orange-500/10 text-[#FF6A00] flex items-center justify-center opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
+              <div className="flex flex-col gap-1.5 w-full">
+                <div className="w-full h-[5px] bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full rounded-full transition-all duration-700 ease-out ${stockColorClass}`} 
+                    style={{ width: `${stockWidth}%` }}
+                  />
+                </div>
+                <span className="text-[9.5px] font-bold text-slate-500 dark:text-slate-400 tracking-wide">
+                  {safeStock > 0 ? `Only ${safeStock} item${safeStock !== 1 ? 's' : ''} left` : 'Out of stock'}
+                </span>
               </div>
             )}
+
+            {/* Price Line */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between">
+              <span className={`text-sm sm:text-base font-black ${isSold ? 'text-slate-400 line-through' : isNegotiable ? 'text-[#FF6A00]' : 'text-slate-900 dark:text-white group-hover:text-[#FF6A00]'} transition-colors`}>
+                {isNegotiable ? "Negotiable" : `UGX ${Number(product.price).toLocaleString()}`}
+              </span>
+
+              {/* View Button Icon */}
+              {!isSold && (
+                <div className="w-6 h-6 rounded-full bg-orange-50 dark:bg-orange-500/10 text-[#FF6A00] flex items-center justify-center opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 5l7 7-7 7" /></svg>
+                </div>
+              )}
+            </div>
+            
           </div>
-          
         </div>
       </Link>
     </div>
