@@ -24,17 +24,13 @@ export default function BottomNav() {
   const { user } = useAuth(); 
   const { cartCount } = useCart();
 
+  // ALL HOOKS MUST RUN FIRST
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
   const isAdmin = user?.role === "admin";
-
-  // 🔥 UPDATED: Hide entirely on admin routes AND product routes
-  if (pathname?.startsWith("/admin") || pathname?.startsWith("/product/")) {
-    return null;
-  }
 
   // 1. Admin Session Cookie Management
   useEffect(() => {
@@ -76,7 +72,6 @@ export default function BottomNav() {
     ? [...baseNavItems, { label: "Admin", href: "/admin", Icon: ShieldAlert }]
     : baseNavItems;
 
-  // 5. The NEW 6 Frontend Category Buckets
   const categoryLinks = [
     { label: "Watches", href: "/category/watches", Icon: Watch },
     { label: "Phones & TVs", href: "/category/phones-tvs", Icon: Smartphone },
@@ -85,6 +80,11 @@ export default function BottomNav() {
     { label: "Appliances", href: "/category/appliances", Icon: Plug },
     { label: "Other Products", href: "/category/other-products", Icon: Package }
   ];
+
+  // 🔥 THE FIX: The early return goes HERE, after all hooks have successfully run!
+  if (pathname?.startsWith("/admin") || pathname?.startsWith("/product/")) {
+    return null;
+  }
 
   return (
     <>
