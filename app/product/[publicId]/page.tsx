@@ -11,7 +11,7 @@ import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
 import SaveProductButton from "@/components/SaveProductButton";
 import ProductReviews from "@/components/ProductReviews"; 
-import { optimizeImage, calculateDepositAmount } from "@/lib/utils"; 
+import { optimizeImage } from "@/lib/utils"; 
 import { MdVerifiedUser } from "react-icons/md";
 
 export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
@@ -84,7 +84,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
     if (!isNaN(parsed)) safeStock = Math.max(0, parsed);
   }
 
-  // 🔥 Trigger Low Stock warning if 5 or fewer items remain
+  // Trigger Low Stock warning if 5 or fewer items remain
   const isLowStock = safeStock > 0 && safeStock <= 5;
   const isSoldOut = safeStock <= 0 || product.status === "sold";
 
@@ -135,7 +135,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
       "url": `https://www.kabaleonline.com/product/${params.publicId}`,
       "priceCurrency": "UGX",
       "price": safePrice,
-      "priceValidUntil": new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Valid for 30 days
+      // 🔥 FIX: Hardcoded future date to completely prevent timezone hydration mismatch crashes
+      "priceValidUntil": "2027-12-31",
       "availability": isSoldOut ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
       "itemCondition": safeCondition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
       "seller": {
@@ -193,7 +194,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </span>  
           </div>  
 
-          {/* 🔥 REAL SCARCITY TRIGGER: LOW STOCK WARNING */}
+          {/* LOW STOCK WARNING */}
           {!isSoldOut && isLowStock && !isNegotiable && (
             <div className="mb-6 flex items-center gap-2 text-[#FF6A00] bg-orange-50 px-3 py-2.5 rounded-md w-fit border border-[#FF6A00]/20 shadow-sm">
               <span className="animate-bounce">⚠️</span>
