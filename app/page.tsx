@@ -1,8 +1,11 @@
+// 🔥 CRITICAL: Tells Next.js to refresh this page every 60 seconds to pull new deals!
+export const revalidate = 7200; 
+
 import ContinueBrowsing from "@/components/ContinueBrowsing";
 import Link from "next/link";
 import { getCachedHomepageData } from "@/lib/firebase/fetchers";
 
-// 🔥 1. Firebase imports for the active deals query
+// Firebase imports for the active deals query
 import { collection, query, where, getDocs, limit } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 
@@ -18,7 +21,6 @@ import LeftSidebar from "@/components/LeftSidebar";
 // BANNERS & SCROLLERS
 import TimepieceBanner from "@/components/banners/TimepieceBanner";
 import ValuePropBanner from "@/components/banners/ValuePropBanner";
-// 🔥 2. Import the new Campaign Scroller
 import CampaignScroller from "@/components/CampaignScroller";
 
 const shuffleArray = (array: any[]) => {
@@ -46,28 +48,37 @@ export default async function Home() {
   const otherProducts = data.otherProducts || [];
 
   // ==========================================
-  // 🔥 3. FETCH ACTIVE DEALS
+  // 🔥 FETCH AND GROUP DYNAMIC CAMPAIGNS
   // ==========================================
-  let activeDeals: any[] = [];
-  let earliestEndDate = "";
+  // This object will group deals by their campaign type
+  const campaigns: Record<string, { products: any[], earliestEndDate: string }> = {};
 
   try {
     const dealsQ = query(
       collection(db, "products"), 
       where("isSale", "==", true), 
-      limit(10)
+      limit(20) // Limit increased to grab deals from multiple campaigns
     );
     const dealsSnap = await getDocs(dealsQ);
 
     dealsSnap.docs.forEach(doc => {
       const dealData = doc.data();
-      // Only show deals that haven't expired yet
+      
+      // Ensure the deal hasn't expired
       if (new Date(dealData.saleEndDate).getTime() > Date.now()) {
-        activeDeals.push({ id: doc.id, ...dealData });
+        const cType = dealData.campaignType || "flash-sales";
 
-        // Find the earliest end date to pass to the master countdown timer
-        if (!earliestEndDate || new Date(dealData.saleEndDate) < new Date(earliestEndDate)) {
-          earliestEndDate = dealData.saleEndDate;
+        // If this campaign type doesn't exist in our object yet, create it
+        if (!campaigns[cType]) {
+          campaigns[cType] = { products: [], earliestEndDate: dealData.saleEndDate };
+        }
+
+        // Push the product into its specific campaign
+        campaigns[cType].products.push({ id: doc.id, ...dealData });
+
+        // Update the master clock for this specific campaign
+        if (new Date(dealData.saleEndDate) < new Date(campaigns[cType].earliestEndDate)) {
+          campaigns[cType].earliestEndDate = dealData.saleEndDate;
         }
       }
     });
@@ -84,7 +95,7 @@ export default async function Home() {
           <div className="flex flex-col md:flex-row items-start gap-4 w-full">
 
             {/* ========================================== */}
-            {/* 🛑 FIXED: THE INVISIBLE SCROLLBAR SIDEBAR  */}
+            {/* THE INVISIBLE SCROLLBAR SIDEBAR            */}
             {/* ========================================== */}
             <div className="hidden md:flex flex-col gap-4 w-[220px] lg:w-[240px] shrink-0 sticky top-[85px] h-[calc(100vh-85px)] overflow-y-auto overscroll-contain z-10 pb-6 pr-1 md:pr-2 
               [&::-webkit-scrollbar]:w-1.5 
@@ -102,38 +113,37 @@ export default async function Home() {
             <div className="flex-grow min-w-0 flex flex-col w-full">
 
               {/* ========================================== */}
-              {/* 🏆 THE "SEAMLESS STACK" DASHBOARD BLOCK     */}
+              {/* THE "SEAMLESS STACK" DASHBOARD BLOCK       */}
               {/* ========================================== */}
               <div className="w-full flex flex-col shadow-sm mb-4 sm:mb-6">
-
-                {/* 1. Value Prop Banner (Top of stack - White) */}
+                {/* 1. Value Prop Banner */}
                 <ValuePropBanner />
 
-                {/* 2. Hero (Middle of stack - Dark, No margins) */}
+                {/* 2. Hero Carousel */}
                 <div className="w-full z-0">
                   <HeroCarousel products={heroProducts} />
                 </div>
 
-                {/* 3. Explore by category (Bottom of stack - White) */}
+                {/* 3. Explore by category */}
                 <div className="w-full bg-white dark:bg-[#151515] sm:rounded-b-xl border-x border-b border-slate-200 dark:border-slate-800 p-4 pt-5 sm:pt-6">
                   <ThemedCategoryGrid />
                 </div>
-
               </div>
 
               {/* ========================================== */}
-              {/* 🔥 4. INJECT THE CAMPAIGN SCROLLER HERE    */}
+              {/* 🔥 RENDER EVERY ACTIVE CAMPAIGN DYNAMICALLY*/}
               {/* ========================================== */}
-              {activeDeals.length > 0 && (
-                <div className="w-full mb-2">
+              {Object.entries(campaigns).map(([slug, campaignData]) => (
+                <div className="w-full mb-4 sm:mb-6" key={slug}>
                   <CampaignScroller 
-                    title="Flash Sales" 
-                    endTime={earliestEndDate} 
-                    products={activeDeals} 
-                    campaignSlug="flash-sales" 
+                    // Automatically formats "student-deals" into "Student Deals"
+                    title={slug.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} 
+                    endTime={campaignData.earliestEndDate} 
+                    products={campaignData.products} 
+                    campaignSlug={slug} 
                   />
                 </div>
-              )}
+              ))}
 
               {/* ========================================== */}
               {/* 🛍️ REST OF THE PRODUCT FEED                 */}
@@ -189,7 +199,7 @@ export default async function Home() {
                     viewAllLink="/products?sort=trending"
                   />
                 )}
-
+                
                 {/* Recently added */}
                 {latestProducts.length > 0 && (
                   <ProductSection 
