@@ -1,3 +1,5 @@
+// 1. REMOVE force-dynamic
+// 2. ADD revalidate to cache this product page for 1 hour
 export const revalidate = 3600;
 
 import { Metadata } from "next";
@@ -11,8 +13,10 @@ import ProductTracker from "@/components/ProductTracker";
 import RecentlyViewedTracker from "@/components/RecentlyViewedTracker";
 import SaveProductButton from "@/components/SaveProductButton";
 import ProductReviews from "@/components/ProductReviews"; 
-import { optimizeImage } from "@/lib/utils"; 
+import { optimizeImage, calculateDepositAmount } from "@/lib/utils"; 
+import { FaCheck, FaTruck } from "react-icons/fa";
 import { MdVerifiedUser } from "react-icons/md";
+import BatchDeliveryCountdown from "@/components/BatchDeliveryCountdown"; 
 
 export async function generateMetadata({ params }: { params: { publicId: string } }): Promise<Metadata> {
   const product = await getProductByPublicId(params.publicId);
@@ -20,6 +24,7 @@ export async function generateMetadata({ params }: { params: { publicId: string 
   if (!product) return { title: "Item Not Found | Kabale Online" };
 
   const safeName = product.name || "Unnamed Item";
+  // Format metadata price to say Negotiable if 0
   const formattedPrice = Number(product.price) === 0 ? "Negotiable" : `UGX ${(Number(product.price) || 0).toLocaleString()}`;
 
   const title = `${safeName} - Available in Kabale | ${formattedPrice}`;
@@ -43,17 +48,22 @@ export async function generateMetadata({ params }: { params: { publicId: string 
 }
 
 // ==========================================
-// 🔥 STABLE SHUFFLE ALGORITHM (No Timezones)
+// THE DAILY SHUFFLE ALGORITHM
 // ==========================================
-function getStableRandomScore(id: string) {
+function getDailyRandomScore(id: string) {
+  const today = new Date().toISOString().split('T')[0];
+  const seedString = id + today; 
   let hash = 0;
-  for (let i = 0; i < id.length; i++) {
-    hash = (hash << 5) - hash + id.charCodeAt(i);
+  for (let i = 0; i < seedString.length; i++) {
+    hash = (hash << 5) - hash + seedString.charCodeAt(i);
     hash |= 0; 
   }
-  return Math.abs(hash); 
+  return hash;
 }
 
+// ==========================================
+// HELPER: CHECK IF ITEM IS NEW (< 7 DAYS)
+// ==========================================
 const checkIsNew = (p: any) => {
   const pDate = p.createdAt?.seconds ? p.createdAt.seconds * 1000 : new Date(p.createdAt || 0).getTime();
   return pDate > 0 && (Date.now() - pDate) < (7 * 24 * 60 * 60 * 1000); 
@@ -70,19 +80,23 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
   const safeName = product.name || "Unnamed Item";
   const safePrice = Number(product.price) || 0;
-  const isNegotiable = safePrice === 0; 
+  const isNegotiable = safePrice === 0; // 🔥 CHECK IF ZERO
   
   const safeCondition = product.condition || "used";
   const safeCategory = product.category || "general";
+
   const pAny = product as any;
 
-  // ==========================================
-  // REAL STOCK TRACKING
-  // ==========================================
+  const isMainProductNew = checkIsNew(product);
+  const isMainApproved = pAny.isApprovedQuality;
+  const isMainOfficial = pAny.isOfficialStore || pAny.isAdminUpload;
+
   let safeStock = 1;
   if (product.stock !== undefined && product.stock !== null) {
     const parsed = Number(product.stock);
-    if (!isNaN(parsed)) safeStock = Math.max(0, parsed);
+    if (!isNaN(parsed)) {
+      safeStock = parsed;
+    }
   }
 
   const isLowStock = safeStock > 0 && safeStock <= 5;
@@ -91,13 +105,15 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   const sellerNameStr = String(product.sellerName || "").toLowerCase();
   const isAdmin = sellerNameStr.includes('admin') || sellerNameStr.includes('kabale online') || sellerNameStr.includes('official');
 
+  const depositRequired = safePrice >= 20000 ? calculateDepositAmount(safePrice, false) : 0;
+
   const optimizedImages = product.images?.map((img: string) => optimizeImage(img)) || [];
+
   const rawCategoryProducts = await getProducts(safeCategory, 12);
 
   const relatedProducts = rawCategoryProducts
     .filter((p) => p.id !== product.id && p.publicId !== product.publicId)
-    // 🔥 FIX: Using the stable score to prevent server/client array mismatch
-    .sort((a, b) => getStableRandomScore(a.id) - getStableRandomScore(b.id))
+    .sort((a, b) => getDailyRandomScore(a.id) - getDailyRandomScore(b.id))
     .slice(0, 8) 
     .map((p) => ({
       ...p,
@@ -106,7 +122,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
 
   const renderDescription = (desc?: string) => {
     if (!desc) return <p className="text-[#6B6B6B] text-sm">No description provided by the seller.</p>;
+
     const lines = desc.split('\n').filter(line => line.trim() !== '');
+
     return (
       <ul className="space-y-2">
         {lines.map((line, idx) => {
@@ -136,7 +154,6 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
       "url": `https://www.kabaleonline.com/product/${params.publicId}`,
       "priceCurrency": "UGX",
       "price": safePrice,
-      "priceValidUntil": "2027-12-31",
       "availability": isSoldOut ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
       "itemCondition": safeCondition === "new" ? "https://schema.org/NewCondition" : "https://schema.org/UsedCondition",
       "seller": {
@@ -149,7 +166,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
   return (
     <div className="py-8 w-full max-w-full overflow-x-hidden mx-auto px-4 sm:px-6 bg-white min-h-screen">
       
-      {/* JSON-LD FOR GOOGLE SEARCH RANKING */}
+      {/* INJECT JSON-LD FOR GOOGLE SEARCH RANKING */}
       <script
         type="application/ld+json"
         suppressHydrationWarning
@@ -170,6 +187,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         <span className="text-[#1A1A1A] truncate max-w-[200px]">{safeName}</span>  
       </div>  
 
+      {/* MODERN E-COMMERCE LAYOUT */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mb-16">  
 
         {/* LEFT COLUMN: Image Gallery */}  
@@ -183,19 +201,19 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         {/* RIGHT COLUMN: Product Details */}  
         <div className="flex flex-col overflow-hidden">  
 
-          {/* TITLE */}
+          {/* 3. TITLE (Big and light gray) */}
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-400 leading-tight mb-4">  
             {safeName}
           </h1>  
 
-          {/* PRICE */}
+          {/* 4. PRICE (Displays Negotiable if 0) */}
           <div className="mb-4 flex items-end gap-3">  
             <span className={`font-black ${isNegotiable ? 'text-3xl sm:text-4xl text-[#FF6A00]' : 'text-4xl sm:text-5xl text-[#1A1A1A]'}`}>  
               {isNegotiable ? "Price Negotiable" : `UGX ${safePrice.toLocaleString()}`}
             </span>  
           </div>  
 
-          {/* LOW STOCK WARNING */}
+          {/* 🔥 REAL SCARCITY TRIGGER: LOW STOCK WARNING */}
           {!isSoldOut && isLowStock && !isNegotiable && (
             <div className="mb-6 flex items-center gap-2 text-[#FF6A00] bg-orange-50 px-3 py-2.5 rounded-md w-fit border border-[#FF6A00]/20 shadow-sm">
               <span className="animate-bounce">⚠️</span>
@@ -203,7 +221,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </div>
           )}
 
-          {/* MAIN CALL TO ACTIONS */}
+          {/* MAIN CALL TO ACTIONS (HYBRID) */}
           <div className={`mb-8 ${isSoldOut ? 'opacity-50 pointer-events-none grayscale' : ''}`}>
             <ProductActions product={{...product, images: optimizedImages}}>
                 <div className="flex flex-col gap-3 mt-2 w-full">
@@ -212,7 +230,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
             </ProductActions>
           </div> 
 
-          {/* ACCORDIONS */}
+          {/* NATIVE HTML ACCORDIONS (SEO FRIENDLY) */}
           <div className="border border-slate-200 rounded-xl overflow-hidden mt-auto mb-10 bg-white shadow-sm divide-y divide-slate-200">
 
             <details className="group" open>
@@ -274,7 +292,9 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
         </div>  
       </div>  
 
-      {/* RELATED PRODUCTS */}  
+      {/* ========================================== */}  
+      {/* HORIZONTALLY SCROLLABLE RELATED PRODUCTS   */}  
+      {/* ========================================== */}  
       {relatedProducts.length > 0 && (  
         <div className="mt-16 mb-8 pt-10 border-t border-slate-200">  
           <div className="flex items-center justify-between mb-8">  
@@ -288,6 +308,8 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
               const isRelNew = checkIsNew(relProduct);
               const isRelApproved = relAny.isApprovedQuality;
               const isRelOfficial = relAny.isOfficialStore || relAny.isAdminUpload;
+              
+              // 🔥 Check if related product is negotiable
               const isRelNegotiable = Number(relProduct.price) === 0;
 
               return (
@@ -337,6 +359,7 @@ export default async function ProductDetailsPage({ params }: { params: { publicI
                     </h3>  
                     <div className="mt-auto pt-1 flex flex-col">  
                       <span className={`text-sm sm:text-base font-black ${isRelSold ? 'text-slate-500' : isRelNegotiable ? 'text-[#FF6A00]' : 'text-[#1A1A1A]'}`}>
+                        {/* 🔥 Display Negotiable or formatted price */}
                         {isRelNegotiable ? "Negotiable" : `UGX ${Number(relProduct.price).toLocaleString()}`}
                       </span>  
                     </div>  
