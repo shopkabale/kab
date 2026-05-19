@@ -13,6 +13,45 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing product ID" }, { status: 400 });
     }
 
+    // ==========================================
+    // 🧹 THE "LAZY REVERT" SECURITY SYSTEM (API)
+    // ==========================================
+    let finalPrice = Number(price) || 0;
+    
+    try {
+      const productRef = adminDb.collection("products").doc(productId);
+      const productSnap = await productRef.get();
+      
+      if (productSnap.exists) {
+        const productData = productSnap.data();
+        
+        // Check if the item is marked as on sale
+        if (productData?.isSale && productData?.saleEndDate) {
+          const saleEndDate = new Date(productData.saleEndDate).getTime();
+          const now = Date.now();
+          
+          if (saleEndDate <= now) {
+            // 🚨 DEAL EXPIRED! Intercept and secure the price.
+            const originalPrice = Number(productData.originalPrice) || Number(productData.price);
+            finalPrice = originalPrice; // Force the lead to use the real, restored price
+            
+            // Silently clean up Firebase in the background
+            await productRef.update({
+              price: originalPrice,
+              originalPrice: FieldValue.delete(), // Using FieldValue to completely remove it
+              isSale: false,
+              campaignType: FieldValue.delete(),
+              saleEndDate: FieldValue.delete()
+            });
+            console.log(`🧹 API Lazy Revert: Cleaned up expired deal for ${productId}`);
+          }
+        }
+      }
+    } catch (dbError) {
+      console.error("Error checking product for lazy revert:", dbError);
+      // We continue with checkout even if the check fails, to not block sales
+    }
+
     // 🚀 SMART REFERRAL CAPTURE
     // 1. Try the code from the body (Direct from ProductActions)
     // 2. Fallback to the cookie (Backup for guest buyers)
@@ -36,7 +75,7 @@ export async function POST(request: Request) {
         {
           productId,
           name: productName || "Unknown Item",
-          price: Number(price) || 0,
+          price: finalPrice, // 🔥 Uses the secured final price
           quantity: 1,
           sellerId: sellerId || "SYSTEM",
           sellerPhone: sellerPhone || ""
@@ -46,12 +85,13 @@ export async function POST(request: Request) {
       // or admin updates them during the WhatsApp conversation.
       buyerPhone: "", 
       buyerName: "",
-      totalAmount: Number(price) || 0,
+      totalAmount: finalPrice, // 🔥 Uses the secured final price
       createdAt: Date.now(),
       updatedAt: Date.now()
     });
 
-    return NextResponse.json({ success: true, leadId });
+    // We can also return the finalPrice back to the client so ProductActions knows what actually happened
+    return NextResponse.json({ success: true, leadId, actualPrice: finalPrice });
 
   } catch (error: any) {
     console.error("Lead capture error:", error);
