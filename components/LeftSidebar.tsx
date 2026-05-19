@@ -11,7 +11,7 @@ import {
   ChevronRight, 
   ShoppingBag,
   PlusCircle,
-  User,
+  User, // Kept in imports just in case you need it later
   Wallet,
   Flame,
   Sparkles,
@@ -77,32 +77,25 @@ function LeftSidebarContent() {
   return (
     <div className="w-full flex flex-col gap-6 select-none pb-8">
 
-      {/* 1. AUTH / WELCOME CARD */}
-      <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm p-5 flex items-center gap-4 transition-colors">
-        <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 overflow-hidden">
-          {user?.photoURL ? (
-            <img src={user.photoURL} alt="User" className="w-full h-full object-cover" />
-          ) : (
-            <User className="w-6 h-6 text-slate-400 dark:text-slate-500" />
-          )}
-        </div>
-        <div className="flex flex-col flex-grow min-w-0">
-          <span style={{ color: '#6B6B6B' }} className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 dark:text-slate-400">
-            Welcome
+      {/* 1. AUTH / WELCOME CARD (UPDATED) */}
+      <div className="bg-white dark:bg-[#151515] border border-slate-200 dark:border-slate-800 rounded-lg shadow-sm p-5 flex flex-col transition-colors">
+        <span style={{ color: '#6B6B6B' }} className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 dark:text-slate-400">
+          Welcome,
+        </span>
+        
+        {user ? (
+          <span style={{ color: '#1A1A1A' }} className="text-xl font-black dark:text-white truncate">
+            {/* 🔥 Grabs only the first name by splitting at the space */}
+            {user.displayName ? user.displayName.split(' ')[0] : "Shopper"}
           </span>
-          {user ? (
-            <span style={{ color: '#1A1A1A' }} className="text-base font-black dark:text-white truncate">
-              {user.displayName || "Shopper"}
-            </span>
-          ) : (
-            <button 
-              onClick={signIn} 
-              className="text-sm font-black text-[#FF6A00] hover:opacity-80 transition-colors text-left outline-none truncate"
-            >
-              Hello, Sign In
-            </button>
-          )}
-        </div>
+        ) : (
+          <button 
+            onClick={signIn} 
+            className="text-lg font-black text-[#FF6A00] hover:opacity-80 transition-colors text-left outline-none truncate"
+          >
+            Sign In
+          </button>
+        )}
       </div>
 
       {/* 2. SHOPPING CART */}
