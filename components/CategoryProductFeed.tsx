@@ -5,11 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { collection, query, where, orderBy, limit, startAfter, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
 import Link from "next/link";
-import Image from "next/image";
-import { optimizeImage } from "@/lib/utils";
-import { trackSelectItem } from "@/lib/analytics";
+// 🔥 IMPORT YOUR PRODUCT CARD HERE
+import ProductCard from "@/components/ProductCard"; 
 
-// 🔴 FIX 1: MATCHED SERVER LIMIT EXACTLY
 const PAGE_SIZE = 100;
 
 export default function CategoryProductFeed({ 
@@ -24,8 +22,7 @@ export default function CategoryProductFeed({
   const searchParams = useSearchParams();
   const [products, setProducts] = useState<any[]>(initialProducts);
   const [loading, setLoading] = useState(false);
-  
-  // 🔴 FIX 2: CHANGED TO >= SO IT DOESN'T INSTANTLY FAIL
+
   const [hasMore, setHasMore] = useState(initialProducts.length >= PAGE_SIZE);
 
   // Extract URL Parameters
@@ -75,8 +72,7 @@ export default function CategoryProductFeed({
       }
 
       const productsRef = collection(db, "products");
-      
-      // 🔴 FIX 3: SAFELY HANDLE THE "ALL PRODUCTS" PAGE QUERY
+
       const q = categoryName === "all"
         ? query(
             productsRef,
@@ -114,7 +110,6 @@ export default function CategoryProductFeed({
     }
   };
 
-  // If the database has absolutely zero items for this category, let the parent layout handle the empty state.
   if (!products || products.length === 0) return null; 
 
   return (
@@ -158,68 +153,11 @@ export default function CategoryProductFeed({
             </div>
           </div>
         ) : (
-          /* CUSTOM GRID: Fixed to 4 columns max on desktop */
+          /* 🔥 CUSTOM GRID: Now using the imported ProductCard component */
           <div className="p-3 sm:p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-            {displayedProducts.map((p) => {
-              const optimizedImage = p.images?.[0] ? optimizeImage(p.images[0]) : null;
-              const isSold = p.status === "sold";
-              const titleStr = p.title || p.name || 'Product';
-
-              return (
-                <div key={p.id} className={`group flex flex-col transition-all hover:shadow-md rounded-md p-1 sm:p-2 relative h-full ${isSold ? 'opacity-80 grayscale-[20%]' : ''}`}>
-                  <Link 
-                    href={`/product/${p.publicId || p.id}`} 
-                    className="flex flex-col flex-grow relative pointer-events-auto outline-none"
-                    onClick={() => {
-                      trackSelectItem({
-                        id: p.id,
-                        name: titleStr, 
-                        price: Number(p.price) || 0,
-                        category: p.category || categoryName,
-                      });
-                    }}
-                  >
-                    {/* Image Area - Strict Square */}
-                    <div className="relative aspect-square w-full bg-slate-50 dark:bg-slate-900 rounded-sm overflow-hidden mb-2 border border-slate-100 dark:border-slate-800/50">
-                      {optimizedImage ? (
-                        <Image 
-                          src={optimizedImage} 
-                          alt={titleStr} 
-                          fill 
-                          sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw" 
-                          className="object-cover group-hover:scale-105 transition-transform duration-500" 
-                        />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase">No Image</div>
-                      )}
-
-                      {isSold && (
-                        <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-[2px]">
-                           <span className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-[10px] sm:text-xs font-black uppercase tracking-widest px-3 py-1.5 rounded-sm shadow-lg transform -rotate-6">
-                             Sold Out
-                           </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Text Area */}
-                    <div className="flex flex-col flex-grow bg-transparent">
-                      <div className="h-[36px] sm:h-[42px] mb-1 flex flex-col justify-start">
-                        <h3 className="text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 line-clamp-2 leading-snug transition-colors duration-200 group-hover:text-[#D97706]">
-                          {titleStr}
-                        </h3>
-                      </div>
-
-                      <div className="mt-auto pt-1 flex flex-col">
-                        <span className={`text-sm sm:text-base font-black transition-colors duration-200 ${isSold ? 'text-slate-500' : 'text-slate-900 dark:text-white group-hover:text-[#D97706]'}`}>
-                          UGX {Number(p.price).toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                </div>
-              );
-            })}
+            {displayedProducts.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
           </div>
         )}
       </div>
