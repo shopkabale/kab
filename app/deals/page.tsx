@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic"; // 🔥 FIX 1: Allows ?campaign= URL parameters to work safely without crashing
+export const dynamic = "force-dynamic"; // Allows ?campaign= URL parameters to work safely
 
 import { collection, query, where, getDocs, orderBy, limit, doc, writeBatch } from "firebase/firestore";
 import { db } from "@/lib/firebase/config";
@@ -6,21 +6,52 @@ import CategoryProductFeed from "@/components/CategoryProductFeed";
 import Link from "next/link";
 import { ZapOff, Home } from "lucide-react";
 
+// Helper to deep-clean any nested Firebase Timestamp objects into primitive numbers
+function sanitizeDocument(obj: any): any {
+  if (obj === null || typeof obj !== "object") return obj;
+
+  // If it's an array, clean every item in it
+  if (Array.isArray(obj)) {
+    return obj.map(sanitizeDocument);
+  }
+
+  // If it's a Firestore Timestamp look-alike, flatten it immediately
+  if (obj.seconds !== undefined && typeof obj.seconds === "number") {
+    return obj.seconds * 1000;
+  }
+
+  const cloned: any = {};
+  for (const key in obj) {
+    if (Object.prototype.hasOwnProperty.call(obj, key)) {
+      cloned[key] = sanitizeDocument(obj[key]);
+    }
+  }
+  return cloned;
+}
+
+// Map slug terms to elegant UI headers
+const campaignDisplayNames: Record<string, string> = {
+  "flash-sales": "Flash Sales",
+  "weekend-deals": "Weekend Deals",
+  "clearance": "Clearance Sale",
+  "student-deals": "Student Deals",
+  "mega-sale": "Mega Sale"
+};
+
 export default async function DealsPage({
   searchParams,
 }: {
   searchParams: { campaign?: string | string[] };
 }) {
-  // Extract string safely if Next.js passes an array
   const param = searchParams.campaign;
   const campaignFilter = Array.isArray(param) ? param[0] : param;
 
-  // Format the title dynamically
+  // Format the title beautifully based on dictionary mapping
   const pageTitle = campaignFilter 
-    ? campaignFilter.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) 
+    ? (campaignDisplayNames[campaignFilter] || campaignFilter.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase()))
     : "All Active Deals";
 
-  // FIREBASE QUERY: Fetch items where isSale === true
+  // Base query for live sales
   let dealsQuery = query(
     collection(db, "products"),
     where("isSale", "==", true),
@@ -40,7 +71,7 @@ export default async function DealsPage({
 
   const snap = await getDocs(dealsQuery);
   
-  const now = new Date().getTime();
+  const now = Date.now();
   const validProducts: any[] = [];
   const expiredDocs: any[] = [];
 
@@ -49,24 +80,19 @@ export default async function DealsPage({
     const endTime = new Date(data.saleEndDate || 0).getTime();
 
     if (endTime > now) {
-      // 🔥 FIX 2: Sanitize Firebase Timestamps to prevent Next.js 500 Serialization Error
-      const safeData = { ...data };
-      for (const key in safeData) {
-        if (safeData[key] && typeof safeData[key] === "object" && safeData[key].seconds !== undefined) {
-           safeData[key] = safeData[key].seconds * 1000;
-        }
-      }
-
-      validProducts.push({
+      // Deep sanitize data to make it 100% compliant with Next.js serialization
+      const cleanData = sanitizeDocument({
         id: document.id,
-        ...safeData,
-        createdAt: data.createdAt?.seconds ? data.createdAt.seconds * 1000 : new Date(data.createdAt || 0).getTime(),
+        ...data,
       });
+
+      validProducts.push(cleanData);
     } else {
       expiredDocs.push({ id: document.id, originalPrice: data.originalPrice });
     }
   });
 
+  // Background lazy revert execution if any items expired
   if (expiredDocs.length > 0) {
     try {
       const batch = writeBatch(db);
@@ -90,6 +116,7 @@ export default async function DealsPage({
     <div className="min-h-screen bg-transparent pb-12 pt-4 font-sans selection:bg-[#FF6A00] selection:text-white">
       <div className="w-full max-w-[1400px] mx-auto px-4">
 
+        {/* Universal Banner Header */}
         <div className="w-full bg-gradient-to-r from-[#FF6A00] to-[#e65f00] rounded-xl p-8 mb-8 text-white shadow-md relative overflow-hidden">
           <div className="absolute top-0 right-0 opacity-10 transform translate-x-1/4 -translate-y-1/4 pointer-events-none">
             <svg width="300" height="300" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
@@ -107,6 +134,7 @@ export default async function DealsPage({
           </div>
         </div>
 
+        {/* Product Display Feed Area */}
         {validProducts.length > 0 ? (
           <CategoryProductFeed 
              initialProducts={validProducts} 
