@@ -1,5 +1,5 @@
 // 🔥 CRITICAL: Tells Next.js to refresh this page every 60 seconds to pull new deals!
-export const revalidate = 60; 
+export const revalidate = 7200; 
 
 import ContinueBrowsing from "@/components/ContinueBrowsing";
 import Link from "next/link";
