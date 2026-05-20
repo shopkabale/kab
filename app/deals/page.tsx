@@ -54,8 +54,8 @@ export async function generateMetadata({
 
   const currentUrl = `https://www.kabaleonline.com/deals${campaignFilter ? `?campaign=${campaignFilter}` : ''}`;
   
-  // Note: Ensure you have an 'og-deals.jpg' in your public folder, or fallback to your default og-image
-  const ogImage = "https://www.kabaleonline.com/og-image.jpg"; 
+  // 🔥 BUILD THE DYNAMIC OG IMAGE URL FOR THE DEALS PAGE
+  const ogImage = `https://www.kabaleonline.com/api/og?title=${encodeURIComponent(baseTitle)}&desc=${encodeURIComponent(description)}`;
 
   return {
     title: pageTitle,
