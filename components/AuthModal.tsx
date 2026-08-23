@@ -79,7 +79,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
           throw new Error("Password must be at least 6 characters");
         }
         await signUpWithEmail(email, password);
-        setSuccessMessage("Account Created Successfully!");
+        setSuccessMessage("Account Registered Successfully!");
         setIsSuccess(true); 
       }
     } catch (err: any) {
@@ -104,7 +104,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       setSuccessMessage("Login Successful!");
       setIsSuccess(true); 
     } catch (err: unknown) {
-      setError("Google sign-in failed. Please try again.");
+      setError("Google login failed. Please try again.");
     }
   };
 
@@ -156,7 +156,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
   }
 
   // ==========================================
-  // NORMAL LOGIN/SIGNUP/FORGOT RENDER
+  // NORMAL LOGIN/REGISTER/FORGOT RENDER
   // ==========================================
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
@@ -267,8 +267,8 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               : isForgotPassword 
                 ? "Send Reset Link"
                 : isLogin 
-                  ? "Sign In" 
-                  : "Sign Up"}
+                  ? "Login" 
+                  : "Register"}
           </button>
         </form>
 
@@ -317,7 +317,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 }}
                 className="font-bold text-[#FF6A00] hover:underline"
               >
-                {isLogin ? "Sign up" : "Sign in"}
+                {isLogin ? "Register" : "Login"}
               </button>
             </p>
           </>
