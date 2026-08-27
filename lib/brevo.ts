@@ -55,20 +55,59 @@ const emailWrapper = (content: string) => `
 `;
 
 // --- 1. ADMIN ORDER ALERT ---
-export async function sendAdminAlert(orderNumber: string, itemName: string, total: number, buyerPhone: string, sellerPhone: string) {
+export async function sendAdminAlert(
+  orderNumber: string, 
+  items: any[], // Accepts the full array of cart items
+  total: number, 
+  buyerPhone: string, 
+  deliveryLocation: string
+) {
   const masterEmail = "hardwaremaco@gmail.com"; 
+
+  // Generate an HTML list for every item in the cart
+  const itemsListHtml = items.map(item => {
+    // Fallback to item.id if productId isn't passed perfectly
+    const linkId = item.productId || item.id; 
+    const productLink = `https://www.mbararaonline.com/item/${linkId}`;
+    const itemName = item.name || item.title || "Unknown Item";
+    
+    return `
+      <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
+        <a href="${productLink}" style="color: #FF6A00; text-decoration: underline; font-weight: bold; font-size: 16px;">
+          ${itemName}
+        </a>
+        <div style="margin-top: 4px; color: #475569; font-size: 14px;">
+          Qty: <strong>${item.quantity}</strong> | Price: UGX ${(item.price * item.quantity).toLocaleString()}
+        </div>
+        <div style="margin-top: 2px; color: #64748b; font-size: 12px;">
+          Seller Phone: ${item.sellerPhone || "N/A"}
+        </div>
+      </li>
+    `;
+  }).join(""); // .join("") combines the array into a single HTML string
+
   const content = `
     <h2 style="color: #dc2626; margin-top: 0;">🚨 New Order Received!</h2>
     <p>A new transaction has been initiated on Mbarara Online.</p>
+    
     <div style="background-color: #fef2f2; padding: 16px; border-radius: 8px; margin: 24px 0;">
-      <p><strong>Order ID:</strong> ${orderNumber}</p>
-      <p><strong>Item:</strong> ${itemName}</p>
-      <p><strong>Total:</strong> UGX ${total.toLocaleString()}</p>
+      <p style="margin-top: 0;"><strong>Order ID:</strong> ${orderNumber}</p>
+      <p><strong>Total Paid (COD):</strong> UGX ${total.toLocaleString()}</p>
       <p><strong>Buyer Phone:</strong> ${buyerPhone}</p>
-      <p><strong>Seller Phone:</strong> ${sellerPhone}</p>
+      <p><strong>Delivery To:</strong> ${deliveryLocation || "Not provided"}</p>
     </div>
+
+    <h3 style="color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">Order Details</h3>
+    <ul style="list-style-type: none; padding: 0; margin: 0;">
+      ${itemsListHtml}
+    </ul>
   `;
-  await sendEmail({ to: [{ email: masterEmail, name: "Admin" }], subject: `🚨 NEW ORDER: ${orderNumber}`, htmlContent: emailWrapper(content) });
+  
+  await sendEmail({ 
+    to: [{ email: masterEmail, name: "Admin" }], 
+    subject: `🚨 NEW ORDER: ${orderNumber} - UGX ${total.toLocaleString()}`, 
+    htmlContent: emailWrapper(content) 
+  });
 }
 
 // --- 2. BUYER RECEIPT ---
