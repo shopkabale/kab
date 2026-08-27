@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase/admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { NotificationService } from "@/lib/notifications"; 
-// Import all email utilities
 import { sendAdminAlert, sendBuyerReceipt, sendSellerNotification } from "@/lib/brevo"; 
 
 export async function POST(request: Request) {
@@ -14,7 +13,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
+    // Changed prefix to MBA (Mbarara)
+    const orderNumber = `MBA-${Math.floor(1000 + Math.random() * 9000)}`;
     let actualTotalAmount = 0;
     const validatedItems: any[] = [];
     const sellerOrdersMap: Record<string, any> = {};
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
         const product = productSnap.data()!;
         const requestedQty = Number(cartItems[index].quantity) || 1;
         const actualPrice = Number(product.price) || 0;
-        
+
         actualTotalAmount += (actualPrice * requestedQty);
 
         const finalItem = {
@@ -65,7 +65,8 @@ export async function POST(request: Request) {
         buyerEmail: buyerEmail || "",
         totalAmount: actualTotalAmount,
         createdAt: Date.now(),
-        status: "processing"
+        status: "processing",
+        location: location || "Mbarara" // Save location to DB
       });
     });
 
@@ -91,15 +92,22 @@ export async function POST(request: Request) {
 
       if (sEmail) {
         notificationPromises.push(sendSellerNotification(sEmail, sName, orderNumber, allProductsString, sellerOrdersMap[sellerId].subtotal, contactPhone));
-}
-      
+      }
+
       // Notify via WhatsApp
       notificationPromises.push(NotificationService.notifySeller(sPhone, sName, orderNumber, allProductsString, sellerOrdersMap[sellerId].subtotal, buyerName, location, contactPhone));
     }
 
-    // 3. Send Admin Alert (Using first seller's phone as reference or 'Multiple')
-    const primarySellerPhone = sellerIds.length === 1 ? sellerOrdersMap[sellerIds[0]].items[0].sellerPhone : "Multiple Sellers";
-    notificationPromises.push(sendAdminAlert(orderNumber, allProductsString, actualTotalAmount, contactPhone, primarySellerPhone));
+    // 3. Send Admin Alert (UPDATED FOR ARRAY AND LOCATION)
+    notificationPromises.push(
+      sendAdminAlert(
+        orderNumber, 
+        validatedItems, // Pass the array of items for mapping links
+        actualTotalAmount, 
+        contactPhone, 
+        location // Pass delivery location
+      )
+    );
 
     await Promise.allSettled(notificationPromises);
 
