@@ -34,6 +34,7 @@ export async function POST(request: Request) {
 
         const finalItem = {
           productId: productSnap.id,
+          publicId: product.publicId || "", // <--- ADDED THIS LINE FOR THE EMAIL LINKS
           name: product.title || product.name || "Unknown Item",
           price: actualPrice,
           quantity: requestedQty,
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
         validatedItems, // Pass the array of items for mapping links
         actualTotalAmount, 
         contactPhone, 
-        location // Pass delivery location
+        location || "Mbarara" // Fallback to Mbarara if location is missing
       )
     );
 
