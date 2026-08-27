@@ -65,8 +65,11 @@ export async function sendAdminAlert(
   const masterEmail = "hardwaremaco@gmail.com"; 
 
   const itemsListHtml = items.map(item => {
-    const linkId = item.productId || item.id; 
-    const productLink = `https://www.mbararaonline.com/item/${linkId}`;
+    // 🚀 Prioritize publicId (e.g. GEN-0078), fallback to standard id if missing
+    const identifier = item.publicId || item.productId || item.id; 
+    
+    // 🚀 Uses /product/ path for SEO friendly URLs
+    const productLink = `https://www.mbararaonline.com/product/${identifier}`;
     const itemName = item.name || item.title || "Unknown Item";
 
     return `
