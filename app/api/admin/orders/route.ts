@@ -39,7 +39,7 @@ export async function PATCH(request: Request) {
 
         const OFFICIAL_SELLER_ID = "Xsqpxm5T5ySQJMmHDXCCLj9MHhQ2";
         const OFFICIAL_PHONE = "256779094664";
-        
+
         const hasOfficialProduct = items.some((item: any) => 
           item.sellerId === "SYSTEM" || 
           item.sellerId === OFFICIAL_SELLER_ID || 
@@ -48,10 +48,8 @@ export async function PATCH(request: Request) {
         );
 
         if (!hasOfficialProduct) {
-          debugMessage = "Order Delivered. (Skipped payout: Cart did not contain any Official Kabale products).";
+          debugMessage = "Order Delivered. (Skipped payout: Cart did not contain any Official products).";
         } else {
-          // 🚀 RULE 2 HAS BEEN REMOVED! Partners now get paid EVERY TIME their link is used.
-          
           const orderTotal = Number(orderData.totalAmount) || Number(orderData.total) || 0;
 
           if (orderTotal < 5000) {
@@ -165,7 +163,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing required fields or empty cart" }, { status: 400 });
     }
 
-    const orderNumber = `KAB-${Math.floor(1000 + Math.random() * 9000)}`;
+    const orderNumber = `MBA-${Math.floor(1000 + Math.random() * 9000)}`;
     let actualTotalAmount = 0;
     const validatedItems: any[] = [];
     const sellerOrdersMap: Record<string, any> = {};
@@ -193,6 +191,7 @@ export async function POST(request: Request) {
 
         const finalItem = {
           productId: productSnap.id,
+          publicId: product.publicId || "", // Added to fix email links
           name: product.title || product.name || "Unknown Item",
           price: actualPrice,
           quantity: requestedQty,
@@ -231,7 +230,7 @@ export async function POST(request: Request) {
         userId: userId || "GUEST",
         buyerName,
         buyerPhone: contactPhone,
-        buyerLocation: location || "Kabale",
+        buyerLocation: location || "Mbarara",
         source: source || "whatsapp", 
         paymentMode: "COD",           
         paymentStatus: "pending",     
@@ -252,8 +251,9 @@ export async function POST(request: Request) {
       NotificationService.notifyBuyer(contactPhone, orderNumber, allProductsString, actualTotalAmount)
     );
 
+    // FIXED: Now passing 'validatedItems' (array) instead of 'allProductsString'
     notificationPromises.push(
-      sendAdminAlert(orderNumber, allProductsString, actualTotalAmount, contactPhone, "Multi-Seller COD Order")
+      sendAdminAlert(orderNumber, validatedItems, actualTotalAmount, contactPhone, "Multi-Seller COD Order")
     );
 
     const sellerOrdersList = Object.values(sellerOrdersMap);
@@ -268,7 +268,7 @@ export async function POST(request: Request) {
           sellerItemsString, 
           sellerCut.subtotal, 
           buyerName,
-          location || "Kabale",
+          location || "Mbarara",
           contactPhone
         )
       );
