@@ -57,20 +57,18 @@ const emailWrapper = (content: string) => `
 // --- 1. ADMIN ORDER ALERT ---
 export async function sendAdminAlert(
   orderNumber: string, 
-  items: any[], // Accepts the full array of cart items
+  items: any[], 
   total: number, 
   buyerPhone: string, 
   deliveryLocation: string
 ) {
   const masterEmail = "hardwaremaco@gmail.com"; 
 
-  // Generate an HTML list for every item in the cart
   const itemsListHtml = items.map(item => {
-    // Fallback to item.id if productId isn't passed perfectly
     const linkId = item.productId || item.id; 
     const productLink = `https://www.mbararaonline.com/item/${linkId}`;
     const itemName = item.name || item.title || "Unknown Item";
-    
+
     return `
       <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
         <a href="${productLink}" style="color: #FF6A00; text-decoration: underline; font-weight: bold; font-size: 16px;">
@@ -84,7 +82,7 @@ export async function sendAdminAlert(
         </div>
       </li>
     `;
-  }).join(""); // .join("") combines the array into a single HTML string
+  }).join(""); 
 
   const content = `
     <h2 style="color: #dc2626; margin-top: 0;">🚨 New Order Received!</h2>
@@ -102,7 +100,7 @@ export async function sendAdminAlert(
       ${itemsListHtml}
     </ul>
   `;
-  
+
   await sendEmail({ 
     to: [{ email: masterEmail, name: "Admin" }], 
     subject: `🚨 NEW ORDER: ${orderNumber} - UGX ${total.toLocaleString()}`, 
@@ -117,7 +115,7 @@ export async function sendBuyerReceipt(buyerEmail: string, buyerName: string, or
     <p>Hi ${buyerName}, thank you for shopping with Mbarara Online!</p>
     <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; margin: 24px 0;">
       <p><strong>Order ID:</strong> ${orderNumber}</p>
-      <p><strong>Item:</strong> ${itemName}</p>
+      <p><strong>Items:</strong> ${itemName}</p>
       <p><strong>Total to Pay:</strong> UGX ${total.toLocaleString()}</p>
     </div>
     <p>Our team will contact you shortly to coordinate delivery.</p>
@@ -139,7 +137,7 @@ export async function sendSellerNotification(
     <p>Hi ${sellerName}, congratulations on your sale!</p>
     <div style="background-color: #fff7ed; padding: 16px; border-radius: 8px; margin: 24px 0;">
       <p style="margin: 0 0 8px 0;"><strong>Order ID:</strong> ${orderNumber}</p>
-      <p style="margin: 0 0 8px 0;"><strong>Item Sold:</strong> ${itemName}</p>
+      <p style="margin: 0 0 8px 0;"><strong>Items Sold:</strong> ${itemName}</p>
       <p style="margin: 0 0 8px 0;"><strong>Payout Amount:</strong> UGX ${total.toLocaleString()}</p>
       <hr style="border: 0; border-top: 1px solid #fed7aa; margin: 12px 0;">
       <p style="margin: 0; color: #9a3412;"><strong>Buyer Phone:</strong> ${buyerPhone}</p>
