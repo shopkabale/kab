@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,36 +10,60 @@ import { Product } from "@/types";
 export default function CheckoutForm({ product }: { product: Product }) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  
+
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
+    buyerName: "",
+    buyerEmail: "",
     contactPhone: "",
     deliveryLocation: "",
   });
 
+  // Automatically pre-fill user details if they are logged in
+  useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        buyerName: prev.buyerName || user.displayName || "",
+        buyerEmail: prev.buyerEmail || user.email || "",
+      }));
+    }
+  }, [user]);
+
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return alert("Please log in to place an order.");
-    
+
     setLoading(true);
     try {
+      const payload = {
+        source: "website",
+        userId: user.id,
+        buyerName: formData.buyerName,
+        buyerEmail: formData.buyerEmail,
+        contactPhone: formData.contactPhone,
+        location: formData.deliveryLocation,
+        cartItems: [{
+          productId: product.id,
+          publicId: product.publicId || "",
+          name: product.name || product.title || "Unknown Item",
+          price: product.price,
+          quantity: 1,
+          sellerId: product.sellerId || "SYSTEM",
+          sellerPhone: product.sellerPhone || "",
+          image: product.images?.[0] || ""
+        }]
+      };
+
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          productId: product.id,
-          sellerId: product.sellerId,
-          total: product.price,
-          contactPhone: formData.contactPhone,
-          deliveryLocation: formData.deliveryLocation,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
 
       if (res.ok && data.success) {
-        // Redirect to the success page!
         router.push(`/success/${data.orderId}`);
       } else {
         alert(data.error || "Failed to place order.");
@@ -71,11 +95,34 @@ export default function CheckoutForm({ product }: { product: Product }) {
       <h1 className="text-3xl font-extrabold text-slate-900 mb-8">Secure Checkout</h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        
-        {/* Left Column: The Form */}
         <form onSubmit={handlePlaceOrder} className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 space-y-6">
           <h2 className="text-xl font-bold text-slate-900 border-b border-slate-100 pb-4">Delivery Details</h2>
-          
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">Full Name *</label>
+            <input 
+              required 
+              type="text" 
+              placeholder="e.g. John Doe"
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-primary"
+              value={formData.buyerName} 
+              onChange={e => setFormData({...formData, buyerName: e.target.value})} 
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-slate-900 mb-2">Email Address</label>
+            <input 
+              type="email" 
+              placeholder="e.g. name@example.com (For your receipt)"
+              className="w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:ring-2 focus:ring-primary bg-slate-50 text-slate-500"
+              value={formData.buyerEmail} 
+              onChange={e => setFormData({...formData, buyerEmail: e.target.value})}
+              readOnly={!!user?.email} 
+              title={user?.email ? "Email is linked to your account" : ""}
+            />
+          </div>
+
           <div>
             <label className="block text-sm font-semibold text-slate-900 mb-2">Phone / WhatsApp Number *</label>
             <input 
@@ -111,10 +158,8 @@ export default function CheckoutForm({ product }: { product: Product }) {
           <p className="text-xs text-center text-slate-500 font-medium">🛡️ You only pay when the item is in your hands.</p>
         </form>
 
-        {/* Right Column: Order Summary */}
         <div className="bg-slate-50 p-6 sm:p-8 rounded-2xl border border-slate-200 h-fit">
           <h2 className="text-lg font-bold text-slate-900 mb-6">Order Summary</h2>
-          
           <div className="flex gap-4 mb-6 border-b border-slate-200 pb-6">
             <div className="w-20 h-20 bg-white rounded-lg border border-slate-200 overflow-hidden relative flex-shrink-0">
               {product.images && product.images.length > 0 ? (
@@ -128,7 +173,6 @@ export default function CheckoutForm({ product }: { product: Product }) {
               <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider">{product.condition || "Used"}</p>
             </div>
           </div>
-
           <div className="space-y-3 text-sm mb-6">
             <div className="flex justify-between text-slate-600">
               <span>Item Price</span>
@@ -139,7 +183,6 @@ export default function CheckoutForm({ product }: { product: Product }) {
               <span className="text-green-600 font-medium">Negotiated with Seller</span>
             </div>
           </div>
-
           <div className="flex justify-between items-center border-t border-slate-200 pt-4">
             <span className="font-bold text-slate-900">Total to Pay</span>
             <span className="text-xl font-black text-primary">UGX {product.price.toLocaleString()}</span>
