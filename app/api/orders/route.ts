@@ -4,16 +4,167 @@ import { FieldValue } from "firebase-admin/firestore";
 import { NotificationService } from "@/lib/notifications"; 
 import { sendAdminAlert, sendBuyerReceipt, sendSellerNotification } from "@/lib/brevo"; 
 
-export async function POST(request: Request) {
+// ==========================================
+// PATCH: Update Order Status & Process Payouts
+// ==========================================
+export async function PATCH(request: Request) {
   try {
-    const body = await request.json();
-    const { source, userId, buyerName, contactPhone, location, cartItems, buyerEmail } = body;
+    const { adminId, orderId, newStatus } = await request.json();
 
-    if (!cartItems || cartItems.length === 0 || !contactPhone || !buyerName) {
+    if (!adminId || !orderId || !newStatus) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    // Changed prefix to MBA (Mbarara)
+    const adminSnap = await adminDb.collection("users").doc(adminId).get();
+    if (!adminSnap.exists || adminSnap.data()?.role !== "admin") {
+      return NextResponse.json({ error: "Unauthorized access" }, { status: 403 });
+    }
+
+    let referrerId: string | null = null;
+    let referrerPhone: string | null = null;
+    let referrerCode: string | null = null;
+    let rewardAmount = 0; 
+    let debugMessage = `Order status updated to ${newStatus}.`; 
+
+    if (newStatus === "delivered") {
+      const orderSnap = await adminDb.collection("orders").doc(orderId).get();
+      const orderData = orderSnap.data();
+
+      if (!orderData) {
+        debugMessage = "Order not found in DB.";
+      } else if (!orderData.referralCodeUsed) {
+        debugMessage = "Order Delivered. (No referral code attached).";
+      } else if (orderData.status === "delivered" || orderData.payoutProcessed) {
+        debugMessage = "Order Delivered. (Partner was already paid previously).";
+      } else {
+        const items = orderData.cartItems || orderData.items || [];
+
+        const OFFICIAL_SELLER_ID = "Xsqpxm5T5ySQJMmHDXCCLj9MHhQ2";
+        const OFFICIAL_PHONE = "256779094664";
+
+        const hasOfficialProduct = items.some((item: any) => 
+          item.sellerId === "SYSTEM" || 
+          item.sellerId === OFFICIAL_SELLER_ID || 
+          item.sellerPhone === OFFICIAL_PHONE ||
+          item.isAdminUpload === true 
+        );
+
+        if (!hasOfficialProduct) {
+          debugMessage = "Order Delivered. (Skipped payout: Cart did not contain any Official products).";
+        } else {
+          const orderTotal = Number(orderData.totalAmount) || Number(orderData.total) || 0;
+
+          if (orderTotal < 5000) {
+            rewardAmount = 300; 
+          } else {
+            rewardAmount = Math.min(Math.floor(orderTotal * 0.10), 3000);
+          }
+
+          const referrerSnap = await adminDb.collection("users")
+            .where("referralCode", "==", orderData.referralCodeUsed)
+            .limit(1)
+            .get();
+
+          if (referrerSnap.empty) {
+            debugMessage = `Order Delivered. (Nobody owns the code ${orderData.referralCodeUsed}).`;
+          } else {
+            const referrerData = referrerSnap.docs[0].data();
+            referrerId = referrerSnap.docs[0].id;
+            referrerPhone = referrerData.phone || referrerData.phoneNumber || null;
+            referrerCode = orderData.referralCodeUsed;
+
+            if (referrerPhone) {
+              debugMessage = `✅ SUCCESS! Partner earned ${rewardAmount} UGX.\nWhatsApp alert sent.`;
+            } else {
+              debugMessage = `✅ SUCCESS! Partner earned ${rewardAmount} UGX (No phone linked for WhatsApp alert).`;
+            }
+          }
+        }
+      }
+    }
+
+    await adminDb.runTransaction(async (transaction) => {
+      const orderRef = adminDb.collection("orders").doc(orderId);
+      const orderSnap = await transaction.get(orderRef);
+
+      if (!orderSnap.exists) throw new Error("Order not found");
+
+      const orderData = orderSnap.data()!;
+      const items = orderData.cartItems || orderData.items || [];
+
+      if (items.length > 0) {
+        const productId = items[0].productId || items[0].id; 
+        if (productId) {
+           const productRef = adminDb.collection("products").doc(productId);
+           const productSnap = await transaction.get(productRef);
+
+           if (newStatus === "cancelled") {
+             transaction.update(productRef, {
+               stock: FieldValue.increment(1),
+               locked: false,
+               status: "available",
+               updatedAt: Date.now()
+             });
+           } 
+           else if (newStatus === "delivered" && productSnap.exists) {
+             const productData = productSnap.data()!;
+             if (productData.stock <= 0) {
+               transaction.update(productRef, { 
+                 status: "sold_out", 
+                 updatedAt: Date.now() 
+               });
+             }
+           }
+        }
+      }
+
+      const updatePayload: any = {
+        status: newStatus,
+        updatedAt: Date.now()
+      };
+      
+      if (referrerId && rewardAmount > 0) {
+         updatePayload.payoutProcessed = true;
+         updatePayload.payoutAmount = rewardAmount;
+      }
+      transaction.update(orderRef, updatePayload);
+
+      if (referrerId && rewardAmount > 0) {
+        const referrerRef = adminDb.collection("users").doc(referrerId);
+        transaction.update(referrerRef, {
+          referralBalance: FieldValue.increment(rewardAmount),
+          referralCount: FieldValue.increment(1)
+        });
+      }
+    });
+
+    if (referrerId && referrerPhone && rewardAmount > 0) {
+      const freshReferrer = await adminDb.collection("users").doc(referrerId).get();
+      const newBalance = freshReferrer.data()?.referralBalance || rewardAmount;
+
+      NotificationService.notifyPartnerCredit(referrerPhone, rewardAmount, newBalance).catch(console.error);
+    }
+
+    return NextResponse.json({ success: true, message: debugMessage }, { status: 200 });
+
+  } catch (error: any) {
+    console.error("Status update error:", error);
+    return NextResponse.json({ error: error.message || "Failed to update status" }, { status: 500 });
+  }
+}
+
+// ==========================================
+// POST: Create New Order & Trigger Notifications
+// ==========================================
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+    const { source, userId, buyerName, contactPhone, location, cartItems, buyerEmail, referralCodeUsed } = body;
+
+    if (!cartItems || cartItems.length === 0 || !contactPhone || !buyerName) {
+      return NextResponse.json({ error: "Missing required fields or empty cart" }, { status: 400 });
+    }
+
     const orderNumber = `MBA-${Math.floor(1000 + Math.random() * 9000)}`;
     let actualTotalAmount = 0;
     const validatedItems: any[] = [];
@@ -25,22 +176,31 @@ export async function POST(request: Request) {
       );
 
       productDocs.forEach((productSnap, index) => {
-        if (!productSnap.exists) throw new Error(`Item ${cartItems[index].name} not found.`);
+        if (!productSnap.exists) throw new Error(`Item ${cartItems[index].name} is not found.`);
+
         const product = productSnap.data()!;
         const requestedQty = Number(cartItems[index].quantity) || 1;
-        const actualPrice = Number(product.price) || 0;
 
+        if (product.stock < requestedQty || product.status === "sold_out") {
+          throw new Error(`Sorry, ${product.title || product.name} is out of stock!`);
+        }
+        if (product.locked) {
+          throw new Error(`Sorry, someone else is currently checking out with ${product.title || product.name}.`);
+        }
+
+        const actualPrice = Number(product.price) || 0;
         actualTotalAmount += (actualPrice * requestedQty);
 
         const finalItem = {
           productId: productSnap.id,
-          publicId: product.publicId || "", // <--- ADDED THIS LINE FOR THE EMAIL LINKS
+          publicId: product.publicId || "", 
           name: product.title || product.name || "Unknown Item",
           price: actualPrice,
           quantity: requestedQty,
           sellerId: product.sellerId || "SYSTEM",
           sellerPhone: product.sellerPhone || "",
-          image: product.images?.[0] || ""
+          image: product.images?.[0] || "",
+          isAdminUpload: product.isAdminUpload === true 
         };
         validatedItems.push(finalItem);
 
@@ -54,66 +214,161 @@ export async function POST(request: Request) {
         sellerOrdersMap[finalItem.sellerId].items.push(finalItem);
         sellerOrdersMap[finalItem.sellerId].subtotal += (actualPrice * requestedQty);
 
-        transaction.update(productSnap.ref, { stock: FieldValue.increment(-requestedQty) });
+        transaction.update(productSnap.ref, {
+          stock: FieldValue.increment(-requestedQty),
+          locked: true,
+          updatedAt: Date.now()
+        });
       });
 
+      const sellerOrders = Object.values(sellerOrdersMap);
+      const uniqueSellerIds = Array.from(new Set(validatedItems.map(item => item.sellerId).filter(Boolean)));
       const orderRef = adminDb.collection("orders").doc(orderNumber);
+
       transaction.set(orderRef, {
         orderId: orderNumber,
         userId: userId || "GUEST",
         buyerName,
         buyerPhone: contactPhone,
         buyerEmail: buyerEmail || "",
+        buyerLocation: location || "Mbarara",
+        source: source || "website", 
+        paymentMode: "COD",           
+        paymentStatus: "pending",     
+        status: "processing",         
+        cartItems: validatedItems,
+        sellerOrders: sellerOrders,
+        sellerIds: uniqueSellerIds,   
         totalAmount: actualTotalAmount,
+        referralCodeUsed: referralCodeUsed || null,
         createdAt: Date.now(),
-        status: "processing",
-        location: location || "Mbarara" // Save location to DB
+        updatedAt: Date.now()
       });
     });
 
-    // ==========================================
-    // NOTIFICATION & EMAIL ROUTING
-    // ==========================================
-    const allProductsString = validatedItems.map(i => `${i.quantity}x ${i.name}`).join(", ");
     const notificationPromises: Promise<any>[] = [];
+    
+    // Stringified version specifically for WhatsApp alerts (which don't support HTML)
+    const allProductsString = validatedItems.map(i => `${i.quantity}x ${i.name}`).join(", ");
 
-    // 1. Send Buyer Receipt
+    // 1. WhatsApp Buyer Receipt
+    notificationPromises.push(
+      NotificationService.notifyBuyer(contactPhone, orderNumber, allProductsString, actualTotalAmount)
+    );
+
+    // 2. Email Buyer Receipt (Passes validatedItems array for image/link mapping)
     if (buyerEmail) {
-      notificationPromises.push(sendBuyerReceipt(buyerEmail, buyerName, orderNumber, allProductsString, actualTotalAmount));
+      notificationPromises.push(
+        sendBuyerReceipt(buyerEmail, buyerName, orderNumber, validatedItems, actualTotalAmount)
+      );
     }
 
-    // 2. Notify Each Seller
+    // 3. Email Admin Alert (Passes validatedItems array for image/link mapping)
+    notificationPromises.push(
+      sendAdminAlert(orderNumber, validatedItems, actualTotalAmount, contactPhone, location || "Mbarara")
+    );
+
+    // 4. Notify Each Seller (WhatsApp & Email)
     const sellerIds = Object.keys(sellerOrdersMap);
     for (const sellerId of sellerIds) {
-      const sellerData = await adminDb.collection("users").doc(sellerId).get();
-      const sData = sellerData.data();
-      const sEmail = sData?.email;
-      const sPhone = sData?.phone || "N/A";
-      const sName = sData?.displayName || "Partner";
+      if (sellerId === "SYSTEM") continue;
 
-      if (sEmail) {
-        notificationPromises.push(sendSellerNotification(sEmail, sName, orderNumber, allProductsString, sellerOrdersMap[sellerId].subtotal, contactPhone));
+      try {
+        const sellerData = await adminDb.collection("users").doc(sellerId).get();
+        const sData = sellerData.data();
+        
+        if (sData) {
+          const sEmail = sData.email;
+          const sPhone = sData.phone || sData.phoneNumber || "N/A";
+          const sName = sData.displayName || "Partner";
+          
+          const sellerSubtotal = sellerOrdersMap[sellerId].subtotal;
+          const sellerItemsString = sellerOrdersMap[sellerId].items.map((i: any) => `${i.quantity}x ${i.name}`).join(", ");
+
+          // Email Seller (Passes seller's specific items array for image/link mapping)
+          if (sEmail) {
+            notificationPromises.push(
+              sendSellerNotification(sEmail, sName, orderNumber, sellerOrdersMap[sellerId].items, sellerSubtotal, contactPhone)
+            );
+          }
+
+          // WhatsApp Seller
+          if (sPhone !== "N/A") {
+            notificationPromises.push(
+              NotificationService.notifySeller(
+                sPhone, 
+                sName, 
+                orderNumber, 
+                sellerItemsString, 
+                sellerSubtotal, 
+                buyerName, 
+                location || "Mbarara", 
+                contactPhone
+              )
+            );
+          }
+        }
+      } catch (err) {
+        console.error(`Failed to trigger notifications for seller ${sellerId}`, err);
       }
-
-      // Notify via WhatsApp
-      notificationPromises.push(NotificationService.notifySeller(sPhone, sName, orderNumber, allProductsString, sellerOrdersMap[sellerId].subtotal, buyerName, location, contactPhone));
     }
-
-    // 3. Send Admin Alert (UPDATED FOR ARRAY AND LOCATION)
-    notificationPromises.push(
-      sendAdminAlert(
-        orderNumber, 
-        validatedItems, // Pass the array of items for mapping links
-        actualTotalAmount, 
-        contactPhone, 
-        location || "Mbarara" // Fallback to Mbarara if location is missing
-      )
-    );
 
     await Promise.allSettled(notificationPromises);
 
     return NextResponse.json({ success: true, orderId: orderNumber });
+
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("❌ Order creation error:", error.message);
+    return NextResponse.json({ error: error.message || "Failed to create order" }, { status: 500 });
+  }
+}
+
+// ==========================================
+// GET: Fetch Orders for Admin Dashboard
+// ==========================================
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const adminId = searchParams.get("adminId");
+
+    if (!adminId) {
+      return NextResponse.json({ error: "Missing admin ID" }, { status: 400 });
+    }
+
+    const adminSnap = await adminDb.collection("users").doc(adminId).get();
+    if (!adminSnap.exists || adminSnap.data()?.role !== "admin") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
+    const ordersSnap = await adminDb.collection("orders")
+      .orderBy("createdAt", "desc")
+      .get();
+
+    const orders = await Promise.all(ordersSnap.docs.map(async (doc) => {
+      const data = doc.data();
+      let totalAmount = Number(data.totalAmount) || Number(data.total) || 0;
+
+      if (totalAmount === 0 && data.productId) {
+        try {
+          const productDoc = await adminDb.collection("products").doc(data.productId).get();
+          if (productDoc.exists) {
+            totalAmount = Number(productDoc.data()?.price) || 0;
+          }
+        } catch (err) {
+          console.error(`Could not fetch fallback price for product ${data.productId}`);
+        }
+      }
+
+      return {
+        id: doc.id,
+        ...data,
+        total: totalAmount 
+      };
+    }));
+
+    return NextResponse.json({ orders }, { status: 200 });
+  } catch (error) {
+    console.error("Failed to fetch admin orders:", error);
+    return NextResponse.json({ error: "Failed to fetch orders" }, { status: 500 });
   }
 }
