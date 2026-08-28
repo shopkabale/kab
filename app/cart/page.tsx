@@ -5,25 +5,32 @@ import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { FaTrash, FaArrowLeft, FaPlus, FaShieldAlt, FaCheckCircle } from "react-icons/fa";
+import { useAuth } from "@/components/AuthProvider"; // Imported Auth
 
 export default function CartPage() {
   const { cart, updateQuantity, removeFromCart, cartTotal, addToCart, clearCart } = useCart();
   const router = useRouter();
+  const { user } = useAuth(); // Extracted user
 
-  // Native Checkout State (Synchronized with Firestore API fields)
   const [showCheckoutModal, setShowCheckoutModal] = useState(false);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
+  
   const [buyerName, setBuyerName] = useState("");
+  const [buyerEmail, setBuyerEmail] = useState(""); 
   const [contactPhone, setContactPhone] = useState("");
   const [location, setLocation] = useState("");
 
-  // Real Upsell State
   const [upsellItems, setUpsellItems] = useState<any[]>([]);
   const [loadingUpsells, setLoadingUpsells] = useState(true);
 
-  // ==========================================
-  // 📥 FETCH REAL UPSELL ITEMS
-  // ==========================================
+  // Automatically pre-fill user details if they are logged in
+  useEffect(() => {
+    if (user) {
+      if (!buyerName) setBuyerName(user.displayName || "");
+      if (!buyerEmail) setBuyerEmail(user.email || "");
+    }
+  }, [user, buyerName, buyerEmail]);
+
   useEffect(() => {
     async function fetchUpsells() {
       try {
@@ -32,7 +39,6 @@ export default function CartPage() {
           const data = await res.json();
           const cartIds = new Set(cart.map(item => item.id));
           const filteredUpsells = data.items.filter((item: any) => !cartIds.has(item.id));
-
           setUpsellItems(filteredUpsells);
         }
       } catch (error) {
@@ -44,9 +50,6 @@ export default function CartPage() {
     fetchUpsells();
   }, [cart]);
 
-  // ==========================================
-  // 🧠 THE DELIVERY PROGRESS LOGIC
-  // ==========================================
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const { deliveryFee, progress, message, isFreeDelivery } = useMemo(() => {
@@ -79,28 +82,28 @@ export default function CartPage() {
     });
   };
 
-  // ==========================================
-  // 🚀 NATIVE CHECKOUT SUBMISSION
-  // ==========================================
   const handlePlaceOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cart.length === 0) return;
     setIsCheckingOut(true);
 
     try {
-      // Setup payload matching backend route properties precisely
       const payload = {
         source: "web",
+        userId: user?.id || "GUEST",
         buyerName,
+        buyerEmail,
         contactPhone,
         location: location || "Mbarara",
         cartItems: cart.map(item => ({
           productId: item.id,
+          publicId: (item as any).publicId || "",
           name: item.title,
           price: item.price,
           quantity: item.quantity,
           sellerId: (item as any).sellerId || "SYSTEM",
-          sellerPhone: (item as any).sellerPhone || ""
+          sellerPhone: (item as any).sellerPhone || "",
+          image: item.image || ""
         }))
       };
 
@@ -149,7 +152,6 @@ export default function CartPage() {
         </Link>
       </div>
 
-      {/* Gamification Bar */}
       <div className={`mb-6 md:mb-8 p-4 rounded-2xl border transition-all w-full max-w-full overflow-hidden box-border ${isFreeDelivery ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
         <div className="flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-end mb-3 w-full">
           <p className={`font-bold text-[13px] md:text-base leading-snug w-full sm:w-auto ${isFreeDelivery ? 'text-green-700' : 'text-slate-700'}`}>
@@ -208,7 +210,6 @@ export default function CartPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 w-full max-w-full">
-        {/* Cart items details */}
         <div className="lg:col-span-2 flex flex-col gap-3 md:gap-4 w-full">
           {cart.map((item) => (
             <div key={item.id} className="flex gap-3 p-3 border border-slate-200 rounded-xl bg-slate-50 relative w-full box-border">
@@ -219,13 +220,11 @@ export default function CartPage() {
                   <span className="text-[9px] text-slate-400">No img</span>
                 )}
               </div>
-
               <div className="flex-1 flex flex-col justify-between min-w-0 pr-6">
                 <div className="w-full">
                   <h3 className="font-bold text-sm md:text-base text-slate-800 leading-tight truncate md:whitespace-normal md:line-clamp-2">{item.title}</h3>
                   <p className="text-slate-800 font-extrabold mt-1 text-sm md:text-base">UGX {item.price.toLocaleString()}</p>
                 </div>
-
                 <div className="flex items-center gap-4 mt-2">
                   <div className="flex items-center border border-slate-300 rounded overflow-hidden bg-white h-7 md:h-8">
                     <button onClick={() => updateQuantity(item.id, -1)} className="px-2.5 hover:bg-slate-100 font-bold text-slate-600">-</button>
@@ -234,27 +233,19 @@ export default function CartPage() {
                   </div>
                 </div>
               </div>
-
-              <button 
-                onClick={() => removeFromCart(item.id)}
-                className="absolute top-2 right-2 text-slate-400 hover:text-red-500 p-2 transition-colors"
-                title="Remove item"
-              >
+              <button onClick={() => removeFromCart(item.id)} className="absolute top-2 right-2 text-slate-400 hover:text-red-500 p-2 transition-colors">
                 <FaTrash className="text-[13px]" />
               </button>
             </div>
           ))}
         </div>
 
-        {/* Totals & CTA */}
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 w-full h-max sticky top-24 box-border">
           <h2 className="text-base md:text-lg font-bold text-slate-800 mb-4 border-b border-slate-200 pb-3">Order Summary</h2>
-
           <div className="flex justify-between mb-3 text-[13px] md:text-sm text-slate-600">
             <span>Subtotal ({totalItems} items)</span>
             <span className="font-semibold text-slate-800">UGX {cartTotal.toLocaleString()}</span>
           </div>
-
           <div className="flex justify-between mb-4 text-[13px] md:text-sm border-b border-slate-200 pb-3">
             <span className="text-slate-600">Delivery Fee</span>
             {isFreeDelivery ? (
@@ -263,33 +254,22 @@ export default function CartPage() {
               <span className="font-semibold text-slate-800">UGX {deliveryFee.toLocaleString()}</span>
             )}
           </div>
-
           <div className="flex justify-between mb-6 text-base md:text-lg">
             <span className="font-bold text-slate-900">Total</span>
             <span className="font-black text-slate-900">UGX {finalTotal.toLocaleString()}</span>
           </div>
-
-          <button 
-            onClick={() => setShowCheckoutModal(true)}
-            className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-[15px]"
-          >
+          <button onClick={() => setShowCheckoutModal(true)} className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-3.5 rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 text-[15px]">
             Proceed to Checkout
           </button>
-
           <div className="mt-4 flex items-center justify-center gap-1.5 text-[10px] text-slate-400 font-medium">
-            <FaShieldAlt className="text-slate-400" /> 
-            Secure purchase powered by Mbarara Online
+            <FaShieldAlt className="text-slate-400" /> Secure purchase powered by Mbarara Online
           </div>
         </div>
       </div>
 
-      {/* ========================================== */}
-      {/* 🛑 NATIVE DELIVERY DETAILS FORM MODAL      */}
-      {/* ========================================== */}
       {showCheckoutModal && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4">
           <div className="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200 flex flex-col max-h-[90vh]">
-
             <div className="p-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
               <h3 className="text-lg font-black text-slate-900">Delivery Details</h3>
               <button onClick={() => setShowCheckoutModal(false)} className="text-slate-400 hover:text-slate-700 font-bold text-xl">×</button>
@@ -306,6 +286,19 @@ export default function CartPage() {
                     onChange={(e) => setBuyerName(e.target.value)}
                     placeholder="e.g. John Doe"
                     className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Email Address</label>
+                  <input 
+                    type="email" 
+                    value={buyerEmail}
+                    onChange={(e) => setBuyerEmail(e.target.value)}
+                    placeholder="e.g. name@example.com (For your receipt)"
+                    className="w-full border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900 bg-slate-50 text-slate-500"
+                    readOnly={!!user?.email}
+                    title={user?.email ? "Email is linked to your account" : ""}
                   />
                 </div>
 
@@ -360,15 +353,10 @@ export default function CartPage() {
                   </>
                 )}
               </button>
-              <button 
-                onClick={() => setShowCheckoutModal(false)} 
-                disabled={isCheckingOut} 
-                className="w-full py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors"
-              >
+              <button onClick={() => setShowCheckoutModal(false)} disabled={isCheckingOut} className="w-full py-2.5 text-sm font-bold text-slate-500 hover:text-slate-700 transition-colors">
                 Cancel
               </button>
             </div>
-
           </div>
         </div>
       )}
