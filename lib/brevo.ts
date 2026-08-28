@@ -65,25 +65,32 @@ export async function sendAdminAlert(
   const masterEmail = "hardwaremaco@gmail.com"; 
 
   const itemsListHtml = items.map(item => {
-    // 🚀 Prioritize publicId (e.g. GEN-0078), fallback to standard id if missing
     const identifier = item.publicId || item.productId || item.id; 
-    
-    // 🚀 Uses /product/ path for SEO friendly URLs
     const productLink = `https://www.mbararaonline.com/product/${identifier}`;
     const itemName = item.name || item.title || "Unknown Item";
+    const imageUrl = item.image || "https://www.mbararaonline.com/og-image.jpg";
 
     return `
-      <li style="margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
-        <a href="${productLink}" style="color: #FF6A00; text-decoration: underline; font-weight: bold; font-size: 16px;">
-          ${itemName}
-        </a>
-        <div style="margin-top: 4px; color: #475569; font-size: 14px;">
-          Qty: <strong>${item.quantity}</strong> | Price: UGX ${(item.price * item.quantity).toLocaleString()}
-        </div>
-        <div style="margin-top: 2px; color: #64748b; font-size: 12px;">
-          Seller Phone: ${item.sellerPhone || "N/A"}
-        </div>
-      </li>
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 12px; border-bottom: 1px dashed #e2e8f0;">
+        <tr>
+          <td width="70" valign="top" style="padding-bottom: 12px;">
+            <a href="${productLink}">
+              <img src="${imageUrl}" width="60" height="60" style="border-radius: 8px; object-fit: cover; display: block; background-color: #f8fafc; border: 1px solid #e2e8f0;" alt="${itemName}" />
+            </a>
+          </td>
+          <td valign="top" style="padding-bottom: 12px; padding-left: 12px;">
+            <a href="${productLink}" style="color: #FF6A00; text-decoration: underline; font-weight: bold; font-size: 16px;">
+              ${itemName}
+            </a>
+            <div style="margin-top: 4px; color: #475569; font-size: 14px;">
+              Qty: <strong>${item.quantity}</strong> | Price: UGX ${(item.price * item.quantity).toLocaleString()}
+            </div>
+            <div style="margin-top: 2px; color: #64748b; font-size: 12px;">
+              Seller Phone: ${item.sellerPhone || "N/A"}
+            </div>
+          </td>
+        </tr>
+      </table>
     `;
   }).join(""); 
 
@@ -99,9 +106,9 @@ export async function sendAdminAlert(
     </div>
 
     <h3 style="color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">Order Details</h3>
-    <ul style="list-style-type: none; padding: 0; margin: 0;">
+    <div style="padding: 0; margin: 0;">
       ${itemsListHtml}
-    </ul>
+    </div>
   `;
 
   await sendEmail({ 
@@ -112,17 +119,49 @@ export async function sendAdminAlert(
 }
 
 // --- 2. BUYER RECEIPT ---
-export async function sendBuyerReceipt(buyerEmail: string, buyerName: string, orderNumber: string, itemName: string, total: number) {
+export async function sendBuyerReceipt(buyerEmail: string, buyerName: string, orderNumber: string, items: any[], total: number) {
+  
+  const itemsListHtml = items.map(item => {
+    const identifier = item.publicId || item.productId || item.id; 
+    const productLink = `https://www.mbararaonline.com/product/${identifier}`;
+    const itemName = item.name || item.title || "Unknown Item";
+    const imageUrl = item.image || "https://www.mbararaonline.com/og-image.jpg";
+
+    return `
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 8px; border-bottom: 1px dashed #bbf7d0;">
+        <tr>
+          <td width="70" valign="top" style="padding-bottom: 8px;">
+            <a href="${productLink}">
+              <img src="${imageUrl}" width="60" height="60" style="border-radius: 8px; object-fit: cover; display: block; background-color: #f0fdf4; border: 1px solid #bbf7d0;" alt="${itemName}" />
+            </a>
+          </td>
+          <td valign="top" style="padding-bottom: 8px; padding-left: 12px;">
+            <a href="${productLink}" style="color: #16a34a; text-decoration: none; font-weight: bold; font-size: 15px;">
+              ${itemName}
+            </a>
+            <div style="margin-top: 4px; color: #475569; font-size: 13px;">
+              Qty: <strong>${item.quantity}</strong> | Price: UGX ${(item.price * item.quantity).toLocaleString()}
+            </div>
+          </td>
+        </tr>
+      </table>
+    `;
+  }).join("");
+
   const content = `
     <h2 style="color: #16a34a; margin-top: 0;">🎉 Order Confirmed!</h2>
     <p>Hi ${buyerName}, thank you for shopping with Mbarara Online!</p>
     <div style="background-color: #f0fdf4; padding: 16px; border-radius: 8px; margin: 24px 0;">
-      <p><strong>Order ID:</strong> ${orderNumber}</p>
-      <p><strong>Items:</strong> ${itemName}</p>
+      <p style="margin-top: 0;"><strong>Order ID:</strong> ${orderNumber}</p>
       <p><strong>Total to Pay:</strong> UGX ${total.toLocaleString()}</p>
+    </div>
+    <h3 style="color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">Your Items</h3>
+    <div style="padding: 0; margin: 0 0 24px 0;">
+      ${itemsListHtml}
     </div>
     <p>Our team will contact you shortly to coordinate delivery.</p>
   `;
+  
   await sendEmail({ to: [{ email: buyerEmail, name: buyerName }], subject: `Order Receipt - ${orderNumber}`, htmlContent: emailWrapper(content) });
 }
 
@@ -131,22 +170,51 @@ export async function sendSellerNotification(
   sellerEmail: string, 
   sellerName: string, 
   orderNumber: string, 
-  itemName: string, 
+  items: any[], 
   total: number,
   buyerPhone: string
 ) {
+  const itemsListHtml = items.map(item => {
+    const identifier = item.publicId || item.productId || item.id; 
+    const productLink = `https://www.mbararaonline.com/product/${identifier}`;
+    const itemName = item.name || item.title || "Unknown Item";
+    const imageUrl = item.image || "https://www.mbararaonline.com/og-image.jpg";
+
+    return `
+      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 8px; border-bottom: 1px dashed #fed7aa;">
+        <tr>
+          <td width="70" valign="top" style="padding-bottom: 8px;">
+            <a href="${productLink}">
+              <img src="${imageUrl}" width="60" height="60" style="border-radius: 8px; object-fit: cover; display: block; background-color: #fff7ed; border: 1px solid #fed7aa;" alt="${itemName}" />
+            </a>
+          </td>
+          <td valign="top" style="padding-bottom: 8px; padding-left: 12px;">
+            <a href="${productLink}" style="color: #ea580c; text-decoration: none; font-weight: bold; font-size: 15px;">
+              ${itemName}
+            </a>
+            <div style="margin-top: 4px; color: #78350f; font-size: 13px;">
+              Qty: <strong>${item.quantity}</strong> | Price: UGX ${(item.price * item.quantity).toLocaleString()}
+            </div>
+          </td>
+        </tr>
+      </table>
+    `;
+  }).join("");
+
   const content = `
     <h2 style="color: #FF6A00; margin-top: 0;">🚀 You Made a Sale!</h2>
     <p>Hi ${sellerName}, congratulations on your sale!</p>
     <div style="background-color: #fff7ed; padding: 16px; border-radius: 8px; margin: 24px 0;">
       <p style="margin: 0 0 8px 0;"><strong>Order ID:</strong> ${orderNumber}</p>
-      <p style="margin: 0 0 8px 0;"><strong>Items Sold:</strong> ${itemName}</p>
       <p style="margin: 0 0 8px 0;"><strong>Payout Amount:</strong> UGX ${total.toLocaleString()}</p>
       <hr style="border: 0; border-top: 1px solid #fed7aa; margin: 12px 0;">
       <p style="margin: 0; color: #9a3412;"><strong>Buyer Phone:</strong> ${buyerPhone}</p>
     </div>
+    <h3 style="color: #0f172a; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">Items to Fulfill</h3>
+    <div style="padding: 0; margin: 0 0 24px 0;">
+      ${itemsListHtml}
+    </div>
     <p>Please contact the buyer at <strong>${buyerPhone}</strong> to coordinate delivery as soon as possible.</p>
-    <p>You can also check your Mbarara Online seller dashboard to manage this fulfillment.</p>
   `;
 
   await sendEmail({ 
