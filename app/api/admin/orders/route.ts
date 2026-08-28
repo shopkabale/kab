@@ -4,6 +4,9 @@ import { FieldValue } from "firebase-admin/firestore";
 import { NotificationService } from "@/lib/notifications"; 
 import { sendAdminAlert } from "@/lib/brevo"; 
 
+// ==========================================
+// PATCH: Update Order Status & Process Payouts
+// ==========================================
 export async function PATCH(request: Request) {
   try {
     const { adminId, orderId, newStatus } = await request.json();
@@ -120,6 +123,7 @@ export async function PATCH(request: Request) {
         status: newStatus,
         updatedAt: Date.now()
       };
+      
       if (referrerId && rewardAmount > 0) {
          updatePayload.payoutProcessed = true;
          updatePayload.payoutAmount = rewardAmount;
@@ -151,9 +155,8 @@ export async function PATCH(request: Request) {
 }
 
 // ==========================================
-// POST & GET Methods
+// POST: Admin Manual Order Creation
 // ==========================================
-
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -191,13 +194,13 @@ export async function POST(request: Request) {
 
         const finalItem = {
           productId: productSnap.id,
-          publicId: product.publicId || "", // Added to fix email links
+          publicId: product.publicId || "", // Needed for the email links
           name: product.title || product.name || "Unknown Item",
           price: actualPrice,
           quantity: requestedQty,
           sellerId: product.sellerId || "SYSTEM",
           sellerPhone: product.sellerPhone || "",
-          image: product.images?.[0] || "",
+          image: product.images?.[0] || "", // Needed for the email thumbnails
           isAdminUpload: product.isAdminUpload === true 
         };
         validatedItems.push(finalItem);
@@ -251,7 +254,7 @@ export async function POST(request: Request) {
       NotificationService.notifyBuyer(contactPhone, orderNumber, allProductsString, actualTotalAmount)
     );
 
-    // FIXED: Now passing 'validatedItems' (array) instead of 'allProductsString'
+    // Passes the populated validatedItems array to the Admin Email for links and thumbnails
     notificationPromises.push(
       sendAdminAlert(orderNumber, validatedItems, actualTotalAmount, contactPhone, "Multi-Seller COD Order")
     );
@@ -284,6 +287,9 @@ export async function POST(request: Request) {
   }
 }
 
+// ==========================================
+// GET: Fetch Admin Dashboard Orders
+// ==========================================
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -304,7 +310,9 @@ export async function GET(request: Request) {
 
     const orders = await Promise.all(ordersSnap.docs.map(async (doc) => {
       const data = doc.data();
-      let totalAmount = Number(data.total) || 0;
+      
+      // Fixed fallback logic to match your main API and prevent "0" totals
+      let totalAmount = Number(data.totalAmount) || Number(data.total) || 0;
 
       if (totalAmount === 0 && data.productId) {
         try {
